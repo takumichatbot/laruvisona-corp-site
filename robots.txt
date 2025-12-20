@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://laruvisona.co.jp/sitemap.xml
