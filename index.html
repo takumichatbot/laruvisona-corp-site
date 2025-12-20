@@ -430,23 +430,23 @@
                             <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-en">Q1</span> どのようなものを作りますか？
                         </h3>
                         <div class="grid md:grid-cols-3 gap-4">
-                            <label class="cursor-pointer group">
-                                <input type="radio" name="q_type" value="50" class="estimator-option hidden" checked onchange="calcEstimate()">
-                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-blue-500 hover:bg-slate-800 transition-all text-center h-full flex flex-col justify-center items-center gap-2 peer-checked:bg-blue-900/30 peer-checked:border-blue-500 peer-checked:text-white text-slate-300">
+                            <label class="cursor-pointer group block">
+                                <input type="radio" name="q_type" value="50" class="hidden peer" checked onchange="calcEstimate()">
+                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 transition-all text-center h-full flex flex-col justify-center items-center gap-2 text-slate-300 peer-checked:bg-blue-600 peer-checked:border-blue-400 peer-checked:text-white peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.5)] peer-checked:scale-[1.02]">
                                     <i class="fas fa-desktop text-2xl mb-1"></i>
                                     <span class="font-bold">Webサイト / LP</span>
                                 </div>
                             </label>
-                            <label class="cursor-pointer group">
-                                <input type="radio" name="q_type" value="150" class="estimator-option hidden" onchange="calcEstimate()">
-                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-blue-500 hover:bg-slate-800 transition-all text-center h-full flex flex-col justify-center items-center gap-2 peer-checked:bg-blue-900/30 peer-checked:border-blue-500 peer-checked:text-white text-slate-300">
+                            <label class="cursor-pointer group block">
+                                <input type="radio" name="q_type" value="150" class="hidden peer" onchange="calcEstimate()">
+                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 transition-all text-center h-full flex flex-col justify-center items-center gap-2 text-slate-300 peer-checked:bg-blue-600 peer-checked:border-blue-400 peer-checked:text-white peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.5)] peer-checked:scale-[1.02]">
                                     <i class="fas fa-layer-group text-2xl mb-1"></i>
                                     <span class="font-bold">Webアプリ / SaaS</span>
                                 </div>
                             </label>
-                            <label class="cursor-pointer group">
-                                <input type="radio" name="q_type" value="300" class="estimator-option hidden" onchange="calcEstimate()">
-                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-blue-500 hover:bg-slate-800 transition-all text-center h-full flex flex-col justify-center items-center gap-2 peer-checked:bg-blue-900/30 peer-checked:border-blue-500 peer-checked:text-white text-slate-300">
+                            <label class="cursor-pointer group block">
+                                <input type="radio" name="q_type" value="300" class="hidden peer" onchange="calcEstimate()">
+                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 transition-all text-center h-full flex flex-col justify-center items-center gap-2 text-slate-300 peer-checked:bg-blue-600 peer-checked:border-blue-400 peer-checked:text-white peer-checked:shadow-[0_0_15px_rgba(59,130,246,0.5)] peer-checked:scale-[1.02]">
                                     <i class="fas fa-mobile-alt text-2xl mb-1"></i>
                                     <span class="font-bold">モバイルアプリ</span>
                                 </div>
@@ -459,10 +459,10 @@
                             <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-en">Q2</span> 規模・ページ数
                         </h3>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <label class="cursor-pointer"><input type="radio" name="q_scale" value="10" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">小 (1-5p)</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_scale" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">中 (10-20p)</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_scale" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">大 (30p〜)</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_scale" value="150" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">大規模PF</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_scale" value="10" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">小 (1-5p)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_scale" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">中 (10-20p)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_scale" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">大 (30p〜)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_scale" value="150" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">大規模PF</div></label>
                         </div>
                     </div>
 
@@ -471,9 +471,9 @@
                             <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-en">Q3</span> デザイン・UI/UX
                         </h3>
                         <div class="grid md:grid-cols-3 gap-4">
-                            <label class="cursor-pointer"><input type="radio" name="q_design" value="20" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">テンプレートベース</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_design" value="60" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">オリジナルデザイン</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_design" value="120" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">ハイエンド (演出重視)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_design" value="20" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">テンプレートベース</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_design" value="60" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">オリジナルデザイン</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_design" value="120" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">ハイエンド (演出重視)</div></label>
                         </div>
                     </div>
 
@@ -482,9 +482,9 @@
                             <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-en">Q4</span> ログイン機能
                         </h3>
                         <div class="grid md:grid-cols-3 gap-4">
-                            <label class="cursor-pointer"><input type="radio" name="q_auth" value="0" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">なし</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_auth" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">メール認証</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_auth" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">SNS/SSO連携</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_auth" value="0" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">なし</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_auth" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">メール認証</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_auth" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">SNS/SSO連携</div></label>
                         </div>
                     </div>
 
@@ -494,10 +494,10 @@
                             <span class="bg-indigo-500 text-white text-xs px-2 py-1 rounded font-en">Q5</span> 生成AI・LLM連携
                         </h3>
                         <div class="grid md:grid-cols-2 gap-4">
-                            <label class="cursor-pointer"><input type="radio" name="q_ai" value="0" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">なし</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_ai" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">チャットボット (GPT)</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_ai" value="150" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">自社データ学習 (RAG)</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_ai" value="300" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">自律型エージェント</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_ai" value="0" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">なし</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_ai" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">チャットボット (GPT)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_ai" value="150" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">自社データ学習 (RAG)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_ai" value="300" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">自律型エージェント</div></label>
                         </div>
                     </div>
 
@@ -506,9 +506,9 @@
                             <span class="bg-indigo-500 text-white text-xs px-2 py-1 rounded font-en">Q6</span> 音声・画像認識
                         </h3>
                         <div class="flex flex-wrap gap-4">
-                            <label class="cursor-pointer"><input type="checkbox" name="q_voice" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active"><i class="fas fa-microphone mr-2"></i>音声操作・認識</div></label>
-                            <label class="cursor-pointer"><input type="checkbox" name="q_voice" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active"><i class="fas fa-volume-up mr-2"></i>音声読み上げ</div></label>
-                            <label class="cursor-pointer"><input type="checkbox" name="q_voice" value="60" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active"><i class="fas fa-camera mr-2"></i>画像解析</div></label>
+                            <label class="cursor-pointer block"><input type="checkbox" name="q_voice" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active"><i class="fas fa-microphone mr-2"></i>音声操作・認識</div></label>
+                            <label class="cursor-pointer block"><input type="checkbox" name="q_voice" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active"><i class="fas fa-volume-up mr-2"></i>音声読み上げ</div></label>
+                            <label class="cursor-pointer block"><input type="checkbox" name="q_voice" value="60" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active"><i class="fas fa-camera mr-2"></i>画像解析</div></label>
                         </div>
                     </div>
 
@@ -517,9 +517,9 @@
                             <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-en">Q7</span> 決済・外部連携
                         </h3>
                         <div class="grid md:grid-cols-3 gap-4">
-                            <label class="cursor-pointer"><input type="checkbox" name="q_ext" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">決済機能 (Stripe等)</div></label>
-                            <label class="cursor-pointer"><input type="checkbox" name="q_ext" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">Google Maps連携</div></label>
-                            <label class="cursor-pointer"><input type="checkbox" name="q_ext" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">外部API・基幹連携</div></label>
+                            <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">決済機能 (Stripe等)</div></label>
+                            <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="40" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">Google Maps連携</div></label>
+                            <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">外部API・基幹連携</div></label>
                         </div>
                     </div>
 
@@ -528,9 +528,9 @@
                             <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-en">Q8</span> 管理機能 (CMS)
                         </h3>
                         <div class="grid md:grid-cols-3 gap-4">
-                            <label class="cursor-pointer"><input type="radio" name="q_admin" value="0" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">なし</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_admin" value="30" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">標準CMS (記事入稿等)</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_admin" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">高度な管理・分析</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_admin" value="0" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">なし</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_admin" value="30" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">標準CMS (記事入稿等)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_admin" value="80" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">高度な管理・分析</div></label>
                         </div>
                     </div>
 
@@ -539,9 +539,9 @@
                             <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-en">Q9</span> インフラ・保守
                         </h3>
                         <div class="grid md:grid-cols-3 gap-4">
-                            <label class="cursor-pointer"><input type="radio" name="q_infra" value="10" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">標準・共用サーバー</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_infra" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">クラウド (AWS/GCP)</div></label>
-                            <label class="cursor-pointer"><input type="radio" name="q_infra" value="100" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">高負荷対策・冗長化</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_infra" value="10" class="hidden peer" checked onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">標準・共用サーバー</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_infra" value="50" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">クラウド (AWS/GCP)</div></label>
+                            <label class="cursor-pointer block"><input type="radio" name="q_infra" value="100" class="hidden peer" onchange="calcEstimate()"><div class="estimator-btn peer-checked:active">高負荷対策・冗長化</div></label>
                         </div>
                     </div>
 
@@ -550,11 +550,11 @@
                             <span class="bg-red-500 text-white text-xs px-2 py-1 rounded font-en">Q10</span> 希望納期
                         </h3>
                         <div class="flex gap-4">
-                            <label class="cursor-pointer flex-1 group">
+                            <label class="cursor-pointer flex-1 group block">
                                 <input type="radio" name="q_speed" value="1.0" class="hidden peer" checked onchange="calcEstimate()">
                                 <div class="estimator-btn peer-checked:active">通常 (2-3ヶ月〜)</div>
                             </label>
-                            <label class="cursor-pointer flex-1 group">
+                            <label class="cursor-pointer flex-1 group block">
                                 <input type="radio" name="q_speed" value="1.3" class="hidden peer" onchange="calcEstimate()">
                                 <div class="estimator-btn peer-checked:active bg-red-900/20 hover:bg-red-900/40 peer-checked:border-red-500 text-red-300">特急 (〜1ヶ月) <span class="text-xs ml-1 opacity-70">x1.3</span></div>
                             </label>
@@ -620,7 +620,13 @@
                 display: flex; align-items: center; justify-content: center;
             }
             .estimator-btn:hover { background: rgba(51, 65, 85, 0.8); border-color: #64748b; color: white; }
-            .estimator-btn.peer-checked\:active { background: rgba(30, 58, 138, 0.4); border-color: #3b82f6; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+            /* 選択時のハイライト（青く光る） */
+            .estimator-btn.peer-checked\:active {
+                background: #2563eb; /* bg-blue-600 */
+                border-color: #60a5fa; /* border-blue-400 */
+                color: #ffffff;
+                box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); /* 光彩 */
+            }
         </style>
     </section>
 
@@ -697,8 +703,9 @@
                     <ul class="space-y-4 text-sm">
                         <li><a href="#about" class="hover:text-blue-400 transition-colors">私たちについて</a></li>
                         <li><a href="#" class="hover:text-blue-400 transition-colors">ニュース</a></li>
-                        <li><a href="#contact" class="hover:text-blue-400 transition-colors">お問い合わせ</a></li>
-                        <li><a href="#" class="hover:text-blue-400 transition-colors">プライバシーポリシー</a></li>
+                        <li><a href="privacy.html" class="hover:text-blue-400 transition-colors">プライバシーポリシー</a></li>
+                        <li><a href="terms.html" class="hover:text-blue-400 transition-colors">利用規約</a></li>
+                        <li><a href="tokusho.html" class="hover:text-blue-400 transition-colors">特定商取引法に基づく表記</a></li>
                     </ul>
                 </div>
                 <div>
@@ -721,7 +728,8 @@
         </div>
     </footer>
 
-    <script src="https://larubot.tokyo/static/embed.js" data-public-id="あなたのパブリックID" defer></script>
+    <script src="https://larubot.tokyo/static/embed.js" data-public-id="ここにあなたのLARUbotのパブリックIDを入れてください" defer></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -730,7 +738,6 @@
     <script>
         // 見積もり計算ロジック（Q1-Q10完全対応版）
         function calcEstimate() {
-            // 各項目の値を取得 (未選択時は0)
             const getVal = (name) => {
                 const el = document.querySelector(`input[name="${name}"]:checked`);
                 return el ? parseInt(el.value) : 0;
@@ -741,7 +748,7 @@
                 return sum;
             };
 
-            // 1. ベース費用 (タイプ + 規模 + デザイン + ログイン + 管理画面 + インフラ)
+            // 1. ベース費用
             let baseCost = 0;
             baseCost += getVal('q_type');
             baseCost += getVal('q_scale');
@@ -750,7 +757,7 @@
             baseCost += getVal('q_admin');
             baseCost += getVal('q_infra');
 
-            // 2. オプション費用 (AI + 音声 + 外部連携)
+            // 2. オプション費用
             let optCost = 0;
             optCost += getVal('q_ai');
             optCost += getMultiVal('q_voice');
@@ -762,12 +769,11 @@
 
             // 合計計算
             let total = (baseCost + optCost) * multiplier;
-            total = Math.round(total); // 整数化
+            total = Math.round(total);
 
-            // 内訳計算用（特急料金分）
             const speedCost = Math.round((baseCost + optCost) * (multiplier - 1.0));
 
-            // --- アニメーション表示 ---
+            // アニメーション表示
             const el = document.getElementById('estimate-price');
             const current = parseInt(el.innerText) || 0;
             const diff = total - current;
@@ -779,7 +785,6 @@
                 step++;
                 if (step >= steps) {
                     el.innerText = total;
-                    // 内訳更新 (アニメーション完了時)
                     document.getElementById('detail-base').innerText = `¥${baseCost}万`;
                     document.getElementById('detail-opt').innerText = `¥${optCost}万`;
                     document.getElementById('detail-speed').innerText = `¥${speedCost}万`;
@@ -789,12 +794,10 @@
                 }
             }, 20);
         }
-    
-        // 初期実行
-        document.addEventListener('DOMContentLoaded', calcEstimate);
 
         document.addEventListener('DOMContentLoaded', () => {
             gsap.registerPlugin(ScrollTrigger);
+            calcEstimate(); // 初期計算
 
             // 1. オープニング
             const preloader = document.getElementById('preloader');
@@ -813,7 +816,6 @@
                         gsap.to(preloader, { y: "-100%", duration: 1, ease: "power4.inOut" });
                         gsap.to(header, { opacity: 1, y: 0, duration: 0.8, delay: 0.5 });
                         
-                        // Vanta.jsの起動
                         try {
                             VANTA.GLOBE({
                                 el: "#hero-section",
@@ -834,7 +836,7 @@
                 }
             }, 100);
 
-            // 2. Dev Mode (開発者モード) 切り替え
+            // 2. Dev Mode 切り替え
             const devToggles = document.querySelectorAll('.dev-switch');
             devToggles.forEach(toggle => {
                 toggle.addEventListener('click', () => {
@@ -854,7 +856,7 @@
                 );
             });
 
-            // 4. Voice UI Logic
+            // 4. Voice UI
             const voiceBtn = document.getElementById('voice-trigger-btn');
             const voiceStatus = document.getElementById('voice-status-text');
             const voiceWaves = document.getElementById('voice-waves');
