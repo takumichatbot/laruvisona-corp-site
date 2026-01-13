@@ -349,7 +349,7 @@ export default function Home() {
                     </tr>
                     <tr className="border-b border-slate-800">
                       <th className="py-3 text-slate-500">代表者</th>
-                      <td className="py-3 text-slate-200">代表取締役 CEO</td>
+                      <td className="py-3 text-slate-200">代表取締役 齋藤 匠</td>
                     </tr>
                     <tr className="border-b border-slate-800">
                       <th className="py-3 text-slate-500">事業内容</th>
@@ -359,9 +359,13 @@ export default function Home() {
                         DXコンサルティング
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="border-b border-slate-800">
                       <th className="py-3 text-slate-500">所在地</th>
-                      <td className="py-3 text-slate-200">東京都（詳細住所）</td>
+                      <td className="py-3 text-slate-200">〒170-0005<br/>東京都豊島区南大塚１丁目２２−２</td>
+                    </tr>
+                    <tr>
+                      <th className="py-3 text-slate-500">電話番号</th>
+                      <td className="py-3 text-slate-200">050-1724-8283</td>
                     </tr>
                   </tbody>
                 </table>
@@ -756,11 +760,15 @@ export default function Home() {
               <ul className="space-y-4 text-sm">
                 <li className="flex items-start gap-3">
                   <i className="fas fa-map-marker-alt mt-1 text-slate-600"></i>
-                  <span>東京都</span>
+                  <span>〒170-0005<br/>東京都豊島区南大塚１丁目２２−２</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <i className="fas fa-phone text-slate-600"></i>
+                  <span>050-1724-8283</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <i className="fas fa-envelope text-slate-600"></i>
-                  <span>info@laruvisona.jp</span>
+                  <span>laruvisona@gmail.com</span>
                 </li>
               </ul>
             </div>
