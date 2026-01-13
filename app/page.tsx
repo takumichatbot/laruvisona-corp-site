@@ -443,6 +443,116 @@ export default function Home() {
         </div>
       </section>
 
+      {/* AI開発実績セクション - NEW */}
+      <section id="ai-expertise" className="py-32 bg-gradient-to-b from-slate-900 to-black relative overflow-hidden border-t border-slate-800">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,_rgba(59,130,246,0.1),transparent_50%)]"></div>
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="text-center mb-20 gsap-fade-up">
+            <div className="inline-flex items-center gap-3 border border-blue-500/30 bg-blue-900/10 backdrop-blur-md px-6 py-2 rounded-full mb-6">
+              <i className="fas fa-certificate text-blue-400"></i>
+              <span className="text-xs font-bold tracking-[0.2em] text-blue-300 font-en">PROVEN TRACK RECORD</span>
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
+              AI開発の<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">実績が証明する</span>、<br/>
+              確かな技術力。
+            </h2>
+            <p className="text-slate-400 text-lg max-w-3xl mx-auto leading-relaxed">
+              自社SaaS「LARUbot」の開発・運用実績が、私たちの技術力を物語ります。<br/>
+              実際に稼働するプロダクトを持つからこそ、お客様に最高のAIソリューションを提供できます。
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8 mb-16">
+            {/* 実績1: マルチテナントSaaS */}
+            <div className="glass-panel rounded-3xl p-8 border border-blue-500/20 hover:border-blue-500/40 transition-all duration-500 group gsap-fade-up">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-all duration-300 shadow-lg shadow-blue-900/50">
+                <i className="fas fa-building text-white"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">マルチテナントSaaS</h3>
+              <p className="text-slate-400 leading-relaxed mb-6">
+                LARUbotは複数企業が同時利用可能なマルチテナント設計。データ分離とセキュリティを確保しながら、スケーラブルなアーキテクチャを実現。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full border border-blue-500/30">Flask</span>
+                <span className="text-xs px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full border border-blue-500/30">PostgreSQL</span>
+                <span className="text-xs px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full border border-blue-500/30">Redis</span>
+              </div>
+            </div>
+
+            {/* 実績2: AI統合 */}
+            <div className="glass-panel rounded-3xl p-8 border border-indigo-500/20 hover:border-indigo-500/40 transition-all duration-500 group gsap-fade-up bg-gradient-to-br from-indigo-900/10 to-transparent">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-all duration-300 shadow-lg shadow-indigo-900/50">
+                <i className="fas fa-robot text-white"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">AIチャットボット技術</h3>
+              <p className="text-slate-400 leading-relaxed mb-6">
+                OpenAI GPT-4、Claude APIを活用した自然な対話。RAG技術により企業独自データを学習し、精度の高い回答を実現。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full border border-indigo-500/30">GPT-4</span>
+                <span className="text-xs px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full border border-indigo-500/30">RAG</span>
+                <span className="text-xs px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full border border-indigo-500/30">Vector DB</span>
+              </div>
+            </div>
+
+            {/* 実績3: CRM/SFA */}
+            <div className="glass-panel rounded-3xl p-8 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-500 group gsap-fade-up">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-all duration-300 shadow-lg shadow-purple-900/50">
+                <i className="fas fa-chart-line text-white"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">CRM/SFA統合</h3>
+              <p className="text-slate-400 leading-relaxed mb-6">
+                顧客管理（CRM）と営業支援（SFA）機能を完全統合。リアルタイムダッシュボードで営業活動を可視化し、成果を最大化。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs px-3 py-1 bg-purple-900/30 text-purple-300 rounded-full border border-purple-500/30">WebSocket</span>
+                <span className="text-xs px-3 py-1 bg-purple-900/30 text-purple-300 rounded-full border border-purple-500/30">Real-time</span>
+                <span className="text-xs px-3 py-1 bg-purple-900/30 text-purple-300 rounded-full border border-purple-500/30">Analytics</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 実績数値 */}
+          <div className="grid md:grid-cols-4 gap-8 gsap-fade-up">
+            <div className="text-center">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 mb-2 font-en">99.9%</div>
+              <div className="text-slate-400 font-bold">稼働率</div>
+              <div className="text-xs text-slate-600 mt-1">高可用性を保証</div>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-300 mb-2 font-en">&lt;2s</div>
+              <div className="text-slate-400 font-bold">平均応答速度</div>
+              <div className="text-xs text-slate-600 mt-1">AI応答時間</div>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-300 mb-2 font-en">100+</div>
+              <div className="text-slate-400 font-bold">同時接続数</div>
+              <div className="text-xs text-slate-600 mt-1">スケーラブル設計</div>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-red-300 mb-2 font-en">SSL</div>
+              <div className="text-slate-400 font-bold">セキュリティ</div>
+              <div className="text-xs text-slate-600 mt-1">GDPR対応済み</div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center mt-16 gsap-fade-up">
+            <p className="text-slate-300 text-lg mb-6">この実績と技術力を、あなたのビジネスに。</p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 px-10 rounded-full transition-all shadow-lg shadow-blue-900/50">
+                <i className="fas fa-external-link-alt"></i>
+                LARUbotを見る
+              </a>
+              <a href="#contact" className="inline-flex items-center gap-3 border-2 border-white/20 hover:border-white/40 text-white font-bold py-4 px-10 rounded-full transition-all backdrop-blur-sm">
+                <i className="fas fa-envelope"></i>
+                お問い合わせ
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Voice Demo セクション */}
       <section id="voice-demo" className="py-32 bg-black relative overflow-hidden flex items-center justify-center">
         <div className="container mx-auto px-6 relative z-10 text-center">
