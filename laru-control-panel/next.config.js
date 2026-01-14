@@ -20,6 +20,11 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   reactStrictMode: true,
   turbopack: {},
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true
+  },
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3006',
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
