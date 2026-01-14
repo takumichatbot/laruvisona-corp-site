@@ -1,0 +1,76 @@
+{
+  "name": "Laru-Control-Panel",
+  "short_name": "LaruControl",
+  "description": "LARUVISONA専用モバイル管理ダッシュボード - PWA対応",
+  "theme_color": "#3B82F6",
+  "background_color": "#F9FAFB",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icons/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/apple-touch-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "apple touch icon"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "ja",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "ワンボタンテスト",
+      "short_name": "テスト",
+      "description": "全アカウントログインテストを実行",
+      "url": "/?action=test",
+      "icons": [
+        {
+          "src": "/icons/test-shortcut-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "ステータス確認",
+      "short_name": "ステータス",
+      "description": "flastal.comの稼働状況を確認",
+      "url": "/?action=status",
+      "icons": [
+        {
+          "src": "/icons/status-shortcut-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshots/mobile-1.png",
+      "sizes": "414x896",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}
