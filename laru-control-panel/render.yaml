@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: laru-control-panel
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXTAUTH_URL
+        value: https://admin.laruvisona.com
+      - key: NEXTAUTH_SECRET
+        sync: false # 手動で設定（秘密情報）
+      - key: GOOGLE_CLIENT_ID
+        sync: false # 手動で設定
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false # 手動で設定
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+    routes:
+      - type: redirect
+        source: /
+        destination: /
+    domains:
+      - admin.laruvisona.com
