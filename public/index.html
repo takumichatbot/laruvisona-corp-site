@@ -7,7 +7,7 @@
     'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
     })(window,document,'script','dataLayer','GTM-MVQ8TDBF');</script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>株式会社LARUVisona | 「想像」を「実装」するテックパートナー</title>
     <meta name="description" content="株式会社LARUVisonaは、AIチャットボット「LARUbot」の開発運営および、Webシステム・アプリケーション開発を通じて、企業のDXと事業成長を支援するテクノロジーカンパニーです。">
     
@@ -75,43 +75,50 @@
         }
 
         /* アニメーション要素 */
-        .marquee-track { display: flex; gap: 4rem; animation: marquee 30s linear infinite; width: max-content; }
-        .marquee-item { font-size: 1.2rem; font-weight: bold; color: #475569; display: flex; align-items: center; gap: 0.5rem; }
+        .marquee-track { display: flex; gap: 3rem; animation: marquee 30s linear infinite; width: max-content; }
+        .marquee-item { font-size: 1rem; font-weight: bold; color: #475569; display: flex; align-items: center; gap: 0.5rem; }
+        @media (min-width: 768px) {
+            .marquee-track { gap: 4rem; }
+            .marquee-item { font-size: 1.2rem; }
+        }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         @keyframes blob { 0% { transform: translate(0px, 0px) scale(1); } 33% { transform: translate(30px, -50px) scale(1.1); } 66% { transform: translate(-20px, 20px) scale(0.9); } 100% { transform: translate(0px, 0px) scale(1); } }
         .animate-blob { animation: blob 7s infinite; }
 
         /* 1. ボイスUIセクション用 */
         .voice-circle {
-            position: relative; width: 120px; height: 120px; border-radius: 50%;
+            position: relative; width: 100px; height: 100px; border-radius: 50%;
             background: linear-gradient(135deg, #0ea5e9, #4f46e5);
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
         }
+        @media (min-width: 768px) {
+            .voice-circle { width: 120px; height: 120px; }
+        }
         .voice-circle:hover { transform: scale(1.05); box-shadow: 0 0 50px rgba(59, 130, 246, 0.6); }
         .voice-circle.active { animation: pulse-voice 1.5s infinite; background: #ef4444; }
-        .voice-waves { display: flex; gap: 8px; align-items: center; justify-content: center; height: 60px; margin-top: 20px; opacity: 0; transition: opacity 0.3s; }
+        .voice-waves { display: flex; gap: 6px; align-items: center; justify-content: center; height: 50px; margin-top: 20px; opacity: 0; transition: opacity 0.3s; }
         .voice-waves.active { opacity: 1; }
-        .wave-bar { width: 6px; background: #3b82f6; border-radius: 4px; animation: wave 0.5s infinite ease-in-out alternate; }
-        .wave-bar:nth-child(1) { height: 20px; animation-delay: 0s; }
-        .wave-bar:nth-child(2) { height: 40px; animation-delay: 0.1s; }
-        .wave-bar:nth-child(3) { height: 60px; animation-delay: 0.2s; }
-        .wave-bar:nth-child(4) { height: 40px; animation-delay: 0.3s; }
-        .wave-bar:nth-child(5) { height: 20px; animation-delay: 0.4s; }
+        .wave-bar { width: 4px; background: #3b82f6; border-radius: 4px; animation: wave 0.5s infinite ease-in-out alternate; }
+        .wave-bar:nth-child(1) { height: 15px; animation-delay: 0s; }
+        .wave-bar:nth-child(2) { height: 30px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { height: 50px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { height: 30px; animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { height: 15px; animation-delay: 0.4s; }
         @keyframes pulse-voice { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 30px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         @keyframes wave { 0% { transform: scaleY(0.5); } 100% { transform: scaleY(1.2); } }
 
-        /* 2. Dev Mode (開発者モード) */
+        /* 2. Dev Mode */
         .dev-switch {
-            position: relative; width: 44px; height: 24px; background: rgba(255,255,255,0.1);
+            position: relative; width: 40px; height: 22px; background: rgba(255,255,255,0.1);
             border-radius: 99px; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2);
         }
         .dev-switch::after {
-            content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+            content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
             background: #94a3b8; border-radius: 50%; transition: 0.3s;
         }
         .dev-switch.active { background: #22c55e; border-color: #22c55e; }
-        .dev-switch.active::after { left: 22px; background: white; }
+        .dev-switch.active::after { left: 20px; background: white; }
 
         body.dev-mode {
             background-color: #0d1117 !important; color: #00ff00 !important; font-family: 'Fira Code', monospace !important;
@@ -124,10 +131,10 @@
         body.dev-mode .text-gradient-super { -webkit-text-fill-color: #00ff00 !important; background: none !important; }
         body.dev-mode img { filter: grayscale(100%) contrast(200%); border: 1px solid #00ff00; opacity: 0.5; }
 
-        /* 3. 見積もりボタン用スタイル (Dark & Sleek版にアップデート) */
+        /* 3. 見積もりボタン用スタイル */
         .estimator-btn {
             background: rgba(20, 20, 20, 0.6);
-            padding: 1.2rem 1rem; 
+            padding: 1rem 0.5rem; 
             border-radius: 1rem; 
             border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center; 
@@ -139,7 +146,10 @@
             flex-direction: column;
             align-items: center; 
             justify-content: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
+        }
+        @media (min-width: 768px) {
+            .estimator-btn { padding: 1.2rem 1rem; gap: 0.75rem; }
         }
         .estimator-btn:hover { 
             background: rgba(255, 255, 255, 0.05); 
@@ -157,9 +167,9 @@
         .estimator-btn.flex-row { flex-direction: row; }
 
         /* スクロールバー隠し */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
@@ -167,58 +177,58 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MVQ8TDBF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     
     <div id="preloader" class="fixed inset-0 z-[10000] bg-dark flex flex-col justify-center items-center">
-        <div class="font-en text-3xl font-black tracking-[0.3em] text-white animate-pulse">LARU<span class="text-blue-500">VISONA</span></div>
-        <div class="w-48 h-1 bg-border mt-6 rounded overflow-hidden">
+        <div class="font-en text-2xl md:text-3xl font-black tracking-[0.3em] text-white animate-pulse">LARU<span class="text-blue-500">VISONA</span></div>
+        <div class="w-32 md:w-48 h-1 bg-border mt-6 rounded overflow-hidden">
             <div id="loader-bar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div>
         </div>
     </div>
 
     <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-blue-600/20 blur-[120px] animate-blob"></div>
-        <div class="absolute top-[20%] right-[-10%] w-[30vw] h-[30vw] rounded-full bg-indigo-600/20 blur-[120px] animate-blob" style="animation-delay: 2s;"></div>
+        <div class="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] md:w-[40vw] md:h-[40vw] rounded-full bg-blue-600/20 blur-[100px] md:blur-[120px] animate-blob"></div>
+        <div class="absolute top-[20%] right-[-10%] w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] rounded-full bg-indigo-600/20 blur-[100px] md:blur-[120px] animate-blob" style="animation-delay: 2s;"></div>
     </div>
 
-    <header class="fixed w-full z-50 py-4 transition-all duration-500 opacity-0" id="header" style="transform: translateY(-20px);">
-        <div class="container mx-auto px-6 flex justify-between items-center glass-nav rounded-full p-3 pl-6 shadow-2xl border border-white/5">
-            <a href="#" class="flex items-center gap-3 group shrink-0">
-                <div class="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center font-black text-xl font-en shadow-[0_0_15px_rgba(255,255,255,0.3)] group-hover:scale-110 transition-transform">L</div>
+    <header class="fixed w-full z-50 py-3 md:py-4 transition-all duration-500 opacity-0" id="header" style="transform: translateY(-20px);">
+        <div class="container mx-auto px-4 md:px-6 flex justify-between items-center glass-nav rounded-full p-2 md:p-3 pl-4 md:pl-6 shadow-2xl border border-white/5">
+            <a href="#" class="flex items-center gap-2 md:gap-3 group shrink-0">
+                <div class="w-8 h-8 md:w-10 md:h-10 bg-white text-black rounded-full flex items-center justify-center font-black text-lg md:text-xl font-en shadow-[0_0_15px_rgba(255,255,255,0.3)] group-hover:scale-110 transition-transform">L</div>
                 <div class="flex flex-col">
-                    <span class="text-lg font-bold tracking-tight text-white leading-none font-en">LARU<span class="font-light text-slate-400">Visona</span></span>
+                    <span class="text-base md:text-lg font-bold tracking-tight text-white leading-none font-en">LARU<span class="font-light text-slate-400">Visona</span></span>
                 </div>
             </a>
             
-            <div class="flex items-center gap-4">
-                <div class="hidden lg:flex items-center gap-2 mr-2" title="Developer Mode">
+            <div class="flex items-center gap-3 md:gap-4">
+                <div class="hidden md:flex items-center gap-2 mr-2" title="Developer Mode">
                     <i class="fas fa-code text-slate-400 text-xs"></i>
                     <div class="dev-switch" id="dev-mode-toggle"></div>
                 </div>
 
                 <nav class="hidden md:flex items-center gap-1 font-bold text-xs text-slate-300 bg-white/5 rounded-full px-1 p-1 backdrop-blur-md border border-white/5">
-                    <a href="#about" class="hover:text-white hover:bg-white/10 px-5 py-2.5 rounded-full transition-all">About</a>
-                    <a href="#services" class="hover:text-white hover:bg-white/10 px-5 py-2.5 rounded-full transition-all">Services</a>
-                    <a href="#product" class="hover:text-white hover:bg-white/10 px-5 py-2.5 rounded-full transition-all">Product</a>
-                    <a href="#estimator" class="text-blue-400 hover:text-white hover:bg-blue-600 px-5 py-2.5 rounded-full transition-all flex items-center gap-2">
+                    <a href="#about" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all">About</a>
+                    <a href="#services" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all">Services</a>
+                    <a href="#product" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all">Product</a>
+                    <a href="#estimator" class="text-blue-400 hover:text-white hover:bg-blue-600 px-4 lg:px-5 py-2.5 rounded-full transition-all flex items-center gap-2">
                         <i class="fas fa-calculator"></i> AI見積もり
                     </a>
                 </nav>
 
-                <a href="#contact" class="hidden md:flex bg-white text-slate-900 px-7 py-3 rounded-full font-bold text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] transform hover:-translate-y-0.5 items-center gap-2 shrink-0 group">
+                <a href="#contact" class="hidden md:flex bg-white text-slate-900 px-5 lg:px-7 py-2.5 lg:py-3 rounded-full font-bold text-xs lg:text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] transform hover:-translate-y-0.5 items-center gap-2 shrink-0 group">
                     Contact <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </a>
                 
-                <button class="md:hidden text-white text-xl w-10 h-10 flex items-center justify-center bg-white/10 rounded-full border border-white/10" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+                <button class="md:hidden text-white text-lg w-10 h-10 flex items-center justify-center bg-white/10 rounded-full border border-white/10" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
         </div>
         
-        <div id="mobile-menu" class="hidden md:hidden glass-panel m-4 rounded-2xl p-6 shadow-2xl absolute w-[calc(100%-2rem)] top-24 border border-white/10 backdrop-blur-xl z-50 bg-[#0a0a0a]/95">
+        <div id="mobile-menu" class="hidden md:hidden glass-panel m-4 rounded-2xl p-6 shadow-2xl absolute w-[calc(100%-2rem)] top-16 border border-white/10 backdrop-blur-xl z-50 bg-[#0a0a0a]/95">
             <div class="flex flex-col space-y-4 font-bold text-slate-300 text-center">
-                <a href="#about" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl">About</a>
-                <a href="#services" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl">Services</a>
-                <a href="#product" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl">Product</a>
-                <a href="#estimator" class="block py-3 text-blue-400 hover:bg-white/5 rounded-xl">AI見積もり</a>
-                <a href="#contact" class="block py-4 bg-white text-slate-900 rounded-xl shadow-lg">お問い合わせ</a>
+                <a href="#about" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">About</a>
+                <a href="#services" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Services</a>
+                <a href="#product" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Product</a>
+                <a href="#estimator" class="block py-3 text-blue-400 hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">AI見積もり</a>
+                <a href="#contact" class="block py-4 bg-white text-slate-900 rounded-xl shadow-lg" onclick="document.getElementById('mobile-menu').classList.add('hidden')">お問い合わせ</a>
             </div>
         </div>
     </header>
@@ -228,34 +238,34 @@
         
         <div class="container mx-auto relative z-10 text-center">
             <div class="gsap-hero-elem opacity-0 translate-y-10">
-                <div class="inline-flex items-center gap-3 border border-white/10 bg-white/5 backdrop-blur-md px-6 py-2 rounded-full mb-10">
+                <div class="inline-flex items-center gap-3 border border-white/10 bg-white/5 backdrop-blur-md px-4 md:px-6 py-1.5 md:py-2 rounded-full mb-8 md:mb-10">
                     <span class="relative flex h-2 w-2">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                     </span>
-                    <span class="text-xs font-bold tracking-[0.2em] text-slate-300 font-en">EST. 2026 TOKYO</span>
+                    <span class="text-[10px] md:text-xs font-bold tracking-[0.2em] text-slate-300 font-en">EST. 2026 TOKYO</span>
                 </div>
             </div>
             
-            <h1 class="gsap-hero-elem opacity-0 translate-y-10 text-[3.5rem] md:text-[7rem] lg:text-[9rem] font-black tracking-tighter leading-[1.1] mb-8">
+            <h1 class="gsap-hero-elem opacity-0 translate-y-10 text-6xl sm:text-7xl md:text-[7rem] lg:text-[9rem] font-black tracking-tighter leading-[1.1] mb-6 md:mb-8">
                 <span class="text-gradient-super block">IMAGINE.</span>
                 <span class="text-white block" style="text-shadow: 0 10px 40px rgba(59,130,246,0.2);">IMPLEMENT.</span>
             </h1>
             
-            <p class="gsap-hero-elem opacity-0 translate-y-10 text-slate-400 text-lg md:text-xl leading-relaxed mb-12 max-w-2xl mx-auto font-medium">
+            <p class="gsap-hero-elem opacity-0 translate-y-10 text-slate-400 text-sm sm:text-base md:text-xl leading-relaxed mb-10 md:mb-12 max-w-2xl mx-auto font-medium px-4">
                 「想像」を「実装」する。<br>
                 AIとモダンWeb技術を駆使し、あなたのビジネスを次の次元へ。
             </p>
             
-            <div class="gsap-hero-elem opacity-0 translate-y-10 flex flex-col sm:flex-row justify-center gap-6">
-                <a href="#services" class="bg-white text-slate-900 px-12 py-4 rounded-full font-bold hover:bg-slate-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] text-lg flex items-center justify-center gap-2 group">
+            <div class="gsap-hero-elem opacity-0 translate-y-10 flex flex-col sm:flex-row justify-center gap-4 md:gap-6">
+                <a href="#services" class="bg-white text-slate-900 px-8 md:px-12 py-3.5 md:py-4 rounded-full font-bold hover:bg-slate-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] text-sm md:text-lg flex items-center justify-center gap-2 group">
                     事業内容を見る <i class="fas fa-arrow-down group-hover:translate-y-1 transition-transform"></i>
                 </a>
             </div>
         </div>
     </section>
 
-    <section class="py-12 border-y border-white/5 bg-white/5 backdrop-blur-sm overflow-hidden relative z-20">
+    <section class="py-8 md:py-12 border-y border-white/5 bg-white/5 backdrop-blur-sm overflow-hidden relative z-20">
         <div class="marquee-track">
             <div class="marquee-item"><i class="fab fa-python"></i> Python</div>
             <div class="marquee-item"><i class="fab fa-react"></i> React</div>
@@ -274,48 +284,48 @@
         </div>
     </section>
 
-    <section id="about" class="py-32 relative">
+    <section id="about" class="py-20 md:py-32 relative">
         <div class="container mx-auto px-6 max-w-7xl">
-            <div class="grid md:grid-cols-2 gap-16 items-center">
+            <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                 <div class="gsap-fade-up">
-                    <span class="text-blue-500 font-bold text-xs tracking-[0.2em] uppercase mb-4 block font-en">WHO WE ARE</span>
-                    <h2 class="text-4xl md:text-5xl font-black text-white mb-8 leading-tight">
+                    <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">WHO WE ARE</span>
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 md:mb-8 leading-tight">
                         未来の景色を、<br>
                         テクノロジーで描く。
                     </h2>
-                    <p class="text-slate-400 leading-relaxed mb-6">
+                    <p class="text-slate-400 leading-relaxed mb-4 md:mb-6 text-sm md:text-base">
                         LARUVisona（ラルビゾナ）は、「Vision（展望）」と「Persona（人格）」を掛け合わせた造語です。
                     </p>
-                    <p class="text-slate-400 leading-relaxed mb-8">
+                    <p class="text-slate-400 leading-relaxed mb-6 md:mb-8 text-sm md:text-base">
                         私たちは単なるシステム開発会社ではありません。AIという新たな「人格」をビジネスに宿らせ、御社が描く「展望」を最短距離で実現するパートナーです。
                     </p>
-                    <div class="bg-white/5 rounded-2xl p-6 border border-white/5 backdrop-blur-sm">
-                        <table class="w-full text-left text-sm">
+                    <div class="bg-white/5 rounded-2xl p-5 md:p-6 border border-white/5 backdrop-blur-sm">
+                        <table class="w-full text-left text-xs md:text-sm">
                             <tr class="border-b border-white/5">
-                                <th class="py-3 text-slate-500 w-32">会社名</th>
-                                <td class="py-3 text-slate-200 font-bold">株式会社LARUVisona</td>
+                                <th class="py-2.5 md:py-3 text-slate-500 w-24 md:w-32">会社名</th>
+                                <td class="py-2.5 md:py-3 text-slate-200 font-bold">株式会社LARUVisona</td>
                             </tr>
                             <tr class="border-b border-white/5">
-                                <th class="py-3 text-slate-500">設立</th>
-                                <td class="py-3 text-slate-200">2026年4月1日</td>
+                                <th class="py-2.5 md:py-3 text-slate-500">設立</th>
+                                <td class="py-2.5 md:py-3 text-slate-200">2026年4月1日</td>
                             </tr>
                             <tr class="border-b border-white/5">
-                                <th class="py-3 text-slate-500">所在地</th>
-                                <td class="py-3 text-slate-200">東京都板橋区南常盤台1-11-6-101号室</td>
+                                <th class="py-2.5 md:py-3 text-slate-500 align-top">所在地</th>
+                                <td class="py-2.5 md:py-3 text-slate-200">東京都板橋区南常盤台<br class="md:hidden">1-11-6-101号室</td>
                             </tr>
                             <tr>
-                                <th class="py-3 text-slate-500">事業内容</th>
-                                <td class="py-3 text-slate-200">AI SaaS事業（LARUbot）<br>Webシステム受託開発 / DX支援</td>
+                                <th class="py-2.5 md:py-3 text-slate-500 align-top">事業内容</th>
+                                <td class="py-2.5 md:py-3 text-slate-200">AI SaaS事業（LARUbot）<br>Webシステム受託開発 / DX支援</td>
                             </tr>
                         </table>
                     </div>
                 </div>
-                <div class="relative gsap-fade-up">
+                <div class="relative gsap-fade-up mt-8 lg:mt-0">
                     <div class="absolute -inset-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] blur-2xl opacity-20"></div>
-                    <div class="spotlight-card rounded-[2rem] p-1 h-96 w-full flex items-center justify-center relative bg-[#0a0a0a]">
+                    <div class="spotlight-card rounded-[2rem] p-1 h-64 md:h-96 w-full flex items-center justify-center relative bg-[#0a0a0a]">
                         <div class="text-center spotlight-content flex flex-col items-center justify-center w-full h-full">
-                            <i class="fas fa-layer-group text-6xl text-white/20 mb-4"></i>
-                            <p class="text-slate-500 font-en text-lg tracking-widest">VISUALIZING...</p>
+                            <i class="fas fa-layer-group text-5xl md:text-6xl text-white/20 mb-3 md:mb-4"></i>
+                            <p class="text-slate-500 font-en text-sm md:text-lg tracking-widest">VISUALIZING...</p>
                         </div>
                     </div>
                 </div>
@@ -323,53 +333,53 @@
         </div>
     </section>
 
-    <section id="services" class="py-32 relative bg-card border-y border-white/5">
+    <section id="services" class="py-20 md:py-32 relative bg-card border-y border-white/5">
         <div class="container mx-auto px-6 max-w-7xl">
-            <div class="md:flex md:justify-between md:items-end mb-20 gsap-fade-up">
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-end mb-16 md:mb-20 gsap-fade-up gap-6">
                 <div>
-                    <span class="text-blue-500 font-bold text-xs tracking-[0.2em] uppercase mb-4 block font-en">WHAT WE DO</span>
-                    <h2 class="text-5xl md:text-6xl font-black text-white leading-[1.2]">
+                    <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">WHAT WE DO</span>
+                    <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.2]">
                         論理と、<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">感情。</span>
                     </h2>
                 </div>
-                <p class="text-slate-400 text-lg max-w-md mt-8 md:mt-0 leading-relaxed border-l-2 border-slate-700 pl-6">
+                <p class="text-slate-400 text-sm md:text-lg max-w-md leading-relaxed border-l-2 border-slate-700 pl-4 md:pl-6">
                     論理的なシステム構築と、感情に響くUXデザイン。<br>
                     この両輪で、選ばれ続けるプロダクトを生み出します。
                 </p>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-6" id="cards-container">
-                <div class="spotlight-card p-[1px] min-h-[380px] gsap-fade-up">
-                    <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-8 flex flex-col">
-                        <div class="w-14 h-14 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center text-2xl mb-8 border border-blue-500/20"><i class="fas fa-code"></i></div>
-                        <h3 class="text-2xl font-bold text-white mb-4">Web / SaaS 開発</h3>
-                        <p class="text-slate-400 leading-relaxed text-sm mb-6 flex-grow">モダンな技術選定により、高速かつ拡張性の高いWebサイト・アプリケーションを構築します。</p>
-                        <ul class="space-y-2 text-xs text-slate-500 font-bold">
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="cards-container">
+                <div class="spotlight-card p-[1px] min-h-[340px] md:min-h-[380px] gsap-fade-up">
+                    <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 flex flex-col">
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-blue-500/20"><i class="fas fa-code"></i></div>
+                        <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">Web / SaaS 開発</h3>
+                        <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">モダンな技術選定により、高速かつ拡張性の高いWebサイト・アプリケーションを構築します。</p>
+                        <ul class="space-y-2 text-[11px] md:text-xs text-slate-500 font-bold">
                             <li class="flex items-center"><i class="fas fa-arrow-right text-blue-500 mr-2"></i>コーポレートサイト / LP</li>
                             <li class="flex items-center"><i class="fas fa-arrow-right text-blue-500 mr-2"></i>Webアプリ / SaaS構築</li>
                         </ul>
                     </div>
                 </div>
 
-                <div class="spotlight-card p-[1px] min-h-[380px] gsap-fade-up delay-100">
-                    <div class="spotlight-content bg-gradient-to-br from-indigo-900/20 to-[#0a0a0a] rounded-[1.4rem] p-8 flex flex-col relative overflow-hidden">
-                        <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg tracking-widest">MAIN</div>
-                        <div class="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center text-2xl mb-8 border border-indigo-500/20"><i class="fas fa-brain"></i></div>
-                        <h3 class="text-2xl font-bold text-white mb-4">AIソリューション</h3>
-                        <p class="text-slate-400 leading-relaxed text-sm mb-6 flex-grow">自社SaaS「LARUbot」のノウハウを活かし、LLMを組み込んだ業務効率化システムを開発します。</p>
-                        <ul class="space-y-2 text-xs text-slate-500 font-bold">
+                <div class="spotlight-card p-[1px] min-h-[340px] md:min-h-[380px] gsap-fade-up delay-100">
+                    <div class="spotlight-content bg-gradient-to-br from-indigo-900/20 to-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 flex flex-col relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-blue-600 text-white text-[9px] md:text-[10px] font-bold px-3 py-1 rounded-bl-lg tracking-widest">MAIN</div>
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-indigo-500/20"><i class="fas fa-brain"></i></div>
+                        <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">AIソリューション</h3>
+                        <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">自社SaaS「LARUbot」のノウハウを活かし、LLMを組み込んだ業務効率化システムを開発します。</p>
+                        <ul class="space-y-2 text-[11px] md:text-xs text-slate-500 font-bold">
                             <li class="flex items-center"><i class="fas fa-arrow-right text-indigo-500 mr-2"></i>チャットボット導入支援</li>
                             <li class="flex items-center"><i class="fas fa-arrow-right text-indigo-500 mr-2"></i>社内ナレッジ検索AI (RAG)</li>
                         </ul>
                     </div>
                 </div>
 
-                <div class="spotlight-card p-[1px] min-h-[380px] gsap-fade-up delay-200">
-                    <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-8 flex flex-col">
-                        <div class="w-14 h-14 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center text-2xl mb-8 border border-purple-500/20"><i class="fas fa-lightbulb"></i></div>
-                        <h3 class="text-2xl font-bold text-white mb-4">DXコンサルティング</h3>
-                        <p class="text-slate-400 leading-relaxed text-sm mb-6 flex-grow">「何から始めればいいかわからない」という課題に対し、業務フローの整理からツールの選定まで伴走します。</p>
-                        <ul class="space-y-2 text-xs text-slate-500 font-bold">
+                <div class="spotlight-card p-[1px] min-h-[340px] md:min-h-[380px] gsap-fade-up delay-200">
+                    <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 flex flex-col">
+                        <div class="w-12 h-12 md:w-14 md:h-14 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-purple-500/20"><i class="fas fa-lightbulb"></i></div>
+                        <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">DXコンサルティング</h3>
+                        <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">「何から始めればいいかわからない」という課題に対し、業務フローの整理からツールの選定まで伴走します。</p>
+                        <ul class="space-y-2 text-[11px] md:text-xs text-slate-500 font-bold">
                             <li class="flex items-center"><i class="fas fa-arrow-right text-purple-500 mr-2"></i>業務フロー可視化</li>
                             <li class="flex items-center"><i class="fas fa-arrow-right text-purple-500 mr-2"></i>デジタルツール選定</li>
                         </ul>
@@ -379,63 +389,63 @@
         </div>
     </section>
 
-    <section id="voice-demo" class="py-32 relative overflow-hidden flex items-center justify-center">
+    <section id="voice-demo" class="py-24 md:py-32 relative overflow-hidden flex items-center justify-center">
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-[#000] to-[#000]"></div>
         <div class="container mx-auto px-6 relative z-10 text-center">
-            <span class="text-blue-500 font-bold text-xs tracking-[0.2em] uppercase mb-4 block font-en">VOICE INTERFACE</span>
-            <h2 class="text-4xl md:text-5xl font-black text-white mb-8 tracking-tight">声で操る、未来のUI体験。</h2>
-            <p class="text-slate-400 mb-12 max-w-xl mx-auto text-sm md:text-base">
+            <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">VOICE INTERFACE</span>
+            <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 md:mb-8 tracking-tight">声で操る、未来のUI体験。</h2>
+            <p class="text-slate-400 mb-10 md:mb-12 max-w-xl mx-auto text-xs md:text-base">
                 クリック操作を超えた体験を。下のコアを押し、「サービス」「問い合わせ」と話しかけてみてください。
             </p>
 
             <div class="flex flex-col items-center">
                 <div id="voice-trigger-btn" class="voice-circle border border-white/20">
-                    <i class="fas fa-microphone text-4xl text-white drop-shadow-md"></i>
+                    <i class="fas fa-microphone text-3xl md:text-4xl text-white drop-shadow-md"></i>
                 </div>
                 <div id="voice-waves" class="voice-waves">
                     <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
                 </div>
-                <p id="voice-status-text" class="mt-6 text-blue-400 font-mono text-sm min-h-[30px] font-bold">SYSTEM_STANDBY...</p>
+                <p id="voice-status-text" class="mt-4 md:mt-6 text-blue-400 font-mono text-xs md:text-sm min-h-[30px] font-bold">SYSTEM_STANDBY...</p>
             </div>
         </div>
     </section>
 
-    <section id="product" class="py-32 bg-card border-y border-white/5 relative overflow-hidden">
+    <section id="product" class="py-20 md:py-32 bg-card border-y border-white/5 relative overflow-hidden">
         <div class="container mx-auto px-6 max-w-7xl relative z-10">
-            <div class="flex flex-col md:flex-row items-center gap-16">
-                <div class="md:w-1/2 gsap-fade-up">
-                    <div class="inline-block bg-white/10 text-white text-[10px] font-bold px-3 py-1 rounded-full mb-4 border border-white/10 font-en tracking-widest">FLAGSHIP PRODUCT</div>
-                    <h2 class="text-5xl md:text-7xl font-black mb-4 font-en tracking-tight">LARUbot</h2>
-                    <p class="text-slate-300 text-xl font-bold mb-6">24時間働く、AI営業アシスタント</p>
-                    <p class="text-slate-400 leading-relaxed mb-10 text-sm md:text-base">
-                        問い合わせ対応の自動化から顧客管理(CRM)、チャット内決済までを一元化。<br>専門知識がなくても、誰でも簡単にAIをビジネスに導入できるSaaSプラットフォームです。
+            <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+                <div class="lg:w-1/2 gsap-fade-up text-center lg:text-left">
+                    <div class="inline-block bg-white/10 text-white text-[9px] md:text-[10px] font-bold px-3 py-1 rounded-full mb-3 md:mb-4 border border-white/10 font-en tracking-widest">FLAGSHIP PRODUCT</div>
+                    <h2 class="text-4xl md:text-5xl lg:text-7xl font-black mb-3 md:mb-4 font-en tracking-tight text-white">LARUbot</h2>
+                    <p class="text-slate-300 text-lg md:text-xl font-bold mb-4 md:mb-6">24時間働く、AI営業アシスタント</p>
+                    <p class="text-slate-400 leading-relaxed mb-8 md:mb-10 text-xs md:text-sm lg:text-base text-left">
+                        問い合わせ対応の自動化から顧客管理(CRM)、チャット内決済までを一元化。<br class="hidden md:block">専門知識がなくても、誰でも簡単にAIをビジネスに導入できるSaaSプラットフォームです。
                     </p>
-                    <div class="flex flex-wrap gap-4">
-                        <a href="https://larubot.tokyo" target="_blank" class="bg-white text-black font-bold py-3.5 px-8 rounded-full transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)] flex items-center gap-2 text-sm">
+                    <div class="flex flex-wrap justify-center lg:justify-start gap-4">
+                        <a href="https://larubot.tokyo" target="_blank" class="bg-white text-black font-bold py-3 md:py-3.5 px-6 md:px-8 rounded-full transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)] flex items-center gap-2 text-xs md:text-sm">
                             公式サイトへ <i class="fas fa-external-link-alt"></i>
                         </a>
                     </div>
                 </div>
-                <div class="md:w-1/2 gsap-fade-up">
-                    <div class="spotlight-card p-[1px] transform md:rotate-2 hover:rotate-0 transition-all duration-700">
-                        <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-8">
-                            <div class="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                                <span class="ml-2 text-[10px] font-mono text-slate-500">larubot-engine.sh</span>
+                <div class="lg:w-1/2 w-full gsap-fade-up">
+                    <div class="spotlight-card p-[1px] transform lg:rotate-2 hover:rotate-0 transition-all duration-700">
+                        <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8">
+                            <div class="flex items-center gap-2 md:gap-3 mb-5 md:mb-6 border-b border-white/10 pb-4">
+                                <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-500"></div>
+                                <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-500"></div>
+                                <span class="ml-2 text-[9px] md:text-[10px] font-mono text-slate-500">larubot-engine.sh</span>
                             </div>
-                            <div class="space-y-6 font-medium text-sm">
-                                <div class="flex gap-4">
-                                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold shrink-0 text-white">AI</div>
-                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-3 border border-white/5 text-slate-200">御社の課題を教えてください。</div>
+                            <div class="space-y-4 md:space-y-6 font-medium text-xs md:text-sm">
+                                <div class="flex gap-3 md:gap-4">
+                                    <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-[9px] md:text-[10px] font-bold shrink-0 text-white">AI</div>
+                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-2.5 md:p-3 border border-white/5 text-slate-200">御社の課題を教えてください。</div>
                                 </div>
-                                <div class="flex gap-4 flex-row-reverse">
-                                    <div class="bg-blue-600/20 border border-blue-500/30 rounded-tl-xl rounded-b-xl p-3 text-blue-100">サイトからの離脱率を改善したいです。</div>
+                                <div class="flex gap-3 md:gap-4 flex-row-reverse">
+                                    <div class="bg-blue-600/20 border border-blue-500/30 rounded-tl-xl rounded-b-xl p-2.5 md:p-3 text-blue-100 text-right">サイトからの離脱率を改善したいです。</div>
                                 </div>
-                                <div class="flex gap-4">
-                                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold shrink-0 text-white">AI</div>
-                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-3 border border-white/5 text-slate-200">それなら、私の出番ですね。<br>自動接客でCV率を向上させましょう。</div>
+                                <div class="flex gap-3 md:gap-4">
+                                    <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-[9px] md:text-[10px] font-bold shrink-0 text-white">AI</div>
+                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-2.5 md:p-3 border border-white/5 text-slate-200">それなら、私の出番ですね。<br>自動接客でCV率を向上させましょう。</div>
                                 </div>
                             </div>
                         </div>
@@ -445,175 +455,179 @@
         </div>
     </section>
 
-    <section class="py-24 border-b border-white/5">
+    <section class="py-20 md:py-24 border-b border-white/5">
         <div class="container mx-auto px-6 max-w-4xl">
-            <div class="flex justify-between items-end mb-10">
-                <h2 class="text-2xl font-bold text-white font-en">NEWS</h2>
+            <div class="flex justify-between items-end mb-8 md:mb-10">
+                <h2 class="text-xl md:text-2xl font-bold text-white font-en">NEWS</h2>
             </div>
             <div class="space-y-3">
-                <a href="#" class="block bg-white/5 border border-white/5 p-5 rounded-xl hover:bg-white/10 transition-colors group">
-                    <div class="flex flex-col md:flex-row md:items-center gap-4">
-                        <span class="text-slate-500 font-mono text-xs">2025.12.20</span>
-                        <span class="bg-blue-900/50 text-blue-300 px-2.5 py-0.5 rounded text-[10px] font-bold w-fit border border-blue-500/20">PRESS</span>
-                        <p class="text-slate-300 text-sm group-hover:text-white transition-colors">株式会社LARUVisonaとして法人化に向けた準備を開始しました。</p>
+                <a href="#" class="block bg-white/5 border border-white/5 p-4 md:p-5 rounded-xl hover:bg-white/10 transition-colors group">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-slate-500 font-mono text-[10px] md:text-xs">2025.12.20</span>
+                            <span class="bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold border border-blue-500/20">PRESS</span>
+                        </div>
+                        <p class="text-slate-300 text-xs md:text-sm group-hover:text-white transition-colors mt-1 sm:mt-0">株式会社LARUVisonaとして法人化に向けた準備を開始しました。</p>
                     </div>
                 </a>
-                <a href="#" class="block bg-white/5 border border-white/5 p-5 rounded-xl hover:bg-white/10 transition-colors group">
-                    <div class="flex flex-col md:flex-row md:items-center gap-4">
-                        <span class="text-slate-500 font-mono text-xs">2025.12.01</span>
-                        <span class="bg-indigo-900/50 text-indigo-300 px-2.5 py-0.5 rounded text-[10px] font-bold w-fit border border-indigo-500/20">PRODUCT</span>
-                        <p class="text-slate-300 text-sm group-hover:text-white transition-colors">AIチャットボットサービス「LARUbot」のβ版をリリースしました。</p>
+                <a href="#" class="block bg-white/5 border border-white/5 p-4 md:p-5 rounded-xl hover:bg-white/10 transition-colors group">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-slate-500 font-mono text-[10px] md:text-xs">2025.12.01</span>
+                            <span class="bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold border border-indigo-500/20">PRODUCT</span>
+                        </div>
+                        <p class="text-slate-300 text-xs md:text-sm group-hover:text-white transition-colors mt-1 sm:mt-0">AIチャットボットサービス「LARUbot」のβ版をリリースしました。</p>
                     </div>
                 </a>
             </div>
         </div>
     </section>
 
-    <section id="estimator" class="py-32 relative overflow-hidden bg-[#000]">
+    <section id="estimator" class="py-20 md:py-32 relative overflow-hidden bg-[#000]">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-[#000] to-[#000]"></div>
-        <div class="container mx-auto px-6 max-w-6xl relative z-10">
-            <div class="text-center mb-16 gsap-fade-up">
-                <span class="text-blue-500 font-bold text-xs tracking-[0.2em] uppercase mb-4 block font-en">AI ESTIMATION</span>
-                <h2 class="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">開発費用シミュレーター</h2>
-                <p class="text-slate-400 text-sm">プロジェクトの要件を選択するだけで、概算費用をリアルタイム算出します。</p>
+        <div class="container mx-auto px-4 md:px-6 max-w-6xl relative z-10">
+            <div class="text-center mb-12 md:mb-16 gsap-fade-up">
+                <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">AI ESTIMATION</span>
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight">開発費用シミュレーター</h2>
+                <p class="text-slate-400 text-xs md:text-sm px-4">プロジェクトの要件を選択するだけで、概算費用をリアルタイム算出します。</p>
             </div>
 
-            <div class="grid lg:grid-cols-12 gap-10 items-start">
-                <div class="lg:col-span-8 space-y-6">
+            <div class="grid lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+                <div class="lg:col-span-8 space-y-5 md:space-y-6">
                     
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q1</span> どのようなものを作りますか？
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q1</span> どのようなものを作りますか？
                             </h3>
-                            <div class="grid md:grid-cols-3 gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_type" value="50" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn"><i class="fas fa-desktop text-xl mb-1"></i><span>Webサイト/LP</span></div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_type" value="150" class="hidden" onchange="calcEstimate()"><div class="estimator-btn"><i class="fas fa-layer-group text-xl mb-1"></i><span>Webアプリ/SaaS</span></div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_type" value="300" class="hidden" onchange="calcEstimate()"><div class="estimator-btn"><i class="fas fa-mobile-alt text-xl mb-1"></i><span>モバイルアプリ</span></div></label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <label class="cursor-pointer block"><input type="radio" name="q_type" value="50" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn flex-row sm:flex-col"><i class="fas fa-desktop text-lg md:text-xl sm:mb-1"></i><span class="text-xs md:text-sm">Webサイト/LP</span></div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_type" value="150" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row sm:flex-col"><i class="fas fa-layer-group text-lg md:text-xl sm:mb-1"></i><span class="text-xs md:text-sm">Webアプリ/SaaS</span></div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_type" value="300" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row sm:flex-col"><i class="fas fa-mobile-alt text-lg md:text-xl sm:mb-1"></i><span class="text-xs md:text-sm">モバイルアプリ</span></div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q2</span> 規模・ページ数
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q2</span> 規模・ページ数
                             </h3>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="10" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-xs">小 (1-5p)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">中 (10-20p)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">大 (30p〜)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="150" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">大規模PF</div></label>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="10" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">小 (1-5p)</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">中 (10-20p)</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">大 (30p〜)</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_scale" value="150" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">大規模PF</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q3</span> デザイン・UI/UX
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q3</span> デザイン・UI/UX
                             </h3>
-                            <div class="grid md:grid-cols-3 gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_design" value="20" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-xs">テンプレート</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_design" value="60" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">オリジナル</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_design" value="120" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">ハイエンド演出</div></label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                                <label class="cursor-pointer block"><input type="radio" name="q_design" value="20" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">テンプレート</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_design" value="60" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">オリジナル</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_design" value="120" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">ハイエンド演出</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q4</span> ログイン機能
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q4</span> ログイン機能
                             </h3>
-                            <div class="grid md:grid-cols-3 gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-xs">なし</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">メール認証</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">SNS連携</div></label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">なし</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">メール認証</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">SNS連携</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-gradient-to-br from-indigo-900/10 to-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem] relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[8px] font-bold px-2 py-1 rounded-bl-lg">RECOMMEND</div>
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q5</span> 生成AI・LLM連携
+                        <div class="spotlight-content bg-gradient-to-br from-indigo-900/10 to-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem] relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[7px] md:text-[8px] font-bold px-2 py-1 rounded-bl-lg">RECOMMEND</div>
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q5</span> 生成AI・LLM連携
                             </h3>
-                            <div class="grid md:grid-cols-2 gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-xs">なし</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">ボット(GPT等)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="150" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">自社データ(RAG)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="300" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">自律型エージェント</div></label>
+                            <div class="grid grid-cols-2 gap-2 md:gap-3">
+                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">なし</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">ボット(GPT等)</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="150" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">自社データ(RAG)</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="300" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">自律型エージェント</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q6</span> 音声・画像認識 (複数選択可)
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q6</span> 音声・画像認識 (複数選択可)
                             </h3>
-                            <div class="flex flex-wrap gap-3">
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_voice" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-xs"><i class="fas fa-microphone"></i> 音声操作</div></label>
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_voice" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-xs"><i class="fas fa-volume-up"></i> 音声読上</div></label>
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_voice" value="60" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-xs"><i class="fas fa-camera"></i> 画像解析</div></label>
+                            <div class="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-3">
+                                <label class="cursor-pointer block flex-1"><input type="checkbox" name="q_voice" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-[11px] md:text-xs"><i class="fas fa-microphone"></i> 音声操作</div></label>
+                                <label class="cursor-pointer block flex-1"><input type="checkbox" name="q_voice" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-[11px] md:text-xs"><i class="fas fa-volume-up"></i> 音声読上</div></label>
+                                <label class="cursor-pointer block flex-1"><input type="checkbox" name="q_voice" value="60" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-[11px] md:text-xs"><i class="fas fa-camera"></i> 画像解析</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q7</span> 決済・外部連携 (複数選択可)
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q7</span> 決済・外部連携 (複数選択可)
                             </h3>
-                            <div class="grid md:grid-cols-3 gap-3">
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">決済 (Stripe)</div></label>
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">Maps連携</div></label>
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">基幹API連携</div></label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">決済 (Stripe)</div></label>
+                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">Maps連携</div></label>
+                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">基幹API連携</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q8</span> 管理機能 (CMS)
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q8</span> 管理機能 (CMS)
                             </h3>
-                            <div class="grid md:grid-cols-3 gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-xs">なし</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="30" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">標準CMS</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">高度な管理</div></label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">なし</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="30" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">標準CMS</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">高度な管理</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q9</span> インフラ・保守
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q9</span> インフラ・保守
                             </h3>
-                            <div class="grid md:grid-cols-3 gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="10" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-xs">標準サーバー</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">クラウド(AWS)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="100" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-xs">高負荷対応</div></label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="10" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">標準サーバー</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">クラウド(AWS)</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="100" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">高負荷対応</div></label>
                             </div>
                         </div>
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-6 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-sm font-bold text-white mb-5 flex items-center gap-3">
-                                <span class="bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q10</span> 希望納期
+                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
+                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
+                                <span class="bg-red-500/20 text-red-400 border border-red-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q10</span> 希望納期
                             </h3>
-                            <div class="flex gap-3">
+                            <div class="flex flex-col sm:flex-row gap-2 md:gap-3">
                                 <label class="cursor-pointer flex-1 block">
                                     <input type="radio" name="q_speed" value="1.0" class="hidden peer" checked onchange="calcEstimate()">
-                                    <div class="estimator-btn text-xs">通常 (2-3ヶ月)</div>
+                                    <div class="estimator-btn text-[11px] md:text-xs">通常 (2-3ヶ月)</div>
                                 </label>
                                 <label class="cursor-pointer flex-1 block">
                                     <input type="radio" name="q_speed" value="1.3" class="hidden peer" onchange="calcEstimate()">
-                                    <div class="estimator-btn text-xs bg-red-900/10 text-red-300 peer-checked:bg-red-600/20 peer-checked:border-red-500 peer-checked:text-white">特急 (1ヶ月) x1.3</div>
+                                    <div class="estimator-btn text-[11px] md:text-xs bg-red-900/10 text-red-300 peer-checked:bg-red-600/20 peer-checked:border-red-500 peer-checked:text-white">特急 (1ヶ月) x1.3</div>
                                 </label>
                             </div>
                         </div>
@@ -621,19 +635,19 @@
 
                 </div>
 
-                <div class="lg:col-span-4 relative">
-                    <div class="sticky top-28 space-y-4">
+                <div class="lg:col-span-4 relative mt-8 lg:mt-0">
+                    <div class="lg:sticky lg:top-24 space-y-4">
                         <div class="spotlight-card p-[1px]">
-                            <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-8 text-center">
+                            <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 text-center">
                                 <p class="text-slate-500 text-[10px] font-bold tracking-[0.2em] font-en mb-4">ESTIMATED COST</p>
                                 
-                                <div class="flex justify-center items-baseline gap-1 text-white mb-8">
-                                    <span class="text-xl font-bold text-slate-400">¥</span>
-                                    <span id="estimate-price" class="text-6xl font-black font-mono tracking-tighter text-white" style="text-shadow: 0 0 20px rgba(255,255,255,0.2);">70</span>
-                                    <span class="text-lg font-bold text-slate-400">万~</span>
+                                <div class="flex justify-center items-baseline gap-1 text-white mb-6 md:mb-8">
+                                    <span class="text-lg md:text-xl font-bold text-slate-400">¥</span>
+                                    <span id="estimate-price" class="text-5xl md:text-6xl lg:text-7xl font-black font-mono tracking-tighter text-white" style="text-shadow: 0 0 20px rgba(255,255,255,0.2);">70</span>
+                                    <span class="text-base md:text-lg font-bold text-slate-400">万~</span>
                                 </div>
 
-                                <div class="space-y-3 mb-8 border-t border-white/5 pt-6 text-xs text-slate-400">
+                                <div class="space-y-2 md:space-y-3 mb-6 md:mb-8 border-t border-white/5 pt-5 md:pt-6 text-[11px] md:text-xs text-slate-400">
                                     <div class="flex justify-between items-center">
                                         <span>基本開発費</span><span class="font-mono text-white" id="detail-base">¥0</span>
                                     </div>
@@ -645,10 +659,10 @@
                                     </div>
                                 </div>
 
-                                <a href="#contact" class="block w-full py-3.5 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                                <a href="#contact" class="block w-full py-3 md:py-3.5 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform text-xs md:text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                                     この内容で相談する
                                 </a>
-                                <p class="text-[9px] text-slate-600 mt-4">※税抜概算です。要件により変動します。</p>
+                                <p class="text-[8px] md:text-[9px] text-slate-600 mt-4">※税抜概算です。要件により変動します。</p>
                             </div>
                         </div>
                     </div>
@@ -658,47 +672,49 @@
         </div>
     </section>
 
-    <section id="contact" class="py-32 bg-card border-t border-white/5 relative z-10">
-        <div class="container mx-auto px-6 max-w-3xl text-center gsap-fade-up">
-            <h2 class="text-4xl font-black text-white mb-4">Contact</h2>
-            <p class="text-slate-400 mb-12 text-sm">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
+    <section id="contact" class="py-20 md:py-32 bg-card border-t border-white/5 relative z-10">
+        <div class="container mx-auto px-4 md:px-6 max-w-3xl text-center gsap-fade-up">
+            <h2 class="text-3xl md:text-4xl font-black text-white mb-3 md:mb-4">Contact</h2>
+            <p class="text-slate-400 mb-8 md:mb-12 text-xs md:text-sm">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
             
-            <form class="text-left bg-[#0a0a0a] p-8 md:p-12 rounded-[2rem] border border-white/10 shadow-2xl space-y-6 relative overflow-hidden">
+            <form class="text-left bg-[#0a0a0a] p-6 sm:p-8 md:p-12 rounded-2xl md:rounded-[2rem] border border-white/10 shadow-2xl space-y-5 md:space-y-6 relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-                <div class="grid md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2">お名前 <span class="text-red-500">*</span></label>
-                        <input type="text" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-sm" placeholder="山田 太郎">
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2">お名前 <span class="text-red-500">*</span></label>
+                        <input type="text" required class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 md:p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-xs md:text-sm" placeholder="山田 太郎">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2">メールアドレス <span class="text-red-500">*</span></label>
-                        <input type="email" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-sm" placeholder="example@laruvisona.co.jp">
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2">メールアドレス <span class="text-red-500">*</span></label>
+                        <input type="email" required class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 md:p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-xs md:text-sm" placeholder="example@laruvisona.co.jp">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 mb-2">メッセージ <span class="text-red-500">*</span></label>
-                    <textarea rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-sm" placeholder="具体的なご相談内容をご記入ください"></textarea>
+                    <label class="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2">メッセージ <span class="text-red-500">*</span></label>
+                    <textarea rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 md:p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-xs md:text-sm" placeholder="具体的なご相談内容をご記入ください"></textarea>
                 </div>
-                <div class="text-center pt-4">
-                    <button type="submit" class="bg-white text-black font-bold py-3.5 px-12 rounded-full hover:scale-105 transition-transform text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                        送信する <i class="fas fa-paper-plane ml-2"></i>
+                <div class="text-center pt-2 md:pt-4">
+                    <button type="submit" class="w-full sm:w-auto bg-white text-black font-bold py-3 md:py-3.5 px-8 md:px-12 rounded-full hover:scale-105 transition-transform text-xs md:text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                        送信する <i class="fas fa-paper-plane ml-1 md:ml-2"></i>
                     </button>
                 </div>
             </form>
         </div>
     </section>
 
-    <footer class="bg-[#000] text-slate-500 py-16 border-t border-white/5">
+    <footer class="bg-[#000] text-slate-500 py-12 md:py-16 border-t border-white/5">
         <div class="container mx-auto px-6 text-center">
-            <div class="text-2xl font-black tracking-tight font-en text-white mb-6">LARU<span class="font-light text-slate-600">Visona</span></div>
-            <div class="flex justify-center gap-6 text-xs font-bold mb-8">
+            <div class="text-xl md:text-2xl font-black tracking-tight font-en text-white mb-5 md:mb-6">LARU<span class="font-light text-slate-600">Visona</span></div>
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6 text-[10px] md:text-xs font-bold mb-6 md:mb-8">
                 <a href="terms.html" class="hover:text-white transition-colors">利用規約</a>
                 <a href="privacy.html" class="hover:text-white transition-colors">プライバシーポリシー</a>
                 <a href="tokusho.html" class="hover:text-white transition-colors">特商法に基づく表記</a>
             </div>
-            <p class="text-[10px] font-mono">&copy; 2026 LARUVisona Inc. All Rights Reserved.</p>
+            <p class="text-[9px] md:text-[10px] font-mono">&copy; 2026 LARUVisona Inc. All Rights Reserved.</p>
         </div>
     </footer>
+
+    <script src="https://larubot.tokyo/static/embed.js" data-public-id="1b60c5da-794d-492e-b4a7-a709e50696f1" defer></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js"></script>
@@ -724,7 +740,7 @@
             });
         });
 
-        // 🌟 3. AI 見積もり計算ロジック (Q1 ~ Q10 完全対応)
+        // 🌟 3. AI 見積もり計算ロジック
         function calcEstimate() {
             const getVal = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? parseInt(el.value) : 0; };
             const getMultiVal = (name) => { let sum = 0; document.querySelectorAll(`input[name="${name}"]:checked`).forEach(el => sum += parseInt(el.value)); return sum; };
@@ -808,7 +824,7 @@
                     setTimeout(() => {
                         gsap.to('#preloader', { opacity: 0, duration: 0.5, onComplete: () => document.getElementById('preloader').style.display = 'none' });
                         gsap.to('#header', { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
-                        gsap.from('.gsap-hero-elem', { y: 50, opacity: 0, duration: 1, stagger: 0.15, ease: 'power3.out', delay: 0.2 });
+                        gsap.from('.gsap-hero-elem', { y: 30, opacity: 0, duration: 1, stagger: 0.1, ease: 'power3.out', delay: 0.2 });
                         
                         try {
                             VANTA.GLOBE({
@@ -823,7 +839,7 @@
 
             // フェードアップ
             gsap.utils.toArray('.gsap-fade-up').forEach(elem => {
-                gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 85%" }, y: 40, opacity: 0, duration: 0.8, ease: "power3.out" });
+                gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 85%" }, y: 30, opacity: 0, duration: 0.8, ease: "power3.out" });
             });
         });
     </script>
