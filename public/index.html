@@ -789,7 +789,9 @@
                     setTimeout(() => {
                         gsap.to('#preloader', { opacity: 0, duration: 0.5, onComplete: () => document.getElementById('preloader').style.display = 'none' });
                         gsap.to('#header', { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
-                        gsap.from('.gsap-hero-elem', { y: 30, opacity: 0, duration: 1, stagger: 0.1, ease: 'power3.out', delay: 0.2 });
+                        
+                        // 🌟 ここを修正！(toに変更し、y:0, opacity:1 に向かって表示させる)
+                        gsap.to('.gsap-hero-elem', { y: 0, opacity: 1, duration: 1, stagger: 0.1, ease: 'power3.out', delay: 0.2 });
                         
                         try {
                             VANTA.GLOBE({
