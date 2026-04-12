@@ -13,7 +13,7 @@
     
     <meta property="og:title" content="株式会社LARUVisona | AI × Design × Tech">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://laruvisona.co.jp">
+    <meta property="og:url" content="https://laruvisona.jp">
     <meta property="og:image" content="https://larubot.tokyo/static/images/larubot_logo_original_transparent.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,9 +28,9 @@
                         mono: ['"Fira Code"', 'monospace'],
                     },
                     colors: {
-                        dark: '#000000',
-                        card: '#0a0a0a',
-                        border: '#222222',
+                        dark: '#030712',
+                        card: '#0f172a',
+                        border: '#1e293b',
                     }
                 }
             }
@@ -41,62 +41,52 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Rajdhani:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
-        /* --- 基本スタイル --- */
-        html { scroll-behavior: smooth; background-color: #000; }
-        body { background-color: #000; color: #f8fafc; overflow-x: hidden; font-family: 'Noto Sans JP', sans-serif; }
+        /* --- 究極のベーススタイル --- */
+        html { cursor: auto; background-color: #030712; }
+        @media (min-width: 768px) { html { cursor: none; } } /* PCのみカスタムカーソル */
+        body { background-color: #030712; color: #f8fafc; overflow-x: hidden; font-family: 'Noto Sans JP', sans-serif; }
         .font-en { font-family: 'Rajdhani', sans-serif; }
         
-        /* 🌟 最先端UI：スポットライトボーダー */
-        .spotlight-card {
-            position: relative; background: rgba(15, 15, 15, 0.5);
-            border-radius: 1.5rem; overflow: hidden;
+        /* 🌟 カスタムカーソル */
+        .cursor-dot {
+            position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: white;
+            border-radius: 50%; pointer-events: none; z-index: 10000;
+            transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s;
+            mix-blend-mode: difference;
         }
-        .spotlight-card::before {
-            content: ""; position: absolute; inset: 0;
-            background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.06), transparent 40%);
-            z-index: 0; pointer-events: none;
+        .cursor-outline {
+            position: fixed; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%); transition: transform 0.1s ease-out, width 0.2s, height 0.2s;
         }
-        .spotlight-card::after {
-            content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
-            background: radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), rgba(59, 130, 246, 0.8), transparent 40%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor; mask-composite: exclude; z-index: 1; pointer-events: none;
-        }
-        .spotlight-content { position: relative; z-index: 10; height: 100%; }
+        a:hover ~ .cursor-dot, button:hover ~ .cursor-dot, label:hover ~ .cursor-dot { width: 60px; height: 60px; background: rgba(255,255,255,0.1); mix-blend-mode: normal; backdrop-filter: blur(4px); }
+        a:hover ~ .cursor-outline, button:hover ~ .cursor-outline, label:hover ~ .cursor-outline { opacity: 0; }
+
+        /* 🌟 スポットライトボーダー */
+        .spotlight-card { position: relative; background: rgba(15, 23, 42, 0.4); border-radius: 1.5rem; overflow: hidden; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @media (min-width: 768px) { .spotlight-card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; } }
+        .spotlight-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(59,130,246,0.1), transparent 40%); z-index: 0; pointer-events: none; }
+        .spotlight-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(96, 165, 250, 0.8), transparent 40%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; z-index: 1; pointer-events: none; }
+        .spotlight-content { position: relative; z-index: 10; height: 100%; backdrop-filter: blur(10px); }
 
         /* グラスモーフィズム */
-        .glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .glass-nav { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .glass-nav { background: rgba(3, 7, 18, 0.6); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(255,255,255,0.05); }
 
         /* 巨大グラデーションテキスト */
-        .text-gradient-super {
-            background: linear-gradient(135deg, #fff 0%, #94a3b8 50%, #3b82f6 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-        }
+        .text-gradient-super { background: linear-gradient(135deg, #fff 0%, #94a3b8 50%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
         /* アニメーション要素 */
         .marquee-track { display: flex; gap: 3rem; animation: marquee 30s linear infinite; width: max-content; }
-        .marquee-item { font-size: 1rem; font-weight: bold; color: #475569; display: flex; align-items: center; gap: 0.5rem; }
-        @media (min-width: 768px) {
-            .marquee-track { gap: 4rem; }
-            .marquee-item { font-size: 1.2rem; }
-        }
+        .marquee-item { font-size: 1rem; font-weight: 900; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.3); display: flex; align-items: center; gap: 0.5rem; transition: 0.3s; }
+        .marquee-item:hover { color: #fff; -webkit-text-stroke: 0px; text-shadow: 0 0 20px rgba(59,130,246,0.8); }
+        @media (min-width: 768px) { .marquee-track { gap: 4rem; } .marquee-item { font-size: 1.5rem; } }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        @keyframes blob { 0% { transform: translate(0px, 0px) scale(1); } 33% { transform: translate(30px, -50px) scale(1.1); } 66% { transform: translate(-20px, 20px) scale(0.9); } 100% { transform: translate(0px, 0px) scale(1); } }
-        .animate-blob { animation: blob 7s infinite; }
 
-        /* 1. ボイスUIセクション用 */
-        .voice-circle {
-            position: relative; width: 100px; height: 100px; border-radius: 50%;
-            background: linear-gradient(135deg, #0ea5e9, #4f46e5);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
-        }
-        @media (min-width: 768px) {
-            .voice-circle { width: 120px; height: 120px; }
-        }
+        /* ボイスUIセクション */
+        .voice-circle { position: relative; width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #4f46e5); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); }
+        @media (min-width: 768px) { .voice-circle { width: 120px; height: 120px; } }
         .voice-circle:hover { transform: scale(1.05); box-shadow: 0 0 50px rgba(59, 130, 246, 0.6); }
-        .voice-circle.active { animation: pulse-voice 1.5s infinite; background: #ef4444; }
+        .voice-circle.active { animation: pulse-voice 1.5s infinite; background: #ef4444; box-shadow: 0 0 60px rgba(244, 63, 94, 0.6); }
         .voice-waves { display: flex; gap: 6px; align-items: center; justify-content: center; height: 50px; margin-top: 20px; opacity: 0; transition: opacity 0.3s; }
         .voice-waves.active { opacity: 1; }
         .wave-bar { width: 4px; background: #3b82f6; border-radius: 4px; animation: wave 0.5s infinite ease-in-out alternate; }
@@ -108,74 +98,43 @@
         @keyframes pulse-voice { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 30px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         @keyframes wave { 0% { transform: scaleY(0.5); } 100% { transform: scaleY(1.2); } }
 
-        /* 2. Dev Mode */
-        .dev-switch {
-            position: relative; width: 40px; height: 22px; background: rgba(255,255,255,0.1);
-            border-radius: 99px; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2);
-        }
-        .dev-switch::after {
-            content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
-            background: #94a3b8; border-radius: 50%; transition: 0.3s;
-        }
+        /* Dev Mode */
+        .dev-switch { position: relative; width: 40px; height: 22px; background: rgba(255,255,255,0.1); border-radius: 99px; cursor: pointer; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2); }
+        .dev-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #94a3b8; border-radius: 50%; transition: 0.3s; }
         .dev-switch.active { background: #22c55e; border-color: #22c55e; }
         .dev-switch.active::after { left: 20px; background: white; }
-
-        body.dev-mode {
-            background-color: #0d1117 !important; color: #00ff00 !important; font-family: 'Fira Code', monospace !important;
-            background-image: linear-gradient(rgba(0, 255, 0, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
+        body.dev-mode { background-color: #050505 !important; color: #22c55e !important; font-family: 'Fira Code', monospace !important; background-image: radial-gradient(rgba(34, 197, 94, 0.15) 1px, transparent 1px); background-size: 24px 24px; }
         body.dev-mode * { border-radius: 0 !important; box-shadow: none !important; backdrop-filter: none !important; }
-        body.dev-mode header, body.dev-mode .glass-panel, body.dev-mode footer { background: rgba(0, 0, 0, 0.9) !important; border: 1px solid #00ff00 !important; }
-        body.dev-mode h1, body.dev-mode h2, body.dev-mode h3 { color: #00ff00 !important; }
-        body.dev-mode .text-gradient-super { -webkit-text-fill-color: #00ff00 !important; background: none !important; }
-        body.dev-mode img { filter: grayscale(100%) contrast(200%); border: 1px solid #00ff00; opacity: 0.5; }
+        body.dev-mode header, body.dev-mode .glass-nav, body.dev-mode footer { background: rgba(0, 0, 0, 0.9) !important; border: 1px solid #22c55e !important; }
+        body.dev-mode h1, body.dev-mode h2, body.dev-mode h3 { color: #22c55e !important; text-shadow: 0 0 10px rgba(34,197,94,0.5); }
+        body.dev-mode .text-gradient-super { -webkit-text-fill-color: #22c55e !important; background: none !important; }
 
-        /* 3. 見積もりボタン用スタイル */
-        .estimator-btn {
-            background: rgba(20, 20, 20, 0.6);
-            padding: 1rem 0.5rem; 
-            border-radius: 1rem; 
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            text-align: center; 
-            color: #94a3b8;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-weight: 600; 
-            height: 100%;
-            display: flex; 
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        @media (min-width: 768px) {
-            .estimator-btn { padding: 1.2rem 1rem; gap: 0.75rem; }
-        }
-        .estimator-btn:hover { 
-            background: rgba(255, 255, 255, 0.05); 
-            border-color: rgba(255, 255, 255, 0.2); 
-            color: #e2e8f0; 
-            transform: translateY(-2px);
-        }
-        input:checked + .estimator-btn {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: #3b82f6;
-            color: #fff;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), inset 0 0 10px rgba(59, 130, 246, 0.1);
-            transform: scale(1.02);
-        }
+        /* AI見積もりボタン */
+        .estimator-btn { background: rgba(20, 20, 20, 0.6); padding: 1rem 0.5rem; border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.05); text-align: center; color: #94a3b8; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 600; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;}
+        @media (min-width: 768px) { .estimator-btn { padding: 1.2rem 1rem; gap: 0.75rem; } }
+        .estimator-btn:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; transform: translateY(-2px); }
+        input:checked + .estimator-btn { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #fff; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), inset 0 0 10px rgba(59, 130, 246, 0.1); transform: scale(1.02); }
         .estimator-btn.flex-row { flex-direction: row; }
 
+        /* 🌟 フルスクリーンモバイルメニュー */
+        #mobile-menu { clip-path: circle(0px at top right); transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        #mobile-menu.active { clip-path: circle(150% at top right); }
+        .menu-link { transform: translateY(20px); opacity: 0; transition: all 0.4s ease; }
+        #mobile-menu.active .menu-link { transform: translateY(0); opacity: 1; }
+
+        /* 🌟 ドラッグ横スクロール用 */
+        #horizontal-scroll.active { cursor: grabbing; cursor: -webkit-grabbing; }
+        
         /* スクロールバー隠し */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::-webkit-scrollbar { width: 0px; height: 0px; }
     </style>
 </head>
 <body class="antialiased selection:bg-blue-500 selection:text-white relative">
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MVQ8TDBF" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     
+    <div class="cursor-dot hidden md:block"></div>
+    <div class="cursor-outline hidden md:block"></div>
+
     <div id="preloader" class="fixed inset-0 z-[10000] bg-dark flex flex-col justify-center items-center">
         <div class="font-en text-2xl md:text-3xl font-black tracking-[0.3em] text-white animate-pulse">LARU<span class="text-blue-500">VISONA</span></div>
         <div class="w-32 md:w-48 h-1 bg-border mt-6 rounded overflow-hidden">
@@ -184,57 +143,57 @@
     </div>
 
     <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] md:w-[40vw] md:h-[40vw] rounded-full bg-blue-600/20 blur-[100px] md:blur-[120px] animate-blob"></div>
-        <div class="absolute top-[20%] right-[-10%] w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] rounded-full bg-indigo-600/20 blur-[100px] md:blur-[120px] animate-blob" style="animation-delay: 2s;"></div>
+        <div class="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] md:w-[40vw] md:h-[40vw] rounded-full bg-blue-600/20 blur-[100px] md:blur-[120px] parallax-blob" data-speed="0.05"></div>
+        <div class="absolute top-[40%] right-[-10%] w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] rounded-full bg-indigo-600/20 blur-[100px] md:blur-[120px] parallax-blob" data-speed="-0.03"></div>
     </div>
 
     <header class="fixed w-full z-50 py-3 md:py-4 transition-all duration-500 opacity-0" id="header" style="transform: translateY(-20px);">
-        <div class="container mx-auto px-4 md:px-6 flex justify-between items-center glass-nav rounded-full p-2 md:p-3 pl-4 md:pl-6 shadow-2xl border border-white/5">
-            <a href="#" class="flex items-center gap-2 md:gap-3 group shrink-0">
-                <div class="w-8 h-8 md:w-10 md:h-10 bg-white text-black rounded-full flex items-center justify-center font-black text-lg md:text-xl font-en shadow-[0_0_15px_rgba(255,255,255,0.3)] group-hover:scale-110 transition-transform">L</div>
+        <div class="container mx-auto px-4 md:px-6 flex justify-between items-center glass-nav rounded-2xl md:rounded-full p-2 md:p-3 pl-4 md:pl-6 shadow-2xl border border-white/5">
+            <a href="#" class="flex items-center gap-2 md:gap-3 group shrink-0 magnetic-element">
+                <div class="w-8 h-8 md:w-10 md:h-10 bg-white text-black rounded-xl md:rounded-full flex items-center justify-center font-black text-lg md:text-xl font-en shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-transform duration-300 group-hover:rotate-12">L</div>
                 <div class="flex flex-col">
                     <span class="text-base md:text-lg font-bold tracking-tight text-white leading-none font-en">LARU<span class="font-light text-slate-400">Visona</span></span>
                 </div>
             </a>
             
             <div class="flex items-center gap-3 md:gap-4">
-                <div class="hidden md:flex items-center gap-2 mr-2" title="Developer Mode">
-                    <i class="fas fa-code text-slate-400 text-xs"></i>
-                    <div class="dev-switch" id="dev-mode-toggle"></div>
+                <div class="hidden md:flex items-center gap-2 mr-2 magnetic-element cursor-pointer" title="Developer Mode" id="dev-mode-toggle">
+                    <i class="fas fa-terminal text-slate-400 text-xs"></i>
+                    <div class="dev-switch"></div>
                 </div>
 
                 <nav class="hidden md:flex items-center gap-1 font-bold text-xs text-slate-300 bg-white/5 rounded-full px-1 p-1 backdrop-blur-md border border-white/5">
-                    <a href="#about" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all">About</a>
-                    <a href="#services" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all">Services</a>
-                    <a href="#product" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all">Product</a>
-                    <a href="#estimator" class="text-blue-400 hover:text-white hover:bg-blue-600 px-4 lg:px-5 py-2.5 rounded-full transition-all flex items-center gap-2">
+                    <a href="#about" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all magnetic-element">About</a>
+                    <a href="#services" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all magnetic-element">Services</a>
+                    <a href="#product" class="hover:text-white hover:bg-white/10 px-4 lg:px-5 py-2.5 rounded-full transition-all magnetic-element">Product</a>
+                    <a href="#estimator" class="text-blue-400 hover:text-white hover:bg-blue-600 px-4 lg:px-5 py-2.5 rounded-full transition-all flex items-center gap-2 magnetic-element">
                         <i class="fas fa-calculator"></i> AI見積もり
                     </a>
                 </nav>
 
-                <a href="#contact" class="hidden md:flex bg-white text-slate-900 px-5 lg:px-7 py-2.5 lg:py-3 rounded-full font-bold text-xs lg:text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] transform hover:-translate-y-0.5 items-center gap-2 shrink-0 group">
+                <a href="#contact" class="hidden md:flex bg-white text-slate-900 px-5 lg:px-7 py-2.5 lg:py-3 rounded-full font-bold text-xs lg:text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] items-center gap-2 shrink-0 group magnetic-element">
                     Contact <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </a>
                 
-                <button class="md:hidden text-white text-lg w-10 h-10 flex items-center justify-center bg-white/10 rounded-full border border-white/10" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
-                    <i class="fas fa-bars"></i>
+                <button id="menu-toggle" class="md:hidden text-white text-lg w-10 h-10 flex items-center justify-center bg-white/10 rounded-xl border border-white/10 relative z-[60]">
+                    <i class="fas fa-bars transition-transform duration-300"></i>
                 </button>
             </div>
         </div>
         
-        <div id="mobile-menu" class="hidden md:hidden glass-panel m-4 rounded-2xl p-6 shadow-2xl absolute w-[calc(100%-2rem)] top-16 border border-white/10 backdrop-blur-xl z-50 bg-[#0a0a0a]/95">
-            <div class="flex flex-col space-y-4 font-bold text-slate-300 text-center">
-                <a href="#about" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">About</a>
-                <a href="#services" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Services</a>
-                <a href="#product" class="block py-3 hover:text-white hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Product</a>
-                <a href="#estimator" class="block py-3 text-blue-400 hover:bg-white/5 rounded-xl" onclick="document.getElementById('mobile-menu').classList.add('hidden')">AI見積もり</a>
-                <a href="#contact" class="block py-4 bg-white text-slate-900 rounded-xl shadow-lg" onclick="document.getElementById('mobile-menu').classList.add('hidden')">お問い合わせ</a>
+        <div id="mobile-menu" class="fixed inset-0 bg-[#030712]/95 backdrop-blur-2xl z-[55] flex flex-col justify-center items-center">
+            <div class="flex flex-col space-y-8 font-black text-4xl text-center tracking-tighter w-full px-6 font-en">
+                <a href="#about" class="menu-link text-white hover:text-blue-500 border-b border-white/10 pb-4">ABOUT</a>
+                <a href="#services" class="menu-link text-white hover:text-blue-500 border-b border-white/10 pb-4" style="transition-delay: 0.1s;">SERVICES</a>
+                <a href="#product" class="menu-link text-white hover:text-blue-500 border-b border-white/10 pb-4" style="transition-delay: 0.2s;">PRODUCT</a>
+                <a href="#estimator" class="menu-link text-blue-400 border-b border-white/10 pb-4" style="transition-delay: 0.3s;">ESTIMATOR</a>
+                <a href="#contact" class="menu-link text-brand-accent mt-4" style="transition-delay: 0.4s;">CONTACT US</a>
             </div>
         </div>
     </header>
 
     <section class="relative h-screen flex flex-col items-center justify-center overflow-hidden px-4" id="hero-section">
-        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-[#000]/50 to-[#000] z-0"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-dark/50 to-dark z-0"></div>
         
         <div class="container mx-auto relative z-10 text-center">
             <div class="gsap-hero-elem opacity-0 translate-y-10">
@@ -247,7 +206,7 @@
                 </div>
             </div>
             
-            <h1 class="gsap-hero-elem opacity-0 translate-y-10 text-6xl sm:text-7xl md:text-[7rem] lg:text-[9rem] font-black tracking-tighter leading-[1.1] mb-6 md:mb-8">
+            <h1 class="gsap-hero-elem opacity-0 translate-y-10 text-6xl sm:text-7xl md:text-[8rem] lg:text-[10rem] font-black tracking-tighter leading-[1.1] mb-6 md:mb-8" id="hero-title">
                 <span class="text-gradient-super block">IMAGINE.</span>
                 <span class="text-white block" style="text-shadow: 0 10px 40px rgba(59,130,246,0.2);">IMPLEMENT.</span>
             </h1>
@@ -258,8 +217,8 @@
             </p>
             
             <div class="gsap-hero-elem opacity-0 translate-y-10 flex flex-col sm:flex-row justify-center gap-4 md:gap-6">
-                <a href="#services" class="bg-white text-slate-900 px-8 md:px-12 py-3.5 md:py-4 rounded-full font-bold hover:bg-slate-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] text-sm md:text-lg flex items-center justify-center gap-2 group">
-                    事業内容を見る <i class="fas fa-arrow-down group-hover:translate-y-1 transition-transform"></i>
+                <a href="#services" class="magnetic-element bg-white text-slate-900 px-8 md:px-12 py-3.5 md:py-4 rounded-full font-bold hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.2)] text-sm md:text-lg flex items-center justify-center gap-2 group">
+                    Discover <i class="fas fa-arrow-down group-hover:translate-y-1 transition-transform"></i>
                 </a>
             </div>
         </div>
@@ -267,20 +226,18 @@
 
     <section class="py-8 md:py-12 border-y border-white/5 bg-white/5 backdrop-blur-sm overflow-hidden relative z-20">
         <div class="marquee-track">
-            <div class="marquee-item"><i class="fab fa-python"></i> Python</div>
-            <div class="marquee-item"><i class="fab fa-react"></i> React</div>
-            <div class="marquee-item"><i class="fas fa-robot"></i> OpenAI / Gemini</div>
+            <div class="marquee-item"><i class="fab fa-python"></i> PYTHON</div>
+            <div class="marquee-item"><i class="fab fa-react"></i> REACT</div>
+            <div class="marquee-item"><i class="fas fa-robot"></i> GENERATIVE AI</div>
             <div class="marquee-item"><i class="fab fa-aws"></i> AWS</div>
-            <div class="marquee-item"><i class="fab fa-docker"></i> Docker</div>
-            <div class="marquee-item"><i class="fas fa-database"></i> PostgreSQL</div>
-            <div class="marquee-item"><i class="fab fa-js"></i> TypeScript</div>
-            <div class="marquee-item"><i class="fab fa-python"></i> Python</div>
-            <div class="marquee-item"><i class="fab fa-react"></i> React</div>
-            <div class="marquee-item"><i class="fas fa-robot"></i> OpenAI / Gemini</div>
+            <div class="marquee-item"><i class="fab fa-docker"></i> DOCKER</div>
+            <div class="marquee-item"><i class="fas fa-database"></i> POSTGRESQL</div>
+            <div class="marquee-item"><i class="fab fa-js"></i> TYPESCRIPT</div>
+            <div class="marquee-item"><i class="fab fa-python"></i> PYTHON</div>
+            <div class="marquee-item"><i class="fab fa-react"></i> REACT</div>
+            <div class="marquee-item"><i class="fas fa-robot"></i> GENERATIVE AI</div>
             <div class="marquee-item"><i class="fab fa-aws"></i> AWS</div>
-            <div class="marquee-item"><i class="fab fa-docker"></i> Docker</div>
-            <div class="marquee-item"><i class="fas fa-database"></i> PostgreSQL</div>
-            <div class="marquee-item"><i class="fab fa-js"></i> TypeScript</div>
+            <div class="marquee-item"><i class="fab fa-docker"></i> DOCKER</div>
         </div>
     </section>
 
@@ -289,7 +246,7 @@
             <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                 <div class="gsap-fade-up">
                     <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">WHO WE ARE</span>
-                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 md:mb-8 leading-tight">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 md:mb-8 leading-tight tracking-tight">
                         未来の景色を、<br>
                         テクノロジーで描く。
                     </h2>
@@ -299,33 +256,33 @@
                     <p class="text-slate-400 leading-relaxed mb-6 md:mb-8 text-sm md:text-base">
                         私たちは単なるシステム開発会社ではありません。AIという新たな「人格」をビジネスに宿らせ、御社が描く「展望」を最短距離で実現するパートナーです。
                     </p>
-                    <div class="bg-white/5 rounded-2xl p-5 md:p-6 border border-white/5 backdrop-blur-sm">
+                    <div class="bg-card/50 rounded-2xl p-5 md:p-8 border border-white/5 backdrop-blur-md">
                         <table class="w-full text-left text-xs md:text-sm">
                             <tr class="border-b border-white/5">
-                                <th class="py-2.5 md:py-3 text-slate-500 w-24 md:w-32">会社名</th>
-                                <td class="py-2.5 md:py-3 text-slate-200 font-bold">株式会社LARUVisona</td>
+                                <th class="py-3 text-slate-500 w-24 md:w-32 font-normal">会社名</th>
+                                <td class="py-3 text-slate-200 font-bold">株式会社LARUVisona</td>
                             </tr>
                             <tr class="border-b border-white/5">
-                                <th class="py-2.5 md:py-3 text-slate-500">設立</th>
-                                <td class="py-2.5 md:py-3 text-slate-200">2026年4月1日</td>
+                                <th class="py-3 text-slate-500 font-normal">設立</th>
+                                <td class="py-3 text-slate-200">2026年4月1日</td>
                             </tr>
                             <tr class="border-b border-white/5">
-                                <th class="py-2.5 md:py-3 text-slate-500 align-top">所在地</th>
-                                <td class="py-2.5 md:py-3 text-slate-200"> 東京都豊島区南大塚<br class="md:hidden">１丁目２２−２　CASA大塚１０１</td>
+                                <th class="py-3 text-slate-500 align-top font-normal">所在地</th>
+                                <td class="py-3 text-slate-200">東京都板橋区 (Head Office)</td>
                             </tr>
                             <tr>
-                                <th class="py-2.5 md:py-3 text-slate-500 align-top">事業内容</th>
-                                <td class="py-2.5 md:py-3 text-slate-200">AI SaaS事業（LARUbot）<br>Webシステム受託開発 / DX支援</td>
+                                <th class="py-3 text-slate-500 align-top font-normal">事業内容</th>
+                                <td class="py-3 text-slate-200 leading-relaxed">AI SaaS事業（LARUbot）<br>Webシステム受託開発 / DX支援</td>
                             </tr>
                         </table>
                     </div>
                 </div>
-                <div class="relative gsap-fade-up mt-8 lg:mt-0">
-                    <div class="absolute -inset-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] blur-2xl opacity-20"></div>
-                    <div class="spotlight-card rounded-[2rem] p-1 h-64 md:h-96 w-full flex items-center justify-center relative bg-[#0a0a0a]">
-                        <div class="text-center spotlight-content flex flex-col items-center justify-center w-full h-full">
-                            <i class="fas fa-layer-group text-5xl md:text-6xl text-white/20 mb-3 md:mb-4"></i>
-                            <p class="text-slate-500 font-en text-sm md:text-lg tracking-widest">VISUALIZING...</p>
+                <div class="relative gsap-fade-up mt-8 lg:mt-0 flex justify-center">
+                    <div class="w-full aspect-square max-w-md rounded-[2rem] border border-white/10 bg-gradient-to-br from-blue-500/10 to-transparent backdrop-blur-md p-8 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.2),_transparent_70%)] animate-pulse"></div>
+                        <div class="text-center relative z-10">
+                            <i class="fas fa-cube text-6xl text-white/30 mb-4 animate-[spin_10s_linear_infinite]"></i>
+                            <p class="text-slate-400 font-en tracking-widest text-sm">SYSTEM ARCHITECTURE</p>
                         </div>
                     </div>
                 </div>
@@ -333,119 +290,118 @@
         </div>
     </section>
 
-    <section id="services" class="py-20 md:py-32 relative bg-card border-y border-white/5">
-        <div class="container mx-auto px-6 max-w-7xl">
-            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-end mb-16 md:mb-20 gsap-fade-up gap-6">
-                <div>
-                    <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">WHAT WE DO</span>
-                    <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.2]">
-                        論理と、<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">感情。</span>
-                    </h2>
+    <section id="services" class="py-20 md:py-32 relative bg-[#030712] border-y border-white/5 overflow-hidden">
+        <div class="container mx-auto px-6 max-w-7xl mb-10 md:mb-16 gsap-fade-up">
+            <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">WHAT WE DO</span>
+            <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-[1.2] tracking-tight">
+                論理と、<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">感情。</span>
+            </h2>
+            <p class="text-slate-400 text-sm md:text-lg mt-6 max-w-xl">PCはドラッグ、スマホはスワイプで横にスクロールできます。</p>
+        </div>
+
+        <div class="pl-6 md:pl-10 lg:pl-0 lg:ml-[calc((100vw-1280px)/2)] pb-10 overflow-x-auto hide-scrollbar flex gap-6 md:gap-8" id="horizontal-scroll" style="-webkit-overflow-scrolling: touch;">
+            
+            <div class="spotlight-card p-[1px] min-w-[300px] md:min-w-[400px] h-[400px] md:h-[450px] flex-shrink-0 select-none">
+                <div class="spotlight-content bg-card rounded-[1.4rem] p-6 md:p-8 flex flex-col h-full pointer-events-none">
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-blue-500/10 text-blue-400 rounded-xl md:rounded-2xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-blue-500/20"><i class="fas fa-code"></i></div>
+                    <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">Web / SaaS 開発</h3>
+                    <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">最新のフレームワークを用いたモダンな技術選定により、高速かつ拡張性の高いWebアプリケーションを構築します。</p>
+                    <ul class="space-y-2 md:space-y-3 text-[11px] md:text-sm text-slate-300 font-medium">
+                        <li class="flex items-center"><i class="fas fa-check text-blue-500 mr-2 md:mr-3"></i>モダンフロントエンド (React)</li>
+                        <li class="flex items-center"><i class="fas fa-check text-blue-500 mr-2 md:mr-3"></i>堅牢なバックエンド (Python)</li>
+                    </ul>
                 </div>
-                <p class="text-slate-400 text-sm md:text-lg max-w-md leading-relaxed border-l-2 border-slate-700 pl-4 md:pl-6">
-                    論理的なシステム構築と、感情に響くUXデザイン。<br>
-                    この両輪で、選ばれ続けるプロダクトを生み出します。
-                </p>
             </div>
 
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="cards-container">
-                <div class="spotlight-card p-[1px] min-h-[340px] md:min-h-[380px] gsap-fade-up">
-                    <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 flex flex-col">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-blue-500/20"><i class="fas fa-code"></i></div>
-                        <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">Web / SaaS 開発</h3>
-                        <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">モダンな技術選定により、高速かつ拡張性の高いWebサイト・アプリケーションを構築します。</p>
-                        <ul class="space-y-2 text-[11px] md:text-xs text-slate-500 font-bold">
-                            <li class="flex items-center"><i class="fas fa-arrow-right text-blue-500 mr-2"></i>コーポレートサイト / LP</li>
-                            <li class="flex items-center"><i class="fas fa-arrow-right text-blue-500 mr-2"></i>Webアプリ / SaaS構築</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="spotlight-card p-[1px] min-h-[340px] md:min-h-[380px] gsap-fade-up delay-100">
-                    <div class="spotlight-content bg-gradient-to-br from-indigo-900/20 to-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 flex flex-col relative overflow-hidden">
-                        <div class="absolute top-0 right-0 bg-blue-600 text-white text-[9px] md:text-[10px] font-bold px-3 py-1 rounded-bl-lg tracking-widest">MAIN</div>
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-indigo-500/20"><i class="fas fa-brain"></i></div>
-                        <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">AIソリューション</h3>
-                        <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">自社SaaS「LARUbot」のノウハウを活かし、LLMを組み込んだ業務効率化システムを開発します。</p>
-                        <ul class="space-y-2 text-[11px] md:text-xs text-slate-500 font-bold">
-                            <li class="flex items-center"><i class="fas fa-arrow-right text-indigo-500 mr-2"></i>チャットボット導入支援</li>
-                            <li class="flex items-center"><i class="fas fa-arrow-right text-indigo-500 mr-2"></i>社内ナレッジ検索AI (RAG)</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="spotlight-card p-[1px] min-h-[340px] md:min-h-[380px] gsap-fade-up delay-200">
-                    <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 flex flex-col">
-                        <div class="w-12 h-12 md:w-14 md:h-14 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-purple-500/20"><i class="fas fa-lightbulb"></i></div>
-                        <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">DXコンサルティング</h3>
-                        <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">「何から始めればいいかわからない」という課題に対し、業務フローの整理からツールの選定まで伴走します。</p>
-                        <ul class="space-y-2 text-[11px] md:text-xs text-slate-500 font-bold">
-                            <li class="flex items-center"><i class="fas fa-arrow-right text-purple-500 mr-2"></i>業務フロー可視化</li>
-                            <li class="flex items-center"><i class="fas fa-arrow-right text-purple-500 mr-2"></i>デジタルツール選定</li>
-                        </ul>
-                    </div>
+            <div class="spotlight-card p-[1px] min-w-[300px] md:min-w-[400px] h-[400px] md:h-[450px] flex-shrink-0 select-none">
+                <div class="spotlight-content bg-gradient-to-br from-indigo-900/40 to-card rounded-[1.4rem] p-6 md:p-8 flex flex-col relative overflow-hidden h-full pointer-events-none border border-indigo-500/20">
+                    <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] md:text-[10px] font-bold px-3 py-1 rounded-bl-xl tracking-widest font-en">MAIN</div>
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-indigo-500/20 text-indigo-300 rounded-xl md:rounded-2xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-indigo-400/30"><i class="fas fa-brain"></i></div>
+                    <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">AIソリューション</h3>
+                    <p class="text-indigo-200/80 leading-relaxed text-xs md:text-sm mb-6 flex-grow">自社SaaS「LARUbot」のノウハウを活かし、Gemini APIなどのLLMを組み込んだ業務効率化システムを開発。</p>
+                    <ul class="space-y-2 md:space-y-3 text-[11px] md:text-sm text-indigo-100 font-medium">
+                        <li class="flex items-center"><i class="fas fa-check text-indigo-400 mr-2 md:mr-3"></i>チャットボット導入支援</li>
+                        <li class="flex items-center"><i class="fas fa-check text-indigo-400 mr-2 md:mr-3"></i>社内ナレッジ検索AI (RAG)</li>
+                    </ul>
                 </div>
             </div>
+
+            <div class="spotlight-card p-[1px] min-w-[300px] md:min-w-[400px] h-[400px] md:h-[450px] flex-shrink-0 select-none">
+                <div class="spotlight-content bg-card rounded-[1.4rem] p-6 md:p-8 flex flex-col h-full pointer-events-none">
+                    <div class="w-12 h-12 md:w-16 md:h-16 bg-purple-500/10 text-purple-400 rounded-xl md:rounded-2xl flex items-center justify-center text-xl md:text-2xl mb-6 md:mb-8 border border-purple-500/20"><i class="fas fa-chart-line"></i></div>
+                    <h3 class="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">アルゴリズム・HFT</h3>
+                    <p class="text-slate-400 leading-relaxed text-xs md:text-sm mb-6 flex-grow">Hyperliquid等のプラットフォームに向けた、高速処理が求められるアルゴリズムトレードシステムの設計と実装。</p>
+                    <ul class="space-y-2 md:space-y-3 text-[11px] md:text-sm text-slate-300 font-medium">
+                        <li class="flex items-center"><i class="fas fa-check text-purple-500 mr-2 md:mr-3"></i>ボット戦略構築</li>
+                        <li class="flex items-center"><i class="fas fa-check text-purple-500 mr-2 md:mr-3"></i>データ解析・バックテスト</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="min-w-[20px] md:min-w-[100px] flex-shrink-0"></div>
         </div>
     </section>
 
-    <section id="voice-demo" class="py-24 md:py-32 relative overflow-hidden flex items-center justify-center">
+    <section id="voice-demo" class="py-24 md:py-32 relative overflow-hidden flex items-center justify-center min-h-[60vh]">
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-[#000] to-[#000]"></div>
         <div class="container mx-auto px-6 relative z-10 text-center">
             <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">VOICE INTERFACE</span>
-            <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 md:mb-8 tracking-tight">声で操る、未来のUI体験。</h2>
-            <p class="text-slate-400 mb-10 md:mb-12 max-w-xl mx-auto text-xs md:text-base">
-                クリック操作を超えた体験を。下のコアを押し、「サービス」「問い合わせ」と話しかけてみてください。
+            <h2 class="text-3xl md:text-5xl font-black text-white mb-6 md:mb-8 tracking-tight">声で操る、未来のUI。</h2>
+            <p class="text-slate-400 mb-10 md:mb-16 max-w-xl mx-auto text-xs md:text-base">
+                クリック操作を超えた体験を。下のコアを押し、「サービス」「見積もり」と話しかけてみてください。
             </p>
 
             <div class="flex flex-col items-center">
-                <div id="voice-trigger-btn" class="voice-circle border border-white/20">
+                <div id="voice-trigger-btn" class="voice-circle border border-white/20 magnetic-element">
                     <i class="fas fa-microphone text-3xl md:text-4xl text-white drop-shadow-md"></i>
                 </div>
                 <div id="voice-waves" class="voice-waves">
                     <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
                 </div>
-                <p id="voice-status-text" class="mt-4 md:mt-6 text-blue-400 font-mono text-xs md:text-sm min-h-[30px] font-bold">SYSTEM_STANDBY...</p>
+                <p id="voice-status-text" class="mt-6 md:mt-8 text-blue-400 font-mono text-xs md:text-sm min-h-[30px] font-bold tracking-widest">SYSTEM_STANDBY</p>
             </div>
         </div>
     </section>
 
-    <section id="product" class="py-20 md:py-32 bg-card border-y border-white/5 relative overflow-hidden">
+    <section id="product" class="py-20 md:py-32 bg-[#0a0a0a] border-y border-white/5 relative overflow-hidden">
         <div class="container mx-auto px-6 max-w-7xl relative z-10">
             <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
                 <div class="lg:w-1/2 gsap-fade-up text-center lg:text-left">
                     <div class="inline-block bg-white/10 text-white text-[9px] md:text-[10px] font-bold px-3 py-1 rounded-full mb-3 md:mb-4 border border-white/10 font-en tracking-widest">FLAGSHIP PRODUCT</div>
-                    <h2 class="text-4xl md:text-5xl lg:text-7xl font-black mb-3 md:mb-4 font-en tracking-tight text-white">LARUbot</h2>
+                    <h2 class="text-4xl md:text-6xl font-black mb-3 md:mb-4 font-en tracking-tight text-white">LARUbot</h2>
                     <p class="text-slate-300 text-lg md:text-xl font-bold mb-4 md:mb-6">24時間働く、AI営業アシスタント</p>
-                    <p class="text-slate-400 leading-relaxed mb-8 md:mb-10 text-xs md:text-sm lg:text-base text-left">
+                    <p class="text-slate-400 leading-relaxed mb-8 md:mb-10 text-xs md:text-base text-left">
                         問い合わせ対応の自動化から顧客管理(CRM)、チャット内決済までを一元化。<br class="hidden md:block">専門知識がなくても、誰でも簡単にAIをビジネスに導入できるSaaSプラットフォームです。
                     </p>
                     <div class="flex flex-wrap justify-center lg:justify-start gap-4">
-                        <a href="https://larubot.tokyo" target="_blank" class="bg-white text-black font-bold py-3 md:py-3.5 px-6 md:px-8 rounded-full transition-transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)] flex items-center gap-2 text-xs md:text-sm">
+                        <a href="https://larubot.tokyo" target="_blank" class="magnetic-element bg-white text-black font-bold py-3 md:py-4 px-6 md:px-8 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.2)] flex items-center gap-2 text-xs md:text-sm">
                             公式サイトへ <i class="fas fa-external-link-alt"></i>
                         </a>
                     </div>
                 </div>
                 <div class="lg:w-1/2 w-full gsap-fade-up">
                     <div class="spotlight-card p-[1px] transform lg:rotate-2 hover:rotate-0 transition-all duration-700">
-                        <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8">
-                            <div class="flex items-center gap-2 md:gap-3 mb-5 md:mb-6 border-b border-white/10 pb-4">
-                                <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-500"></div>
-                                <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-500"></div>
-                                <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-500"></div>
-                                <span class="ml-2 text-[9px] md:text-[10px] font-mono text-slate-500">larubot-engine.sh</span>
+                        <div class="spotlight-content bg-[#0a0a0a] rounded-[1.4rem] p-6 md:p-8 border border-white/5">
+                            <div class="flex items-center justify-between mb-5 md:mb-6 border-b border-white/10 pb-4">
+                                <div class="flex items-center gap-2 md:gap-3">
+                                    <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-500"></div>
+                                    <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-500"></div>
+                                    <div class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-500"></div>
+                                </div>
+                                <span class="bg-blue-600 text-white text-[8px] md:text-[10px] px-2 py-1 rounded font-en tracking-widest">LIVE DEMO</span>
                             </div>
-                            <div class="space-y-4 md:space-y-6 font-medium text-xs md:text-sm">
+                            <div class="space-y-4 md:space-y-6 font-medium text-xs md:text-sm" id="chat-demo-container">
                                 <div class="flex gap-3 md:gap-4">
-                                    <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-[9px] md:text-[10px] font-bold shrink-0 text-white">AI</div>
-                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-2.5 md:p-3 border border-white/5 text-slate-200">御社の課題を教えてください。</div>
+                                    <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[9px] md:text-[10px] font-bold shrink-0 text-white"><i class="fas fa-robot"></i></div>
+                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-3 md:p-4 border border-white/5 text-slate-200">御社の課題を教えてください。</div>
                                 </div>
                                 <div class="flex gap-3 md:gap-4 flex-row-reverse">
-                                    <div class="bg-blue-600/20 border border-blue-500/30 rounded-tl-xl rounded-b-xl p-2.5 md:p-3 text-blue-100 text-right">サイトからの離脱率を改善したいです。</div>
+                                    <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-700 flex items-center justify-center text-[9px] md:text-[10px] font-bold shrink-0 text-white"><i class="fas fa-user"></i></div>
+                                    <div class="bg-blue-600 text-white rounded-tl-xl rounded-b-xl p-3 md:p-4 shadow-sm">サイトからの離脱率を改善したいです。</div>
                                 </div>
                                 <div class="flex gap-3 md:gap-4">
-                                    <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-[9px] md:text-[10px] font-bold shrink-0 text-white">AI</div>
-                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-2.5 md:p-3 border border-white/5 text-slate-200">それなら、私の出番ですね。<br>自動接客でCV率を向上させましょう。</div>
+                                    <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[9px] md:text-[10px] font-bold shrink-0 text-white"><i class="fas fa-robot"></i></div>
+                                    <div class="bg-white/5 rounded-tr-xl rounded-b-xl p-3 md:p-4 border border-white/5 text-slate-200">それなら、私の出番ですね。<br>プロアクティブ機能で自動接客しましょう！</div>
                                 </div>
                             </div>
                         </div>
@@ -455,28 +411,19 @@
         </div>
     </section>
 
-    <section class="py-20 md:py-24 border-b border-white/5">
+    <section class="py-20 border-b border-white/5">
         <div class="container mx-auto px-6 max-w-4xl">
-            <div class="flex justify-between items-end mb-8 md:mb-10">
-                <h2 class="text-xl md:text-2xl font-bold text-white font-en">NEWS</h2>
+            <div class="flex justify-between items-end mb-8">
+                <h2 class="text-xl md:text-2xl font-bold text-white font-en tracking-widest">NEWS</h2>
             </div>
             <div class="space-y-3">
                 <a href="#" class="block bg-white/5 border border-white/5 p-4 md:p-5 rounded-xl hover:bg-white/10 transition-colors group">
                     <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                         <div class="flex items-center gap-3">
-                            <span class="text-slate-500 font-mono text-[10px] md:text-xs">2025.12.20</span>
+                            <span class="text-slate-500 font-mono text-[10px] md:text-xs">2026.04.01</span>
                             <span class="bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold border border-blue-500/20">PRESS</span>
                         </div>
-                        <p class="text-slate-300 text-xs md:text-sm group-hover:text-white transition-colors mt-1 sm:mt-0">株式会社LARUVisonaとして法人化に向けた準備を開始しました。</p>
-                    </div>
-                </a>
-                <a href="#" class="block bg-white/5 border border-white/5 p-4 md:p-5 rounded-xl hover:bg-white/10 transition-colors group">
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                        <div class="flex items-center gap-3">
-                            <span class="text-slate-500 font-mono text-[10px] md:text-xs">2025.12.01</span>
-                            <span class="bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold border border-indigo-500/20">PRODUCT</span>
-                        </div>
-                        <p class="text-slate-300 text-xs md:text-sm group-hover:text-white transition-colors mt-1 sm:mt-0">AIチャットボットサービス「LARUbot」のβ版をリリースしました。</p>
+                        <p class="text-slate-300 text-xs md:text-sm group-hover:text-white transition-colors mt-1 sm:mt-0">株式会社LARUVisonaを設立いたしました。</p>
                     </div>
                 </a>
             </div>
@@ -536,20 +483,7 @@
                     </div>
 
                     <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q4</span> ログイン機能
-                            </h3>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">なし</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">メール認証</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_auth" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">SNS連携</div></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-gradient-to-br from-indigo-900/10 to-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem] relative overflow-hidden">
+                        <div class="spotlight-content bg-gradient-to-br from-indigo-900/20 to-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem] relative overflow-hidden">
                             <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[7px] md:text-[8px] font-bold px-2 py-1 rounded-bl-lg">RECOMMEND</div>
                             <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
                                 <span class="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q5</span> 生成AI・LLM連携
@@ -558,59 +492,7 @@
                                 <label class="cursor-pointer block"><input type="radio" name="q_ai" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">なし</div></label>
                                 <label class="cursor-pointer block"><input type="radio" name="q_ai" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">ボット(GPT等)</div></label>
                                 <label class="cursor-pointer block"><input type="radio" name="q_ai" value="150" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">自社データ(RAG)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="300" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">自律型エージェント</div></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q6</span> 音声・画像認識 (複数選択可)
-                            </h3>
-                            <div class="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-3">
-                                <label class="cursor-pointer block flex-1"><input type="checkbox" name="q_voice" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-[11px] md:text-xs"><i class="fas fa-microphone"></i> 音声操作</div></label>
-                                <label class="cursor-pointer block flex-1"><input type="checkbox" name="q_voice" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-[11px] md:text-xs"><i class="fas fa-volume-up"></i> 音声読上</div></label>
-                                <label class="cursor-pointer block flex-1"><input type="checkbox" name="q_voice" value="60" class="hidden" onchange="calcEstimate()"><div class="estimator-btn flex-row text-[11px] md:text-xs"><i class="fas fa-camera"></i> 画像解析</div></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q7</span> 決済・外部連携 (複数選択可)
-                            </h3>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">決済 (Stripe)</div></label>
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="40" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">Maps連携</div></label>
-                                <label class="cursor-pointer block"><input type="checkbox" name="q_ext" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">基幹API連携</div></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q8</span> 管理機能 (CMS)
-                            </h3>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="0" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">なし</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="30" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">標準CMS</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_admin" value="80" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">高度な管理</div></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="spotlight-card p-[1px]">
-                        <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
-                            <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q9</span> インフラ・保守
-                            </h3>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
-                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="10" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">標準サーバー</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="50" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">クラウド(AWS)</div></label>
-                                <label class="cursor-pointer block"><input type="radio" name="q_infra" value="100" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">高負荷対応</div></label>
+                                <label class="cursor-pointer block"><input type="radio" name="q_ai" value="300" class="hidden" onchange="calcEstimate()"><div class="estimator-btn text-[11px] md:text-xs">自律エージェント</div></label>
                             </div>
                         </div>
                     </div>
@@ -647,21 +529,9 @@
                                     <span class="text-base md:text-lg font-bold text-slate-400">万~</span>
                                 </div>
 
-                                <div class="space-y-2 md:space-y-3 mb-6 md:mb-8 border-t border-white/5 pt-5 md:pt-6 text-[11px] md:text-xs text-slate-400">
-                                    <div class="flex justify-between items-center">
-                                        <span>基本開発費</span><span class="font-mono text-white" id="detail-base">¥0</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span>AI・機能OP</span><span class="font-mono text-blue-400" id="detail-opt">¥0</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span>特急料金</span><span class="font-mono text-red-400" id="detail-speed">¥0</span>
-                                    </div>
-                                </div>
-
-                                <a href="#contact" class="block w-full py-3 md:py-3.5 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform text-xs md:text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                                <button id="consult-btn" class="magnetic-element block w-full py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform text-xs md:text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                                     この内容で相談する
-                                </a>
+                                </button>
                                 <p class="text-[8px] md:text-[9px] text-slate-600 mt-4">※税抜概算です。要件により変動します。</p>
                             </div>
                         </div>
@@ -672,45 +542,56 @@
         </div>
     </section>
 
-    <section id="contact" class="py-20 md:py-32 bg-card border-t border-white/5 relative z-10">
+    <section id="contact" class="py-20 md:py-32 bg-[#030712] border-t border-white/5 relative z-10">
         <div class="container mx-auto px-4 md:px-6 max-w-3xl text-center gsap-fade-up">
-            <h2 class="text-3xl md:text-4xl font-black text-white mb-3 md:mb-4">Contact</h2>
-            <p class="text-slate-400 mb-8 md:mb-12 text-xs md:text-sm">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
+            <h2 class="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight font-en">Contact</h2>
+            <p class="text-slate-400 mb-10 md:mb-16 text-sm md:text-base">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
             
-            <form class="text-left bg-[#0a0a0a] p-6 sm:p-8 md:p-12 rounded-2xl md:rounded-[2rem] border border-white/10 shadow-2xl space-y-5 md:space-y-6 relative overflow-hidden">
+            <div class="bg-[#0a0a0a]/80 backdrop-blur-xl p-6 sm:p-8 md:p-12 rounded-2xl md:rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
-                    <div>
-                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2">お名前 <span class="text-red-500">*</span></label>
-                        <input type="text" required class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 md:p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-xs md:text-sm" placeholder="山田 太郎">
+                
+                <div id="contact-success" class="hidden text-center py-12">
+                    <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-check text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">送信完了しました</h3>
+                    <p class="text-slate-400 text-sm">お問い合わせありがとうございます。<br>内容を確認の上、担当者よりご連絡いたします。</p>
+                </div>
+
+                <form id="contact-form" class="text-left space-y-6 md:space-y-8">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 tracking-widest font-en">NAME <span class="text-red-500">*</span></label>
+                            <input type="text" name="name" required class="w-full bg-transparent border-b border-white/20 px-0 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-sm" placeholder="山田 太郎">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-2 tracking-widest font-en">EMAIL <span class="text-red-500">*</span></label>
+                            <input type="email" name="email" required class="w-full bg-transparent border-b border-white/20 px-0 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-sm" placeholder="info@laruvisona.jp">
+                        </div>
                     </div>
                     <div>
-                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2">メールアドレス <span class="text-red-500">*</span></label>
-                        <input type="email" required class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 md:p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-xs md:text-sm" placeholder="example@laruvisona.co.jp">
+                        <label class="block text-xs font-bold text-slate-400 mb-2 tracking-widest font-en">MESSAGE <span class="text-red-500">*</span></label>
+                        <textarea id="contact-message" name="message" rows="4" required class="w-full bg-transparent border-b border-white/20 px-0 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-sm resize-none" placeholder="ご相談内容をご記入ください"></textarea>
                     </div>
-                </div>
-                <div>
-                    <label class="block text-[10px] md:text-xs font-bold text-slate-400 mb-1.5 md:mb-2">メッセージ <span class="text-red-500">*</span></label>
-                    <textarea rows="4" required class="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 md:p-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-xs md:text-sm" placeholder="具体的なご相談内容をご記入ください"></textarea>
-                </div>
-                <div class="text-center pt-2 md:pt-4">
-                    <button type="submit" class="w-full sm:w-auto bg-white text-black font-bold py-3 md:py-3.5 px-8 md:px-12 rounded-full hover:scale-105 transition-transform text-xs md:text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                        送信する <i class="fas fa-paper-plane ml-1 md:ml-2"></i>
-                    </button>
-                </div>
-            </form>
+                    <div class="text-center pt-4">
+                        <button type="submit" id="contact-submit-btn" class="w-full sm:w-auto bg-white text-black font-bold py-4 px-12 rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300 text-sm tracking-widest font-en magnetic-element shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                            SEND MESSAGE
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </section>
 
-    <footer class="bg-[#000] text-slate-500 py-12 md:py-16 border-t border-white/5">
+    <footer class="bg-[#000] text-slate-500 py-12 md:py-16 border-t border-white/5 relative z-10">
         <div class="container mx-auto px-6 text-center">
-            <div class="text-xl md:text-2xl font-black tracking-tight font-en text-white mb-5 md:mb-6">LARU<span class="font-light text-slate-600">Visona</span></div>
-            <div class="flex flex-wrap justify-center gap-4 md:gap-6 text-[10px] md:text-xs font-bold mb-6 md:mb-8">
-                <a href="terms.html" class="hover:text-white transition-colors">利用規約</a>
-                <a href="privacy.html" class="hover:text-white transition-colors">プライバシーポリシー</a>
-                <a href="tokusho.html" class="hover:text-white transition-colors">特商法に基づく表記</a>
+            <div class="text-xl md:text-3xl font-black tracking-tight font-en text-white mb-5 md:mb-8">LARU<span class="font-light text-slate-600">Visona</span></div>
+            <div class="flex flex-wrap justify-center gap-6 md:gap-8 text-[10px] md:text-xs font-bold mb-8 md:mb-10 tracking-widest uppercase">
+                <a href="#" class="hover:text-white transition-colors">Privacy</a>
+                <a href="#" class="hover:text-white transition-colors">Terms</a>
+                <a href="#" class="hover:text-white transition-colors">Company</a>
             </div>
-            <p class="text-[9px] md:text-[10px] font-mono">&copy; 2026 LARUVisona Inc. All Rights Reserved.</p>
+            <p class="text-[9px] md:text-xs font-mono">&copy; 2026 LARUVisona Inc. Tokyo. All Rights Reserved.</p>
         </div>
     </footer>
 
@@ -723,51 +604,136 @@
     <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
 
     <script>
-        // 🌟 1. Lenis Smooth Scroll
+        // 🌟 1. カスタムカーソル & Magnetic Button (PCのみ)
+        const cursorDot = document.querySelector('.cursor-dot');
+        const cursorOutline = document.querySelector('.cursor-outline');
+        
+        if (window.innerWidth > 768) {
+            window.addEventListener('mousemove', (e) => {
+                const posX = e.clientX;
+                const posY = e.clientY;
+                cursorDot.style.left = `${posX}px`;
+                cursorDot.style.top = `${posY}px`;
+                cursorOutline.style.left = `${posX}px`;
+                cursorOutline.style.top = `${posY}px`;
+            });
+
+            document.querySelectorAll('.magnetic-element').forEach(elem => {
+                elem.addEventListener('mousemove', (e) => {
+                    const rect = elem.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    gsap.to(elem, { x: x * 0.3, y: y * 0.3, duration: 0.4, ease: "power2.out" });
+                });
+                elem.addEventListener('mouseleave', () => {
+                    gsap.to(elem, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.3)" });
+                });
+            });
+        }
+
+        // 🌟 2. Smooth Scroll (Lenis)
         const lenis = new Lenis({ duration: 1.2, smooth: true });
         function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
         requestAnimationFrame(raf);
 
-        // 🌟 2. Spotlight Border Effect
-        const cards = document.querySelectorAll('.spotlight-card');
-        cards.forEach(card => {
-            card.addEventListener('mousemove', e => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
+        // 🌟 3. ドラッグ対応 横スクロール (Services)
+        const slider = document.getElementById('horizontal-scroll');
+        let isDown = false, startX, scrollLeft;
+        slider.addEventListener('mousedown', (e) => { isDown = true; slider.classList.add('active'); startX = e.pageX - slider.offsetLeft; scrollLeft = slider.scrollLeft; });
+        slider.addEventListener('mouseleave', () => { isDown = false; slider.classList.remove('active'); });
+        slider.addEventListener('mouseup', () => { isDown = false; slider.classList.remove('active'); });
+        slider.addEventListener('mousemove', (e) => {
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - slider.offsetLeft;
+            const walk = (x - startX) * 2;
+            slider.scrollLeft = scrollLeft - walk;
+        });
+
+        // 🌟 4. フルスクリーン モバイルメニュー
+        const menuBtn = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuIcon = menuBtn.querySelector('i');
+        let menuOpen = false;
+
+        menuBtn.addEventListener('click', () => {
+            menuOpen = !menuOpen;
+            if(menuOpen) {
+                mobileMenu.classList.add('active');
+                menuIcon.classList.replace('fa-bars', 'fa-times');
+            } else {
+                mobileMenu.classList.remove('active');
+                menuIcon.classList.replace('fa-times', 'fa-bars');
+            }
+        });
+
+        document.querySelectorAll('.menu-link').forEach(link => {
+            link.addEventListener('click', () => {
+                menuOpen = false;
+                mobileMenu.classList.remove('active');
+                menuIcon.classList.replace('fa-times', 'fa-bars');
             });
         });
 
-        // 🌟 3. AI 見積もり計算ロジック
+        // 🌟 5. AI 見積もり計算 ＆ Contact連携
         function calcEstimate() {
             const getVal = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? parseInt(el.value) : 0; };
-            const getMultiVal = (name) => { let sum = 0; document.querySelectorAll(`input[name="${name}"]:checked`).forEach(el => sum += parseInt(el.value)); return sum; };
-
-            let baseCost = getVal('q_type') + getVal('q_scale') + getVal('q_design') + getVal('q_auth') + getVal('q_admin') + getVal('q_infra');
-            let optCost = getVal('q_ai') + getMultiVal('q_voice') + getMultiVal('q_ext');
-            
+            let baseCost = getVal('q_type') + getVal('q_scale') + getVal('q_design');
+            let optCost = getVal('q_ai');
             const speedEl = document.querySelector('input[name="q_speed"]:checked');
             const multiplier = speedEl ? parseFloat(speedEl.value) : 1.0;
 
             let total = Math.round((baseCost + optCost) * multiplier);
-            const speedCost = Math.round((baseCost + optCost) * (multiplier - 1.0));
 
-            // アニメーション更新
             const el = document.getElementById('estimate-price');
-            const current = parseInt(el.innerText) || 0;
-            gsap.to(el, {
-                innerText: total, duration: 0.5, snap: { innerText: 1 }, ease: "power2.out",
-                onComplete: () => {
-                    document.getElementById('detail-base').innerText = `¥${baseCost}万`;
-                    document.getElementById('detail-opt').innerText = `¥${optCost}万`;
-                    document.getElementById('detail-speed').innerText = `¥${speedCost}万`;
-                }
-            });
+            gsap.to(el, { innerText: total, duration: 0.5, snap: { innerText: 1 }, ease: "power2.out" });
         }
 
-        // 🌟 4. Voice UI ロジック
+        // 見積もり結果をContactへ渡す
+        document.getElementById('consult-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            const getLabel = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.nextElementSibling.innerText : '未選択'; };
+            
+            const total = document.getElementById('estimate-price').innerText;
+            const type = getLabel('q_type');
+            const scale = getLabel('q_scale');
+            const ai = getLabel('q_ai');
+            const speed = getLabel('q_speed');
+
+            const message = `【AI見積もりシミュレーターからのご相談】
+■ 概算費用: 約${total}万円
+------------------------
+■ 種類: ${type}
+■ 規模: ${scale}
+■ AI連携: ${ai}
+■ 納期: ${speed}
+------------------------
+ご要望や詳細をこちらにご追記ください：\n`;
+
+            const textarea = document.getElementById('contact-message');
+            textarea.value = message;
+            // 高さの自動調整
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+
+            document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // 🌟 6. Contact Form API連携モック
+        document.getElementById('contact-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('contact-submit-btn');
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> SENDING...';
+            btn.disabled = true;
+
+            // ★ここで '/api/contact' にFetchする処理を書きます（現在は2秒待つデモ）
+            setTimeout(() => {
+                document.getElementById('contact-form').classList.add('hidden');
+                document.getElementById('contact-success').classList.remove('hidden');
+            }, 2000);
+        });
+
+        // 🌟 7. Voice UI ロジック
         const voiceBtn = document.getElementById('voice-trigger-btn');
         const voiceStatus = document.getElementById('voice-status-text');
         const voiceWaves = document.getElementById('voice-waves');
@@ -796,11 +762,11 @@
             recognition.onend = stopListening;
             function stopListening() {
                 voiceBtn.classList.remove('active'); voiceWaves.classList.remove('active');
-                setTimeout(() => { voiceStatus.innerText = "SYSTEM_STANDBY..."; voiceStatus.classList.remove("text-white"); }, 2000);
+                setTimeout(() => { voiceStatus.innerText = "SYSTEM_STANDBY"; voiceStatus.classList.remove("text-white"); }, 2000);
             }
         }
 
-        // 🌟 5. Dev Mode 切り替え
+        // 🌟 8. Dev Mode & 初期化
         const devToggles = document.querySelectorAll('.dev-switch');
         devToggles.forEach(toggle => {
             toggle.addEventListener('click', () => {
@@ -809,7 +775,6 @@
             });
         });
 
-        // 🌟 6. 初期化
         document.addEventListener('DOMContentLoaded', () => {
             gsap.registerPlugin(ScrollTrigger);
             calcEstimate();
@@ -840,6 +805,22 @@
             // フェードアップ
             gsap.utils.toArray('.gsap-fade-up').forEach(elem => {
                 gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 85%" }, y: 30, opacity: 0, duration: 0.8, ease: "power3.out" });
+            });
+
+            // パララックス粒子
+            gsap.utils.toArray('.parallax-blob').forEach(blob => {
+                const speed = blob.getAttribute('data-speed');
+                gsap.to(blob, {
+                    y: () => (ScrollTrigger.maxScroll(window) * speed),
+                    ease: "none",
+                    scrollTrigger: { trigger: "body", start: "top top", end: "bottom bottom", scrub: true }
+                });
+            });
+
+            // テキストエリア自動リサイズ
+            document.getElementById('contact-message').addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
             });
         });
     </script>
