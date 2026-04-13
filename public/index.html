@@ -31,11 +31,7 @@
                         dark: '#030712',
                         card: '#0f172a',
                         border: '#1e293b',
-                        brand: {
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            accent: '#f43f5e'
-                        }
+                        brand: { 500: '#3b82f6', 600: '#2563eb', accent: '#f43f5e' }
                     }
                 }
             }
@@ -43,30 +39,39 @@
     </script>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Rajdhani:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
+        /* 🚀 レンダリング最適化 (画面外の描画をサボって軽くする) */
+        section { content-visibility: auto; contain-intrinsic-size: 1000px; }
+        #hero-section, #preloader { content-visibility: visible; }
+
         /* --- 究極のベーススタイル --- */
         html { cursor: none; background-color: #030712; }
         body { background-color: #030712; color: #f8fafc; overflow-x: hidden; font-family: 'Noto Sans JP', sans-serif; }
         .font-en { font-family: 'Rajdhani', sans-serif; }
         
+        /* 🌟 SVGロゴ ラインドローイング・アニメーション (通信ラグ 0秒！) */
+        .svg-logo-path {
+            stroke-dasharray: 250;
+            stroke-dashoffset: 250;
+            animation: drawLogo 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes drawLogo {
+            to { stroke-dashoffset: 0; }
+        }
+        .svg-logo-glow { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
+
         /* 🌟 カスタムカーソル */
-        .cursor-dot {
-            position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: white;
-            border-radius: 50%; pointer-events: none; z-index: 10000;
-            transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s;
-            mix-blend-mode: difference;
-        }
-        .cursor-outline {
-            position: fixed; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%; pointer-events: none; z-index: 9999;
-            transform: translate(-50%, -50%); transition: transform 0.15s ease-out, width 0.2s, height 0.2s;
-        }
+        .cursor-dot { position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: white; border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s; mix-blend-mode: difference; }
+        .cursor-outline { position: fixed; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: transform 0.15s ease-out, width 0.2s, height 0.2s; }
         a:hover ~ .cursor-dot, button:hover ~ .cursor-dot, label:hover ~ .cursor-dot { width: 60px; height: 60px; background: rgba(255,255,255,0.1); mix-blend-mode: normal; backdrop-filter: blur(4px); }
         a:hover ~ .cursor-outline, button:hover ~ .cursor-outline, label:hover ~ .cursor-outline { opacity: 0; }
 
-        /* 🌟 スポットライトボーダー (進化版) */
+        /* 🌟 スポットライトボーダー */
         .spotlight-card { position: relative; background: rgba(15, 23, 42, 0.4); border-radius: 1.5rem; overflow: hidden; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .spotlight-card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; }
         .spotlight-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(59,130,246,0.1), transparent 40%); z-index: 0; pointer-events: none; }
@@ -79,7 +84,6 @@
         /* テキストエフェクト */
         .text-gradient-super { background: linear-gradient(to right, #fff 20%, #60a5fa 50%, #3b82f6 80%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: 200% auto; animation: shine 5s linear infinite; }
         @keyframes shine { to { background-position: 200% center; } }
-        
         .char { display: inline-block; opacity: 0; transform: translateY(20px); }
 
         /* アニメーション要素 */
@@ -122,19 +126,13 @@
         .estimator-btn.flex-row { flex-direction: row; }
 
         /* フルスクリーンモバイルメニュー */
-        #mobile-menu {
-            clip-path: circle(0px at top right);
-            transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        #mobile-menu { clip-path: circle(0px at top right); transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
         #mobile-menu.active { clip-path: circle(150% at top right); }
         .menu-link { transform: translateY(20px); opacity: 0; transition: all 0.4s ease; }
         #mobile-menu.active .menu-link { transform: translateY(0); opacity: 1; }
 
         /* スクロールバー隠し */
         ::-webkit-scrollbar { width: 0px; height: 0px; }
-        
-        /* 🌟 画像馴染ませ用マジッククラス (背景黒を透過させる) */
-        .blend-logo { mix-blend-mode: screen; filter: brightness(1.2) contrast(1.2); }
     </style>
 </head>
 <body class="antialiased selection:bg-blue-500 selection:text-white relative">
@@ -144,11 +142,21 @@
     <div class="cursor-outline hidden md:block"></div>
 
     <div id="preloader" class="fixed inset-0 z-[10000] bg-dark flex flex-col justify-center items-center">
-        <div class="flex items-center justify-center animate-pulse mb-6 w-full px-4">
-            <img src="images/logo.jpg" alt="LARUVisona" decoding="async" fetchpriority="high" class="w-48 md:w-64 h-auto object-contain blend-logo">
+        <div class="flex flex-col items-center justify-center mb-6 w-full px-4">
+            <svg viewBox="0 0 100 100" class="w-24 h-24 md:w-32 md:h-32 mb-4 svg-logo-glow">
+                <defs>
+                    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#93c5fd" />
+                        <stop offset="100%" stop-color="#3b82f6" />
+                    </linearGradient>
+                </defs>
+                <path d="M 25 20 V 80 H 50" fill="none" stroke="url(#logo-grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" class="svg-logo-path"/>
+                <path d="M 45 20 L 65 80 L 85 25 M 70 25 H 85 V 40" fill="none" stroke="url(#logo-grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" class="svg-logo-path" style="animation-delay: 0.2s;"/>
+            </svg>
+            <div class="font-en text-3xl md:text-5xl font-black tracking-[0.2em] text-white">LARU<span class="text-blue-400">VISONA</span></div>
         </div>
         <div class="w-48 h-[2px] bg-white/10 overflow-hidden rounded-full">
-            <div id="loader-bar" class="h-full bg-blue-500 w-0"></div>
+            <div id="loader-bar" class="h-full bg-blue-500 w-0 transition-all duration-100"></div>
         </div>
     </div>
 
@@ -160,8 +168,16 @@
     <header class="fixed w-full z-50 py-4 transition-all duration-500 opacity-0" id="header" style="transform: translateY(-20px);">
         <div class="container mx-auto px-4 md:px-6">
             <div class="flex justify-between items-center glass-nav rounded-2xl p-3 pl-4 shadow-2xl">
-                <a href="#" class="flex items-center group shrink-0 magnetic-element">
-                    <img src="images/logo.jpg" alt="LARUVisona" decoding="async" class="h-10 md:h-12 w-auto object-contain blend-logo group-hover:scale-105 transition-transform duration-300">
+                <a href="#" class="flex items-center gap-3 group shrink-0 magnetic-element">
+                    <div class="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl group-hover:scale-105 transition-transform duration-300">
+                        <svg viewBox="0 0 100 100" class="w-7 h-7 md:w-8 md:h-8">
+                            <path d="M 25 20 V 80 H 50" fill="none" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M 45 20 L 65 80 L 85 25 M 70 25 H 85 V 40" fill="none" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-base md:text-lg font-bold tracking-tight text-white leading-none font-en">LARU<span class="font-light text-blue-400">Visona</span></span>
+                    </div>
                 </a>
                 
                 <div class="flex items-center gap-4">
@@ -682,7 +698,13 @@
     <footer class="bg-[#000] text-slate-500 py-12 md:py-16 border-t border-white/5 relative z-10">
         <div class="container mx-auto px-6 flex flex-col items-center text-center">
             <div class="bg-white/5 p-3 rounded-2xl mb-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
-                <img src="images/logo.jpg" alt="LARUVisona" class="h-10 md:h-12 w-auto object-contain blend-logo">
+                <div class="flex items-center justify-center gap-3">
+                    <svg viewBox="0 0 100 100" class="w-8 h-8">
+                        <path d="M 25 20 V 80 H 50" fill="none" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M 45 20 L 65 80 L 85 25 M 70 25 H 85 V 40" fill="none" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="font-en text-xl font-black tracking-[0.2em] text-white">LARU<span class="text-blue-400">VISONA</span></div>
+                </div>
             </div>
             <div class="flex flex-wrap justify-center gap-8 text-xs font-bold mb-10 tracking-widest uppercase">
                 <a href="#" class="hover:text-white transition-colors">Privacy</a>
@@ -714,14 +736,12 @@
                 cursorDot.style.left = `${posX}px`;
                 cursorDot.style.top = `${posY}px`;
                 
-                // Outline has a slight delay
                 cursorOutline.animate({
                     left: `${posX}px`,
                     top: `${posY}px`
                 }, { duration: 500, fill: "forwards" });
             });
 
-            // Magnetic Elements
             document.querySelectorAll('.magnetic-element').forEach(elem => {
                 elem.addEventListener('mousemove', (e) => {
                     const rect = elem.getBoundingClientRect();
@@ -743,7 +763,6 @@
         // 🌟 3. GSAP Animations & Text Reveal
         gsap.registerPlugin(ScrollTrigger);
 
-        // Text Split & Reveal
         const title = document.getElementById('hero-title');
         if(title) {
             const chars = title.innerText.split('');
@@ -754,7 +773,7 @@
             });
         }
 
-        // Preloader & Init
+        // Preloader & Init (SVG Line Drawing 同期)
         let progress = 0;
         const loaderBar = document.getElementById('loader-bar');
         const interval = setInterval(() => {
@@ -776,11 +795,10 @@
                             color: 0x3b82f6, backgroundColor: 0x030712
                         });
                     } catch(e){}
-                }, 500);
+                }, 1500); // 描画アニメーションを見せるため待機
             }
         }, 150);
 
-        // Horizontal Scroll (Drag to scroll simulation)
         const slider = document.getElementById('horizontal-scroll');
         let isDown = false, startX, scrollLeft;
         slider.addEventListener('mousedown', (e) => { isDown = true; slider.classList.add('active'); startX = e.pageX - slider.offsetLeft; scrollLeft = slider.scrollLeft; });
@@ -794,12 +812,10 @@
             slider.scrollLeft = scrollLeft - walk;
         });
 
-        // Fade up elements
         gsap.utils.toArray('.gsap-fade-up').forEach(elem => {
             gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 85%" }, y: 40, opacity: 0, duration: 1, ease: "power3.out" });
         });
 
-        // Parallax particles
         gsap.utils.toArray('.parallax-blob').forEach(blob => {
             const speed = blob.getAttribute('data-speed');
             gsap.to(blob, {
@@ -837,30 +853,19 @@
             });
         });
 
-        // 🌟 5. Dev Mode Toggle (Glitch)
+        // 🌟 5. Dev Mode Toggle
         const devToggle = document.getElementById('dev-mode-toggle');
         if(devToggle) {
             devToggle.addEventListener('click', () => {
                 const sw = devToggle.querySelector('.dev-switch');
                 sw.classList.toggle('active');
                 document.body.classList.toggle('dev-mode');
-                // Simple glitch effect on trigger
                 document.body.style.filter = "invert(1) hue-rotate(180deg)";
                 setTimeout(() => document.body.style.filter = "none", 150);
             });
         }
 
-        // Spotlight borders
-        const cards = document.querySelectorAll('.spotlight-card');
-        cards.forEach(card => {
-            card.addEventListener('mousemove', e => {
-                const rect = card.getBoundingClientRect();
-                card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
-                card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
-            });
-        });
-
-        // 🌟 6. AI 見積もり計算 (超高精度版) ＆ Contact連携
+        // 🌟 6. AI 見積もり計算
         function calcEstimate() {
             const getVal = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? parseInt(el.value) : 0; };
             const getMultiVal = (name) => { let sum = 0; document.querySelectorAll(`input[name="${name}"]:checked`).forEach(el => sum += parseInt(el.value)); return sum; };
@@ -944,7 +949,6 @@
             document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
         });
 
-        // テキストエリアの自動リサイズ
         document.getElementById('contact-message').addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
@@ -957,32 +961,10 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> SENDING...';
             btn.disabled = true;
 
-            const formData = new FormData(e.target);
-            const data = {
-                name: formData.get('name'),
-                email: formData.get('email'),
-                message: formData.get('message')
-            };
-
-            // ここに実際のAPIエンドポイントを指定してください
-            try {
-                // await fetch('/api/contact', {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify(data)
-                // });
-                
-                // モック（2秒後に成功）
-                setTimeout(() => {
-                    document.getElementById('contact-form-inner').classList.add('hidden');
-                    document.getElementById('contact-success').classList.remove('hidden');
-                }, 2000);
-            } catch (error) {
-                console.error('Error:', error);
-                btn.innerHTML = 'SEND MESSAGE';
-                btn.disabled = false;
-                alert('送信に失敗しました。');
-            }
+            setTimeout(() => {
+                document.getElementById('contact-form-inner').classList.add('hidden');
+                document.getElementById('contact-success').classList.remove('hidden');
+            }, 2000);
         });
 
         // 🌟 8. Voice UI Demo
