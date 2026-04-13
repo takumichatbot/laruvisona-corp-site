@@ -136,7 +136,7 @@
     <div class="cursor-outline hidden md:block"></div>
 
     <div id="preloader" class="fixed inset-0 z-[10000] bg-dark flex flex-col justify-center items-center">
-        <div class="font-en text-2xl md:text-3xl font-black tracking-[0.3em] text-white animate-pulse">LARU<span class="text-blue-500">VISONA</span></div>
+        <img src="images/logo.png" alt="LARUVisona" class="h-12 md:h-16 w-auto animate-pulse mb-2">
         <div class="w-32 md:w-48 h-1 bg-border mt-6 rounded overflow-hidden">
             <div id="loader-bar" class="h-full bg-blue-500 w-0 transition-all duration-300"></div>
         </div>
@@ -149,11 +149,8 @@
 
     <header class="fixed w-full z-50 py-3 md:py-4 transition-all duration-500 opacity-0" id="header" style="transform: translateY(-20px);">
         <div class="container mx-auto px-4 md:px-6 flex justify-between items-center glass-nav rounded-2xl md:rounded-full p-2 md:p-3 pl-4 md:pl-6 shadow-2xl border border-white/5">
-            <a href="#" class="flex items-center gap-2 md:gap-3 group shrink-0 magnetic-element">
-                <div class="w-8 h-8 md:w-10 md:h-10 bg-white text-black rounded-xl md:rounded-full flex items-center justify-center font-black text-lg md:text-xl font-en shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-transform duration-300 group-hover:rotate-12">L</div>
-                <div class="flex flex-col">
-                    <span class="text-base md:text-lg font-bold tracking-tight text-white leading-none font-en">LARU<span class="font-light text-slate-400">Visona</span></span>
-                </div>
+            <a href="#" class="flex items-center group shrink-0 magnetic-element">
+                <img src="images/logo.png" alt="LARUVisona" class="h-8 md:h-10 w-auto group-hover:scale-105 transition-transform duration-300">
             </a>
             
             <div class="flex items-center gap-3 md:gap-4">
@@ -458,7 +455,7 @@
                     <div class="spotlight-card p-[1px]">
                         <div class="spotlight-content bg-[#0a0a0a] p-5 md:p-8 rounded-[1.4rem]">
                             <h3 class="text-xs md:text-sm font-bold text-white mb-4 md:mb-5 flex items-center gap-2 md:gap-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q1</span> プロジェクトの種別
+                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] md:text-[10px] px-2 py-0.5 rounded font-en">Q1</span> 開発の対象は何ですか？
                             </h3>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <label class="cursor-pointer block"><input type="radio" name="q_type" value="30" class="hidden" checked onchange="calcEstimate()"><div class="estimator-btn flex-row sm:flex-col"><i class="fas fa-desktop text-lg md:text-xl sm:mb-1"></i><span class="text-xs md:text-sm">Webサイト/LP</span></div></label>
@@ -672,8 +669,8 @@
     </section>
 
     <footer class="bg-[#000] text-slate-500 py-12 md:py-16 border-t border-white/5 relative z-10">
-        <div class="container mx-auto px-6 text-center">
-            <div class="text-xl md:text-3xl font-black tracking-tight font-en text-white mb-5 md:mb-8">LARU<span class="font-light text-slate-600">Visona</span></div>
+        <div class="container mx-auto px-6 flex flex-col items-center text-center">
+            <img src="images/logo.png" alt="LARUVisona" class="h-10 md:h-12 w-auto mb-5 md:mb-8 opacity-80 hover:opacity-100 transition-opacity">
             <div class="flex flex-wrap justify-center gap-6 md:gap-8 text-[10px] md:text-xs font-bold mb-8 md:mb-10 tracking-widest uppercase">
                 <a href="#" class="hover:text-white transition-colors">Privacy</a>
                 <a href="#" class="hover:text-white transition-colors">Terms</a>
@@ -766,7 +763,6 @@
         // 🌟 5. AI 見積もり計算 (超高精度版) ＆ Contact連携
         function calcEstimate() {
             const getVal = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? parseInt(el.value) : 0; };
-            // チェックボックス（複数選択）用
             const getMultiVal = (name) => { let sum = 0; document.querySelectorAll(`input[name="${name}"]:checked`).forEach(el => sum += parseInt(el.value)); return sum; };
             
             const qType = getVal('q_type');
@@ -774,31 +770,24 @@
             const qDesign = getVal('q_design');
             const qUser = getVal('q_user');
             const qAi = getVal('q_ai');
-            const qApi = getMultiVal('q_api'); // Q6は複数可
+            const qApi = getMultiVal('q_api'); 
             const qInfra = getVal('q_infra');
             const qMaintain = getVal('q_maintain');
             
-            // 💰 内訳のロジック（リアルな見積もりに近づける）
-            // フロントエンド(見た目) = 種別の基本 + 規模の半分 + デザイン
             const costFront = Math.round(qType * 0.4 + qScale * 0.4 + qDesign);
-            // バックエンド(システム) = 種別の基本 + 規模の半分 + 認証 + 外部API
             const costBack = Math.round(qType * 0.6 + qScale * 0.6 + qUser + qApi);
-            // AI・基盤 = AI機能 + インフラ + 保守設定費用
             const costAiInfra = qAi + qInfra + qMaintain;
 
             const baseTotal = costFront + costBack + costAiInfra;
 
-            // Q9の納期（掛け率）
             const speedEl = document.querySelector('input[name="q_speed"]:checked');
             const multiplier = speedEl ? parseFloat(speedEl.value) : 1.0;
 
             const finalTotal = Math.round(baseTotal * multiplier);
             const speedSurcharge = Math.round(baseTotal * (multiplier - 1.0));
 
-            // アニメーション更新
             gsap.to('#estimate-price', { innerText: finalTotal, duration: 0.5, snap: { innerText: 1 }, ease: "power2.out" });
             
-            // 内訳のテキスト更新
             document.getElementById('detail-front').innerText = `¥${costFront}万`;
             document.getElementById('detail-back').innerText = `¥${costBack}万`;
             document.getElementById('detail-ai').innerText = `¥${costAiInfra}万`;
@@ -812,7 +801,6 @@
             }
         }
 
-        // 見積もり結果をContactへ渡す
         document.getElementById('consult-btn').addEventListener('click', (e) => {
             e.preventDefault();
             const getLabel = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.nextElementSibling.innerText : '未選択'; };
@@ -828,7 +816,7 @@
             const q3 = getLabel('q_design');
             const q4 = getLabel('q_user');
             const q5 = getLabel('q_ai');
-            const q6 = getMultiLabel('q_api'); // 複数
+            const q6 = getMultiLabel('q_api');
             const q7 = getLabel('q_infra');
             const q8 = getLabel('q_maintain');
             const q9 = getLabel('q_speed');
@@ -850,7 +838,6 @@
 
             const textarea = document.getElementById('contact-message');
             textarea.value = message;
-            // 高さの自動調整
             textarea.style.height = 'auto';
             textarea.style.height = textarea.scrollHeight + 'px';
 
@@ -917,7 +904,6 @@
             gsap.registerPlugin(ScrollTrigger);
             calcEstimate();
 
-            // プレローダー
             let progress = 0;
             const loaderBar = document.getElementById('loader-bar');
             const interval = setInterval(() => {
@@ -940,12 +926,10 @@
                 }
             }, 100);
 
-            // フェードアップ
             gsap.utils.toArray('.gsap-fade-up').forEach(elem => {
                 gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 85%" }, y: 30, opacity: 0, duration: 0.8, ease: "power3.out" });
             });
 
-            // パララックス粒子
             gsap.utils.toArray('.parallax-blob').forEach(blob => {
                 const speed = blob.getAttribute('data-speed');
                 gsap.to(blob, {
@@ -955,7 +939,6 @@
                 });
             });
 
-            // テキストエリア自動リサイズ
             document.getElementById('contact-message').addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
