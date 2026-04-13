@@ -43,30 +43,28 @@
     </script>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Rajdhani:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
+        /* 🚀 レンダリング最適化 (画面外の描画をサボって軽くする) */
+        section { content-visibility: auto; contain-intrinsic-size: 1000px; }
+        #hero-section, #preloader { content-visibility: visible; }
+
         /* --- 究極のベーススタイル --- */
         html { cursor: none; background-color: #030712; }
         body { background-color: #030712; color: #f8fafc; overflow-x: hidden; font-family: 'Noto Sans JP', sans-serif; }
         .font-en { font-family: 'Rajdhani', sans-serif; }
         
         /* 🌟 カスタムカーソル */
-        .cursor-dot {
-            position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: white;
-            border-radius: 50%; pointer-events: none; z-index: 10000;
-            transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s;
-            mix-blend-mode: difference;
-        }
-        .cursor-outline {
-            position: fixed; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%; pointer-events: none; z-index: 9999;
-            transform: translate(-50%, -50%); transition: transform 0.15s ease-out, width 0.2s, height 0.2s;
-        }
+        .cursor-dot { position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: white; border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s; mix-blend-mode: difference; }
+        .cursor-outline { position: fixed; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: transform 0.15s ease-out, width 0.2s, height 0.2s; }
         a:hover ~ .cursor-dot, button:hover ~ .cursor-dot, label:hover ~ .cursor-dot { width: 60px; height: 60px; background: rgba(255,255,255,0.1); mix-blend-mode: normal; backdrop-filter: blur(4px); }
         a:hover ~ .cursor-outline, button:hover ~ .cursor-outline, label:hover ~ .cursor-outline { opacity: 0; }
 
-        /* 🌟 スポットライトボーダー (進化版) */
+        /* 🌟 スポットライトボーダー */
         .spotlight-card { position: relative; background: rgba(15, 23, 42, 0.4); border-radius: 1.5rem; overflow: hidden; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .spotlight-card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; }
         .spotlight-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(59,130,246,0.1), transparent 40%); z-index: 0; pointer-events: none; }
@@ -79,7 +77,6 @@
         /* テキストエフェクト */
         .text-gradient-super { background: linear-gradient(to right, #fff 20%, #60a5fa 50%, #3b82f6 80%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: 200% auto; animation: shine 5s linear infinite; }
         @keyframes shine { to { background-position: 200% center; } }
-        
         .char { display: inline-block; opacity: 0; transform: translateY(20px); }
 
         /* アニメーション要素 */
@@ -121,11 +118,8 @@
         input:checked + .estimator-btn { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #fff; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), inset 0 0 10px rgba(59, 130, 246, 0.1); transform: scale(1.02); }
         .estimator-btn.flex-row { flex-direction: row; }
 
-        /* フルスクリーンモバイルメニュー */
-        #mobile-menu {
-            clip-path: circle(0px at top right);
-            transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        /* 🌟 フルスクリーンモバイルメニュー */
+        #mobile-menu { clip-path: circle(0px at top right); transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
         #mobile-menu.active { clip-path: circle(150% at top right); }
         .menu-link { transform: translateY(20px); opacity: 0; transition: all 0.4s ease; }
         #mobile-menu.active .menu-link { transform: translateY(0); opacity: 1; }
@@ -133,7 +127,7 @@
         /* スクロールバー隠し */
         ::-webkit-scrollbar { width: 0px; height: 0px; }
         
-        /* 🌟 画像馴染ませ用マジッククラス (背景黒を透過させる) */
+        /* 🌟 画像馴染ませ用マジッククラス */
         .blend-logo { mix-blend-mode: screen; filter: brightness(1.2) contrast(1.2); }
     </style>
 </head>
@@ -145,7 +139,7 @@
 
     <div id="preloader" class="fixed inset-0 z-[10000] bg-dark flex flex-col justify-center items-center">
         <div class="flex items-center justify-center animate-pulse mb-6 w-full px-4">
-            <img src="images/logo.jpg" alt="LARUVisona" class="w-48 md:w-64 h-auto object-contain blend-logo">
+            <img src="logo.jpg" alt="LARUVisona" decoding="async" fetchpriority="high" class="w-48 md:w-64 h-auto object-contain blend-logo">
         </div>
         <div class="w-48 h-[2px] bg-white/10 overflow-hidden rounded-full">
             <div id="loader-bar" class="h-full bg-blue-500 w-0"></div>
@@ -161,7 +155,7 @@
         <div class="container mx-auto px-4 md:px-6">
             <div class="flex justify-between items-center glass-nav rounded-2xl p-3 pl-4 shadow-2xl">
                 <a href="#" class="flex items-center group shrink-0 magnetic-element">
-                    <img src="images/logo.jpg" alt="LARUVisona" class="h-10 md:h-12 w-auto object-contain blend-logo group-hover:scale-105 transition-transform duration-300">
+                    <img src="logo.jpg" alt="LARUVisona" decoding="async" class="h-10 md:h-12 w-auto object-contain blend-logo group-hover:scale-105 transition-transform duration-300">
                 </a>
                 
                 <div class="flex items-center gap-4">
@@ -669,7 +663,7 @@
                             <textarea id="contact-message" name="message" rows="1" required class="w-full bg-transparent border-b border-white/20 px-0 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-base resize-none" placeholder="ご相談内容をご記入ください"></textarea>
                         </div>
                         <div class="text-center">
-                            <button type="submit" id="contact-submit-btn" class="bg-white text-black font-bold py-4 px-12 rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300 text-sm tracking-widest magnetic-element shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                            <button type="submit" id="contact-submit-btn" class="bg-white text-black font-bold py-4 px-12 rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300 text-sm tracking-widest font-en magnetic-element shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                                 SEND MESSAGE
                             </button>
                         </div>
