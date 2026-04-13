@@ -133,6 +133,33 @@
 
         /* スクロールバー隠し */
         ::-webkit-scrollbar { width: 0px; height: 0px; }
+
+        /* 🌟 超・高精度 SVGロゴ・ドローイング＆クロスフェード */
+        .draw-line {
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
+            animation: drawPath 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .delay-0 { animation-delay: 0s; }
+        .delay-1 { animation-delay: 0.3s; }
+        .delay-2 { animation-delay: 0.6s; }
+        .delay-3 { animation-delay: 0.9s; }
+        
+        @keyframes drawPath { to { stroke-dashoffset: 0; } }
+
+        /* 線を描き終わった後にSVGを光らせて消す */
+        .svg-logo-anim {
+            animation: fadeOutSvg 0.8s ease 2s forwards;
+        }
+        @keyframes fadeOutSvg { to { opacity: 0; filter: blur(4px); transform: scale(1.05); } }
+
+        /* 線に合わせて本物のロゴ画像を浮かび上がらせる */
+        .real-logo-reveal {
+            opacity: 0;
+            transform: scale(0.95);
+            animation: revealImage 1s cubic-bezier(0.4, 0, 0.2, 1) 1.5s forwards;
+        }
+        @keyframes revealImage { to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="antialiased selection:bg-blue-500 selection:text-white relative">
@@ -142,19 +169,33 @@
     <div class="cursor-outline hidden md:block"></div>
 
     <div id="preloader" class="fixed inset-0 z-[10000] bg-dark flex flex-col justify-center items-center">
-        <div class="flex flex-col items-center justify-center mb-6 w-full px-4">
-            <svg viewBox="0 0 100 100" class="w-24 h-24 md:w-32 md:h-32 mb-4 svg-logo-glow">
+        
+        <div class="relative w-32 h-32 md:w-48 md:h-48 mb-2 flex items-center justify-center">
+            
+            <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full svg-logo-anim z-20">
                 <defs>
-                    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#93c5fd" />
-                        <stop offset="100%" stop-color="#3b82f6" />
+                    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#7dd3fc" />
+                        <stop offset="100%" stop-color="#2563eb" />
                     </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="1.5" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
                 </defs>
-                <path d="M 25 20 V 80 H 50" fill="none" stroke="url(#logo-grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" class="svg-logo-path"/>
-                <path d="M 45 20 L 65 80 L 85 25 M 70 25 H 85 V 40" fill="none" stroke="url(#logo-grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" class="svg-logo-path" style="animation-delay: 0.2s;"/>
+                <g fill="none" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+                    <path class="draw-line delay-0" d="M 22 20 V 80 H 48" />
+                    <path class="draw-line delay-1" d="M 48 20 Q 56 20, 56 30 L 54 33 L 59 37 L 56 40 L 58 42 L 56 43 L 58 46 C 58 52, 51 55, 51 55 C 43 65, 22 65, 22 65" />
+                    <path class="draw-line delay-2" d="M 48 80 L 83 20" />
+                    <path class="draw-line delay-3" d="M 68 20 H 83 V 35" />
+                </g>
             </svg>
-            <div class="font-en text-3xl md:text-5xl font-black tracking-[0.2em] text-white">LARU<span class="text-blue-400">VISONA</span></div>
+
+            <img src="images/logo.jpg" alt="LARUVisona" decoding="async" class="absolute inset-0 w-full h-full object-contain blend-logo real-logo-reveal z-10">
         </div>
+
+        <div class="font-en text-3xl md:text-5xl font-black tracking-[0.2em] text-white mb-6 real-logo-reveal">LARU<span class="text-blue-400">VISONA</span></div>
+        
         <div class="w-48 h-[2px] bg-white/10 overflow-hidden rounded-full">
             <div id="loader-bar" class="h-full bg-blue-500 w-0 transition-all duration-100"></div>
         </div>
