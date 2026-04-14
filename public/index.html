@@ -761,10 +761,7 @@
             });
         }
 
-        // 🌟 2. Smooth Scroll (Lenis)
-        const lenis = new Lenis({ duration: 1.2, smooth: true });
-        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-        requestAnimationFrame(raf);
+        
 
         // 🌟 3. GSAP Animations & Text Reveal
         gsap.registerPlugin(ScrollTrigger);
