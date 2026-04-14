@@ -337,16 +337,8 @@
                         </table>
                     </div>
                 </div>
-                <div class="relative gsap-fade-up lg:mt-0 mt-12 h-[500px] rounded-[2rem] overflow-hidden" id="about-3d-canvas">
-                    <div class="absolute inset-0 bg-gradient-to-tr from-blue-900/40 to-card flex items-center justify-center border border-white/10 rounded-[2rem]">
-                        <div class="relative w-64 h-64">
-                            <div class="absolute inset-0 border border-blue-500/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
-                            <div class="absolute inset-4 border border-indigo-500/40 rounded-full animate-[spin_15s_linear_infinite_reverse]"></div>
-                            <div class="absolute inset-8 border border-purple-500/50 rounded-full animate-[spin_20s_linear_infinite]"></div>
-                            <div class="absolute inset-0 flex items-center justify-center font-en text-2xl tracking-widest text-white/50">CORE</div>
-                        </div>
+                <div class="relative gsap-fade-up lg:mt-0 mt-12 h-[500px] rounded-[2rem] overflow-hidden bg-card/50 border border-white/10 shadow-2xl" id="about-3d-canvas">
                     </div>
-                </div>
             </div>
         </div>
     </section>
@@ -1014,6 +1006,112 @@
                 setTimeout(() => voiceStatus.innerText = "SYSTEM_STANDBY", 2000);
             };
         }
+        // 🌟 9. Three.js AI Core Animation
+        function initThreeJSCore() {
+            const container = document.getElementById('about-3d-canvas');
+            if (!container) return;
+
+            // シーン、カメラ、レンダラーのセットアップ
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 重くならないよう上限2に
+            container.appendChild(renderer.domElement);
+
+            // オブジェクトをまとめるグループ
+            const group = new THREE.Group();
+            scene.add(group);
+
+            // ジオメトリ（多面体）の生成
+            const geometry = new THREE.IcosahedronGeometry(1.4, 2);
+
+            // 1. ワイヤーフレーム（ネットワークの線）
+            const wireMaterial = new THREE.MeshBasicMaterial({
+                color: 0x3b82f6, // Tailwind blue-500
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15
+            });
+            const wireMesh = new THREE.Mesh(geometry, wireMaterial);
+            group.add(wireMesh);
+
+            // 2. パーティクル（ネットワークの交点/ノード）
+            const pointsMaterial = new THREE.PointsMaterial({
+                color: 0x60a5fa, // Tailwind blue-400
+                size: 0.04,
+                transparent: true,
+                opacity: 0.8
+            });
+            const points = new THREE.Points(geometry, pointsMaterial);
+            group.add(points);
+
+            // 3. 内部で脈打つコア（AIの心臓部）
+            const innerGeo = new THREE.IcosahedronGeometry(0.7, 1);
+            const innerMat = new THREE.MeshBasicMaterial({
+                color: 0x8b5cf6, // Tailwind purple-500
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+            group.add(innerMesh);
+
+            // マウス連動用の変数
+            let mouseX = 0;
+            let mouseY = 0;
+            const targetX = 0;
+            const targetY = 0;
+
+            // マウスが乗った時に少し動かすギミック
+            container.addEventListener('mousemove', (event) => {
+                const rect = container.getBoundingClientRect();
+                mouseX = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
+                mouseY = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
+            });
+            container.addEventListener('mouseleave', () => {
+                mouseX = 0;
+                mouseY = 0;
+            });
+
+            // アニメーションループ
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                const elapsedTime = clock.getElapsedTime();
+
+                // 全体のゆっくりとした自転
+                group.rotation.y += 0.002;
+                group.rotation.x += 0.001;
+
+                // 内部コアの逆回転と脈動（呼吸）
+                innerMesh.rotation.y -= 0.004;
+                innerMesh.rotation.x -= 0.002;
+                const pulse = 1 + Math.sin(elapsedTime * 2) * 0.05;
+                innerMesh.scale.set(pulse, pulse, pulse);
+
+                // マウス位置への緩やかな追従
+                group.rotation.x += mouseY * 0.05;
+                group.rotation.y += mouseX * 0.05;
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // リサイズ対応
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // スクリプト読み込み後に実行
+        setTimeout(initThreeJSCore, 100);
     </script>
+
+    
 </body>
 </html>
