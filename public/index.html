@@ -509,9 +509,9 @@
     <section id="estimator" class="py-20 md:py-32 relative overflow-hidden bg-[#000]">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-[#000] to-[#000]"></div>
         <div class="container mx-auto px-4 md:px-6 max-w-6xl relative z-10">
-            <div class="text-center mb-12 md:mb-16 gsap-fade-up">
+            <div class="text-center mb-12 md:mb-16">
                 <span class="text-blue-500 font-bold text-[10px] md:text-xs tracking-[0.2em] uppercase mb-3 md:mb-4 block font-en">AI ESTIMATION</span>
-                <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight">開発費用シミュレーター</h2>
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 md:mb-4 tracking-tight">お見積もりシミュレーター</h2>
                 <p class="text-slate-400 text-xs md:text-sm px-4">プロジェクトの要件を選択するだけで、概算費用をリアルタイム算出します。</p>
             </div>
 
@@ -697,41 +697,14 @@
         <div class="container mx-auto px-4 md:px-6 max-w-3xl text-center gsap-fade-up">
             <h2 class="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight font-en">Contact</h2>
             <p class="text-slate-400 mb-10 md:mb-16 text-sm md:text-base">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
-            
+        
             <div class="bg-[#0a0a0a]/80 backdrop-blur-xl p-6 sm:p-8 md:p-12 rounded-2xl md:rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-                
-                <div id="contact-success" class="hidden text-center py-12">
-                    <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <i class="fas fa-check text-2xl"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-2">送信完了しました</h3>
-                    <p class="text-slate-400 text-sm">お問い合わせありがとうございます。<br>内容を確認の上、担当者よりご連絡いたします。</p>
+            
+                <div class="w-full text-left min-h-[300px]">
+                    <script src="https://larubot.tokyo/embed/blog.js" data-id="ab0761b3-2eec-49f0-9042-77168ffff329"></script>
                 </div>
 
-                <form id="contact-form" class="text-left space-y-6 md:space-y-8">
-                    <div id="contact-form-inner">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-400 mb-3 tracking-wide">NAME <span class="text-red-500">*</span></label>
-                                <input type="text" name="name" required class="w-full bg-white/5 border-b border-white/20 px-0 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-base" placeholder="山田 太郎">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-400 mb-3 tracking-wide">EMAIL <span class="text-red-500">*</span></label>
-                                <input type="email" name="email" required class="w-full bg-white/5 border-b border-white/20 px-0 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-base" placeholder="info@laruvisona.jp">
-                            </div>
-                        </div>
-                        <div class="mb-10">
-                            <label class="block text-xs font-bold text-slate-400 mb-3 tracking-wide">MESSAGE <span class="text-red-500">*</span></label>
-                            <textarea id="contact-message" name="message" rows="1" required class="w-full bg-transparent border-b border-white/20 px-0 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors text-base resize-none" placeholder="ご相談内容をご記入ください"></textarea>
-                        </div>
-                        <div class="text-center">
-                            <button type="submit" id="contact-submit-btn" class="bg-white text-black font-bold py-4 px-12 rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300 text-sm tracking-widest font-en magnetic-element shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                                SEND MESSAGE
-                            </button>
-                        </div>
-                    </div>
-                </form>
             </div>
         </div>
     </section>
@@ -967,7 +940,7 @@
             const q8 = getLabel('q_maintain');
             const q9 = getLabel('q_speed');
 
-            const message = `【AI見積もりシミュレーターからのご相談】
+            const message = `【お見積もりシミュレーターからのご相談】
 ■ 概算費用: 約${total}万円
 ------------------------
 ■ 開発対象: ${q1}
@@ -980,33 +953,30 @@
 ■ 運用保守: ${q8}
 ■ 納期: ${q9}
 ------------------------
-ご要望や詳細をこちらにご追記ください：\n`;
+※このまま送信するか、ご要望を追記してください。`;
 
-            const textarea = document.getElementById('contact-message');
-            textarea.value = message;
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-
-            document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
+            // クリップボードにコピーする処理
+            navigator.clipboard.writeText(message).then(() => {
+                const btn = document.getElementById('consult-btn');
+                const originalText = btn.innerHTML;
+                
+                // ボタンの見た目を「コピー完了」に変更
+                btn.innerHTML = '<i class="fas fa-check"></i> コピーしました！チャットに貼り付けてください';
+                btn.style.backgroundColor = '#10b981'; // Tailwind emerald-500
+                btn.style.color = 'white';
+                
+                // 3秒後に元のボタンに戻す
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.backgroundColor = 'white';
+                    btn.style.color = 'black';
+                }, 3000);
+            }).catch(err => {
+                alert('コピーに失敗しました。手動でメモしてください。');
+            });
         });
 
-        document.getElementById('contact-message').addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = this.scrollHeight + 'px';
-        });
 
-        // 🌟 7. Contact Form API連携
-        document.getElementById('contact-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('contact-submit-btn');
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> SENDING...';
-            btn.disabled = true;
-
-            setTimeout(() => {
-                document.getElementById('contact-form-inner').classList.add('hidden');
-                document.getElementById('contact-success').classList.remove('hidden');
-            }, 2000);
-        });
 
         // 🌟 8. Voice UI Demo
         const voiceBtn = document.getElementById('voice-trigger-btn');
