@@ -761,16 +761,11 @@
             });
         }
 
-        // 🌟 2. Smooth Scroll (Lenis) - ブレーキ強化版
-        const lenis = new Lenis({
-            lerp: 0.15, // 追従速度（数値を大きくするほどピタッと止まります。元は未指定で滑りやすかった）
-            duration: 0.8, // アニメーション時間（1.2から0.8に短縮してキビキビと）
-            smoothWheel: true,
-            wheelMultiplier: 1.0, // ホイールの回転に対する移動量
-        });
+        // 🌟 2. Smooth Scroll (Lenis)
+        const lenis = new Lenis({ duration: 1.2, smooth: true });
         function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
         requestAnimationFrame(raf);
-        
+
         // 🌟 3. GSAP Animations & Text Reveal
         gsap.registerPlugin(ScrollTrigger);
 
