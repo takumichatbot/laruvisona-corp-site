@@ -61,59 +61,49 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Rajdhani:wght@500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
-        /* 🚀 レンダリング最適化 (画面外の描画をサボって軽くする) */
+        /* 🚀 レンダリング最適化 */
         section { content-visibility: auto; contain-intrinsic-size: 1000px; }
         #hero-section, #preloader { content-visibility: visible; }
 
-        /* --- 究極のベーススタイル --- */
         html { cursor: none; background-color: #030712; }
         body { background-color: #030712; color: #f8fafc; overflow-x: hidden; font-family: 'Noto Sans JP', sans-serif; }
         .font-en { font-family: 'Rajdhani', sans-serif; }
         
-        /* 🌟 SVGロゴ ラインドローイング・アニメーション (通信ラグ 0秒！) */
         .svg-logo-path {
             stroke-dasharray: 250;
             stroke-dashoffset: 250;
-            animation: drawLogo 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation: drawLogo 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards; /* 高速化 */
         }
-        @keyframes drawLogo {
-            to { stroke-dashoffset: 0; }
-        }
+        @keyframes drawLogo { to { stroke-dashoffset: 0; } }
         .svg-logo-glow { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
 
-        /* 🌟 カスタムカーソル */
-        .cursor-dot { position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: white; border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s; mix-blend-mode: difference; }
-        .cursor-outline { position: fixed; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: transform 0.15s ease-out, width 0.2s, height 0.2s; }
+        .cursor-dot { position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: white; border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); transition: width 0.15s, height 0.15s, background-color 0.15s; mix-blend-mode: difference; }
+        .cursor-outline { position: fixed; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: transform 0.1s ease-out, width 0.15s, height 0.15s; }
         a:hover ~ .cursor-dot, button:hover ~ .cursor-dot, label:hover ~ .cursor-dot { width: 60px; height: 60px; background: rgba(255,255,255,0.1); mix-blend-mode: normal; backdrop-filter: blur(4px); }
         a:hover ~ .cursor-outline, button:hover ~ .cursor-outline, label:hover ~ .cursor-outline { opacity: 0; }
 
-        /* 🌟 スポットライトボーダー */
-        .spotlight-card { position: relative; background: rgba(15, 23, 42, 0.4); border-radius: 1.5rem; overflow: hidden; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .spotlight-card:hover { transform: translateY(-10px) scale(1.02); z-index: 10; }
+        .spotlight-card { position: relative; background: rgba(15, 23, 42, 0.4); border-radius: 1.5rem; overflow: hidden; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .spotlight-card:hover { transform: translateY(-8px) scale(1.01); z-index: 10; }
         .spotlight-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y), rgba(59,130,246,0.1), transparent 40%); z-index: 0; pointer-events: none; }
         .spotlight-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(96, 165, 250, 0.8), transparent 40%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; z-index: 1; pointer-events: none; }
         .spotlight-content { position: relative; z-index: 10; height: 100%; backdrop-filter: blur(10px); }
 
-        /* グラスモーフィズム */
         .glass-nav { background: rgba(3, 7, 18, 0.6); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        /* テキストエフェクト */
         .text-gradient-super { background: linear-gradient(to right, #fff 20%, #60a5fa 50%, #3b82f6 80%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: 200% auto; animation: shine 5s linear infinite; }
         @keyframes shine { to { background-position: 200% center; } }
-        .char { display: inline-block; opacity: 0; transform: translateY(20px); }
+        .char { display: inline-block; opacity: 0; transform: translateY(10px); } /* 移動距離を短く */
 
-        /* アニメーション要素 */
         .marquee-track { display: flex; gap: 4rem; animation: marquee 25s linear infinite; width: max-content; }
-        .marquee-item { font-size: 1.5rem; font-weight: 900; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.2); display: flex; align-items: center; gap: 0.75rem; transition: 0.3s; }
+        .marquee-item { font-size: 1.5rem; font-weight: 900; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.2); display: flex; align-items: center; gap: 0.75rem; transition: 0.2s; }
         .marquee-item:hover { color: #fff; -webkit-text-stroke: 0px; text-shadow: 0 0 20px rgba(59,130,246,0.8); }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-        /* ボイスUIセクション用 */
-        .voice-circle { position: relative; width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #4f46e5); display: flex; align-items: center; justify-content: center; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 40px rgba(59, 130, 246, 0.3); z-index: 10; }
+        .voice-circle { position: relative; width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #4f46e5); display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 40px rgba(59, 130, 246, 0.3); z-index: 10; }
         .voice-circle::before { content: ''; position: absolute; inset: -20px; border: 1px solid rgba(59,130,246,0.3); border-radius: 50%; animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite; z-index: -1; }
         .voice-circle.active { background: #f43f5e; box-shadow: 0 0 60px rgba(244, 63, 94, 0.6); transform: scale(1.1); }
         .voice-circle.active::before { border-color: rgba(244,63,94,0.5); animation-duration: 1s; }
-        .voice-waves { display: flex; gap: 6px; align-items: center; justify-content: center; height: 50px; margin-top: 30px; opacity: 0; transition: opacity 0.3s; }
+        .voice-waves { display: flex; gap: 6px; align-items: center; justify-content: center; height: 50px; margin-top: 30px; opacity: 0; transition: opacity 0.2s; }
         .voice-waves.active { opacity: 1; }
         .wave-bar { width: 4px; background: #fff; border-radius: 4px; animation: wave 0.5s infinite ease-in-out alternate; }
         .wave-bar:nth-child(1) { height: 15px; animation-delay: 0s; }
@@ -123,9 +113,8 @@
         .wave-bar:nth-child(5) { height: 15px; animation-delay: 0.4s; }
         @keyframes wave { 0% { transform: scaleY(0.5); } 100% { transform: scaleY(1.2); } }
 
-        /* Dev Mode (Glitch Effect) */
-        .dev-switch { position: relative; width: 44px; height: 24px; background: rgba(255,255,255,0.1); border-radius: 99px; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2); overflow: hidden; }
-        .dev-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .dev-switch { position: relative; width: 44px; height: 24px; background: rgba(255,255,255,0.1); border-radius: 99px; transition: 0.2s; border: 1px solid rgba(255,255,255,0.2); overflow: hidden; }
+        .dev-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .dev-switch.active { background: #22c55e; border-color: #22c55e; }
         .dev-switch.active::after { transform: translateX(20px); }
         body.dev-mode { background-color: #050505 !important; color: #22c55e !important; font-family: 'Fira Code', monospace !important; background-image: radial-gradient(rgba(34, 197, 94, 0.15) 1px, transparent 1px); background-size: 24px 24px; }
@@ -134,46 +123,37 @@
         body.dev-mode h1, body.dev-mode h3, body.dev-mode h3 { color: #22c55e !important; text-shadow: 0 0 10px rgba(34,197,94,0.5); }
         body.dev-mode .text-gradient-super { -webkit-text-fill-color: #22c55e !important; background: none !important; }
 
-        /* AI見積もりボタン */
-        .estimator-btn { background: rgba(20, 20, 20, 0.6); padding: 0.8rem 0.5rem; border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.05); text-align: center; color: #94a3b8; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 600; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer;}
+        .estimator-btn { background: rgba(20, 20, 20, 0.6); padding: 0.8rem 0.5rem; border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.05); text-align: center; color: #94a3b8; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 600; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer;}
         @media (min-width: 768px) { .estimator-btn { padding: 1rem 0.8rem; gap: 0.5rem; } }
         .estimator-btn:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.2); color: #e2e8f0; transform: translateY(-2px); }
         input:checked + .estimator-btn { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #fff; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), inset 0 0 10px rgba(59, 130, 246, 0.1); transform: scale(1.02); }
         .estimator-btn.flex-row { flex-direction: row; }
 
-        /* フルスクリーンモバイルメニュー */
-        #mobile-menu { clip-path: circle(0px at top right); transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        #mobile-menu { clip-path: circle(0px at top right); transition: clip-path 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         #mobile-menu.active { clip-path: circle(150% at top right); }
-        .menu-link { transform: translateY(20px); opacity: 0; transition: all 0.4s ease; }
+        .menu-link { transform: translateY(20px); opacity: 0; transition: all 0.3s ease; }
         #mobile-menu.active .menu-link { transform: translateY(0); opacity: 1; }
 
-        /* スクロールバー隠し */
         ::-webkit-scrollbar { width: 0px; height: 0px; }
 
-        /* 🌟 超・高精度 SVGロゴ・ドローイング＆クロスフェード */
         .draw-line {
             stroke-dasharray: 300;
             stroke-dashoffset: 300;
-            animation: drawPath 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation: drawPath 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; /* 高速化 */
         }
         .delay-0 { animation-delay: 0s; }
-        .delay-1 { animation-delay: 0.3s; }
-        .delay-2 { animation-delay: 0.6s; }
-        .delay-3 { animation-delay: 0.9s; }
-        
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
         @keyframes drawPath { to { stroke-dashoffset: 0; } }
 
-        /* 線を描き終わった後にSVGを光らせて消す */
-        .svg-logo-anim {
-            animation: fadeOutSvg 0.8s ease 2s forwards;
-        }
+        .svg-logo-anim { animation: fadeOutSvg 0.5s ease 1.2s forwards; } /* 待機時間を短縮 */
         @keyframes fadeOutSvg { to { opacity: 0; filter: blur(4px); transform: scale(1.05); } }
 
-        /* 線に合わせて本物のロゴ画像を浮かび上がらせる */
         .real-logo-reveal {
             opacity: 0;
             transform: scale(0.95);
-            animation: revealImage 1s cubic-bezier(0.4, 0, 0.2, 1) 1.5s forwards;
+            animation: revealImage 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s forwards; /* 出現を早める */
         }
         @keyframes revealImage { to { opacity: 1; transform: scale(1); } }
     </style>
@@ -187,7 +167,6 @@
     <div id="preloader" class="fixed inset-0 z-[10000] bg-dark flex flex-col justify-center items-center">
         
         <div class="relative w-32 h-32 md:w-48 md:h-48 mb-2 flex items-center justify-center">
-            
             <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full svg-logo-anim z-20">
                 <defs>
                     <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -206,14 +185,13 @@
                     <path class="draw-line delay-3" d="M 68 20 H 83 V 35" />
                 </g>
             </svg>
-
             <img src="images/logo_dark.png" alt="LaruVisona" decoding="async" class="absolute inset-0 w-full h-full object-contain blend-logo real-logo-reveal z-10">
         </div>
 
         <div class="font-en text-3xl md:text-5xl font-black tracking-[0.2em] text-white mb-6 real-logo-reveal">LARU<span class="text-blue-400">VISONA</span></div>
         
         <div class="w-48 h-[2px] bg-white/10 overflow-hidden rounded-full">
-            <div id="loader-bar" class="h-full bg-blue-500 w-0 transition-all duration-100"></div>
+            <div id="loader-bar" class="h-full bg-blue-500 w-0 transition-all duration-75"></div>
         </div>
     </div>
 
@@ -222,7 +200,7 @@
         <div class="absolute top-[40%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-indigo-600/10 blur-[120px] mix-blend-screen parallax-blob" data-speed="-0.03"></div>
     </div>
 
-    <header class="fixed w-full z-50 py-4 transition-all duration-500 opacity-0" id="header" style="transform: translateY(-20px);">
+    <header class="fixed w-full z-50 py-4 transition-all duration-300 opacity-0" id="header" style="transform: translateY(-10px);">
         <div class="container mx-auto px-4 md:px-6">
             <div class="flex justify-between items-center glass-nav rounded-2xl p-3 pl-4 shadow-2xl">
                 <a href="#" class="flex items-center gap-3 group shrink-0 magnetic-element">
@@ -272,7 +250,7 @@
         <div class="absolute inset-0 bg-gradient-to-b from-transparent via-dark/50 to-dark z-0"></div>
         
         <div class="container mx-auto relative z-10 text-center">
-            <div class="gsap-hero-elem opacity-0 translate-y-10">
+            <div class="gsap-hero-elem opacity-0 translate-y-5">
                 <div class="inline-flex items-center gap-3 border border-white/10 bg-white/5 backdrop-blur-md px-6 py-2 rounded-full mb-10">
                     <span class="relative flex h-2 w-2">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -287,12 +265,12 @@
                 <span class="text-white block">IMPLEMENT.</span>
             </h1>
             
-            <p class="gsap-hero-elem opacity-0 translate-y-10 text-slate-400 text-base md:text-xl leading-relaxed mb-12 max-w-2xl mx-auto font-medium">
+            <p class="gsap-hero-elem opacity-0 translate-y-5 text-slate-400 text-base md:text-xl leading-relaxed mb-12 max-w-2xl mx-auto font-medium">
                 「想像」を「実装」する。<br>
                 AIとモダンWeb技術を駆使し、あなたのビジネスを次の次元へ。
             </p>
             
-            <div class="gsap-hero-elem opacity-0 translate-y-10">
+            <div class="gsap-hero-elem opacity-0 translate-y-5">
                 <a href="#services" class="bg-white text-slate-900 px-10 py-4 rounded-full font-bold hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.2)] text-lg inline-flex items-center gap-3 magnetic-element">
                     Discover <i class="fas fa-arrow-down animate-bounce"></i>
                 </a>
@@ -574,7 +552,7 @@
                 <p class="text-slate-400 text-sm md:text-base">AIとモダンWeb技術の最前線を発信します。</p>
             </div>
             <div class="gsap-fade-up">
-                <script src="https://larubot.tokyo/embed/blog.js" data-id="ab0761b3-2eec-49f0-9042-77168ffff329" data-limit="3"></script>
+                <script src="https://larubot.tokyo/embed/blog.js" data-id="ab0761b3-2eec-49f0-9042-77168ffff329" data-limit="3" async></script>
             </div>
         </div>
     </section>
@@ -775,7 +753,7 @@
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
             
                 <div class="w-full text-left min-h-[300px]">
-                    <script src="https://larubot.tokyo/embed/blog.js" data-id="ab0761b3-2eec-49f0-9042-77168ffff329"></script>
+                    <script src="https://larubot.tokyo/embed/blog.js" data-id="ab0761b3-2eec-49f0-9042-77168ffff329" async></script>
                 </div>
 
             </div>
@@ -838,8 +816,6 @@
             });
         }
 
-        
-
         // 🌟 3. GSAP Animations & Text Reveal
         gsap.registerPlugin(ScrollTrigger);
 
@@ -849,24 +825,24 @@
             title.innerHTML = '';
             chars.forEach(char => {
                 if(char === ' ') title.innerHTML += '&nbsp;';
-                else title.innerHTML += `<span class="char inline-block opacity-0 translate-y-8">${char}</span>`;
+                else title.innerHTML += `<span class="char inline-block opacity-0 translate-y-5">${char}</span>`;
             });
         }
 
-        // Preloader & Init (SVG Line Drawing 同期)
+        // 🌟 待ち時間を大幅に削減したローディングアニメーション
         let progress = 0;
         const loaderBar = document.getElementById('loader-bar');
         const interval = setInterval(() => {
-            progress += Math.floor(Math.random() * 20) + 10;
+            progress += Math.floor(Math.random() * 30) + 20; 
             if(progress > 100) progress = 100;
             loaderBar.style.width = progress + '%';
             if(progress === 100) {
                 clearInterval(interval);
                 setTimeout(() => {
-                    gsap.to('#preloader', { yPercent: -100, duration: 0.8, ease: "power4.inOut" });
-                    gsap.to('#header', { opacity: 1, y: 0, duration: 1, ease: "power3.out", delay: 0.3 });
-                    gsap.to('.char', { y: 0, opacity: 1, duration: 0.8, stagger: 0.05, ease: "back.out(1.7)", delay: 0.5 });
-                    gsap.to('.gsap-hero-elem', { y: 0, opacity: 1, duration: 1, stagger: 0.1, ease: "power3.out", delay: 1 });
+                    gsap.to('#preloader', { yPercent: -100, duration: 0.6, ease: "power4.inOut" });
+                    gsap.to('#header', { opacity: 1, y: 0, duration: 0.8, ease: "power3.out", delay: 0.1 });
+                    gsap.to('.char', { y: 0, opacity: 1, duration: 0.6, stagger: 0.03, ease: "back.out(1.7)", delay: 0.2 });
+                    gsap.to('.gsap-hero-elem', { y: 0, opacity: 1, duration: 0.8, stagger: 0.05, ease: "power3.out", delay: 0.4 });
                     
                     try {
                         VANTA.GLOBE({
@@ -875,9 +851,9 @@
                             color: 0x3b82f6, backgroundColor: 0x030712
                         });
                     } catch(e){}
-                }, 1500); // 描画アニメーションを見せるため待機
+                }, 800); // 待機時間を半分に
             }
-        }, 150);
+        }, 80); // インターバルも高速化
 
         const slider = document.getElementById('horizontal-scroll');
         let isDown = false, startX, scrollLeft;
@@ -892,8 +868,9 @@
             slider.scrollLeft = scrollLeft - walk;
         });
 
+        // 🌟 スクロールアニメーションを高速化
         gsap.utils.toArray('.gsap-fade-up').forEach(elem => {
-            gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 85%" }, y: 40, opacity: 0, duration: 1, ease: "power3.out" });
+            gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 90%" }, y: 30, opacity: 0, duration: 0.6, ease: "power2.out" });
         });
 
         gsap.utils.toArray('.parallax-blob').forEach(blob => {
