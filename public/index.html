@@ -69,10 +69,11 @@
         body { background-color: #030712; color: #f8fafc; overflow-x: hidden; font-family: 'Noto Sans JP', sans-serif; }
         .font-en { font-family: 'Rajdhani', sans-serif; }
         
+        /* 変更前: 1.0s -> 変更後: 2.0s にして線をゆっくり描画 */
         .svg-logo-path {
             stroke-dasharray: 250;
             stroke-dashoffset: 250;
-            animation: drawLogo 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards; /* 高速化 */
+            animation: drawLogo 2.0s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
         }
         @keyframes drawLogo { to { stroke-dashoffset: 0; } }
         .svg-logo-glow { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
@@ -136,26 +137,31 @@
 
         ::-webkit-scrollbar { width: 0px; height: 0px; }
 
+        /* 変更前: 0.8s -> 変更後: 1.5s にしてシンボルマークもゆっくり描画 */
         .draw-line {
             stroke-dasharray: 300;
             stroke-dashoffset: 300;
-            animation: drawPath 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; /* 高速化 */
+            animation: drawPath 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
         }
+        /* ディレイ（遅延）も少しずつ間隔を広げてエレガントに */
         .delay-0 { animation-delay: 0s; }
-        .delay-1 { animation-delay: 0.2s; }
-        .delay-2 { animation-delay: 0.4s; }
-        .delay-3 { animation-delay: 0.6s; }
+        .delay-1 { animation-delay: 0.3s; } 
+        .delay-2 { animation-delay: 0.6s; } 
+        .delay-3 { animation-delay: 0.9s; } 
         @keyframes drawPath { to { stroke-dashoffset: 0; } }
 
-        .svg-logo-anim { animation: fadeOutSvg 0.5s ease 1.2s forwards; } /* 待機時間を短縮 */
+        /* フェードアウトまでの待機時間を 1.2s -> 2.0s へ延長 */
+        .svg-logo-anim { animation: fadeOutSvg 0.8s ease 2.0s forwards; } 
         @keyframes fadeOutSvg { to { opacity: 0; filter: blur(4px); transform: scale(1.05); } }
 
+        /* 本物のロゴテキストが浮かび上がるタイミングを 0.8s -> 1.5s へ延長 */
         .real-logo-reveal {
             opacity: 0;
             transform: scale(0.95);
-            animation: revealImage 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s forwards; /* 出現を早める */
+            animation: revealImage 1.2s cubic-bezier(0.4, 0, 0.2, 1) 1.5s forwards; 
         }
         @keyframes revealImage { to { opacity: 1; transform: scale(1); } }
+        
     </style>
 </head>
 <body class="antialiased selection:bg-blue-500 selection:text-white relative">
@@ -829,20 +835,30 @@
             });
         }
 
-        // 🌟 待ち時間を大幅に削減したローディングアニメーション
+        // 🌟 重厚感を持たせたローディングアニメーション
         let progress = 0;
         const loaderBar = document.getElementById('loader-bar');
+        
+        // インターバルを 80ms -> 120ms にして進行を落ち着かせる
         const interval = setInterval(() => {
-            progress += Math.floor(Math.random() * 30) + 20; 
+            // 一度に進むパーセンテージも小さくする
+            progress += Math.floor(Math.random() * 15) + 10; 
             if(progress > 100) progress = 100;
             loaderBar.style.width = progress + '%';
+            
             if(progress === 100) {
                 clearInterval(interval);
+                // バーが100%になってから画面が切り替わるまでの余韻を 800ms -> 1500ms に
                 setTimeout(() => {
-                    gsap.to('#preloader', { yPercent: -100, duration: 0.6, ease: "power4.inOut" });
-                    gsap.to('#header', { opacity: 1, y: 0, duration: 0.8, ease: "power3.out", delay: 0.1 });
-                    gsap.to('.char', { y: 0, opacity: 1, duration: 0.6, stagger: 0.03, ease: "back.out(1.7)", delay: 0.2 });
-                    gsap.to('.gsap-hero-elem', { y: 0, opacity: 1, duration: 0.8, stagger: 0.05, ease: "power3.out", delay: 0.4 });
+                    // 全体の duration (アニメーション時間) を長めに設定して滑らかに
+                    gsap.to('#preloader', { yPercent: -100, duration: 1.0, ease: "power4.inOut" });
+                    gsap.to('#header', { opacity: 1, y: 0, duration: 1.0, ease: "power3.out", delay: 0.2 });
+                    
+                    // タイトル文字が1文字ずつ下から出てくるスピードを遅く、余韻を持たせる
+                    gsap.to('.char', { y: 0, opacity: 1, duration: 0.8, stagger: 0.05, ease: "back.out(1.7)", delay: 0.4 });
+                    
+                    // 説明文やボタンの出現も遅らせる
+                    gsap.to('.gsap-hero-elem', { y: 0, opacity: 1, duration: 1.0, stagger: 0.1, ease: "power3.out", delay: 0.6 });
                     
                     try {
                         VANTA.GLOBE({
@@ -851,9 +867,9 @@
                             color: 0x3b82f6, backgroundColor: 0x030712
                         });
                     } catch(e){}
-                }, 800); // 待機時間を半分に
+                }, 1500); 
             }
-        }, 80); // インターバルも高速化
+        }, 120);
 
         const slider = document.getElementById('horizontal-scroll');
         let isDown = false, startX, scrollLeft;
