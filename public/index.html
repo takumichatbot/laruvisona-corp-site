@@ -884,19 +884,7 @@
             slider.scrollLeft = scrollLeft - walk;
         });
 
-        // 🌟 スクロールアニメーションを高速化
-        gsap.utils.toArray('.gsap-fade-up').forEach(elem => {
-            gsap.from(elem, { scrollTrigger: { trigger: elem, start: "top 90%" }, y: 30, opacity: 0, duration: 0.6, ease: "power2.out" });
-        });
-
-        gsap.utils.toArray('.parallax-blob').forEach(blob => {
-            const speed = blob.getAttribute('data-speed');
-            gsap.to(blob, {
-                y: () => (ScrollTrigger.maxScroll(window) * speed),
-                ease: "none",
-                scrollTrigger: { trigger: "body", start: "top top", end: "bottom bottom", scrub: true }
-            });
-        });
+        
 
         // 🌟 4. Mobile Menu
         const menuBtn = document.getElementById('menu-toggle');
