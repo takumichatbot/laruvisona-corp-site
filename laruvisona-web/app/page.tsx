@@ -23,7 +23,20 @@ export default function Home() {
   };
 
   useEffect(() => {
-    // 🌟 GSAPの初期化
+    // カーソル追従
+    let cleanupCursor: (() => void) | undefined;
+    if (window.innerWidth > 768) {
+      const dot = document.getElementById('cursor-dot');
+      const outline = document.getElementById('cursor-outline');
+      const onMove = (e: MouseEvent) => {
+        if (dot) { dot.style.left = `${e.clientX}px`; dot.style.top = `${e.clientY}px`; }
+        if (outline) outline.animate({ left: `${e.clientX}px`, top: `${e.clientY}px` }, { duration: 500, fill: 'forwards' });
+      };
+      window.addEventListener('mousemove', onMove);
+      cleanupCursor = () => window.removeEventListener('mousemove', onMove);
+    }
+
+    // GSAPの初期化
     gsap.registerPlugin(ScrollTrigger);
 
     // 🌟 ヒーローセクションのシネマティック登場アニメーション
@@ -87,16 +100,18 @@ export default function Home() {
         slider.removeEventListener('mouseleave', onMouseLeave);
         slider.removeEventListener('mouseup', onMouseUp);
         slider.removeEventListener('mousemove', onMouseMove);
+        cleanupCursor?.();
       };
     }
+    return () => { cleanupCursor?.(); };
   }, []);
 
   return (
     <main className="relative min-h-screen overflow-x-hidden selection:bg-blue-500 selection:text-white">
       
-      {/* 🌟 1. カスタムカーソル (CSSはglobals.cssに追記を推奨) */}
-      <div className="fixed top-0 left-0 w-2 h-2 bg-white rounded-full pointer-events-none mix-blend-difference z-[10000] hidden md:block" id="cursor-dot" />
-      <div className="fixed top-0 left-0 w-10 h-10 border border-white/50 rounded-full pointer-events-none z-[9999] hidden md:block transition-transform duration-150 ease-out" id="cursor-outline" />
+      {/* カスタムカーソル */}
+      <div className="hidden md:block" id="cursor-dot" style={{ position: 'fixed', top: 0, left: 0, width: 8, height: 8, background: 'white', borderRadius: '50%', pointerEvents: 'none', zIndex: 10000, transform: 'translate(-50%,-50%)', mixBlendMode: 'difference' }} />
+      <div className="hidden md:block" id="cursor-outline" style={{ position: 'fixed', top: 0, left: 0, width: 40, height: 40, border: '1px solid rgba(255,255,255,0.5)', borderRadius: '50%', pointerEvents: 'none', zIndex: 9999, transform: 'translate(-50%,-50%)' }} />
 
       {/* 🌟 2. 3D背景レイヤー */}
       <Scene />
