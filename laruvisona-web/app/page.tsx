@@ -16,13 +16,7 @@ export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const horizontalScrollRef = useRef<HTMLDivElement>(null);
   
-  // 🌟 追加: フォームに渡す初期メッセージを管理するState
-  const [contactMessage, setContactMessage] = useState('');
-
-  // 🌟 追加: Estimatorから結果を受け取って、Contactへスクロールする関数
-  const handleConsult = (details: string) => {
-    setContactMessage(details); // メッセージをセット
-    // 少し待ってからContactセクションへスクロール
+  const handleConsult = () => {
     setTimeout(() => {
       document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -350,7 +344,6 @@ export default function Home() {
             </div>
             
             <div className="gsap-fade-up">
-              {/* 🌟 修正: onConsult を渡す */}
               <Estimator onConsult={handleConsult} />
             </div>
           </div>
@@ -447,14 +440,23 @@ export default function Home() {
             <p className="text-slate-400 mb-16 text-lg">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
             
             {/* 🌟 修正: 先ほど作ったContactコンポーネントに置き換え、メッセージを渡す */}
-            <Contact initialMessage={contactMessage} />
+            <Contact />
             
           </div>
         </section>
 
-        <footer className="bg-[#030712] text-slate-500 py-12 border-t border-white/5 relative z-10 text-center">
-          <div className="text-2xl font-black tracking-tight font-en text-white mb-6">LARU<span className="font-light text-slate-600">Visona</span></div>
-          <p className="text-xs font-mono text-slate-600">&copy; 2026 LARUVisona Inc. Tokyo. All Rights Reserved.</p>
+        <footer className="bg-[#000] text-slate-500 py-12 md:py-16 border-t border-white/5 relative z-10 text-center">
+          <div className="flex flex-col items-center">
+            <div className="bg-white/5 p-3 rounded-2xl mb-8 opacity-80 hover:opacity-100 transition-opacity">
+              <img src="/images/logo_dark.png" alt="LaruVisona" className="h-8 w-auto object-contain" />
+            </div>
+            <div className="flex flex-wrap justify-center gap-8 text-xs font-bold mb-10 tracking-widest uppercase">
+              <a href="/privacy.html" className="hover:text-white transition-colors">Privacy</a>
+              <a href="/terms.html" className="hover:text-white transition-colors">Terms</a>
+              <a href="#about" className="hover:text-white transition-colors">Company</a>
+            </div>
+            <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LaruVisona All Rights Reserved.</p>
+          </div>
         </footer>
 
       </div>
