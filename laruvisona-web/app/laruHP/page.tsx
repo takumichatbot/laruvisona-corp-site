@@ -157,17 +157,31 @@ export default function LaruHPLandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="pt-36 pb-24 px-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.08),transparent_60%)] pointer-events-none" />
-        <div className="max-w-4xl mx-auto relative">
-          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full text-blue-400 text-xs font-bold tracking-widest mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+      <section className="pt-36 pb-28 px-6 text-center relative overflow-hidden">
+        {/* 背景グラデーション群 */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.12),transparent_65%)]" />
+          <div className="absolute top-20 left-1/4 w-72 h-72 rounded-full bg-blue-600/5 blur-3xl" />
+          <div className="absolute top-32 right-1/4 w-56 h-56 rounded-full bg-cyan-500/5 blur-3xl" />
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '80px 80px' }} />
+        </div>
+
+        <div className="max-w-5xl mx-auto relative">
+          {/* バッジ */}
+          <div className="inline-flex items-center gap-2.5 bg-blue-500/10 border border-blue-500/25 px-5 py-2.5 rounded-full text-blue-400 text-xs font-bold tracking-widest mb-10 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+            </span>
             NEW — AI搭載 HPビルダー 2026
           </div>
 
-          <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-6 leading-[1.05]">
-            最高のHPを、<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500">最短</span>で。
+          {/* メインタイトル */}
+          <h1 className="text-6xl md:text-[6.5rem] font-black tracking-tighter mb-6 leading-[1.02]">
+            <span className="block text-white">最高のHPを、</span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 animate-[gradient_4s_ease_infinite]">
+              最短5分で。
+            </span>
           </h1>
 
           <p className="text-slate-400 text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -175,29 +189,42 @@ export default function LaruHPLandingPage() {
             SEO・LARUbot連携・ビジュアル編集がすべて月額<strong className="text-white">999円</strong>。
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
-            <Link href="/laruHP/onboarding" className="bg-white text-black px-8 py-4 rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.12)] flex items-center gap-3 w-full sm:w-auto justify-center">
-              無料で始める（初月1円）
-              <span className="text-blue-600">→</span>
+          {/* CTA ボタン */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
+            <Link href="/laruHP/onboarding"
+              className="relative bg-white text-black px-9 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-[0_0_50px_rgba(255,255,255,0.15)] flex items-center gap-3 w-full sm:w-auto justify-center overflow-hidden group">
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-100 to-cyan-100 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="relative">無料で始める（初月1円）</span>
+              <span className="relative text-blue-600 font-black">→</span>
             </Link>
-            <Link href="/laruHP/builder" className="text-slate-300 hover:text-white px-8 py-4 rounded-2xl font-medium text-lg border border-white/10 hover:border-white/30 transition-all flex items-center gap-2 w-full sm:w-auto justify-center">
-              ▶ デモエディタを体験
+            <Link href="/laruHP/builder"
+              className="text-slate-300 hover:text-white px-9 py-4 rounded-2xl font-bold text-lg border border-white/10 hover:border-white/30 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center backdrop-blur-sm">
+              <span className="text-blue-400">▶</span> デモを体験
             </Link>
           </div>
-          <p className="text-slate-600 text-sm">初月1円 → 月額999円（税別） / 最低6ヶ月 / クレジットカード決済</p>
+          <p className="text-slate-600 text-xs">初月1円 → 月額999円（税別）/ 最低6ヶ月 / クレジットカード決済</p>
+
+          {/* フローティングバッジ */}
+          <div className="hidden md:flex justify-center gap-3 mt-8 flex-wrap">
+            {['🤖 AIコンテンツ生成', '📈 SEO自動最適化', '🤝 LARUbot連携', '📱 モバイル完全対応', '🔒 SSL込み'].map((tag, i) => (
+              <span key={i} className="bg-white/5 border border-white/10 text-slate-400 text-xs px-3 py-1.5 rounded-full hover:border-white/20 hover:text-slate-200 transition-all">
+                {tag}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Stats bar */}
         <div className="max-w-3xl mx-auto mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { num: '5分', label: 'でサイト完成', sub: 'AI自動生成' },
-            { num: '10+', label: '業種テンプレート', sub: '随時追加中' },
-            { num: '999円', label: '/月（初月1円）', sub: '税別' },
-            { num: 'AI', label: 'フル搭載SEO', sub: '自動最適化' },
+            { num: '5分', label: 'でサイト完成', sub: 'AI自動生成', color: 'from-blue-500/20 to-transparent' },
+            { num: '10+', label: '業種テンプレート', sub: '随時追加中', color: 'from-purple-500/20 to-transparent' },
+            { num: '999円', label: '/月（初月1円）', sub: '税別', color: 'from-cyan-500/20 to-transparent' },
+            { num: '100%', label: 'SEO自動化', sub: 'AI最適化', color: 'from-emerald-500/20 to-transparent' },
           ].map((stat, i) => (
-            <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center backdrop-blur-sm hover:border-white/20 transition-all">
-              <div className="text-2xl font-black text-white">{stat.num}</div>
-              <div className="text-xs text-white font-medium mt-0.5">{stat.label}</div>
+            <div key={i} className={`relative bg-gradient-to-br ${stat.color} border border-white/10 rounded-2xl p-5 text-center backdrop-blur-sm hover:border-white/20 hover:-translate-y-1 transition-all duration-300 overflow-hidden`}>
+              <div className="text-2xl md:text-3xl font-black text-white">{stat.num}</div>
+              <div className="text-xs text-white/80 font-bold mt-1">{stat.label}</div>
               <div className="text-[10px] text-slate-500 mt-0.5">{stat.sub}</div>
             </div>
           ))}
@@ -479,15 +506,37 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-6 border-t border-white/5 text-center">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-6xl mb-6">🚀</div>
-          <h2 className="text-4xl md:text-6xl font-black mb-6">今すぐ始めよう</h2>
-          <p className="text-slate-400 text-lg mb-10">初月1円。5分でサイト完成。AIがあなたのビジネスを変える。</p>
-          <Link href="/laruHP/onboarding" className="bg-white text-black px-12 py-5 rounded-2xl font-black text-xl hover:scale-105 transition-transform shadow-[0_0_60px_rgba(255,255,255,0.12)] inline-block">
-            無料で始める（初月1円） →
-          </Link>
-          <p className="text-slate-600 text-sm mt-6">最低6ヶ月契約 / 月額999円（税別）/ 7ヶ月目からいつでも解約可</p>
+      <section className="py-32 px-6 border-t border-white/5 text-center relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[radial-gradient(ellipse,rgba(59,130,246,0.08),transparent_70%)]" />
+        </div>
+        <div className="max-w-3xl mx-auto relative">
+          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full text-blue-400 text-xs font-bold mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+            初月1円キャンペーン実施中
+          </div>
+          <h2 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
+            あなたのビジネスを、<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">今日から変える。</span>
+          </h2>
+          <p className="text-slate-400 text-lg mb-12 max-w-xl mx-auto">業種情報を入力するだけ。5分後にはプロ品質のHPが完成しています。</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/laruHP/onboarding"
+              className="bg-white text-black px-12 py-5 rounded-2xl font-black text-xl hover:scale-105 transition-transform shadow-[0_0_60px_rgba(255,255,255,0.15)] inline-flex items-center gap-3 justify-center">
+              無料で始める（初月1円） <span className="text-blue-600">→</span>
+            </Link>
+            <Link href="/laruHP/builder"
+              className="border border-white/20 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:border-white/40 transition-all inline-flex items-center gap-2 justify-center">
+              ▶ まずデモを見る
+            </Link>
+          </div>
+          <div className="mt-10 flex flex-wrap justify-center gap-6 text-xs text-slate-500">
+            <span>✓ クレジットカード決済</span>
+            <span>✓ 初月1円</span>
+            <span>✓ 最短5分で完成</span>
+            <span>✓ SSL・サーバー込み</span>
+            <span>✓ 7ヶ月目から解約可</span>
+          </div>
         </div>
       </section>
 

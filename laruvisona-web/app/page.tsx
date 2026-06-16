@@ -7,13 +7,15 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Estimator from '@/components/Estimator';
 import ChatMockup from '@/components/ChatMockup';
 import VoiceUI from '@/components/VoiceUI';
-import Contact from '@/components/Contact'; // 🌟 これを追加
+import Contact from '@/components/Contact';
+import Intro from '@/components/Intro';
 
 // 3D背景（SSRオフ）
 const Scene = dynamic(() => import('@/components/Canvas/Scene'), { ssr: false });
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
   const horizontalScrollRef = useRef<HTMLDivElement>(null);
   
   const handleConsult = () => {
@@ -107,6 +109,8 @@ export default function Home() {
   }, []);
 
   return (
+    <>
+    {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
     <main className="relative min-h-screen overflow-x-hidden selection:bg-blue-500 selection:text-white">
       
       {/* カスタムカーソル */}
@@ -483,5 +487,6 @@ export default function Home() {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     ` }} />
     </main>
+    </>
   );
 }
