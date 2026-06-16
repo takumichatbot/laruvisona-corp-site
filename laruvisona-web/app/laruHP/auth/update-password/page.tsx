@@ -1,0 +1,124 @@
+'use client';
+import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+
+function UpdatePasswordContent() {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
+  const [ready, setReady] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setReady(true);
+    });
+    // Also check if already has session (page refreshed)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+    });
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirm) { setError('パスワードが一致しません'); return; }
+    if (password.length < 8) { setError('パスワードは8文字以上で入力してください'); return; }
+    setLoading(true);
+    setError('');
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      setError('パスワードの更新に失敗しました。リセットリンクが期限切れかもしれません。');
+    } else {
+      setDone(true);
+      setTimeout(() => router.push('/laruHP/dashboard'), 2000);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#030712] flex items-center justify-center px-6">
+      <div className="w-full max-w-md">
+        <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
+          <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-black text-lg">L</div>
+          <span className="text-white font-black text-2xl">LARU<span className="text-blue-400 font-light">HP</span></span>
+        </Link>
+
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+          <h1 className="text-2xl font-black text-white mb-2">新しいパスワードを設定</h1>
+          <p className="text-slate-400 text-sm mb-8">8文字以上のパスワードを設定してください</p>
+
+          {done ? (
+            <div className="text-center py-4">
+              <div className="text-5xl mb-4">✅</div>
+              <p className="text-green-400 font-bold">パスワードを更新しました</p>
+              <p className="text-slate-400 text-sm mt-2">ダッシュボードに移動します...</p>
+            </div>
+          ) : !ready ? (
+            <div className="text-center py-8 text-slate-500">
+              <div className="text-3xl mb-3 animate-spin">⏳</div>
+              リンクを確認中...
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
+                  {error}
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-300 mb-2">新しいパスワード</label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="8文字以上"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-300 mb-2">パスワード（確認）</label>
+                  <input
+                    type="password"
+                    required
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                    placeholder="もう一度入力"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-white text-black py-4 rounded-xl font-black text-base hover:bg-blue-50 transition-all disabled:opacity-50"
+                >
+                  {loading ? '更新中...' : 'パスワードを更新'}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <div className="text-white text-sm">読み込み中...</div>
+      </div>
+    }>
+      <UpdatePasswordContent />
+    </Suspense>
+  );
+}

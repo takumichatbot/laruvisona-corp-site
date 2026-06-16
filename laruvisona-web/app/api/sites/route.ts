@@ -9,7 +9,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('sites')
-    .select('id, name, slug, industry, published, created_at, updated_at')
+    .select('id, name, slug, industry, published, created_at, updated_at, view_count, custom_domain')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
 

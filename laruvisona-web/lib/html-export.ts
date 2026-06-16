@@ -527,6 +527,15 @@ export function exportToHTML(
   const desc = effectiveSeo.description || '';
   const multiPage = pages.length > 1;
 
+  // Per-page SEO data for dynamic title/description switching
+  const pageSeoMap = pages.reduce<Record<string, { title: string; desc: string }>>((acc, p) => {
+    acc[p.id] = {
+      title: escapeHtml(p.seo?.title || seo.title || siteName),
+      desc: escapeHtml(p.seo?.description || seo.description || ''),
+    };
+    return acc;
+  }, {});
+
   // Navigation bar (multi-page only)
   const navBar = multiPage ? `
 <nav class="lhp-navbar" id="lhp-navbar">
@@ -539,6 +548,7 @@ export function exportToHTML(
   </div>
 </nav>
 <script>
+var LHP_SEO=${JSON.stringify(pageSeoMap)};
 function lhpPage(e,id){
   if(e)e.preventDefault();
   document.querySelectorAll('.lhp-page').forEach(function(el){el.hidden=true;});
@@ -548,6 +558,12 @@ function lhpPage(e,id){
   document.getElementById('lhp-nav-menu').classList.remove('lhp-nav-open');
   window.scrollTo(0,0);
   window.history.pushState({},'','#'+id);
+  var s=LHP_SEO[id];
+  if(s){
+    document.title=s.title;
+    var m=document.querySelector('meta[name="description"]');
+    if(m)m.setAttribute('content',s.desc);
+  }
 }
 window.addEventListener('DOMContentLoaded',function(){
   var hash=window.location.hash.slice(1);

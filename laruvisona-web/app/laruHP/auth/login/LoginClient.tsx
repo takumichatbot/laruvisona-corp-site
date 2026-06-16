@@ -81,6 +81,11 @@ export default function LoginPage() {
           アカウントをお持ちでない方は{' '}
           <Link href="/laruHP/auth/signup" className="text-blue-400 hover:text-blue-300">新規登録</Link>
         </p>
+        <p className="text-center mt-3">
+          <Link href="/laruHP/auth/reset-password" className="text-slate-500 hover:text-slate-300 text-sm">
+            パスワードを忘れた方
+          </Link>
+        </p>
         <p className="text-center mt-2">
           <Link href="/laruHP" className="text-slate-600 text-xs hover:text-slate-400">← LARU HPトップへ</Link>
         </p>

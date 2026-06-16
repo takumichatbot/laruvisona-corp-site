@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Site {
   id: string;
@@ -12,6 +12,8 @@ interface Site {
   published: boolean;
   created_at: string;
   updated_at: string;
+  view_count: number;
+  custom_domain: string | null;
 }
 
 interface Profile {
@@ -71,8 +73,20 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
+  const [paymentBanner, setPaymentBanner] = useState<'success' | 'canceled' | null>(null);
+  const [domainInputs, setDomainInputs] = useState<Record<string, string>>({});
+  const [savingDomain, setSavingDomain] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  useEffect(() => {
+    const p = searchParams.get('payment');
+    if (p === 'success' || p === 'canceled') {
+      setPaymentBanner(p);
+      router.replace('/laruHP/dashboard');
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     (async () => {
@@ -86,7 +100,11 @@ export default function DashboardPage() {
       ]);
 
       const sitesData = await sitesRes.json();
-      setSites(sitesData.sites || []);
+      const loadedSites: Site[] = sitesData.sites || [];
+      setSites(loadedSites);
+      const initDomains: Record<string, string> = {};
+      for (const s of loadedSites) initDomains[s.id] = s.custom_domain || '';
+      setDomainInputs(initDomains);
       setProfile(profileRes.data);
       setLoading(false);
     })();
@@ -96,10 +114,39 @@ export default function DashboardPage() {
     setPublishing(siteId);
     const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'POST' });
     const data = await res.json();
+    if (data.error === 'subscription_required') {
+      setPublishing(null);
+      if (confirm('サイトを公開するにはサブスクリプションが必要です。今すぐ申し込みますか？')) {
+        handleCheckout();
+      }
+      return;
+    }
     if (data.success) {
       setSites(prev => prev.map(s => s.id === siteId ? { ...s, published: true, slug: data.slug || s.slug } : s));
     }
     setPublishing(null);
+  };
+
+  const handleSaveDomain = async (siteId: string) => {
+    setSavingDomain(siteId);
+    const domain = domainInputs[siteId]?.trim() || '';
+    const res = await fetch(`/api/sites/${siteId}/domain`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customDomain: domain || null }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSites(prev => prev.map(s => s.id === siteId ? { ...s, custom_domain: data.customDomain } : s));
+    } else {
+      alert(data.error || 'エラーが発生しました');
+      setSites(prev => {
+        const site = prev.find(s => s.id === siteId);
+        if (site) setDomainInputs(d => ({ ...d, [siteId]: site.custom_domain || '' }));
+        return prev;
+      });
+    }
+    setSavingDomain(null);
   };
 
   const handleUnpublish = async (siteId: string) => {
@@ -195,6 +242,41 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-10">
+        {/* Payment result banners */}
+        {paymentBanner === 'success' && (
+          <div className="flex items-center justify-between gap-4 bg-green-500/10 border border-green-500/30 rounded-2xl px-6 py-4 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎉</span>
+              <div>
+                <div className="font-bold text-green-400 text-sm">お支払いが完了しました！</div>
+                <div className="text-slate-400 text-xs mt-0.5">LARU HP へようこそ。サイトを作成してすぐに公開できます。</div>
+              </div>
+            </div>
+            <button onClick={() => setPaymentBanner(null)} className="text-slate-500 hover:text-white text-lg flex-shrink-0">×</button>
+          </div>
+        )}
+        {paymentBanner === 'canceled' && (
+          <div className="flex items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-6 py-4 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">ℹ️</span>
+              <div>
+                <div className="font-bold text-amber-400 text-sm">お支払いをキャンセルしました</div>
+                <div className="text-slate-400 text-xs mt-0.5">いつでも「初月1円で始める」からサブスクを開始できます。</div>
+              </div>
+            </div>
+            <button onClick={() => setPaymentBanner(null)} className="text-slate-500 hover:text-white text-lg flex-shrink-0">×</button>
+          </div>
+        )}
+        {/* past_due warning */}
+        {profile?.subscription_status === 'past_due' && (
+          <div className="bg-red-500/10 border border-red-500/40 rounded-2xl px-6 py-4 mb-6 flex items-center gap-4">
+            <span className="text-2xl flex-shrink-0">⚠️</span>
+            <div className="flex-1">
+              <div className="font-bold text-red-400 text-sm">お支払いに問題が発生しています</div>
+              <div className="text-slate-400 text-xs mt-0.5">決済に失敗しました。下の「支払い情報を更新する」から支払い方法を更新してください。解決しない場合サービスが停止します。</div>
+            </div>
+          </div>
+        )}
         {/* Subscription Status */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -213,10 +295,10 @@ export default function DashboardPage() {
               {portalError && <p className="text-red-400 text-sm mt-2">{portalError}</p>}
             </div>
             <div className="flex gap-3">
-              {profile?.subscription_status === 'active' ? (
+              {profile?.subscription_status === 'active' || profile?.subscription_status === 'past_due' ? (
                 <button onClick={handlePortal} disabled={portalLoading}
-                  className="text-sm border border-white/10 hover:border-white/30 px-4 py-2 rounded-xl transition-all disabled:opacity-50">
-                  {portalLoading ? '...' : '💳 サブスクリプション管理'}
+                  className={`text-sm border px-4 py-2 rounded-xl transition-all disabled:opacity-50 ${profile.subscription_status === 'past_due' ? 'border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20' : 'border-white/10 hover:border-white/30'}`}>
+                  {portalLoading ? '...' : profile.subscription_status === 'past_due' ? '⚠️ 支払い情報を更新する' : '💳 サブスクリプション管理'}
                 </button>
               ) : (
                 <button onClick={handleCheckout}
@@ -307,7 +389,30 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    <p className="text-slate-600 text-[11px] mb-4">更新 {relativeTime(site.updated_at)}</p>
+                    <div className="flex items-center gap-3 mb-3">
+                      <p className="text-slate-600 text-[11px]">更新 {relativeTime(site.updated_at)}</p>
+                      {site.published && site.view_count > 0 && (
+                        <p className="text-slate-500 text-[11px]">👁 {site.view_count.toLocaleString()}</p>
+                      )}
+                    </div>
+
+                    {/* Custom domain */}
+                    <div className="flex gap-1.5 mb-4">
+                      <input
+                        type="text"
+                        placeholder="example.com"
+                        value={domainInputs[site.id] ?? ''}
+                        onChange={e => setDomainInputs(d => ({ ...d, [site.id]: e.target.value }))}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 font-mono min-w-0"
+                      />
+                      <button
+                        onClick={() => handleSaveDomain(site.id)}
+                        disabled={savingDomain === site.id}
+                        className="text-[11px] bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50 flex-shrink-0"
+                      >
+                        {savingDomain === site.id ? '...' : '保存'}
+                      </button>
+                    </div>
 
                     {/* Actions */}
                     <div className="flex gap-2 flex-wrap mt-auto">

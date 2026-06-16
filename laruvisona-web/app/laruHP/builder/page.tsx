@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
 import Link from 'next/link';
@@ -41,6 +41,7 @@ interface SiteData {
   larubot: boolean;
   laruseo: boolean;
   notifyEmail: string;
+  gaTrackingId: string;
 }
 
 const emptySeo: SEOSettings = { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '' };
@@ -793,7 +794,7 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
 }
 
 // ─── Right Panel ───────────────────────────────────────────────────────────────
-function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange }: {
+function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, gaTrackingId, onGaTrackingIdChange }: {
   block: Block | null;
   onDataChange: (id: string, data: Record<string, unknown>) => void;
   seo: SEOSettings;
@@ -806,9 +807,35 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   onNotifyEmailChange: (v: string) => void;
   colorScheme: string;
   onColorSchemeChange: (v: string) => void;
+  gaTrackingId: string;
+  onGaTrackingIdChange: (v: string) => void;
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
+  const [uploadingImg, setUploadingImg] = useState<string | null>(null);
   const d = block?.data || {};
+
+  const uploadImage = async (file: File, key: string, idx?: number) => {
+    const slotKey = key + (idx !== undefined ? `-${idx}` : '');
+    setUploadingImg(slotKey);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (json.url && block) {
+        if (idx !== undefined) {
+          const images = [...((d.images as string[]) || [])];
+          while (images.length <= idx) images.push('');
+          images[idx] = json.url;
+          onDataChange(block.id, { ...d, images });
+        } else {
+          onDataChange(block.id, { ...d, [key]: json.url });
+        }
+      }
+    } finally {
+      setUploadingImg(null);
+    }
+  };
 
   const seoScore = [
     seo.title.length > 10,
@@ -864,10 +891,20 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                   </div>
                 </label>
                 <label className="block">
-                  <span className="text-slate-400 block mb-1">背景画像URL（任意）</span>
-                  <input type="text" value={d.bgImage as string || ''} placeholder="https://..."
-                    onChange={e => onDataChange(block.id, { ...d, bgImage: e.target.value })}
-                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  <span className="text-slate-400 block mb-1">背景画像</span>
+                  <div className="flex gap-1 mb-1">
+                    <input type="text" value={d.bgImage as string || ''} placeholder="https://..."
+                      onChange={e => onDataChange(block.id, { ...d, bgImage: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'bgImage'); }}} />
+                      <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'bgImage' ? 'opacity-50' : ''}`}>
+                        {uploadingImg === 'bgImage' ? '...' : '📤'}
+                      </span>
+                    </label>
+                  </div>
+                  {!!(d.bgImage as string) && <img src={d.bgImage as string} alt="" className="w-full h-12 object-cover rounded opacity-60" />}
                 </label>
               </>
             )}
@@ -936,6 +973,22 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             )}
             {block?.type === 'image' && (
               <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">画像</span>
+                  <div className="flex gap-1 mb-1">
+                    <input type="text" value={d.src as string || ''} placeholder="https://..."
+                      onChange={e => onDataChange(block.id, { ...d, src: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'src'); }}} />
+                      <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'src' ? 'opacity-50' : ''}`}>
+                        {uploadingImg === 'src' ? '...' : '📤 アップロード'}
+                      </span>
+                    </label>
+                  </div>
+                  {!!(d.src as string) && <img src={d.src as string} alt="" className="w-full h-16 object-cover rounded mb-1" />}
+                </label>
                 <label className="block">
                   <span className="text-slate-400 block mb-1">高さ (px)</span>
                   <input type="number" value={d.height as number || 300} min="100" max="800"
@@ -1063,7 +1116,48 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
-            {block && !['hero','cta','divider','services','image','larubot','video','map','countdown','price-table','booking'].includes(block.type) && (
+            {block?.type === 'gallery' && (
+              <>
+                <div className="text-slate-400 text-[11px] mb-2">画像スロット（最大8枚）</div>
+                <div className="space-y-1.5">
+                  {Array.from({ length: Math.max(((d.images as string[]) || []).length + 1, 4) }).slice(0, 8).map((_, idx) => {
+                    const images = (d.images as string[]) || [];
+                    const src = images[idx] || '';
+                    const slotKey = `gallery-${idx}`;
+                    return (
+                      <div key={idx} className="flex gap-1.5 items-center">
+                        <div className="w-10 h-10 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                          {src ? <img src={src} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs">{idx + 1}</div>}
+                        </div>
+                        <input type="text" value={src} placeholder="URL or upload →"
+                          onChange={e => { const imgs = [...images]; imgs[idx] = e.target.value; onDataChange(block.id, { ...d, images: imgs }); }}
+                          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[9px]" />
+                        <label className="cursor-pointer flex-shrink-0">
+                          <input type="file" accept="image/*" className="hidden"
+                            onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'images', idx); }}} />
+                          <span className={`flex items-center px-1.5 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === slotKey ? 'opacity-50' : ''}`}>
+                            {uploadingImg === slotKey ? '...' : '📤'}
+                          </span>
+                        </label>
+                        {src && (
+                          <button onClick={() => { const imgs = [...images]; imgs[idx] = ''; onDataChange(block.id, { ...d, images: imgs.filter((_, i) => i < imgs.length) }); }}
+                            className="text-red-400/50 hover:text-red-400 text-xs px-1">✕</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <label className="block mt-3">
+                  <span className="text-slate-400 block mb-1">カラム数</span>
+                  <select value={d.columns as string || '2'} onChange={e => onDataChange(block.id, { ...d, columns: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="2">2カラム</option>
+                    <option value="3">3カラム</option>
+                  </select>
+                </label>
+              </>
+            )}
+            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking'].includes(block.type) && (
               <div className="text-slate-500 py-4 text-center">
                 キャンバス上でクリックしてテキストを直接編集できます
               </div>
@@ -1190,8 +1284,10 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 <span className="font-bold text-sm">Google Analytics</span>
               </div>
               <input type="text" placeholder="G-XXXXXXXXXX"
+                value={gaTrackingId}
+                onChange={e => onGaTrackingIdChange(e.target.value)}
                 className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
-              <div className="text-slate-500 text-[10px] mt-1">トラッキングIDを入力</div>
+              <div className="text-slate-500 text-[10px] mt-1">トラッキングIDを入力して保存すると公開サイトに適用されます</div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
@@ -1249,6 +1345,7 @@ function BuilderContent() {
     larubot: true,
     laruseo: true,
     notifyEmail: '',
+    gaTrackingId: '',
   };
 
   const [site, setSite] = useState<SiteData>(defaultSiteData);
@@ -1267,6 +1364,51 @@ function BuilderContent() {
   const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const undoStack = useRef<SiteData[]>([]);
+  const redoStack = useRef<SiteData[]>([]);
+  const siteRef = useRef<SiteData>(defaultSiteData);
+
+  // Keep siteRef in sync for undo/redo to read current state without stale closure
+  useEffect(() => { siteRef.current = site; }, [site]);
+
+  const pushHistory = useCallback((snapshot: SiteData) => {
+    undoStack.current = [...undoStack.current, JSON.parse(JSON.stringify(snapshot))].slice(-50);
+    redoStack.current = [];
+    setCanUndo(true);
+    setCanRedo(false);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (!undoStack.current.length) return;
+    const past = undoStack.current.pop()!;
+    redoStack.current.push(JSON.parse(JSON.stringify(siteRef.current)));
+    setSite(past);
+    setCanUndo(undoStack.current.length > 0);
+    setCanRedo(true);
+  }, []);
+
+  const redo = useCallback(() => {
+    if (!redoStack.current.length) return;
+    const next = redoStack.current.pop()!;
+    undoStack.current.push(JSON.parse(JSON.stringify(siteRef.current)));
+    setSite(next);
+    setCanUndo(true);
+    setCanRedo(redoStack.current.length > 0);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== 'z') return;
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo, redo]);
 
   // Current page derived from site + currentPageId
   const currentPage = site.pages.find(p => p.id === currentPageId) || site.pages[0];
@@ -1294,6 +1436,7 @@ function BuilderContent() {
               larubot: s.settings_json?.larubot ?? true,
               laruseo: s.settings_json?.laruseo ?? true,
               notifyEmail: s.settings_json?.notifyEmail || '',
+              gaTrackingId: s.settings_json?.gaTrackingId || '',
             });
             setCurrentPageId(pages[0].id);
             setPublished(s.published);
@@ -1345,6 +1488,7 @@ function BuilderContent() {
         larubot: d.larubot ?? true,
         laruseo: d.laruseo ?? true,
         notifyEmail: '',
+        gaTrackingId: '',
       });
     } else {
       const savedStr = typeof window !== 'undefined' ? localStorage.getItem('laruHP_builder') : null;
@@ -1361,6 +1505,7 @@ function BuilderContent() {
             larubot: parsed.larubot ?? true,
             laruseo: parsed.laruseo ?? true,
             notifyEmail: parsed.notifyEmail || '',
+            gaTrackingId: parsed.gaTrackingId || '',
           });
         }
       }
@@ -1387,6 +1532,7 @@ function BuilderContent() {
   }, []);
 
   const moveBlock = (id: string, dir: -1 | 1) => {
+    pushHistory(siteRef.current);
     setSite(prev => ({
       ...prev,
       pages: prev.pages.map(p => {
@@ -1402,6 +1548,7 @@ function BuilderContent() {
   };
 
   const deleteBlock = (id: string) => {
+    pushHistory(siteRef.current);
     setSite(prev => ({
       ...prev,
       pages: prev.pages.map(p =>
@@ -1412,6 +1559,7 @@ function BuilderContent() {
   };
 
   const duplicateBlock = (id: string) => {
+    pushHistory(siteRef.current);
     setSite(prev => ({
       ...prev,
       pages: prev.pages.map(p => {
@@ -1426,6 +1574,7 @@ function BuilderContent() {
   };
 
   const addBlock = (type: BlockType, afterId?: string) => {
+    pushHistory(siteRef.current);
     const block = defaultBlock(type);
     setSite(prev => ({
       ...prev,
@@ -1466,13 +1615,31 @@ function BuilderContent() {
     setSelectedId(null);
   };
 
+  const reorderBlocks = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    pushHistory(siteRef.current);
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map(p => {
+        if (p.id !== currentPageId) return p;
+        const blocks = [...p.blocks];
+        const fromIdx = blocks.findIndex(b => b.id === fromId);
+        const toIdx = blocks.findIndex(b => b.id === toId);
+        if (fromIdx === -1 || toIdx === -1) return p;
+        const [moved] = blocks.splice(fromIdx, 1);
+        blocks.splice(toIdx, 0, moved);
+        return { ...p, blocks };
+      }),
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const payload = {
       name: site.siteName,
       blocks_json: { v: 2, pages: site.pages },
       seo_json: site.pages[0]?.seo || emptySeo,
-      settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail },
+      settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId },
     };
     if (dbSiteId) {
       await fetch(`/api/sites/${dbSiteId}`, {
@@ -1506,7 +1673,7 @@ function BuilderContent() {
           name: site.siteName,
           blocks_json: { v: 2, pages: site.pages },
           seo_json: site.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail },
+          settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId },
           industry: onboardingData?.industry,
         }),
       });
@@ -1518,6 +1685,13 @@ function BuilderContent() {
 
     const res = await fetch(`/api/sites/${id}/publish`, { method: 'POST' });
     const data = await res.json();
+    if (data.error === 'subscription_required') {
+      setPublishing(false);
+      if (confirm('サイトを公開するにはサブスクリプションが必要です。今すぐ申し込みますか？')) {
+        window.location.href = '/laruHP/dashboard';
+      }
+      return;
+    }
     if (data.success) {
       setPublished(true);
       setPublishedSlug(data.slug);
@@ -1550,6 +1724,7 @@ function BuilderContent() {
       if (!layout?.length) return;
       const ok = confirm(`AIが提案するレイアウト:\n${layout.join(' → ')}\n\n理由: ${reasoning}\n\n現在のブロックを置き換えますか？`);
       if (!ok) return;
+      pushHistory(siteRef.current);
       const newBlocks = (layout as BlockType[]).map(t => defaultBlock(t));
       setSite(prev => ({
         ...prev,
@@ -1577,6 +1752,7 @@ function BuilderContent() {
     });
     const { generated } = await res.json();
     if (generated) {
+      pushHistory(siteRef.current);
       setSite(prev => ({
         ...prev,
         colorScheme: generated.colorScheme || prev.colorScheme,
@@ -1679,6 +1855,20 @@ function BuilderContent() {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              title="元に戻す (Cmd+Z)"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 text-sm"
+            >↩</button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              title="やり直す (Cmd+Shift+Z)"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 text-sm"
+            >↪</button>
+          </div>
           <button
             onClick={handleAiLayout}
             disabled={aiLayouting}
@@ -1774,7 +1964,21 @@ function BuilderContent() {
                 </div>
               )}
               {currentPage.blocks.map((block, index) => (
-                <div key={block.id} className="relative group">
+                <div
+                  key={block.id}
+                  className={`relative group transition-all ${!preview && dragOverId === block.id && draggedId !== block.id ? 'border-t-2 border-blue-400' : ''}`}
+                  draggable={!preview}
+                  onDragStart={!preview ? () => setDraggedId(block.id) : undefined}
+                  onDragOver={!preview ? (e) => { e.preventDefault(); setDragOverId(block.id); } : undefined}
+                  onDragLeave={!preview ? () => setDragOverId(null) : undefined}
+                  onDrop={!preview ? () => {
+                    if (draggedId) reorderBlocks(draggedId, block.id);
+                    setDraggedId(null);
+                    setDragOverId(null);
+                  } : undefined}
+                  onDragEnd={!preview ? () => { setDraggedId(null); setDragOverId(null); } : undefined}
+                  style={!preview && draggedId === block.id ? { opacity: 0.4 } : undefined}
+                >
                   <BlockCanvas
                     block={block}
                     selected={selectedId === block.id && !preview}
@@ -1828,6 +2032,7 @@ function BuilderContent() {
             onColorSchemeChange={scheme => {
               const s = COLOR_SCHEMES.find(c => c.id === scheme);
               if (!s) return;
+              pushHistory(siteRef.current);
               setSite(prev => ({
                 ...prev,
                 colorScheme: scheme,
@@ -1842,6 +2047,8 @@ function BuilderContent() {
                 })),
               }));
             }}
+            gaTrackingId={site.gaTrackingId}
+            onGaTrackingIdChange={v => setSite(prev => ({ ...prev, gaTrackingId: v }))}
           />
         )}
       </div>
@@ -1849,7 +2056,7 @@ function BuilderContent() {
       {!preview && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-2.5 text-xs text-slate-400 flex items-center gap-3 shadow-2xl z-20">
           <span>💡</span>
-          <span>ブロックをクリックして選択 · テキストをクリックして直接編集 · 左パネルからブロックを追加 · タブ名をダブルクリックで変更</span>
+          <span>ブロックをクリックして選択 · テキストをクリックして直接編集 · 左パネルからブロックを追加 · ドラッグで並び替え · ↩↪ または Cmd+Z で元に戻す</span>
         </div>
       )}
     </div>

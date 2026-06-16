@@ -584,9 +584,9 @@ export default function LaruHPLandingPage() {
               <div>
                 <div className="text-slate-400 font-bold mb-2">法的情報</div>
                 <div className="space-y-1">
-                  <div><a href="#" className="hover:text-white">利用規約</a></div>
-                  <div><a href="#" className="hover:text-white">プライバシー</a></div>
-                  <div><a href="#" className="hover:text-white">特定商取引法</a></div>
+                  <div><Link href="/laruHP/terms" className="hover:text-white">利用規約</Link></div>
+                  <div><Link href="/laruHP/privacy" className="hover:text-white">プライバシー</Link></div>
+                  <div><Link href="/laruHP/tokusho" className="hover:text-white">特定商取引法</Link></div>
                 </div>
               </div>
             </div>

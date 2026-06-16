@@ -10,6 +10,20 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
 
+  // Paywall: require active subscription to publish
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('subscription_status')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.subscription_status !== 'active') {
+    return NextResponse.json(
+      { error: 'subscription_required', message: 'サイトの公開にはサブスクリプションが必要です' },
+      { status: 403 }
+    );
+  }
+
   const { data: site, error: fetchError } = await supabase
     .from('sites')
     .select('*')

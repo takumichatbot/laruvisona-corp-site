@@ -91,3 +91,30 @@ create policy "sites_select_published" on public.sites
 create index if not exists sites_user_id_idx on public.sites (user_id);
 create index if not exists sites_slug_idx on public.sites (slug) where slug is not null;
 create index if not exists sites_published_idx on public.sites (published) where published = true;
+
+-- ── Migrations ────────────────────────────────────────────────
+-- Run these if adding features after initial setup
+
+-- Page view count
+alter table public.sites add column if not exists view_count bigint not null default 0;
+
+-- Custom domain
+alter table public.sites add column if not exists custom_domain text unique;
+create index if not exists sites_custom_domain_idx on public.sites (custom_domain) where custom_domain is not null;
+
+-- RPC: increment view count (bypasses RLS via security definer)
+create or replace function public.increment_view_count(site_slug text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.sites set view_count = view_count + 1
+  where slug = site_slug and published = true;
+end;
+$$;
+
+create or replace function public.increment_view_count_by_domain(site_domain text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.sites set view_count = view_count + 1
+  where custom_domain = site_domain and published = true;
+end;
+$$;
