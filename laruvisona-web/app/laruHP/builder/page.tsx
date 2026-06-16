@@ -40,6 +40,7 @@ interface SiteData {
   colorScheme: string;
   larubot: boolean;
   laruseo: boolean;
+  notifyEmail: string;
 }
 
 const emptySeo: SEOSettings = { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '' };
@@ -197,6 +198,16 @@ const defaultBlock = (type: BlockType): Block => {
   return { id, type, data: defaults[type] };
 };
 
+// ─── Color Schemes ────────────────────────────────────────────────────────────
+const COLOR_SCHEMES = [
+  { id: 'professional-blue', name: 'プロ', colors: ['#1e3a8a', '#3b82f6'] },
+  { id: 'warm-earth',        name: 'ナチュラル', colors: ['#78350f', '#d97706'] },
+  { id: 'elegant-dark',      name: 'エレガント', colors: ['#111827', '#6b7280'] },
+  { id: 'fresh-green',       name: 'フレッシュ', colors: ['#064e3b', '#10b981'] },
+  { id: 'modern-pink',       name: 'フェミニン', colors: ['#831843', '#ec4899'] },
+  { id: 'bold-orange',       name: 'アクティブ', colors: ['#7c2d12', '#f97316'] },
+];
+
 // ─── Block Palette Config ─────────────────────────────────────────────────────
 const BLOCK_PALETTE = [
   { group: 'レイアウト', items: [
@@ -346,11 +357,17 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
                 <div className="h-full flex flex-col items-center justify-center text-gray-400">
                   <div className="text-4xl mb-2">🖼</div>
                   <div className="font-medium">クリックして画像をアップロード</div>
-                  <div className="text-sm mt-1">PNG, JPG, WebP 対応</div>
+                  <div className="text-sm mt-1">PNG, JPG, WebP 対応 (最大5MB)</div>
                 </div>
-                <input type="file" accept="image/*" className="hidden" onChange={e => {
+                <input type="file" accept="image/*" className="hidden" onChange={async e => {
                   const file = e.target.files?.[0];
-                  if (file) {
+                  if (!file) return;
+                  const form = new FormData();
+                  form.append('file', file);
+                  const res = await fetch('/api/images/upload', { method: 'POST', body: form });
+                  const data = await res.json();
+                  if (data.url) onDataChange({ ...d, src: data.url });
+                  else {
                     const reader = new FileReader();
                     reader.onload = ev => onDataChange({ ...d, src: ev.target?.result as string });
                     reader.readAsDataURL(file);
@@ -558,17 +575,24 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
                       <div className="text-center"><div className="text-2xl">📸</div><div className="text-xs mt-1">画像を追加</div></div>
                     </div>
                   )}
-                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
                     const file = e.target.files?.[0];
-                    if (file) {
+                    if (!file) return;
+                    const form = new FormData();
+                    form.append('file', file);
+                    const res = await fetch('/api/images/upload', { method: 'POST', body: form });
+                    const data = await res.json();
+                    const newImages = [...images];
+                    if (data.url) {
+                      newImages[i] = data.url;
+                    } else {
                       const reader = new FileReader();
-                      reader.onload = ev => {
-                        const newImages = [...images];
-                        newImages[i] = ev.target?.result as string;
-                        onDataChange({ ...d, images: newImages });
-                      };
-                      reader.readAsDataURL(file);
+                      await new Promise<void>(resolve => {
+                        reader.onload = ev => { newImages[i] = ev.target?.result as string; resolve(); };
+                        reader.readAsDataURL(file);
+                      });
                     }
+                    onDataChange({ ...d, images: newImages });
                   }} />
                 </label>
               ))}
@@ -769,7 +793,7 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
 }
 
 // ─── Right Panel ───────────────────────────────────────────────────────────────
-function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange }: {
+function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange }: {
   block: Block | null;
   onDataChange: (id: string, data: Record<string, unknown>) => void;
   seo: SEOSettings;
@@ -778,6 +802,10 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   onLarubotChange: (v: boolean) => void;
   laruseo: boolean;
   onLaruseoChange: (v: boolean) => void;
+  notifyEmail: string;
+  onNotifyEmailChange: (v: string) => void;
+  colorScheme: string;
+  onColorSchemeChange: (v: string) => void;
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
   const d = block?.data || {};
@@ -1100,6 +1128,30 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
         {tab === 'integrations' && (
           <>
+            {/* Color Scheme Picker */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🎨</span>
+                <span className="font-bold text-sm">カラーテーマ</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {COLOR_SCHEMES.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => onColorSchemeChange(s.id)}
+                    title={s.name}
+                    className={`rounded-lg p-1.5 flex flex-col items-center gap-1 transition-all border ${colorScheme === s.id ? 'border-white/60 bg-white/10' : 'border-transparent hover:border-white/20'}`}
+                  >
+                    <div className="flex gap-0.5">
+                      <div className="w-4 h-4 rounded-full" style={{ background: s.colors[0] }} />
+                      <div className="w-4 h-4 rounded-full" style={{ background: s.colors[1] }} />
+                    </div>
+                    <span className="text-[9px] text-slate-400 leading-tight text-center">{s.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🤖</span>
@@ -1150,6 +1202,21 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               <input type="text" placeholder="Maps Embed URL"
                 className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
             </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">📧</span>
+                <span className="font-bold text-sm">フォーム通知メール</span>
+              </div>
+              <input
+                type="email"
+                value={notifyEmail}
+                placeholder="notify@example.com"
+                onChange={e => onNotifyEmailChange(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]"
+              />
+              <div className="text-slate-500 text-[10px] mt-1">お問い合わせ・予約フォーム送信時に通知</div>
+            </div>
           </>
         )}
       </div>
@@ -1181,6 +1248,7 @@ function BuilderContent() {
     colorScheme: 'professional-blue',
     larubot: true,
     laruseo: true,
+    notifyEmail: '',
   };
 
   const [site, setSite] = useState<SiteData>(defaultSiteData);
@@ -1194,9 +1262,11 @@ function BuilderContent() {
   const [published, setPublished] = useState(false);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiLayouting, setAiLayouting] = useState(false);
   const [onboardingData, setOnboardingData] = useState<Record<string, unknown> | null>(null);
   const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
   // Current page derived from site + currentPageId
   const currentPage = site.pages.find(p => p.id === currentPageId) || site.pages[0];
@@ -1223,6 +1293,7 @@ function BuilderContent() {
               colorScheme: s.settings_json?.colorScheme || 'professional-blue',
               larubot: s.settings_json?.larubot ?? true,
               laruseo: s.settings_json?.laruseo ?? true,
+              notifyEmail: s.settings_json?.notifyEmail || '',
             });
             setCurrentPageId(pages[0].id);
             setPublished(s.published);
@@ -1273,6 +1344,7 @@ function BuilderContent() {
         colorScheme: d.colorScheme || 'professional-blue',
         larubot: d.larubot ?? true,
         laruseo: d.laruseo ?? true,
+        notifyEmail: '',
       });
     } else {
       const savedStr = typeof window !== 'undefined' ? localStorage.getItem('laruHP_builder') : null;
@@ -1288,6 +1360,7 @@ function BuilderContent() {
             colorScheme: parsed.colorScheme || 'professional-blue',
             larubot: parsed.larubot ?? true,
             laruseo: parsed.laruseo ?? true,
+            notifyEmail: parsed.notifyEmail || '',
           });
         }
       }
@@ -1399,7 +1472,7 @@ function BuilderContent() {
       name: site.siteName,
       blocks_json: { v: 2, pages: site.pages },
       seo_json: site.pages[0]?.seo || emptySeo,
-      settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo },
+      settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail },
     };
     if (dbSiteId) {
       await fetch(`/api/sites/${dbSiteId}`, {
@@ -1433,7 +1506,7 @@ function BuilderContent() {
           name: site.siteName,
           blocks_json: { v: 2, pages: site.pages },
           seo_json: site.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo },
+          settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail },
           industry: onboardingData?.industry,
         }),
       });
@@ -1450,6 +1523,44 @@ function BuilderContent() {
       setPublishedSlug(data.slug);
     }
     setPublishing(false);
+  };
+
+  const handleAiLayout = async () => {
+    const d = onboardingData || JSON.parse(localStorage.getItem('laruHP_data') || '{}');
+    if (!d.businessName) {
+      alert('オンボーディングでビジネス情報を入力してからAIレイアウトを使用してください');
+      return;
+    }
+    setAiLayouting(true);
+    try {
+      const res = await fetch('/api/ai/layout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: d.industry,
+          businessName: d.businessName,
+          description: d.description,
+          services: d.services,
+          hasBooking: d.hasBooking,
+          hasVideo: d.hasVideo,
+          hasGallery: d.hasGallery,
+        }),
+      });
+      const { layout, reasoning } = await res.json();
+      if (!layout?.length) return;
+      const ok = confirm(`AIが提案するレイアウト:\n${layout.join(' → ')}\n\n理由: ${reasoning}\n\n現在のブロックを置き換えますか？`);
+      if (!ok) return;
+      const newBlocks = (layout as BlockType[]).map(t => defaultBlock(t));
+      setSite(prev => ({
+        ...prev,
+        pages: prev.pages.map(p =>
+          p.id === currentPageId ? { ...p, blocks: newBlocks } : p
+        ),
+      }));
+      setSelectedId(null);
+    } finally {
+      setAiLayouting(false);
+    }
   };
 
   const handleAiGenerate = async () => {
@@ -1569,12 +1680,32 @@ function BuilderContent() {
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
+            onClick={handleAiLayout}
+            disabled={aiLayouting}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 disabled:opacity-50"
+          >
+            {aiLayouting ? '🧩 提案中...' : '🧩 AIレイアウト'}
+          </button>
+          <button
             onClick={handleAiGenerate}
             disabled={aiGenerating}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 disabled:opacity-50"
           >
             {aiGenerating ? '🤖 生成中...' : '🤖 AI生成'}
           </button>
+          {preview && (
+            <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
+              {([['desktop', '🖥', 'PC'], ['tablet', '📱', 'Tab'], ['mobile', '📱', 'SP']] as const).map(([device, , label]) => (
+                <button
+                  key={device}
+                  onClick={() => setPreviewDevice(device)}
+                  className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${previewDevice === device ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             onClick={() => setPreview(!preview)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${preview ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
@@ -1626,8 +1757,14 @@ function BuilderContent() {
 
         {/* Canvas */}
         <div className="flex-1 overflow-y-auto bg-gray-200">
-          <div className={`${preview ? 'min-h-full' : 'min-h-full py-6 px-4'}`}>
-            <div className={`bg-white shadow-2xl mx-auto transition-all ${preview ? 'max-w-none rounded-none' : 'max-w-3xl rounded-xl overflow-hidden'}`}>
+          <div className={`${preview ? 'min-h-full flex flex-col items-center py-4 px-4' : 'min-h-full py-6 px-4'}`}>
+            <div className={`bg-white shadow-2xl mx-auto transition-all duration-300 ${preview
+              ? previewDevice === 'mobile'
+                ? 'w-[390px] rounded-2xl overflow-hidden border-4 border-gray-800'
+                : previewDevice === 'tablet'
+                ? 'w-[768px] rounded-xl overflow-hidden border-2 border-gray-400'
+                : 'w-full max-w-5xl rounded-none'
+              : 'max-w-3xl rounded-xl overflow-hidden'}`}>
               {currentPage.blocks.length === 0 && (
                 <div className="h-64 flex items-center justify-center text-gray-400 text-center">
                   <div>
@@ -1685,6 +1822,26 @@ function BuilderContent() {
             onLarubotChange={v => setSite(prev => ({ ...prev, larubot: v }))}
             laruseo={site.laruseo}
             onLaruseoChange={v => setSite(prev => ({ ...prev, laruseo: v }))}
+            notifyEmail={site.notifyEmail}
+            onNotifyEmailChange={v => setSite(prev => ({ ...prev, notifyEmail: v }))}
+            colorScheme={site.colorScheme}
+            onColorSchemeChange={scheme => {
+              const s = COLOR_SCHEMES.find(c => c.id === scheme);
+              if (!s) return;
+              setSite(prev => ({
+                ...prev,
+                colorScheme: scheme,
+                pages: prev.pages.map(p => ({
+                  ...p,
+                  blocks: p.blocks.map(b => {
+                    if (b.type === 'hero') return { ...b, data: { ...b.data, bgColor: s.colors[0] } };
+                    if (b.type === 'cta') return { ...b, data: { ...b.data, bgColor: s.colors[0] } };
+                    if (b.type === 'countdown') return { ...b, data: { ...b.data, bgColor: s.colors[0] } };
+                    return b;
+                  }),
+                })),
+              }));
+            }}
           />
         )}
       </div>

@@ -23,24 +23,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   // Handle both v1 (Block[]) and v2 ({ v: 2, pages: Page[] }) formats
   const rawBlocks = site.blocks_json as Block[] | { v: number; pages: Page[] };
-  let blocks: Block[];
-  let seoSettings: SEOSettings = site.seo_json as SEOSettings;
+  let pages: Page[];
+  const seoSettings: SEOSettings = site.seo_json as SEOSettings;
 
   if (Array.isArray(rawBlocks)) {
-    blocks = rawBlocks;
+    pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: rawBlocks, seo: seoSettings }];
   } else if (rawBlocks?.v === 2 && rawBlocks.pages?.length) {
-    blocks = rawBlocks.pages[0].blocks;
-    seoSettings = rawBlocks.pages[0].seo || seoSettings;
+    pages = rawBlocks.pages;
   } else {
-    blocks = [];
+    pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: [], seo: seoSettings }];
   }
 
   const html = exportToHTML(
-    blocks,
+    pages,
     seoSettings,
     site.settings_json as SiteSettings,
     site.name,
-    { name: site.name, industry: site.industry ?? undefined }
+    { name: site.name, industry: site.industry ?? undefined, siteId: site.id }
   );
 
   const { data: updated, error: updateError } = await supabase

@@ -1,4 +1,4 @@
-import type { Block, SEOSettings, SiteSettings } from '@/types/laruHP';
+import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -127,17 +127,35 @@ function renderBlock(block: Block): string {
 <section class="lhp-contact" id="contact" style="background-color:${raw('bgColor')}">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
-  <form class="lhp-form" onsubmit="return false">
+  <form class="lhp-form" id="lhp-form-contact">
     <div class="lhp-form-row">
       <input type="text" name="name" placeholder="お名前" required />
       <input type="email" name="email" placeholder="メールアドレス" required />
     </div>
     <input type="tel" name="phone" placeholder="電話番号" />
     <textarea name="message" placeholder="お問い合わせ内容" rows="5" required></textarea>
-    <button type="submit" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
-    <p class="lhp-form-note">※このフォームはデモです。実際の送信にはバックエンド連携が必要です。</p>
+    <button type="submit" id="lhp-btn-contact" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
+    <p class="lhp-form-note" id="lhp-note-contact"></p>
   </form>
-</section>`;
+</section>
+<script>
+(function(){
+  var f=document.getElementById('lhp-form-contact');
+  if(!f)return;
+  f.addEventListener('submit',async function(e){
+    e.preventDefault();
+    var btn=document.getElementById('lhp-btn-contact');
+    var note=document.getElementById('lhp-note-contact');
+    btn.textContent='送信中...';btn.disabled=true;
+    try{
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:f.name.value,email:f.email.value,phone:f.phone.value,message:f.message.value})});
+      var d=await r.json();
+      if(d.ok){f.innerHTML='<div class="lhp-form-success">✅ 送信完了！2営業日以内にご連絡いたします。</div>';}
+      else{btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。再度お試しください。';}
+    }catch(err){btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+  });
+})();
+</script>`;
 
     case 'hours': {
       const schedule = (d['schedule'] as Array<{day:string;hours:string;closed:boolean}>) ?? [];
@@ -263,7 +281,7 @@ function renderBlock(block: Block): string {
 <section class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
-  <form class="lhp-form" onsubmit="return false">
+  <form class="lhp-form" id="lhp-form-booking">
     <div style="margin-bottom:16px">
       <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">サービスを選択</label>
       <select style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
@@ -287,10 +305,31 @@ function renderBlock(block: Block): string {
       <input type="tel" placeholder="電話番号" />
     </div>
     <input type="email" placeholder="メールアドレス" />
-    <button type="submit" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
-    <p class="lhp-form-note">※このフォームはデモです。実際の送信にはバックエンド連携が必要です。</p>
+    <button type="submit" id="lhp-btn-booking" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
+    <p class="lhp-form-note" id="lhp-note-booking"></p>
   </form>
-</section>`;
+</section>
+<script>
+(function(){
+  var f=document.getElementById('lhp-form-booking');
+  if(!f)return;
+  f.addEventListener('submit',async function(e){
+    e.preventDefault();
+    var btn=document.getElementById('lhp-btn-booking');
+    var note=document.getElementById('lhp-note-booking');
+    btn.textContent='送信中...';btn.disabled=true;
+    var sel=f.querySelector('select');
+    var dt=f.querySelector('input[type=date]');
+    var tsel=f.querySelectorAll('select')[1];
+    try{
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',type:'booking',name:f.name.value,email:f.email.value,phone:f.phone.value,message:(sel?sel.value:'')+'\\n'+(dt?dt.value:'')+(tsel?' '+tsel.value:'')})});
+      var d=await r.json();
+      if(d.ok){f.innerHTML='<div class="lhp-form-success">✅ 予約リクエストを受け付けました！確認のご連絡をお送りします。</div>';}
+      else{btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+    }catch(err){btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+  });
+})();
+</script>`;
 
     case 'news': {
       type NewsItem = { date:string; tag:string; title:string };
@@ -319,6 +358,20 @@ const CSS = `
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans JP',sans-serif;color:#111;line-height:1.6}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
+.lhp-navbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.lhp-navbar-inner{max-width:1100px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:24px}
+.lhp-navbar-brand{font-weight:900;font-size:1rem;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;color:#111}
+.lhp-nav-menu{list-style:none;display:flex;gap:4px;margin-left:auto}
+.lhp-nav-link{background:none;border:none;cursor:pointer;font-family:inherit;font-size:.875rem;padding:6px 14px;border-radius:9999px;color:#555;transition:all .2s;font-weight:500}
+.lhp-nav-link:hover{background:#f3f4f6;color:#111}
+.lhp-nav-active{background:#111!important;color:#fff!important}
+.lhp-nav-toggle{display:none;background:none;border:none;cursor:pointer;font-size:1.3rem;padding:4px 8px;margin-left:auto;color:#111}
+@media(max-width:600px){
+  .lhp-nav-toggle{display:block}
+  .lhp-nav-menu{display:none;position:absolute;top:56px;left:0;right:0;background:#fff;flex-direction:column;padding:12px 16px;gap:4px;border-bottom:1px solid #e5e7eb;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+  .lhp-nav-menu.lhp-nav-open{display:flex}
+  .lhp-nav-link{text-align:left;width:100%}
+}
 .lhp-hero{min-height:420px;display:flex;align-items:center;justify-content:center;text-align:center;padding:80px 24px;position:relative;background-size:cover;background-position:center}
 .lhp-hero-inner{position:relative;z-index:1;max-width:720px;margin:0 auto}
 .lhp-hero h1{font-size:clamp(2rem,5vw,4rem);font-weight:900;margin-bottom:16px;line-height:1.1}
@@ -374,8 +427,8 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-form{max-width:560px;margin:40px auto 0}
 .lhp-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 @media(max-width:600px){.lhp-form-row{grid-template-columns:1fr}}
-.lhp-form input,.lhp-form textarea{width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit;margin-bottom:12px;outline:none;transition:border-color .2s}
-.lhp-form input:focus,.lhp-form textarea:focus{border-color:#3b82f6}
+.lhp-form input,.lhp-form select,.lhp-form textarea{width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:16px;font-family:inherit;margin-bottom:12px;outline:none;transition:border-color .2s;background:#fff;color:#111;appearance:auto}
+.lhp-form input:focus,.lhp-form select:focus,.lhp-form textarea:focus{border-color:#3b82f6}
 .lhp-form textarea{resize:vertical}
 .lhp-form button{width:100%;padding:14px;border:none;border-radius:12px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}
 .lhp-form button:hover{opacity:.85}
@@ -417,23 +470,107 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-price-featured .lhp-price-btn{background:#fff;color:#2563eb}
 .lhp-price-btn:hover{opacity:.85}
 .lhp-news{max-width:720px;margin:32px auto 0}
-.lhp-news-item{display:flex;align-items:flex-start;gap:16px;padding:14px 12px;border-bottom:1px solid #f3f4f6;transition:background .2s}
+.lhp-news-item{display:flex;align-items:flex-start;gap:12px;padding:14px 12px;border-bottom:1px solid #f3f4f6;transition:background .2s;flex-wrap:wrap}
 .lhp-news-item:hover{background:#f9fafb}
-.lhp-news-date{font-size:.8rem;color:#9ca3af;white-space:nowrap;margin-top:2px;font-family:monospace}
-.lhp-news-tag{font-size:.7rem;font-weight:700;background:#eff6ff;color:#2563eb;padding:2px 10px;border-radius:9999px;white-space:nowrap}
-.lhp-news-title{font-size:.9rem;font-weight:600;color:#111;line-height:1.5}
+.lhp-news-date{font-size:.8rem;color:#9ca3af;white-space:nowrap;margin-top:2px;font-family:monospace;flex-shrink:0}
+.lhp-news-tag{font-size:.7rem;font-weight:700;background:#eff6ff;color:#2563eb;padding:2px 10px;border-radius:9999px;white-space:nowrap;flex-shrink:0}
+.lhp-news-title{font-size:.9rem;font-weight:600;color:#111;line-height:1.5;flex:1;min-width:200px}
+.lhp-form-success{text-align:center;padding:40px 24px;color:#16a34a;font-weight:700;font-size:1.1rem;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0}
+@media(max-width:768px){
+  .lhp-hero{min-height:300px;padding:56px 20px}
+  .lhp-hero h1{font-size:clamp(1.6rem,7vw,3rem)}
+  .lhp-hero-sub{font-size:1rem}
+  .lhp-section{padding:48px 20px}
+  .lhp-section-title{font-size:clamp(1.4rem,5vw,2rem)}
+  .lhp-cta{padding:56px 20px}
+  .lhp-contact{padding:56px 20px}
+  .lhp-grid-3{grid-template-columns:1fr}
+  .lhp-price-grid{grid-template-columns:1fr}
+  .lhp-price-featured{transform:none}
+  .lhp-countdown-timer{gap:16px}
+  .lhp-cdt-n{font-size:2.8rem}
+  .lhp-testimonials-bg{padding:48px 20px}
+  .lhp-hours{max-width:100%}
+  .lhp-map{height:280px!important}
+}
+@media(max-width:480px){
+  .lhp-hero{min-height:260px;padding:48px 16px}
+  .lhp-hero h1{font-size:clamp(1.4rem,8vw,2.4rem)}
+  .lhp-hero-sub{font-size:.95rem}
+  .lhp-btn-primary{padding:12px 28px;font-size:.95rem}
+  .lhp-section{padding:40px 16px}
+  .lhp-cta{padding:48px 16px}
+  .lhp-contact{padding:48px 16px}
+  .lhp-cdt-n{font-size:2.2rem}
+  .lhp-countdown-timer{gap:12px}
+  .lhp-news-title{min-width:0;width:100%}
+  .lhp-news-item{gap:8px}
+  .lhp-card{padding:18px}
+  .lhp-col{padding:16px}
+  .lhp-price-card{padding:20px}
+  .lhp-testimonial{padding:16px}
+  .lhp-faq-q{padding:14px 16px}
+  .lhp-faq-a{padding:12px 16px}
+}
 `;
 
 export function exportToHTML(
-  blocks: Block[],
+  pages: Page[],
   seo: SEOSettings,
   settings: SiteSettings,
   siteName: string,
-  businessInfo?: { name?: string; address?: string; phone?: string; email?: string; industry?: string }
+  businessInfo?: { name?: string; address?: string; phone?: string; email?: string; industry?: string; siteId?: string }
 ): string {
-  const title = seo.title || siteName;
-  const desc = seo.description || '';
-  const blocksHtml = blocks.map(renderBlock).filter(Boolean).join('\n');
+  const firstPage = pages[0] ?? { blocks: [], seo: {} as SEOSettings };
+  const effectiveSeo = firstPage.seo?.title ? firstPage.seo : seo;
+  const title = effectiveSeo.title || siteName;
+  const desc = effectiveSeo.description || '';
+  const multiPage = pages.length > 1;
+
+  // Navigation bar (multi-page only)
+  const navBar = multiPage ? `
+<nav class="lhp-navbar" id="lhp-navbar">
+  <div class="lhp-navbar-inner">
+    <button class="lhp-navbar-brand" onclick="lhpPage(event,'${firstPage.id}')">${escapeHtml(siteName)}</button>
+    <button class="lhp-nav-toggle" aria-label="メニュー" onclick="document.getElementById('lhp-nav-menu').classList.toggle('lhp-nav-open')">☰</button>
+    <ul class="lhp-nav-menu" id="lhp-nav-menu">
+      ${pages.map(p => `<li><button class="lhp-nav-link" data-page="${p.id}" onclick="lhpPage(event,'${p.id}')">${escapeHtml(p.name)}</button></li>`).join('')}
+    </ul>
+  </div>
+</nav>
+<script>
+function lhpPage(e,id){
+  if(e)e.preventDefault();
+  document.querySelectorAll('.lhp-page').forEach(function(el){el.hidden=true;});
+  var pg=document.getElementById(id);if(pg)pg.hidden=false;
+  document.querySelectorAll('.lhp-nav-link').forEach(function(a){a.classList.remove('lhp-nav-active');});
+  var lnk=document.querySelector('[data-page="'+id+'"]');if(lnk)lnk.classList.add('lhp-nav-active');
+  document.getElementById('lhp-nav-menu').classList.remove('lhp-nav-open');
+  window.scrollTo(0,0);
+  window.history.pushState({},'','#'+id);
+}
+window.addEventListener('DOMContentLoaded',function(){
+  var hash=window.location.hash.slice(1);
+  var startId=hash||'${firstPage.id}';
+  lhpPage(null,startId);
+});
+window.addEventListener('popstate',function(){
+  var hash=window.location.hash.slice(1)||'${firstPage.id}';
+  lhpPage(null,hash);
+});
+</script>` : '';
+
+  // Page sections
+  const pagesHtml = pages.map((page, idx) => {
+    const blocksHtml = page.blocks.map(renderBlock).filter(Boolean).join('\n');
+    return multiPage
+      ? `<div id="${page.id}" class="lhp-page"${idx > 0 ? ' hidden' : ''}>${blocksHtml}</div>`
+      : blocksHtml;
+  }).join('\n');
+
+  const siteIdScript = businessInfo?.siteId
+    ? `<script>window.__LHPSID='${businessInfo.siteId}';</script>`
+    : '';
 
   const schemaType = businessInfo?.industry === 'restaurant' ? 'Restaurant'
     : businessInfo?.industry === 'beauty' ? 'BeautySalon'
@@ -484,11 +621,13 @@ ${seo.keywords ? `<meta name="keywords" content="${escapeHtml(seo.keywords)}">` 
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="">
 <script type="application/ld+json">${JSON.stringify(schema)}</script>
+${siteIdScript}
 ${gaScript}
 <style>${CSS}</style>
 </head>
 <body>
-${blocksHtml}
+${navBar}
+${pagesHtml}
 ${laruBotScript}
 </body>
 </html>`;

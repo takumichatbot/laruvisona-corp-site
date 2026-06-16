@@ -1,7 +1,5 @@
 import type { Block } from '@/types/laruHP';
 
-type TemplateBlocks = Omit<Block, 'id'>[];
-
 const makeId = () => `t-${Math.random().toString(36).slice(2)}`;
 const b = (type: Block['type'], data: Record<string, unknown>): Block => ({ id: makeId(), type, data });
 
@@ -28,6 +26,12 @@ const contactBlock = b('contact', {
   bgColor: '#f8fafc',
 });
 
+const mapBlock = b('map', {
+  heading: 'アクセス',
+  embedUrl: '',
+  height: 400,
+});
+
 export interface IndustryTemplate {
   label: string;
   emoji: string;
@@ -47,7 +51,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     schemaType: 'Restaurant',
     seoTitleTemplate: '{name} | {area}のカフェ・レストラン',
     blocks: [
-      b('hero', { heading: '{name}', subheading: '心を込めた料理でお迎えします', ctaText: 'ご予約はこちら', ctaLink: '#contact', bgColor: '#7c2d12', textColor: '#ffffff' }),
+      b('hero', { heading: '{name}', subheading: '心を込めた料理でお迎えします', ctaText: 'ご予約はこちら', ctaLink: '#booking', bgColor: '#7c2d12', textColor: '#ffffff' }),
       b('heading', { text: '私たちについて', subtext: 'お店のこだわりをご紹介します', align: 'center' }),
       b('paragraph', { text: '{description}', align: 'left' }),
       b('services', { heading: 'おすすめメニュー', columns: '3', items: [{ icon: '🍽', title: 'ランチコース', description: '旬の食材を使った日替わりランチ', price: '1,200円〜' }, { icon: '🍷', title: 'ディナーコース', description: 'シェフ特選のコース料理', price: '4,500円〜' }, { icon: '☕', title: 'カフェタイム', description: '手作りスイーツと厳選コーヒー', price: '800円〜' }] }),
@@ -55,6 +59,16 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       b('two-col', {
         col1Title: '営業時間', col1Text: 'ランチ 11:30〜14:30\nディナー 17:30〜22:00\n※月曜定休',
         col2Title: 'アクセス', col2Text: '{address}\nお車でのご来店もOK。駐車場完備。',
+      }),
+      mapBlock,
+      b('booking', {
+        heading: 'ご予約',
+        subtext: 'お電話でのご予約も承っております',
+        serviceTypes: ['ランチ', 'ディナーコース', '個室', 'パーティー利用'],
+        timeSlots: ['11:30', '12:00', '12:30', '17:30', '18:00', '18:30', '19:00', '19:30'],
+        buttonText: '予約を申し込む',
+        buttonColor: '#7c2d12',
+        bgColor: '#fffbf7',
       }),
       contactBlock,
     ],
@@ -68,13 +82,30 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     schemaType: 'BeautySalon',
     seoTitleTemplate: '{name} | {area}の美容室・ヘアサロン',
     blocks: [
-      b('hero', { heading: '{name}', subheading: 'あなたの美しさを最大限に引き出します', ctaText: '今すぐ予約する', ctaLink: '#contact', bgColor: '#831843', textColor: '#ffffff' }),
+      b('hero', { heading: '{name}', subheading: 'あなたの美しさを最大限に引き出します', ctaText: '今すぐ予約する', ctaLink: '#booking', bgColor: '#831843', textColor: '#ffffff' }),
       b('heading', { text: 'サロンについて', subtext: '', align: 'center' }),
       b('paragraph', { text: '{description}', align: 'left' }),
-      b('services', { heading: 'メニュー・料金', columns: '3', items: [{ icon: '✂️', title: 'カット', description: 'シャンプー・ブロー込み', price: '6,000円〜' }, { icon: '🎨', title: 'カラー', description: 'ダメージレスカラー', price: '8,000円〜' }, { icon: '🌀', title: 'パーマ', description: 'デジタルパーマ対応', price: '12,000円〜' }] }),
+      b('price-table', {
+        heading: 'メニュー・料金プラン',
+        subtext: '全てシャンプー・ブロー込みの価格です',
+        plans: [
+          { name: 'カット', price: '6,000円', period: '〜', description: 'カット+シャンプー+ブロー', features: ['カウンセリング無料', 'スタイリング剤込み', '仕上がり保証'], highlighted: false, buttonText: '予約する', buttonLink: '#booking' },
+          { name: 'カラー', price: '8,000円', period: '〜', description: 'ダメージレスカラー対応', features: ['カラー診断無料', 'ホームケア提案', 'リタッチ対応'], highlighted: true, buttonText: '予約する', buttonLink: '#booking' },
+          { name: 'パーマ', price: '12,000円', period: '〜', description: 'デジタルパーマ・コールドパーマ', features: ['デジタルパーマ対応', 'スタイリング指導', '持続性重視施術'], highlighted: false, buttonText: '予約する', buttonLink: '#booking' },
+        ],
+      }),
       b('testimonials', { heading: 'お客様の声', items: [{ name: '山田様', age: '30代', rating: 5, text: 'スタイリストさんの提案がすごく良くて、毎回おまかせしています！' }, { name: '鈴木様', age: '40代', rating: 5, text: '丁寧なカウンセリングで安心して任せられます。' }, { name: '佐藤様', age: '20代', rating: 5, text: '友達にも紹介しました。また来ます！' }] }),
       b('gallery', { heading: 'スタイルギャラリー', images: ['', '', '', ''], columns: '2' }),
       b('hours', makeHours('10:00〜20:00')),
+      b('booking', {
+        heading: 'ご予約',
+        subtext: 'LINEでのご予約も受け付けております',
+        serviceTypes: ['カット', 'カラー', 'パーマ', 'カット+カラー', 'トリートメント'],
+        timeSlots: ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+        buttonText: '予約する',
+        buttonColor: '#831843',
+        bgColor: '#fff1f2',
+      }),
       contactBlock,
     ],
   },
@@ -87,13 +118,23 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     schemaType: 'MedicalClinic',
     seoTitleTemplate: '{name} | {area}の整体院・接骨院',
     blocks: [
-      b('hero', { heading: '{name}', subheading: '根本から改善。あなたの体の悩みに寄り添います', ctaText: '初回無料相談', ctaLink: '#contact', bgColor: '#064e3b', textColor: '#ffffff' }),
+      b('hero', { heading: '{name}', subheading: '根本から改善。あなたの体の悩みに寄り添います', ctaText: '初回無料相談', ctaLink: '#booking', bgColor: '#064e3b', textColor: '#ffffff' }),
       b('heading', { text: 'こんなお悩みありませんか？', subtext: '', align: 'center' }),
       b('three-col', { col1Icon: '😫', col1Title: '肩こり・首の痛み', col1Text: 'デスクワークや姿勢の悪さからくる慢性的なこりに', col2Icon: '🦵', col2Title: '腰痛', col2Text: '立ち仕事・重い物の持ち運びによる腰の痛みに', col3Icon: '🦷', col3Title: '頭痛・めまい', col3Text: '筋肉の緊張から来る頭痛・自律神経の乱れに' }),
       b('heading', { text: '当院の特徴', subtext: '{description}', align: 'center' }),
       b('services', { heading: '施術メニュー', columns: '3', items: [{ icon: '🙌', title: '全身矯正', description: '骨盤・背骨の歪みを根本から整える', price: '5,500円' }, { icon: '💆', title: '肩こり・腰痛集中', description: '痛みの原因にアプローチ', price: '3,500円' }, { icon: '🌿', title: '初回体験', description: 'カウンセリング込みのお試しコース', price: '1,000円' }] }),
       b('testimonials', { heading: 'ご利用者様の声', items: [{ name: '田中様', age: '50代', rating: 5, text: '長年の腰痛が3回の施術で楽になりました。もっと早く来ればよかった。' }, { name: '山本様', age: '30代', rating: 5, text: '肩こりがひどくて来院。丁寧な説明で安心できました。' }, { name: '木村様', age: '40代', rating: 5, text: '定期的に通っています。体が軽くなって毎日快適です。' }] }),
       b('hours', makeHours('9:00〜20:00', '10:00〜17:00')),
+      mapBlock,
+      b('booking', {
+        heading: '予約・お問い合わせ',
+        subtext: '初回無料カウンセリング実施中',
+        serviceTypes: ['全身矯正', '肩こり・腰痛集中', '初回体験（無料カウンセリング）', 'その他相談'],
+        timeSlots: ['9:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'],
+        buttonText: '予約を申し込む',
+        buttonColor: '#064e3b',
+        bgColor: '#f0fdf4',
+      }),
       contactBlock,
     ],
   },
@@ -106,11 +147,20 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     schemaType: 'LegalService',
     seoTitleTemplate: '{name} | {area}の{type}事務所',
     blocks: [
-      b('hero', { heading: '{name}', subheading: '豊富な実績と専門知識で、お客様の課題を解決します', ctaText: '無料相談を予約する', ctaLink: '#contact', bgColor: '#111827', textColor: '#ffffff' }),
+      b('hero', { heading: '{name}', subheading: '豊富な実績と専門知識で、お客様の課題を解決します', ctaText: '無料相談を予約する', ctaLink: '#booking', bgColor: '#111827', textColor: '#ffffff' }),
       b('heading', { text: '事務所について', subtext: '{description}', align: 'left' }),
       b('services', { heading: 'サービス内容', columns: '3', items: [{ icon: '📄', title: 'ご相談・診断', description: '初回無料でご相談を承ります', price: '無料' }, { icon: '📋', title: '書類作成', description: '各種申請書類の作成代行', price: '要見積' }, { icon: '🤝', title: 'コンサルティング', description: '継続的なサポート・顧問契約', price: '月額制' }] }),
-      b('cta', { heading: 'まずは無料相談から', subtext: 'お電話・メール・ZOOMでのご相談も承ります。お気軽にお問い合わせください。', buttonText: '無料相談を予約する', buttonLink: '#contact', bgColor: '#1e3a8a', textColor: '#ffffff' }),
+      b('cta', { heading: 'まずは無料相談から', subtext: 'お電話・メール・ZOOMでのご相談も承ります。お気軽にお問い合わせください。', buttonText: '無料相談を予約する', buttonLink: '#booking', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('hours', makeHours('9:00〜18:00')),
+      b('booking', {
+        heading: '無料相談のご予約',
+        subtext: 'ZOOMでのオンライン相談も可能です',
+        serviceTypes: ['初回無料相談', '書類作成依頼', '顧問契約相談', 'その他'],
+        timeSlots: ['9:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+        buttonText: '相談を予約する',
+        buttonColor: '#111827',
+        bgColor: '#f8fafc',
+      }),
       contactBlock,
     ],
   },
@@ -175,11 +225,28 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     schemaType: 'ExerciseGym',
     seoTitleTemplate: '{name} | {area}のジム・フィットネス',
     blocks: [
-      b('hero', { heading: '{name}', subheading: '理想の体を、今日から始めよう', ctaText: '無料体験を申し込む', ctaLink: '#contact', bgColor: '#1c1917', textColor: '#ffffff' }),
+      b('hero', { heading: '{name}', subheading: '理想の体を、今日から始めよう', ctaText: '無料体験を申し込む', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
       b('three-col', { col1Icon: '🏋️', col1Title: '最新設備', col1Text: '最新のトレーニングマシンを完備', col2Icon: '👨‍🏫', col2Title: 'プロトレーナー', col2Text: '経験豊富なパーソナルトレーナーが在籍', col3Icon: '🎯', col3Title: '結果にコミット', col3Text: '目標達成まで徹底サポート' }),
-      b('services', { heading: 'プラン・料金', columns: '3', items: [{ icon: '🥈', title: 'ベーシック', description: '設備使い放題・グループレッスン', price: '8,000円/月' }, { icon: '🥇', title: 'プレミアム', description: 'パーソナル月4回込み', price: '20,000円/月' }, { icon: '⚡', title: '体験入会', description: 'トレーナー付き体験1回', price: '無料' }] }),
+      b('price-table', {
+        heading: '料金プラン',
+        subtext: '全プラン無料体験あり',
+        plans: [
+          { name: 'ビジター', price: '2,200円', period: '/回', description: '1回から気軽にトレーニング', features: ['全設備使用可', 'タオル貸し出し', 'シャワー使用可'], highlighted: false, buttonText: '今すぐ来館', buttonLink: '#contact' },
+          { name: 'スタンダード', price: '8,000円', period: '/月', description: '毎日来ても使い放題', features: ['設備使い放題', 'グループレッスン参加', 'ロッカー使用', 'トレーナー相談月1回'], highlighted: true, buttonText: '入会する', buttonLink: '#booking' },
+          { name: 'パーソナル', price: '30,000円', period: '/月', description: 'プロが完全サポート', features: ['全て含む', 'パーソナル月8回', '食事指導', '進捗管理アプリ'], highlighted: false, buttonText: '無料相談', buttonLink: '#booking' },
+        ],
+      }),
       b('testimonials', { heading: 'ビフォーアフター・お客様の声', items: [{ name: '田中様', age: '30代', rating: 5, text: '3ヶ月で10kg減量に成功！トレーナーのサポートが手厚くて続けられました。' }, { name: '佐藤様', age: '40代', rating: 5, text: '体型だけでなく、体力もついて仕事のパフォーマンスが上がりました。' }, { name: '渡辺様', age: '20代', rating: 5, text: '初めてのジムで不安でしたが、丁寧に指導してもらえて安心です。' }] }),
       b('hours', makeHours('6:00〜23:00', '8:00〜20:00')),
+      b('booking', {
+        heading: '無料体験を申し込む',
+        subtext: 'まずは見学だけでもOKです',
+        serviceTypes: ['施設見学（無料）', '体験入会（無料）', 'パーソナルトレーニング体験', '入会相談'],
+        timeSlots: ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'],
+        buttonText: '体験予約をする',
+        buttonColor: '#ea580c',
+        bgColor: '#fff7ed',
+      }),
       contactBlock,
     ],
   },
@@ -192,11 +259,21 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     schemaType: 'Hotel',
     seoTitleTemplate: '{name} | {area}のホテル・旅館',
     blocks: [
-      b('hero', { heading: '{name}', subheading: '特別なひとときを、心を込めておもてなしします', ctaText: '空室・料金を確認する', ctaLink: '#contact', bgColor: '#1c1917', textColor: '#ffffff' }),
+      b('hero', { heading: '{name}', subheading: '特別なひとときを、心を込めておもてなしします', ctaText: '空室・料金を確認する', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
       b('heading', { text: '施設のご案内', subtext: '{description}', align: 'center' }),
       b('services', { heading: 'プラン', columns: '3', items: [{ icon: '🌸', title: '素泊まりプラン', description: '気ままに自由な旅を', price: '8,000円〜/泊' }, { icon: '🍽', title: '朝食付きプラン', description: '地産地消の朝食を楽しむ', price: '12,000円〜/泊' }, { icon: '🥂', title: '夕食付きプラン', description: '旬の会席料理で贅沢な夜を', price: '20,000円〜/泊' }] }),
       b('gallery', { heading: '客室・施設', images: ['', '', '', ''], columns: '2' }),
       b('two-col', { col1Title: 'チェックイン・アウト', col1Text: 'チェックイン: 15:00〜\nチェックアウト: 〜11:00\n\n早期チェックインは要相談', col2Title: 'アクセス', col2Text: '{address}\n最寄り駅から徒歩10分\n無料送迎バスあり（要予約）' }),
+      mapBlock,
+      b('booking', {
+        heading: '宿泊予約',
+        subtext: '直前でもお気軽にお問い合わせください',
+        serviceTypes: ['素泊まりプラン', '朝食付きプラン', '夕食付きプラン', '特別記念日プラン'],
+        timeSlots: ['15:00〜', '16:00〜', '17:00〜', '18:00〜'],
+        buttonText: '予約する',
+        buttonColor: '#1c1917',
+        bgColor: '#fffbeb',
+      }),
       contactBlock,
     ],
   },
@@ -209,12 +286,115 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     schemaType: 'EducationalOrganization',
     seoTitleTemplate: '{name} | {area}の塾・スクール',
     blocks: [
-      b('hero', { heading: '{name}', subheading: 'お子様の可能性を最大限に伸ばします', ctaText: '無料体験授業を申し込む', ctaLink: '#contact', bgColor: '#1e3a8a', textColor: '#ffffff' }),
+      b('hero', { heading: '{name}', subheading: 'お子様の可能性を最大限に伸ばします', ctaText: '無料体験授業を申し込む', ctaLink: '#booking', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('heading', { text: '選ばれる理由', subtext: '{description}', align: 'center' }),
       b('three-col', { col1Icon: '📈', col1Title: '成績向上実績', col1Text: '通塾3ヶ月で平均20点アップの実績', col2Icon: '👩‍🏫', col2Title: '熟練の講師陣', col2Text: '教育経験豊富な講師が個別に指導', col3Icon: '😊', col3Title: '楽しく続けられる', col3Text: 'やる気を引き出す独自のカリキュラム' }),
-      b('services', { heading: 'コース・料金', columns: '3', items: [{ icon: '📐', title: '小学生コース', description: '基礎から応用まで丁寧に', price: '10,000円/月' }, { icon: '📚', title: '中学生コース', description: '高校受験対策まで完全対応', price: '15,000円/月' }, { icon: '🎓', title: '高校生コース', description: '大学受験に向けた集中指導', price: '20,000円/月' }] }),
-      b('cta', { heading: '無料体験授業、受付中', subtext: 'まずはお子様の現状を把握するところから。無料でご相談ください。', buttonText: '無料体験を申し込む', buttonLink: '#contact', bgColor: '#1e3a8a', textColor: '#ffffff' }),
+      b('price-table', {
+        heading: 'コース・料金',
+        subtext: '全コース無料体験授業あり',
+        plans: [
+          { name: '小学生コース', price: '10,000円', period: '/月', description: '基礎から応用まで丁寧に', features: ['週2回授業', '宿題サポート', '保護者面談月1回'], highlighted: false, buttonText: '体験を申し込む', buttonLink: '#booking' },
+          { name: '中学生コース', price: '15,000円', period: '/月', description: '高校受験対策まで完全対応', features: ['週3回授業', '定期テスト対策', '模擬試験月1回', '保護者面談'], highlighted: true, buttonText: '体験を申し込む', buttonLink: '#booking' },
+          { name: '高校生コース', price: '20,000円', period: '/月', description: '大学受験に向けた集中指導', features: ['週3〜5回授業', '志望校別対策', '過去問演習', '入試直前講習'], highlighted: false, buttonText: '体験を申し込む', buttonLink: '#booking' },
+        ],
+      }),
+      b('cta', { heading: '無料体験授業、受付中', subtext: 'まずはお子様の現状を把握するところから。無料でご相談ください。', buttonText: '無料体験を申し込む', buttonLink: '#booking', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('hours', makeHours('14:00〜21:00', '')),
+      b('booking', {
+        heading: '無料体験授業のお申し込み',
+        subtext: '体験当日は手ぶらでお越しください',
+        serviceTypes: ['小学生コース体験', '中学生コース体験', '高校生コース体験', '保護者相談のみ'],
+        timeSlots: ['14:00', '15:00', '16:00', '17:00', '18:00', '19:00'],
+        buttonText: '体験予約をする',
+        buttonColor: '#1e3a8a',
+        bgColor: '#eff6ff',
+      }),
+      contactBlock,
+    ],
+  },
+
+  wedding: {
+    label: 'ウェディング・ブライダル',
+    emoji: '💒',
+    colorScheme: 'elegant-dark',
+    bgColor: '#1c1917',
+    schemaType: 'EventVenue',
+    seoTitleTemplate: '{name} | {area}のウェディング・結婚式場',
+    blocks: [
+      b('hero', { heading: '{name}', subheading: '二人の特別な日を、最高の思い出に', ctaText: '見学・相談を予約する', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
+      b('countdown', {
+        heading: '次の挙式まであと',
+        subtext: '限定日程でのご予約受付中',
+        targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        bgColor: '#1c1917',
+        textColor: '#ffffff',
+      }),
+      b('heading', { text: '私たちのこだわり', subtext: '{description}', align: 'center' }),
+      b('three-col', { col1Icon: '💐', col1Title: 'おふたりだけの式', col1Text: '完全貸切でプライベートな空間をご提供', col2Icon: '👨‍🍳', col2Title: '一流シェフの料理', col2Text: '旬の食材を使ったコース料理でゲストをおもてなし', col3Icon: '📸', col3Title: '専属カメラマン', col3Text: 'プロカメラマンが最高の瞬間を記録します' }),
+      b('price-table', {
+        heading: 'プランと料金',
+        subtext: '全プラン無料見学・相談会あり',
+        plans: [
+          { name: 'シンプルプラン', price: '380,000円', period: '〜', description: '少人数・家族挙式向け', features: ['挙式のみ（20名以下）', '衣装・ブーケ込み', 'フォト撮影', '演出小物一式'], highlighted: false, buttonText: '相談する', buttonLink: '#booking' },
+          { name: 'スタンダードプラン', price: '800,000円', period: '〜', description: '最も人気の定番プラン', features: ['挙式＋披露宴（50名）', '衣装・ヘアメイク込み', '料理（フルコース）', 'ムービー制作', '装花アレンジ'], highlighted: true, buttonText: '見学を予約', buttonLink: '#booking' },
+          { name: 'プレミアムプラン', price: '150万円', period: '〜', description: '完全オーダーメイド', features: ['全て含む', '完全オリジナル演出', 'ドレスフルオーダー', 'ハネムーン手配', '専属プランナー'], highlighted: false, buttonText: '相談する', buttonLink: '#booking' },
+        ],
+      }),
+      b('gallery', { heading: '実際の式場・装飾', images: ['', '', '', ''], columns: '2' }),
+      b('testimonials', { heading: 'ご利用されたカップルの声', items: [{ name: '佐藤 様ご夫妻', age: '20代', rating: 5, text: '担当プランナーさんが本当に親身になってくれて、理想以上の式になりました。ゲスト全員が喜んでくれました。' }, { name: '田中 様ご夫妻', age: '30代', rating: 5, text: '料理がとても美味しかったと親族に大好評。アットホームな雰囲気が素晴らしかったです。' }, { name: '山口 様ご夫妻', age: '20代', rating: 5, text: 'ゼロから一緒に考えてもらえて、二人だけのオリジナルの式ができました。' }] }),
+      b('faq', {
+        heading: 'よくあるご質問',
+        items: [
+          { q: '見学・相談は無料ですか？', a: 'はい、見学・ブライダル相談は完全無料です。お気軽にお申し込みください。' },
+          { q: '少人数でも対応できますか？', a: 'ご家族のみ10名様からでもご対応可能です。むしろ少人数での温かみのある式は大変ご好評をいただいています。' },
+          { q: '持ち込み料はかかりますか？', a: 'ドレスや小物の持ち込みに対応しています。詳細はご相談時にご確認ください。' },
+        ],
+      }),
+      b('booking', {
+        heading: '見学・ブライダル相談のご予約',
+        subtext: '所要時間約1時間。お二人でのご来場歓迎です',
+        serviceTypes: ['式場見学（無料）', 'ブライダル相談（無料）', 'フェア参加', '資料請求'],
+        timeSlots: ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00'],
+        buttonText: '見学を予約する',
+        buttonColor: '#1c1917',
+        bgColor: '#fdf8f0',
+      }),
+      contactBlock,
+    ],
+  },
+
+  pet: {
+    label: 'ペットサロン・トリミング',
+    emoji: '🐾',
+    colorScheme: 'fresh-green',
+    bgColor: '#052e16',
+    schemaType: 'LocalBusiness',
+    seoTitleTemplate: '{name} | {area}のペットサロン・トリミング',
+    blocks: [
+      b('hero', { heading: '{name}', subheading: '大切なペットを、丁寧に心を込めてケアします', ctaText: 'トリミングを予約する', ctaLink: '#booking', bgColor: '#052e16', textColor: '#ffffff' }),
+      b('heading', { text: '私たちのこだわり', subtext: '{description}', align: 'center' }),
+      b('three-col', { col1Icon: '✂️', col1Title: '国家資格保有スタッフ', col1Text: 'トリマー国家資格（愛玩動物飼養管理士）保有スタッフが担当', col2Icon: '🛁', col2Title: '低刺激シャンプー', col2Text: '敏感肌・アレルギーのお子にも安心の低刺激・無添加シャンプー使用', col3Icon: '📸', col3Title: '仕上がり写真送付', col3Text: 'トリミング後はLINEでかわいい仕上がり写真をお送りします' }),
+      b('price-table', {
+        heading: 'トリミング料金',
+        subtext: 'シャンプー・ブロー・爪切り・耳掃除込み',
+        plans: [
+          { name: '小型犬', price: '4,500円', period: '〜', description: 'チワワ・トイプードル・ダックスなど', features: ['シャンプー＆ブロー', '爪切り・耳掃除', '足裏カット', 'カット込み'], highlighted: false, buttonText: '予約する', buttonLink: '#booking' },
+          { name: '中型犬', price: '6,500円', period: '〜', description: 'シュナウザー・コーギーなど', features: ['シャンプー＆ブロー', '爪切り・耳掃除', '足裏カット', 'カット込み', '肛門腺絞り'], highlighted: true, buttonText: '予約する', buttonLink: '#booking' },
+          { name: '大型犬', price: '9,000円', period: '〜', description: 'ゴールデン・ラブラドールなど', features: ['シャンプー＆ブロー', '爪切り・耳掃除', '足裏カット', 'カット込み', '肛門腺絞り', '歯磨きオプション'], highlighted: false, buttonText: '予約する', buttonLink: '#booking' },
+        ],
+      }),
+      b('gallery', { heading: 'トリミング before/after', images: ['', '', '', ''], columns: '2' }),
+      b('testimonials', { heading: 'オーナー様の声', items: [{ name: '木村様（チワワ）', age: '40代', rating: 5, text: 'いつも嫌がっているトリミングが、こちらでは大人しく受けてくれます。スタッフさんが優しいからですね。' }, { name: '中村様（トイプー）', age: '30代', rating: 5, text: '仕上がり写真を毎回楽しみにしています！いつもかわいくしてもらえて感謝です。' }, { name: '田中様（ダックス）', age: '50代', rating: 5, text: '肌が弱い子ですが、低刺激シャンプーで肌荒れも出ず安心して任せられます。' }] }),
+      b('hours', makeHours('10:00〜18:00', '')),
+      b('booking', {
+        heading: 'トリミングのご予約',
+        subtext: 'ご予約はお電話またはフォームから',
+        serviceTypes: ['小型犬トリミング', '中型犬トリミング', '大型犬トリミング', 'シャンプーのみ', '爪切り・耳掃除のみ'],
+        timeSlots: ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'],
+        buttonText: '予約を申し込む',
+        buttonColor: '#052e16',
+        bgColor: '#f0fdf4',
+      }),
       contactBlock,
     ],
   },

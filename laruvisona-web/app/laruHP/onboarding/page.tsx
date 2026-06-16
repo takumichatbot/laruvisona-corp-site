@@ -15,6 +15,7 @@ const INDUSTRIES = [
   { id: 'hotel', emoji: '🏨', name: 'ホテル・旅館', desc: 'ホテル、旅館、民泊、グランピングなど', color: 'amber' },
   { id: 'education', emoji: '📚', name: '教育・スクール', desc: '塾、教室、スクール、研修機関など', color: 'cyan' },
   { id: 'wedding', emoji: '💒', name: '結婚式場・イベント', desc: 'ウェディング、イベントホール、パーティーなど', color: 'rose' },
+  { id: 'pet', emoji: '🐾', name: 'ペットサロン', desc: 'トリミング、ペットホテル、動物病院、ペットショップなど', color: 'lime' },
   { id: 'other', emoji: '✨', name: 'その他', desc: '上記に当てはまらない業種', color: 'slate' },
 ];
 
@@ -154,7 +155,7 @@ function OnboardingContent() {
         {/* Progress */}
         <div className="mb-10">
           <div className="flex items-center justify-between mb-3">
-            {STEPS.map((s, i) => (
+            {STEPS.map((_s, i) => (
               <div key={i} className="flex items-center">
                 <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${
                   i + 1 < step ? 'bg-blue-500 text-white' :

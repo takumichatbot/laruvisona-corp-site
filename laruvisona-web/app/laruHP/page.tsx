@@ -13,6 +13,8 @@ const INDUSTRIES = [
   { emoji: '💪', name: 'フィットネス', id: 'fitness' },
   { emoji: '🏨', name: 'ホテル・旅館', id: 'hotel' },
   { emoji: '📚', name: '教育・スクール', id: 'education' },
+  { emoji: '💒', name: 'ウェディング', id: 'wedding' },
+  { emoji: '🐾', name: 'ペットサロン', id: 'pet' },
 ];
 
 const FEATURES = [
@@ -52,6 +54,18 @@ const FEATURES = [
     desc: 'PC・スマホ・タブレットで完璧に表示。モバイルファーストなデザインで機会損失をゼロに。',
     color: 'cyan',
   },
+  {
+    icon: '📩',
+    title: '予約・お問い合わせフォーム',
+    desc: '日程・サービス選択付きの予約フォームと問い合わせフォームを自動設置。送信時にメール通知も届きます。',
+    color: 'blue',
+  },
+  {
+    icon: '📄',
+    title: 'マルチページ対応',
+    desc: '「トップ」「会社概要」「アクセス」など複数ページを作成可能。ナビゲーションバーも自動生成。',
+    color: 'purple',
+  },
 ];
 
 const PLAN_FEATURES = [
@@ -66,7 +80,9 @@ const PLAN_FEATURES = [
   'モバイル完全対応',
   'Google Analytics連携',
   '画像・動画アップロード 5GB',
-  'お問い合わせフォーム自動設置',
+  'お問い合わせ・予約フォーム（メール通知付き）',
+  'マルチページ対応（ナビゲーションバー自動生成）',
+  'サイト複製機能',
 ];
 
 const FAQ_ITEMS = [
@@ -218,7 +234,7 @@ export default function LaruHPLandingPage() {
         <div className="max-w-3xl mx-auto mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { num: '5分', label: 'でサイト完成', sub: 'AI自動生成', color: 'from-blue-500/20 to-transparent' },
-            { num: '10+', label: '業種テンプレート', sub: '随時追加中', color: 'from-purple-500/20 to-transparent' },
+            { num: '12+', label: '業種テンプレート', sub: '随時追加中', color: 'from-purple-500/20 to-transparent' },
             { num: '999円', label: '/月（初月1円）', sub: '税別', color: 'from-cyan-500/20 to-transparent' },
             { num: '100%', label: 'SEO自動化', sub: 'AI最適化', color: 'from-emerald-500/20 to-transparent' },
           ].map((stat, i) => (
