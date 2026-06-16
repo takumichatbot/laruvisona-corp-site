@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { exportToHTML } from '@/lib/html-export';
-import type { Block, SEOSettings, SiteSettings } from '@/types/laruHP';
+import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -21,9 +21,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   }
 
+  // Handle both v1 (Block[]) and v2 ({ v: 2, pages: Page[] }) formats
+  const rawBlocks = site.blocks_json as Block[] | { v: number; pages: Page[] };
+  let blocks: Block[];
+  let seoSettings: SEOSettings = site.seo_json as SEOSettings;
+
+  if (Array.isArray(rawBlocks)) {
+    blocks = rawBlocks;
+  } else if (rawBlocks?.v === 2 && rawBlocks.pages?.length) {
+    blocks = rawBlocks.pages[0].blocks;
+    seoSettings = rawBlocks.pages[0].seo || seoSettings;
+  } else {
+    blocks = [];
+  }
+
   const html = exportToHTML(
-    site.blocks_json as Block[],
-    site.seo_json as SEOSettings,
+    blocks,
+    seoSettings,
     site.settings_json as SiteSettings,
     site.name,
     { name: site.name, industry: site.industry ?? undefined }

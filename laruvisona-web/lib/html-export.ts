@@ -183,6 +183,132 @@ function renderBlock(block: Block): string {
 })();
 </script>`;
 
+    case 'video': {
+      if (!d['url']) return '';
+      const url = raw('url');
+      const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+      const vmMatch = url.match(/vimeo\.com\/(\d+)/);
+      const embedUrl = ytMatch
+        ? `https://www.youtube.com/embed/${ytMatch[1]}`
+        : vmMatch ? `https://player.vimeo.com/video/${vmMatch[1]}` : url;
+      return `
+<section class="lhp-section">
+  ${d['heading'] ? `<h2 class="lhp-section-title">${str('heading')}</h2>` : ''}
+  <div class="lhp-video-wrap" style="aspect-ratio:${raw('aspectRatio') || '16/9'}">
+    <iframe src="${embedUrl}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>
+  </div>
+</section>`;
+    }
+
+    case 'map':
+      if (!d['embedUrl']) return '';
+      return `
+<section class="lhp-section">
+  ${d['heading'] ? `<h2 class="lhp-section-title">${str('heading')}</h2>` : ''}
+  <iframe src="${raw('embedUrl')}" class="lhp-map" style="height:${raw('height') || 400}px" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+</section>`;
+
+    case 'countdown':
+      return `
+<section class="lhp-countdown" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
+  <h2>${str('heading')}</h2>
+  <p>${str('subtext')}</p>
+  <div class="lhp-countdown-timer" data-target="${raw('targetDate')}">
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-d">00</span><span class="lhp-cdt-l">日</span></div>
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-h">00</span><span class="lhp-cdt-l">時間</span></div>
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-m">00</span><span class="lhp-cdt-l">分</span></div>
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-s">00</span><span class="lhp-cdt-l">秒</span></div>
+  </div>
+</section>
+<script>
+(function(){
+  var t=new Date("${raw('targetDate')}").getTime();
+  function tick(){
+    var d=t-Date.now();
+    if(d<0)d=0;
+    document.getElementById('cd-d').textContent=String(Math.floor(d/86400000)).padStart(2,'0');
+    document.getElementById('cd-h').textContent=String(Math.floor(d%86400000/3600000)).padStart(2,'0');
+    document.getElementById('cd-m').textContent=String(Math.floor(d%3600000/60000)).padStart(2,'0');
+    document.getElementById('cd-s').textContent=String(Math.floor(d%60000/1000)).padStart(2,'0');
+  }
+  tick(); setInterval(tick,1000);
+})();
+</script>`;
+
+    case 'price-table': {
+      type PricePlan = { name:string; price:string; period:string; description:string; features:string[]; highlighted:boolean; buttonText:string; buttonLink:string };
+      const plans = (d['plans'] as PricePlan[]) ?? [];
+      return `
+<section class="lhp-section">
+  <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
+  ${d['subtext'] ? `<p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>` : ''}
+  <div class="lhp-price-grid">
+    ${plans.map(p => `
+    <div class="lhp-price-card${p.highlighted ? ' lhp-price-featured' : ''}">
+      ${p.highlighted ? '<div class="lhp-price-badge">おすすめ</div>' : ''}
+      <div class="lhp-price-name">${escapeHtml(p.name)}</div>
+      <div class="lhp-price-amount">${escapeHtml(p.price)}<span class="lhp-price-period">${escapeHtml(p.period)}</span></div>
+      <div class="lhp-price-desc">${escapeHtml(p.description)}</div>
+      <ul class="lhp-price-features">
+        ${(p.features||[]).map(f => `<li>✓ ${escapeHtml(f)}</li>`).join('')}
+      </ul>
+      <a href="${escapeHtml(p.buttonLink)}" class="lhp-price-btn">${escapeHtml(p.buttonText)}</a>
+    </div>`).join('')}
+  </div>
+</section>`;
+    }
+
+    case 'booking':
+      return `
+<section class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
+  <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
+  <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
+  <form class="lhp-form" onsubmit="return false">
+    <div style="margin-bottom:16px">
+      <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">サービスを選択</label>
+      <select style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
+        ${((d['serviceTypes'] as string[]) || []).map(s => `<option>${escapeHtml(s)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="lhp-form-row">
+      <div>
+        <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の日程</label>
+        <input type="date" />
+      </div>
+      <div>
+        <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の時間</label>
+        <select style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
+          ${((d['timeSlots'] as string[]) || []).map(t => `<option>${escapeHtml(t)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="lhp-form-row">
+      <input type="text" placeholder="お名前" required />
+      <input type="tel" placeholder="電話番号" />
+    </div>
+    <input type="email" placeholder="メールアドレス" />
+    <button type="submit" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
+    <p class="lhp-form-note">※このフォームはデモです。実際の送信にはバックエンド連携が必要です。</p>
+  </form>
+</section>`;
+
+    case 'news': {
+      type NewsItem = { date:string; tag:string; title:string };
+      const items = (d['items'] as NewsItem[]) ?? [];
+      return `
+<section class="lhp-section">
+  <h2 class="lhp-section-title">${str('heading')}</h2>
+  <div class="lhp-news">
+    ${items.map(item => `
+    <div class="lhp-news-item">
+      <span class="lhp-news-date">${escapeHtml(item.date)}</span>
+      <span class="lhp-news-tag">${escapeHtml(item.tag)}</span>
+      <span class="lhp-news-title">${escapeHtml(item.title)}</span>
+    </div>`).join('')}
+  </div>
+</section>`;
+    }
+
     default:
       return '';
   }
@@ -265,6 +391,37 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-gallery-3{grid-template-columns:repeat(3,1fr)}
 .lhp-gallery-img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}
 @media(max-width:600px){.lhp-gallery-2,.lhp-gallery-3{grid-template-columns:1fr 1fr}}
+.lhp-video-wrap{width:100%;border-radius:12px;overflow:hidden}
+.lhp-video-wrap iframe{width:100%;height:100%;border:none;display:block}
+.lhp-map{width:100%;border:none;border-radius:12px;display:block}
+.lhp-countdown{padding:80px 24px;text-align:center}
+.lhp-countdown h2{font-size:clamp(1.5rem,3vw,2.5rem);font-weight:900;margin-bottom:8px}
+.lhp-countdown p{opacity:.8;margin-bottom:40px}
+.lhp-countdown-timer{display:flex;justify-content:center;gap:32px}
+.lhp-cdt-box{text-align:center}
+.lhp-cdt-n{font-size:clamp(3rem,8vw,5rem);font-weight:900;line-height:1;display:block;font-variant-numeric:tabular-nums}
+.lhp-cdt-l{font-size:.9rem;opacity:.7;margin-top:4px;display:block}
+@media(max-width:480px){.lhp-countdown-timer{gap:16px}.lhp-cdt-n{font-size:2.5rem}}
+.lhp-price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;max-width:900px;margin-left:auto;margin-right:auto;align-items:start}
+@media(max-width:768px){.lhp-price-grid{grid-template-columns:1fr}}
+.lhp-price-card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:28px;display:flex;flex-direction:column;position:relative}
+.lhp-price-featured{background:#2563eb;color:#fff;border-color:#2563eb;transform:scale(1.04);box-shadow:0 8px 40px rgba(37,99,235,.3)}
+.lhp-price-badge{font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:#93c5fd;margin-bottom:8px}
+.lhp-price-name{font-size:.9rem;font-weight:700;margin-bottom:4px;color:inherit;opacity:.7}
+.lhp-price-amount{font-size:2.2rem;font-weight:900;margin-bottom:4px;line-height:1}
+.lhp-price-period{font-size:.9rem;font-weight:400;opacity:.6}
+.lhp-price-desc{font-size:.8rem;opacity:.6;margin-bottom:20px}
+.lhp-price-features{list-style:none;margin-bottom:24px;flex:1;display:flex;flex-direction:column;gap:8px}
+.lhp-price-features li{font-size:.85rem;display:flex;align-items:center;gap:8px}
+.lhp-price-btn{display:block;text-align:center;padding:12px;border-radius:12px;font-weight:700;font-size:.9rem;text-decoration:none;background:#2563eb;color:#fff;transition:opacity .2s}
+.lhp-price-featured .lhp-price-btn{background:#fff;color:#2563eb}
+.lhp-price-btn:hover{opacity:.85}
+.lhp-news{max-width:720px;margin:32px auto 0}
+.lhp-news-item{display:flex;align-items:flex-start;gap:16px;padding:14px 12px;border-bottom:1px solid #f3f4f6;transition:background .2s}
+.lhp-news-item:hover{background:#f9fafb}
+.lhp-news-date{font-size:.8rem;color:#9ca3af;white-space:nowrap;margin-top:2px;font-family:monospace}
+.lhp-news-tag{font-size:.7rem;font-weight:700;background:#eff6ff;color:#2563eb;padding:2px 10px;border-radius:9999px;white-space:nowrap}
+.lhp-news-title{font-size:.9rem;font-weight:600;color:#111;line-height:1.5}
 `;
 
 export function exportToHTML(

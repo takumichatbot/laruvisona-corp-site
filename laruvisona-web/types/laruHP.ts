@@ -2,7 +2,8 @@ export type BlockType =
   | 'hero' | 'heading' | 'paragraph' | 'image'
   | 'two-col' | 'three-col' | 'divider' | 'cta'
   | 'services' | 'testimonials' | 'faq' | 'contact'
-  | 'hours' | 'gallery' | 'larubot';
+  | 'hours' | 'gallery' | 'larubot'
+  | 'video' | 'map' | 'countdown' | 'price-table' | 'booking' | 'news';
 
 export interface Block {
   id: string;
@@ -16,6 +17,14 @@ export interface SEOSettings {
   keywords: string;
   ogTitle: string;
   ogDescription: string;
+}
+
+export interface Page {
+  id: string;
+  name: string;
+  path: string;
+  blocks: Block[];
+  seo: SEOSettings;
 }
 
 export interface SiteSettings {
@@ -32,7 +41,7 @@ export interface Site {
   name: string;
   slug: string | null;
   industry: string | null;
-  blocks_json: Block[];
+  blocks_json: Block[] | { v: number; pages: Page[] };
   seo_json: SEOSettings;
   settings_json: SiteSettings;
   published: boolean;
