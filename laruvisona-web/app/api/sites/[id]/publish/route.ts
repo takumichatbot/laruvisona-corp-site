@@ -1,0 +1,64 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { exportToHTML } from '@/lib/html-export';
+import type { Block, SEOSettings, SiteSettings } from '@/types/laruHP';
+
+export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+
+  const { data: site, error: fetchError } = await supabase
+    .from('sites')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (fetchError || !site) {
+    return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+  }
+
+  const html = exportToHTML(
+    site.blocks_json as Block[],
+    site.seo_json as SEOSettings,
+    site.settings_json as SiteSettings,
+    site.name,
+    { name: site.name, industry: site.industry ?? undefined }
+  );
+
+  const { data: updated, error: updateError } = await supabase
+    .from('sites')
+    .update({ published: true, published_html: html })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select('slug')
+    .single();
+
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  return NextResponse.json({
+    success: true,
+    slug: updated.slug,
+    url: `/hp/${updated.slug}`,
+  });
+}
+
+// Unpublish
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+  const { error } = await supabase
+    .from('sites')
+    .update({ published: false, published_html: null })
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}

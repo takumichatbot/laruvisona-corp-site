@@ -124,6 +124,7 @@ export default function Home() {
                 <a href="#services" className="hover:text-white px-4 py-2 transition-colors">SERVICES</a>
                 <a href="#product" className="hover:text-white px-4 py-2 transition-colors">PRODUCT</a>
                 <a href="#estimator" className="text-blue-400 hover:text-blue-300 px-4 py-2 transition-colors">ESTIMATOR</a>
+                <a href="/laruHP" className="text-cyan-400 hover:text-cyan-300 px-4 py-2 transition-colors border border-cyan-500/30 rounded-lg">LARU HP ✨</a>
               </nav>
               <a href="#contact" className="hidden md:flex bg-white text-black px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all items-center gap-2">
                 CONTACT <i className="fas fa-arrow-right"></i>
@@ -351,6 +352,90 @@ export default function Home() {
             <div className="gsap-fade-up">
               {/* 🌟 修正: onConsult を渡す */}
               <Estimator onConsult={handleConsult} />
+            </div>
+          </div>
+        </section>
+
+        {/* --- LARUvisona HP Product Section --- */}
+        <section id="laruHP" className="py-32 relative bg-gradient-to-b from-[#030712] to-[#0a1628] border-t border-white/5 z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.05),transparent_70%)] pointer-events-none" />
+          <div className="container mx-auto px-6 max-w-7xl relative z-10">
+            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+              <div className="lg:w-1/2 gsap-fade-up text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/30 px-4 py-2 rounded-full mb-6">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block"></span>
+                  <span className="text-cyan-400 font-bold text-xs tracking-widest font-en">NEW PRODUCT</span>
+                </div>
+                <h2 className="text-5xl lg:text-7xl font-black mb-4 font-en tracking-tight text-white">
+                  LARU<span className="text-cyan-400">HP</span>
+                </h2>
+                <p className="text-cyan-400 text-xl font-bold mb-6">AIで最高のHPを最短で</p>
+                <p className="text-slate-400 leading-relaxed mb-4 text-sm md:text-base">
+                  業種情報を入力するだけでAIが自動でホームページを生成。ビジュアルエディタで自由に編集、LARUbot・LARUSEO連携でSEOと集客を最大化。
+                </p>
+                <div className="flex flex-wrap gap-3 mb-8 justify-center lg:justify-start">
+                  <span className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full">🤖 AI自動生成</span>
+                  <span className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full">📈 SEO最大化</span>
+                  <span className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full">🎨 ビジュアルエディタ</span>
+                  <span className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full">🤝 LARUbot連携</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                  <a href="/laruHP" className="bg-white text-black font-bold py-4 px-8 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)] inline-flex items-center justify-center gap-2">
+                    詳細・料金を見る <i className="fas fa-arrow-right"></i>
+                  </a>
+                  <a href="/laruHP/builder" className="border border-white/20 text-slate-300 hover:text-white font-bold py-4 px-8 rounded-full hover:border-white/40 transition-all inline-flex items-center justify-center gap-2">
+                    ▶ デモを体験
+                  </a>
+                </div>
+                <p className="text-slate-600 text-xs mt-5 text-center lg:text-left">月額<strong className="text-white">999円</strong>（税別）初月<strong className="text-white">1円</strong> / 最低6ヶ月</p>
+              </div>
+              <div className="lg:w-1/2 w-full gsap-fade-up">
+                {/* Editor preview mockup */}
+                <div className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(6,182,212,0.1)]">
+                  <div className="bg-[#0f172a] border-b border-white/10 px-4 py-2.5 flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                    </div>
+                    <div className="flex-1 bg-white/10 rounded px-2 py-0.5 text-[10px] text-slate-500 font-mono">your-shop.laruvisona.com</div>
+                    <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded font-bold">公開中</span>
+                  </div>
+                  <div className="bg-white">
+                    <div className="bg-gradient-to-r from-blue-700 to-indigo-700 p-8 text-white text-center">
+                      <div className="text-xl font-black mb-1">〇〇整体院</div>
+                      <div className="text-xs opacity-80 mb-3">地域No.1の施術技術で、あなたの痛みを根本から解決します</div>
+                      <div className="inline-block bg-white text-blue-700 text-xs font-bold px-4 py-1.5 rounded-full">無料相談はこちら</div>
+                    </div>
+                    <div className="p-4 grid grid-cols-3 gap-2">
+                      {['首・肩','腰痛','膝'].map(s => (
+                        <div key={s} className="bg-blue-50 rounded-lg p-2 text-center">
+                          <div className="text-base">💆</div>
+                          <div className="text-[10px] font-bold text-blue-800">{s}</div>
+                          <div className="text-[9px] text-blue-500">初回3,000円</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-4 pb-4 text-center">
+                      <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500">
+                        📞 03-1234-5678 ／ 月〜土 9:00〜19:00
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  {[
+                    { num: '5分', label: 'で完成' },
+                    { num: '10+', label: '業種テンプレ' },
+                    { num: 'SEO', label: '自動最適化' },
+                  ].map((s, i) => (
+                    <div key={i} className="bg-white/5 border border-white/10 rounded-xl py-3">
+                      <div className="text-white font-black text-lg">{s.num}</div>
+                      <div className="text-slate-500 text-xs">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
