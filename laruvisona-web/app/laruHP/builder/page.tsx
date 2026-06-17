@@ -2064,90 +2064,152 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               </div>
             </div>
 
-            {/* LARUbot — hp-bot / hp-bot-seo プラン必須 */}
+            {/* LARUbot */}
             {(() => {
               const canUse = userPlan === 'hp-bot' || userPlan === 'hp-bot-seo';
               return (
-                <div className={`bg-white/5 rounded-xl mb-2 overflow-hidden relative ${!canUse ? 'opacity-60' : ''}`}>
-                  {!canUse && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 rounded-xl">
-                      <div className="text-center px-3">
-                        <div className="text-xs font-bold text-white mb-1">🔒 HP + Bot プラン以上</div>
-                        <a href="/laruHP/plans" className="text-[10px] text-blue-400 hover:text-blue-300 underline">プランをアップグレード →</a>
+                <div className="rounded-xl mb-3 overflow-hidden border border-indigo-500/20" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(17,24,39,0.8) 100%)' }}>
+                  {/* Header */}
+                  <div className="p-3 pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-base">🤖</span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-white text-[13px]">LARUbot</span>
+                            {canUse && larubot && <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full font-bold">連携中</span>}
+                            {!canUse && <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded-full font-bold">HP+Bot プラン</span>}
+                          </div>
+                          <div className="text-slate-400 text-[10px] mt-0.5">AIチャットボット — 問い合わせを24時間自動対応</div>
+                        </div>
                       </div>
+                      {canUse && (
+                        <button
+                          onClick={() => onLarubotChange(!larubot)}
+                          className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 mt-1 ${larubot ? 'bg-indigo-500' : 'bg-white/15'}`}
+                        >
+                          <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-[3px] transition-all shadow ${larubot ? 'left-[23px]' : 'left-[3px]'}`} />
+                        </button>
+                      )}
                     </div>
-                  )}
-                  <div className="flex items-center justify-between p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-[10px] font-black flex-shrink-0">LB</div>
-                      <div>
-                        <div className="font-bold text-white text-[11px]">LARUbot AI</div>
-                        <div className="text-slate-500 text-[10px]">チャットボット埋め込み</div>
-                      </div>
+                    {/* Benefits */}
+                    <div className="mt-2.5 grid grid-cols-1 gap-1">
+                      {[
+                        { icon: '💬', text: '訪問者の質問にAIがリアルタイム回答' },
+                        { icon: '📅', text: '予約・営業時間・料金を自動案内' },
+                        { icon: '📊', text: '会話ログをダッシュボードで分析' },
+                      ].map((b, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                          <span className="text-[11px]">{b.icon}</span>
+                          <span>{b.text}</span>
+                        </div>
+                      ))}
                     </div>
-                    <button
-                      onClick={() => canUse && onLarubotChange(!larubot)}
-                      className={`w-10 h-5 rounded-full transition-colors relative ${larubot && canUse ? 'bg-blue-500' : 'bg-white/20'}`}
-                    >
-                      <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${larubot && canUse ? 'left-5' : 'left-0.5'}`} />
-                    </button>
                   </div>
-                  {larubot && canUse && (
-                    <div className="px-3 pb-3 border-t border-white/10 pt-2">
-                      <label className="text-slate-400 text-[10px] mb-1 block">Public ID</label>
-                      <input
-                        type="text"
-                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                        value={larubotPublicId}
-                        onChange={e => onLarubotPublicIdChange(e.target.value)}
-                        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] font-mono"
-                      />
-                      <div className="text-slate-500 text-[10px] mt-1">LARUbotダッシュボードで確認できるPublic IDを入力</div>
+                  {/* Action area */}
+                  {canUse ? (
+                    larubot ? (
+                      <div className="px-3 pb-3 border-t border-indigo-500/20 pt-2.5">
+                        <label className="text-slate-400 text-[10px] mb-1.5 block font-medium">Public ID <span className="text-slate-600">（LARUbotダッシュボード → 設定 で確認）</span></label>
+                        <input
+                          type="text"
+                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                          value={larubotPublicId}
+                          onChange={e => onLarubotPublicIdChange(e.target.value)}
+                          className="w-full bg-white/10 border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-[10px] font-mono focus:outline-none focus:border-indigo-400/50"
+                        />
+                      </div>
+                    ) : (
+                      <div className="px-3 pb-3 pt-1">
+                        <p className="text-[10px] text-slate-500">右のスイッチをオンにして Public ID を入力すると、サイトにチャットボタンが表示されます。</p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="px-3 pb-3 border-t border-indigo-500/20 pt-2.5">
+                      <a
+                        href="/laruHP/plans"
+                        className="block w-full text-center bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/30 text-indigo-300 text-[11px] font-bold py-2 rounded-lg transition-all"
+                      >
+                        HP + Bot プランにアップグレード →
+                      </a>
                     </div>
                   )}
                 </div>
               );
             })()}
 
-            {/* LARUSEO — hp-bot-seo プラン必須 */}
+            {/* LARUSEO */}
             {(() => {
               const canUse = userPlan === 'hp-bot-seo';
               return (
-                <div className={`bg-white/5 rounded-xl mb-4 overflow-hidden relative ${!canUse ? 'opacity-60' : ''}`}>
-                  {!canUse && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 rounded-xl">
-                      <div className="text-center px-3">
-                        <div className="text-xs font-bold text-white mb-1">🔒 HP + Bot + SEO プラン限定</div>
-                        <a href="/laruHP/plans" className="text-[10px] text-blue-400 hover:text-blue-300 underline">プランをアップグレード →</a>
+                <div className="rounded-xl mb-3 overflow-hidden border border-emerald-500/20" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.10) 0%, rgba(17,24,39,0.8) 100%)' }}>
+                  {/* Header */}
+                  <div className="p-3 pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-base">📈</span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-white text-[13px]">LARUSEO</span>
+                            {canUse && laruseo && <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full font-bold">連携中</span>}
+                            {!canUse && <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">Bot+SEO プラン</span>}
+                          </div>
+                          <div className="text-slate-400 text-[10px] mt-0.5">AIブログ自動生成 — Googleで上位表示を狙う</div>
+                        </div>
                       </div>
+                      {canUse && (
+                        <button
+                          onClick={() => onLaruseoChange(!laruseo)}
+                          className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 mt-1 ${laruseo ? 'bg-emerald-500' : 'bg-white/15'}`}
+                        >
+                          <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-[3px] transition-all shadow ${laruseo ? 'left-[23px]' : 'left-[3px]'}`} />
+                        </button>
+                      )}
                     </div>
-                  )}
-                  <div className="flex items-center justify-between p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[10px] font-black flex-shrink-0">SEO</div>
-                      <div>
-                        <div className="font-bold text-white text-[11px]">LARU SEO</div>
-                        <div className="text-slate-500 text-[10px]">AIブログ自動生成</div>
-                      </div>
+                    {/* Benefits */}
+                    <div className="mt-2.5 grid grid-cols-1 gap-1">
+                      {[
+                        { icon: '✍️', text: 'SEO最適化ブログをAIが毎週自動投稿' },
+                        { icon: '🔍', text: '検索キーワードの順位をリアルタイム追跡' },
+                        { icon: '🎯', text: '改善提案でオーガニック集客を強化' },
+                      ].map((b, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                          <span className="text-[11px]">{b.icon}</span>
+                          <span>{b.text}</span>
+                        </div>
+                      ))}
                     </div>
-                    <button
-                      onClick={() => canUse && onLaruseoChange(!laruseo)}
-                      className={`w-10 h-5 rounded-full transition-colors relative ${laruseo && canUse ? 'bg-blue-500' : 'bg-white/20'}`}
-                    >
-                      <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${laruseo && canUse ? 'left-5' : 'left-0.5'}`} />
-                    </button>
                   </div>
-                  {laruseo && canUse && (
-                    <div className="px-3 pb-3 border-t border-white/10 pt-2">
-                      <label className="text-slate-400 text-[10px] mb-1 block">data-id</label>
-                      <input
-                        type="text"
-                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                        value={laruseoPublicId}
-                        onChange={e => onLaruseoPublicIdChange(e.target.value)}
-                        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] font-mono"
-                      />
-                      <div className="text-slate-500 text-[10px] mt-1">LARUSEOダッシュボードで確認できるdata-idを入力</div>
+                  {/* Action area */}
+                  {canUse ? (
+                    laruseo ? (
+                      <div className="px-3 pb-3 border-t border-emerald-500/20 pt-2.5">
+                        <label className="text-slate-400 text-[10px] mb-1.5 block font-medium">サイト ID <span className="text-slate-600">（LARUSEOダッシュボード → 設定 で確認）</span></label>
+                        <input
+                          type="text"
+                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                          value={laruseoPublicId}
+                          onChange={e => onLaruseoPublicIdChange(e.target.value)}
+                          className="w-full bg-white/10 border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-[10px] font-mono focus:outline-none focus:border-emerald-400/50"
+                        />
+                      </div>
+                    ) : (
+                      <div className="px-3 pb-3 pt-1">
+                        <p className="text-[10px] text-slate-500">右のスイッチをオンにしてサイト ID を入力すると、AIブログとSEOウィジェットが有効になります。</p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="px-3 pb-3 border-t border-emerald-500/20 pt-2.5">
+                      <a
+                        href="/laruHP/plans"
+                        className="block w-full text-center bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold py-2 rounded-lg transition-all"
+                      >
+                        HP + Bot + SEO プランにアップグレード →
+                      </a>
                     </div>
                   )}
                 </div>
