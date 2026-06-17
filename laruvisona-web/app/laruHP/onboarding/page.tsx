@@ -680,94 +680,86 @@ function OnboardingContent() {
               ))}
             </div>
 
-            <div className="mt-8">
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="font-bold text-sm text-slate-300">オプション連携</h3>
-                <span className="text-[10px] text-slate-500 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">後からでも追加できます</span>
+            <div className="mt-10">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-bold text-base text-white">集客を加速するオプション</h3>
               </div>
+              <p className="text-slate-500 text-xs mb-4">HP作成後にプランを選ぶ際に追加できます。まずは内容を確認してください。</p>
               <div className="space-y-3">
 
                 {/* LARUbot */}
-                <div
-                  onClick={() => updateForm('larubot', !form.larubot)}
-                  className={`rounded-2xl border cursor-pointer transition-all overflow-hidden ${form.larubot ? 'border-indigo-500/50' : 'border-white/10 hover:border-white/20'}`}
-                  style={form.larubot ? { background: 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(17,24,39,0.9) 100%)' } : { background: 'rgba(255,255,255,0.03)' }}
-                >
+                <div className="rounded-2xl border border-indigo-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(10,10,20,0.95) 100%)' }}>
                   <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl transition-all ${form.larubot ? 'bg-indigo-500/30 border border-indigo-400/40' : 'bg-white/5 border border-white/10'}`}>
-                          🤖
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center flex-shrink-0 text-xl">🤖</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-white text-sm">LARUbot</span>
+                          <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 px-2 py-0.5 rounded-full font-bold">HP+Botプラン ¥4,980/月</span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-white text-sm">LARUbot</span>
-                            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded-full font-bold">+¥3,981/月</span>
-                          </div>
-                          <div className="text-slate-400 text-xs mt-0.5">AIチャットボット — 問い合わせ24時間自動対応</div>
-                        </div>
-                      </div>
-                      <div
-                        className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 mt-0.5 ${form.larubot ? 'bg-indigo-500' : 'bg-white/15'}`}
-                        onClick={e => { e.stopPropagation(); updateForm('larubot', !form.larubot); }}
-                      >
-                        <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-[3px] transition-all shadow ${form.larubot ? 'left-[23px]' : 'left-[3px]'}`} />
+                        <p className="text-slate-400 text-xs mt-0.5">AIチャットボット — 問い合わせを24時間自動対応</p>
                       </div>
                     </div>
-                    <div className="mt-3 grid grid-cols-1 gap-1.5 pl-1">
+                    <div className="mt-3 space-y-1.5">
                       {[
-                        { icon: '💬', text: '訪問者の質問にAIがリアルタイム回答' },
-                        { icon: '📅', text: '予約・営業時間・料金を自動案内' },
-                        { icon: '📊', text: '会話ログと問い合わせ履歴をダッシュボードで管理' },
+                        { icon: '💬', text: '「営業時間は？」「予約したい」にAIが即答' },
+                        { icon: '📊', text: '月の問い合わせをゼロにできる — 対応工数90%削減' },
+                        { icon: '🌙', text: '深夜・休日も無人対応。機会損失をなくす' },
                       ].map((b, i) => (
-                        <div key={i} className={`flex items-center gap-2 text-xs transition-colors ${form.larubot ? 'text-slate-300' : 'text-slate-500'}`}>
-                          <span>{b.icon}</span>
+                        <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                          <span className="text-sm">{b.icon}</span>
+                          <span>{b.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <a
+                        href="https://laruvisona.jp/larubot"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-[11px] text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors"
+                      >
+                        LARUbotの詳細を見る →
+                      </a>
+                      <span className="text-slate-600 text-[10px]">laruvisona.jp</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-indigo-500/20 px-4 py-2.5 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500">HP単体プランからでもあとで追加可能</span>
+                    <span className="text-[11px] text-indigo-400 font-bold">初月1円で試せる</span>
+                  </div>
+                </div>
+
+                {/* LARUSEO */}
+                <div className="rounded-2xl border border-emerald-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(10,10,20,0.95) 100%)' }}>
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 text-xl">📈</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-white text-sm">LARUSEO</span>
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full font-bold">Bot+SEOプラン ¥9,800/月</span>
+                        </div>
+                        <p className="text-slate-400 text-xs mt-0.5">AIブログ自動生成 — Googleで上位表示を狙う</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-1.5">
+                      {[
+                        { icon: '✍️', text: 'SEO最適化ブログをAIが毎週自動投稿。更新不要' },
+                        { icon: '🔍', text: '「地域名 + 業種」でGoogle上位を目指す' },
+                        { icon: '📣', text: '広告費ゼロで集客できる仕組みを自動構築' },
+                      ].map((b, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                          <span className="text-sm">{b.icon}</span>
                           <span>{b.text}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                </div>
-
-                {/* LARUSEO */}
-                <div
-                  onClick={() => updateForm('laruseo', !form.laruseo)}
-                  className={`rounded-2xl border cursor-pointer transition-all overflow-hidden ${form.laruseo ? 'border-emerald-500/50' : 'border-white/10 hover:border-white/20'}`}
-                  style={form.laruseo ? { background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(17,24,39,0.9) 100%)' } : { background: 'rgba(255,255,255,0.03)' }}
-                >
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl transition-all ${form.laruseo ? 'bg-emerald-500/25 border border-emerald-400/40' : 'bg-white/5 border border-white/10'}`}>
-                          📈
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-black text-white text-sm">LARUSEO</span>
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold">+¥4,820/月</span>
-                          </div>
-                          <div className="text-slate-400 text-xs mt-0.5">AIブログ自動生成 — Googleで上位表示を狙う</div>
-                        </div>
-                      </div>
-                      <div
-                        className={`w-11 h-6 rounded-full transition-all relative flex-shrink-0 mt-0.5 ${form.laruseo ? 'bg-emerald-500' : 'bg-white/15'}`}
-                        onClick={e => { e.stopPropagation(); updateForm('laruseo', !form.laruseo); }}
-                      >
-                        <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-[3px] transition-all shadow ${form.laruseo ? 'left-[23px]' : 'left-[3px]'}`} />
-                      </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-1 gap-1.5 pl-1">
-                      {[
-                        { icon: '✍️', text: 'SEO最適化ブログをAIが毎週自動投稿' },
-                        { icon: '🔍', text: '検索キーワードの順位をリアルタイム追跡' },
-                        { icon: '🎯', text: '改善提案でオーガニック集客を強化' },
-                      ].map((b, i) => (
-                        <div key={i} className={`flex items-center gap-2 text-xs transition-colors ${form.laruseo ? 'text-slate-300' : 'text-slate-500'}`}>
-                          <span>{b.icon}</span>
-                          <span>{b.text}</span>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="border-t border-emerald-500/20 px-4 py-2.5 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500">LARUbotもセットで含まれます</span>
+                    <span className="text-[11px] text-emerald-400 font-bold">初月1円で試せる</span>
                   </div>
                 </div>
 

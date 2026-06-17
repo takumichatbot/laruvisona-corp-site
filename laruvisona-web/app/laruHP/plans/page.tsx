@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 
 type Availability = 'yes' | 'no';
@@ -26,15 +27,55 @@ const FEATURE_ROWS: FeatureRow[] = [
 
 function Cell({ value }: { value: Availability }) {
   if (value === 'yes') {
-    return (
-      <div className="flex justify-center">
-        <span className="text-emerald-400 font-bold text-base">✓</span>
-      </div>
-    );
+    return <div className="flex justify-center"><span className="text-emerald-400 font-bold text-base">✓</span></div>;
   }
+  return <div className="flex justify-center"><span className="text-slate-600 text-base">−</span></div>;
+}
+
+function CheckoutButton({
+  plan,
+  className,
+  children,
+}: {
+  plan: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleClick = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      if (res.status === 401) {
+        window.location.href = `/laruHP/auth/login?redirectTo=/laruHP/plans`;
+        return;
+      }
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError('エラーが発生しました。もう一度お試しください。');
+        setLoading(false);
+      }
+    } catch {
+      setError('接続エラーが発生しました。');
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex justify-center">
-      <span className="text-slate-600 text-base">−</span>
+    <div>
+      <button onClick={handleClick} disabled={loading} className={`${className} disabled:opacity-60 disabled:cursor-not-allowed`}>
+        {loading ? '処理中...' : children}
+      </button>
+      {error && <p className="text-red-400 text-[10px] mt-1 text-center">{error}</p>}
     </div>
   );
 }
@@ -84,7 +125,6 @@ export default function PlansPage() {
 
           {/* Plan header row */}
           <div className="grid grid-cols-4 gap-0 mb-0">
-            {/* Empty label column */}
             <div className="p-4" />
 
             {/* HP単体 */}
@@ -97,9 +137,12 @@ export default function PlansPage() {
               <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
-              <Link href="/laruHP/onboarding" className="block bg-white/10 border border-white/10 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all">
-                始める →
-              </Link>
+              <CheckoutButton
+                plan="hp"
+                className="block w-full bg-white/10 border border-white/10 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
+              >
+                このプランで始める →
+              </CheckoutButton>
             </div>
 
             {/* HP + LARUbot */}
@@ -117,9 +160,12 @@ export default function PlansPage() {
               <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
-              <Link href="/laruHP/onboarding" className="block bg-white text-black font-bold py-2.5 rounded-xl text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                始める →
-              </Link>
+              <CheckoutButton
+                plan="hp-bot"
+                className="block w-full bg-white text-black font-bold py-2.5 rounded-xl text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+              >
+                このプランで始める →
+              </CheckoutButton>
             </div>
 
             {/* HP + Bot + SEO */}
@@ -137,9 +183,12 @@ export default function PlansPage() {
               <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
-              <Link href="/laruHP/onboarding" className="block bg-white/10 border border-white/10 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all">
-                始める →
-              </Link>
+              <CheckoutButton
+                plan="hp-bot-seo"
+                className="block w-full bg-white/10 border border-white/10 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
+              >
+                このプランで始める →
+              </CheckoutButton>
             </div>
           </div>
 
@@ -148,25 +197,16 @@ export default function PlansPage() {
             {FEATURE_ROWS.map((row, i) => (
               <div
                 key={i}
-                className={`grid grid-cols-4 border-b border-white/5 last:border-0 ${
-                  i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'
-                }`}
+                className={`grid grid-cols-4 border-b border-white/5 last:border-0 ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'}`}
               >
                 <div className="p-4 text-sm text-slate-400 font-medium">{row.label}</div>
-                <div className="p-4 border-l border-white/5">
-                  <Cell value={row.hp} />
-                </div>
-                <div className="p-4 border-l border-blue-500/10 bg-blue-500/[0.03]">
-                  <Cell value={row.hpBot} />
-                </div>
-                <div className="p-4 border-l border-white/5">
-                  <Cell value={row.hpBotSeo} />
-                </div>
+                <div className="p-4 border-l border-white/5"><Cell value={row.hp} /></div>
+                <div className="p-4 border-l border-blue-500/10 bg-blue-500/[0.03]"><Cell value={row.hpBot} /></div>
+                <div className="p-4 border-l border-white/5"><Cell value={row.hpBotSeo} /></div>
               </div>
             ))}
           </div>
 
-          {/* Bottom note */}
           <p className="text-center text-slate-600 text-xs mt-6">
             全プラン 初月1円 / 最低6ヶ月契約 / 7ヶ月目からいつでも解約可 / クレジットカード決済（Stripe）
           </p>
@@ -178,12 +218,12 @@ export default function PlansPage() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-black mb-4">まずは初月1円で試す</h2>
           <p className="text-slate-400 mb-8">プランはあとからいつでも変更できます。まずは気軽にスタート。</p>
-          <Link
-            href="/laruHP/onboarding"
+          <CheckoutButton
+            plan="hp"
             className="inline-flex items-center gap-2 bg-white text-black font-black text-lg px-10 py-4 rounded-2xl hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.15)]"
           >
-            無料で始める（初月1円） →
-          </Link>
+            まずはHPプランで始める（初月1円） →
+          </CheckoutButton>
           <div className="mt-8">
             <Link href="/laruHP#pricing" className="text-slate-500 hover:text-slate-300 text-sm transition-colors">
               ← 料金ページに戻る
