@@ -2,8 +2,13 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+function normalizeUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 function extractText(html: string): string {
-  // Strip scripts, styles, nav, footer, head
   let text = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -18,8 +23,24 @@ function extractText(html: string): string {
     .replace(/&#\d+;/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  // Limit to ~4000 chars to stay within token budget
-  return text.slice(0, 4000);
+  return text.slice(0, 5000);
+}
+
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+  'Cache-Control': 'no-cache',
+};
+
+async function fetchPage(url: string): Promise<string> {
+  const res = await fetch(url, {
+    headers: FETCH_HEADERS,
+    signal: AbortSignal.timeout(10000),
+    redirect: 'follow',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
 }
 
 export async function POST(req: Request) {
@@ -27,31 +48,37 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { url } = await req.json();
-  if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 });
+  const { url: rawUrl } = await req.json();
+  if (!rawUrl) return NextResponse.json({ error: 'URL required' }, { status: 400 });
 
-  // Fetch the target page
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) return NextResponse.json({ error: 'api_key_missing' }, { status: 500 });
+
+  const httpsUrl = normalizeUrl(rawUrl);
   let pageText = '';
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LaruHPBot/1.0)' },
-      signal: AbortSignal.timeout(8000),
-    });
-    const html = await res.text();
+    const html = await fetchPage(httpsUrl);
     pageText = extractText(html);
   } catch {
-    return NextResponse.json({ error: 'fetch_failed' }, { status: 422 });
+    // Fallback: try http if https failed
+    if (httpsUrl.startsWith('https://')) {
+      try {
+        const html = await fetchPage(httpsUrl.replace('https://', 'http://'));
+        pageText = extractText(html);
+      } catch {
+        return NextResponse.json({ error: 'fetch_failed' }, { status: 422 });
+      }
+    } else {
+      return NextResponse.json({ error: 'fetch_failed' }, { status: 422 });
+    }
   }
 
-  if (!pageText || pageText.length < 50) {
+  if (!pageText || pageText.length < 30) {
     return NextResponse.json({ error: 'no_content' }, { status: 422 });
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
-
   const genAI = new GoogleGenerativeAI(geminiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `以下のウェブサイトのテキストコンテンツを解析して、ビジネス情報を抽出してください。
 

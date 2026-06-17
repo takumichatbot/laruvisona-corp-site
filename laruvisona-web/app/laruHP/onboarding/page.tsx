@@ -373,8 +373,9 @@ function OnboardingContent() {
       const data = await res.json();
       if (!res.ok || data.error) {
         setScanError(
-          data.error === 'fetch_failed' ? 'サイトにアクセスできませんでした' :
-          data.error === 'no_content' ? 'コンテンツを取得できませんでした' :
+          data.error === 'fetch_failed' ? 'サイトにアクセスできませんでした（サイト側がアクセスを制限している可能性があります）' :
+          data.error === 'no_content' ? 'テキストコンテンツを取得できませんでした（JavaScriptで表示されるサイトは非対応）' :
+          data.error === 'api_key_missing' ? 'AI機能が設定されていません（管理者にお問い合わせください）' :
           'スキャンに失敗しました。手動で入力してください。'
         );
         return;
