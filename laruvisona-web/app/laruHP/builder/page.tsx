@@ -3147,8 +3147,9 @@ function BuilderContent() {
         )}
 
         {/* Canvas */}
-        <div className="flex-1 min-h-0 overflow-y-auto bg-gray-200">
-          <div className={`${preview ? 'min-h-full flex flex-col items-center py-4 px-4' : 'min-h-full py-6 px-4'}`}>
+        <div className="flex-1 relative">
+          <div className={`absolute inset-0 overflow-y-auto bg-gray-200`}>
+          <div className={`${preview ? 'flex flex-col items-center py-4 px-4' : 'py-6 px-4'}`}>
             <div className={`bg-white shadow-2xl mx-auto transition-all duration-300 ${preview
               ? previewDevice === 'mobile'
                 ? 'w-[390px] rounded-2xl overflow-hidden border-4 border-gray-800'
@@ -3210,6 +3211,7 @@ function BuilderContent() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
 
