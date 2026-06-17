@@ -1188,7 +1188,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   ].filter(Boolean).length;
 
   return (
-    <div className="w-64 bg-[#0f172a] border-l border-white/10 flex flex-col flex-shrink-0">
+    <div className="w-64 bg-[#0f172a] border-l border-white/10 flex flex-col flex-shrink-0 min-h-0">
       {/* Tabs */}
       <div className="flex border-b border-white/10">
         {(['block', 'seo', 'integrations'] as const).map(t => (
@@ -3121,10 +3121,10 @@ function BuilderContent() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left Panel - Block Palette */}
         {!preview && (
-          <div className="w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0">
+          <div className="w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0 min-h-0">
             <div className="p-3">
               {BLOCK_PALETTE.map(group => (
                 <div key={group.group} className="mb-4">
@@ -3147,7 +3147,7 @@ function BuilderContent() {
         )}
 
         {/* Canvas */}
-        <div className="flex-1 overflow-y-auto bg-gray-200">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-gray-200">
           <div className={`${preview ? 'min-h-full flex flex-col items-center py-4 px-4' : 'min-h-full py-6 px-4'}`}>
             <div className={`bg-white shadow-2xl mx-auto transition-all duration-300 ${preview
               ? previewDevice === 'mobile'
