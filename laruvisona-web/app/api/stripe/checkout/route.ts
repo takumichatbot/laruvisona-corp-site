@@ -49,25 +49,56 @@ export async function POST(req: Request) {
     plan,
   };
 
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [{ price: priceId, quantity: 1 }],
-    discounts: process.env.STRIPE_FIRST_MONTH_COUPON_ID
-      ? [{ coupon: process.env.STRIPE_FIRST_MONTH_COUPON_ID }]
-      : [],
-    metadata: sessionMeta,
-    subscription_data: {
-      metadata: {
-        ...sessionMeta,
-        contract_months: plan === 'hp-bot-seo' ? '6' : '0',
-      },
-    },
-    success_url: `${origin}/laruHP/dashboard?payment=success`,
-    cancel_url: `${origin}/laruHP/dashboard?payment=canceled`,
-    locale: 'ja',
-  });
+  const couponId = process.env.STRIPE_FIRST_MONTH_COUPON_ID;
 
-  return NextResponse.json({ url: session.url });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
+      metadata: sessionMeta,
+      subscription_data: {
+        metadata: {
+          ...sessionMeta,
+          contract_months: plan === 'hp-bot-seo' ? '6' : '0',
+        },
+      },
+      success_url: `${origin}/laruHP/dashboard?payment=success`,
+      cancel_url: `${origin}/laruHP/plans?payment=canceled`,
+      locale: 'ja',
+    });
+
+    return NextResponse.json({ url: session.url });
+  } catch (err: unknown) {
+    const stripeErr = err as { message?: string; code?: string };
+    console.error('[stripe/checkout]', stripeErr?.message);
+
+    // クーポンエラーの場合はクーポンなしで再試行
+    if (stripeErr?.code === 'coupon_applies_to_nothing') {
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        metadata: sessionMeta,
+        subscription_data: {
+          metadata: {
+            ...sessionMeta,
+            contract_months: plan === 'hp-bot-seo' ? '6' : '0',
+          },
+        },
+        success_url: `${origin}/laruHP/dashboard?payment=success`,
+        cancel_url: `${origin}/laruHP/plans?payment=canceled`,
+        locale: 'ja',
+      });
+      return NextResponse.json({ url: session.url, warning: 'coupon_skipped' });
+    }
+
+    return NextResponse.json(
+      { error: stripeErr?.message || 'Stripe error' },
+      { status: 500 }
+    );
+  }
 }
