@@ -114,8 +114,8 @@ export default function PlansPage() {
           <div className="block">
             <span className="text-blue-500 font-bold text-xs tracking-[0.2em] uppercase">PLAN COMPARISON</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black mt-4 mb-4">プラン比較</h1>
-          <p className="text-slate-400 text-lg">全プラン 初月1円・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
+          <h1 className="text-4xl md:text-5xl font-bold mt-4 mb-4">プラン比較</h1>
+          <p className="text-slate-500 text-base font-normal">全プラン 初月1円・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
         </div>
       </section>
 
@@ -129,17 +129,17 @@ export default function PlansPage() {
 
             {/* HP単体 */}
             <div className="p-5 text-center border-t border-l border-r border-white/10 bg-white/5 rounded-tl-2xl rounded-tr-none">
-              <div className="text-xs font-bold text-slate-500 tracking-widest uppercase mb-2">hp</div>
-              <div className="text-lg font-black mb-1">HP単体</div>
+              <div className="text-xs font-medium text-slate-500 tracking-widest uppercase mb-2">hp</div>
+              <div className="text-lg font-semibold mb-1">HP単体</div>
               <div className="text-slate-500 text-xs mb-3">¥</div>
               <div className="text-4xl font-black leading-none mb-1">999</div>
               <div className="text-slate-400 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-2.5 py-0.5 rounded-full mb-4">
+              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
               <CheckoutButton
                 plan="hp"
-                className="block w-full bg-white/10 border border-white/10 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
+                className="block w-full bg-white/10 border border-white/10 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
               >
                 このプランで始める →
               </CheckoutButton>
@@ -148,21 +148,21 @@ export default function PlansPage() {
             {/* HP + LARUbot */}
             <div className="p-5 text-center border-t border-l border-r border-blue-500/50 bg-blue-500/5 relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                <span className="bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                   おすすめ
                 </span>
               </div>
-              <div className="text-xs font-bold text-blue-500/60 tracking-widest uppercase mb-2">hp-bot</div>
-              <div className="text-lg font-black mb-1">HP + LARUbot</div>
+              <div className="text-xs font-medium text-blue-500/60 tracking-widest uppercase mb-2">hp-bot</div>
+              <div className="text-lg font-semibold mb-1">HP + LARUbot</div>
               <div className="text-slate-500 text-xs mb-3">¥</div>
               <div className="text-4xl font-black leading-none mb-1">4,980</div>
               <div className="text-slate-400 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-2.5 py-0.5 rounded-full mb-4">
+              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
               <CheckoutButton
                 plan="hp-bot"
-                className="block w-full bg-white text-black font-bold py-2.5 rounded-xl text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                className="block w-full bg-white text-black font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
               >
                 このプランで始める →
               </CheckoutButton>
@@ -171,21 +171,21 @@ export default function PlansPage() {
             {/* HP + Bot + SEO */}
             <div className="p-5 text-center border-t border-l border-r border-white/10 bg-white/5 rounded-tr-2xl rounded-tl-none relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <span className="bg-amber-500 text-black text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                <span className="bg-amber-500 text-black text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                   半年間限定
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-500 tracking-widest uppercase mb-2">hp-bot-seo</div>
-              <div className="text-lg font-black mb-1">HP + Bot + SEO</div>
+              <div className="text-xs font-medium text-slate-500 tracking-widest uppercase mb-2">hp-bot-seo</div>
+              <div className="text-lg font-semibold mb-1">HP + Bot + SEO</div>
               <div className="text-slate-500 text-xs mb-3">¥</div>
               <div className="text-4xl font-black leading-none mb-1">9,800</div>
               <div className="text-slate-400 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-2.5 py-0.5 rounded-full mb-4">
+              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
               <CheckoutButton
                 plan="hp-bot-seo"
-                className="block w-full bg-white/10 border border-white/10 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
+                className="block w-full bg-white/10 border border-white/10 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
               >
                 このプランで始める →
               </CheckoutButton>
@@ -216,11 +216,11 @@ export default function PlansPage() {
       {/* CTA section */}
       <section className="py-16 md:py-24 px-6 border-t border-white/5 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-black mb-4">まずは初月1円で試す</h2>
-          <p className="text-slate-400 mb-8">プランはあとからいつでも変更できます。まずは気軽にスタート。</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">まずは初月1円で試す</h2>
+          <p className="text-slate-500 text-sm mb-8">プランはあとからいつでも変更できます。まずは気軽にスタート。</p>
           <CheckoutButton
             plan="hp"
-            className="inline-flex items-center gap-2 bg-white text-black font-black text-lg px-10 py-4 rounded-2xl hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.15)]"
+            className="inline-flex items-center gap-2 bg-white text-black font-bold text-base px-10 py-4 rounded-2xl hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.15)]"
           >
             まずはHPプランで始める（初月1円） →
           </CheckoutButton>

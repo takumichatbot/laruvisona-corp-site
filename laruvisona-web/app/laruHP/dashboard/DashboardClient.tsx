@@ -466,9 +466,9 @@ export default function DashboardPage() {
         {effectiveStatus === 'active' && effectivePlan === 'hp' && (
           <div className="grid sm:grid-cols-2 gap-3 mb-6">
             <div className="bg-indigo-500/[0.06] border border-indigo-500/20 rounded-xl p-4 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-[11px] font-black text-indigo-300 flex-shrink-0">LB</div>
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-[11px] font-bold text-indigo-300 flex-shrink-0">LB</div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm text-white mb-0.5">LARUbot AI チャットボット</div>
+                <div className="font-semibold text-sm text-white mb-0.5">LARUbot AI チャットボット</div>
                 <p className="text-slate-500 text-xs leading-relaxed mb-2">24時間対応のAIチャットが問い合わせ数を平均2.3倍に増加。</p>
                 <a href="/laruHP/plans" className="text-indigo-400 hover:text-indigo-300 text-xs font-semibold transition-colors">
                   HP + Bot プランへアップグレード →
@@ -476,9 +476,9 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[11px] font-black text-emerald-300 flex-shrink-0">SEO</div>
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[11px] font-bold text-emerald-300 flex-shrink-0">SEO</div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm text-white mb-0.5">LARU SEO AIブログ自動生成</div>
+                <div className="font-semibold text-sm text-white mb-0.5">LARU SEO AIブログ自動生成</div>
                 <p className="text-slate-500 text-xs leading-relaxed mb-2">毎週AIがSEO記事を自動公開。検索流入を継続的に獲得。</p>
                 <a href="/laruHP/plans" className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold transition-colors">
                   HP + Bot + SEO プランへアップグレード →
@@ -489,9 +489,9 @@ export default function DashboardPage() {
         )}
         {effectiveStatus === 'active' && effectivePlan === 'hp-bot' && (
           <div className="bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[11px] font-black text-emerald-300 flex-shrink-0">SEO</div>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[11px] font-bold text-emerald-300 flex-shrink-0">SEO</div>
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm text-white mb-0.5">LARU SEO — AIブログで検索流入を自動化</div>
+              <div className="font-semibold text-sm text-white mb-0.5">LARU SEO — AIブログで検索流入を自動化</div>
               <p className="text-slate-500 text-xs leading-relaxed mb-2">毎週AIがSEO最適化記事を自動公開。放置するだけで検索順位が上がります。</p>
               <a href="/laruHP/plans" className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold transition-colors">
                 HP + Bot + SEO プランへアップグレード →
@@ -679,7 +679,7 @@ export default function DashboardPage() {
                         href={`/laruHP/builder?siteId=${site.id}`}
                         className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-3 py-2 hover:bg-indigo-500/20 transition-all"
                       >
-                        <div className="w-5 h-5 rounded bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-[9px] font-black flex-shrink-0">LB</div>
+                        <div className="w-5 h-5 rounded bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-[9px] font-bold flex-shrink-0">LB</div>
                         <div className="flex-1 min-w-0">
                           <div className="text-indigo-300 text-[10px] font-semibold">LARUbot未連携</div>
                           <div className="text-indigo-400/70 text-[9px]">Public IDを設定してください</div>
@@ -692,7 +692,7 @@ export default function DashboardPage() {
                         href={`/laruHP/builder?siteId=${site.id}`}
                         className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2 hover:bg-emerald-500/20 transition-all"
                       >
-                        <div className="w-5 h-5 rounded bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[9px] font-black flex-shrink-0">SEO</div>
+                        <div className="w-5 h-5 rounded bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[9px] font-bold flex-shrink-0">SEO</div>
                         <div className="flex-1 min-w-0">
                           <div className="text-emerald-300 text-[10px] font-semibold">LARUSEO未連携</div>
                           <div className="text-emerald-400/70 text-[9px]">data-idを設定してください</div>
@@ -833,7 +833,7 @@ export default function DashboardPage() {
                     <div className="text-slate-400 text-[11px] mt-0.5">{plan.desc}</div>
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
-                    <div className="text-white font-black text-base">{plan.price}<span className="text-slate-400 text-[11px] font-normal">{plan.sub}</span></div>
+                    <div className="text-white font-bold text-base">{plan.price}<span className="text-slate-400 text-[11px] font-normal">{plan.sub}</span></div>
                     <div className="text-blue-400 text-[10px]">初月1円</div>
                   </div>
                 </button>
