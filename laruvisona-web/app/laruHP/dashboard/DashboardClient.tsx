@@ -332,7 +332,10 @@ export default function DashboardPage() {
     if (data.site) router.push(`/laruHP/builder?siteId=${data.site.id}`);
   };
 
-  const status = STATUS_MAP[profile?.subscription_status || 'inactive'];
+  const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && userEmail === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const effectiveStatus: string = isAdmin ? 'active' : (profile?.subscription_status || 'inactive');
+  const effectivePlan = isAdmin ? 'hp-bot-seo' : (profile?.plan || null);
+  const status = STATUS_MAP[effectiveStatus];
 
   return (
     <div className="min-h-screen bg-[#030712] text-white">
@@ -399,7 +402,7 @@ export default function DashboardPage() {
             <button onClick={() => setPaymentBanner(null)} className="text-slate-600 hover:text-white flex-shrink-0 text-lg leading-none">×</button>
           </div>
         )}
-        {profile?.subscription_status === 'past_due' && (
+        {effectiveStatus === 'past_due' && (
           <div className="flex items-start gap-3 bg-red-500/[0.06] border border-red-500/20 rounded-xl px-4 py-3.5 mb-6">
             <div className="w-7 h-7 rounded-full bg-red-500/15 flex items-center justify-center flex-shrink-0 text-red-400 mt-0.5">
               <IcAlert />
@@ -421,7 +424,7 @@ export default function DashboardPage() {
                   {status.label}
                 </span>
               </div>
-              {profile?.subscription_status === 'active' && profile.contract_ends_at && (
+              {effectiveStatus === 'active' && profile?.contract_ends_at && (
                 <p className="text-slate-500 text-xs">
                   最低契約期間: 〜{new Date(profile.contract_ends_at).toLocaleDateString('ja-JP')}
                 </p>
@@ -429,18 +432,18 @@ export default function DashboardPage() {
               {portalError && <p className="text-red-400 text-xs mt-1.5">{portalError}</p>}
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              {(profile?.subscription_status === 'active' || profile?.subscription_status === 'past_due') ? (
+              {(effectiveStatus === 'active' || effectiveStatus === 'past_due') ? (
                 <button
                   onClick={handlePortal}
                   disabled={portalLoading}
                   className={`flex items-center gap-1.5 text-xs border px-3.5 py-2 rounded-lg transition-all disabled:opacity-50 ${
-                    profile?.subscription_status === 'past_due'
+                    effectiveStatus === 'past_due'
                       ? 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'
                       : 'border-white/10 hover:border-white/25 text-slate-300'
                   }`}
                 >
                   <IcCard />
-                  {portalLoading ? '処理中...' : profile?.subscription_status === 'past_due' ? '支払い情報を更新する' : 'サブスクリプション管理'}
+                  {portalLoading ? '処理中...' : effectiveStatus === 'past_due' ? '支払い情報を更新する' : 'サブスクリプション管理'}
                 </button>
               ) : (
                 <button
@@ -455,7 +458,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Plan upgrade nudge ── */}
-        {profile?.subscription_status === 'active' && profile.plan === 'hp' && (
+        {effectiveStatus === 'active' && effectivePlan === 'hp' && (
           <div className="grid sm:grid-cols-2 gap-3 mb-6">
             <div className="bg-indigo-500/[0.06] border border-indigo-500/20 rounded-xl p-4 flex items-start gap-3">
               <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-[11px] font-black text-indigo-300 flex-shrink-0">LB</div>
@@ -479,7 +482,7 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
-        {profile?.subscription_status === 'active' && profile.plan === 'hp-bot' && (
+        {effectiveStatus === 'active' && effectivePlan === 'hp-bot' && (
           <div className="bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3 mb-6">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[11px] font-black text-emerald-300 flex-shrink-0">SEO</div>
             <div className="flex-1 min-w-0">

@@ -2353,6 +2353,7 @@ function BuilderContent() {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
+  const [isAdmin, setIsAdmin] = useState(false);
   const undoStack = useRef<SiteData[]>([]);
   const redoStack = useRef<SiteData[]>([]);
   const siteRef = useRef<SiteData>(defaultSiteData);
@@ -2360,8 +2361,15 @@ function BuilderContent() {
   // Fetch user plan for feature gating
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string } | null } }) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      if (adminEmail && user.email === adminEmail) {
+        setIsAdmin(true);
+        setUserPlan('hp-bot-seo');
+        setSubscriptionStatus('active');
+        return;
+      }
       supabase.from('profiles').select('plan, subscription_status').eq('id', user.id).single().then(({ data }: { data: { plan: string | null; subscription_status: string } | null }) => {
         if (data) {
           setUserPlan(data.plan);
@@ -2925,7 +2933,7 @@ function BuilderContent() {
   };
 
   // Subscription paywall — block builder access for canceled/inactive plans
-  const isLocked = subscriptionStatus === 'canceled' || subscriptionStatus === 'inactive' || subscriptionStatus === 'past_due';
+  const isLocked = !isAdmin && (subscriptionStatus === 'canceled' || subscriptionStatus === 'inactive' || subscriptionStatus === 'past_due');
 
   if (isLocked) {
     return (

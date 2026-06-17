@@ -27,6 +27,10 @@ export async function POST(req: Request) {
       const plan = meta.plan;
       if (!userId) break;
 
+      // Adminはサブスク管理をスキップ（課金なしで全機能利用）
+      const { data: { user: adminCheck } } = await supabase.auth.admin.getUserById(userId);
+      if (adminCheck?.email === process.env.ADMIN_EMAIL) break;
+
       const contractStart = new Date();
       const contractEnd = new Date();
       contractEnd.setMonth(contractEnd.getMonth() + 6);
