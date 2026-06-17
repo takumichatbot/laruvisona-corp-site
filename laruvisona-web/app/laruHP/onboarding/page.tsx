@@ -714,7 +714,7 @@ function OnboardingContent() {
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <a
-                        href="https://laruvisona.jp/larubot"
+                        href="https://larubot.tokyo"
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}
@@ -722,7 +722,7 @@ function OnboardingContent() {
                       >
                         LARUbotの詳細を見る →
                       </a>
-                      <span className="text-slate-600 text-[10px]">laruvisona.jp</span>
+                      <span className="text-slate-600 text-[10px]">larubot.tokyo</span>
                     </div>
                   </div>
                   <div className="border-t border-indigo-500/20 px-4 py-2.5 flex items-center justify-between">
