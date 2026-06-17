@@ -1996,6 +1996,23 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
             </label>
 
+            {/* Google search preview */}
+            <div className="border-t border-white/10 pt-3 mb-3">
+              <div className="text-slate-400 text-[11px] mb-2 font-semibold">検索結果プレビュー</div>
+              <div className="bg-white rounded-xl p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-4 h-4 rounded-full bg-slate-200 flex-shrink-0" />
+                  <span className="text-[10px] text-slate-500 truncate">あなたのサイト.laruvisona.com</span>
+                </div>
+                <div className="text-[13px] text-[#1a0dab] font-medium leading-snug truncate">
+                  {seo.title || '（タイトル未設定）'}
+                </div>
+                <div className="text-[11px] text-[#4d5156] mt-0.5 leading-relaxed line-clamp-2">
+                  {seo.description || '（説明文を入力するとここに表示されます）'}
+                </div>
+              </div>
+            </div>
+
             <div className="border-t border-white/10 pt-3">
               <div className="text-slate-400 mb-2">OG（SNSシェア設定）</div>
               <label className="block mb-2">
@@ -2252,6 +2269,7 @@ function BuilderContent() {
   const [preview, setPreview] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
@@ -2293,6 +2311,44 @@ function BuilderContent() {
 
   // Keep siteRef in sync for undo/redo to read current state without stale closure
   useEffect(() => { siteRef.current = site; }, [site]);
+
+  // Mark dirty when site changes (skip initial mount)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    setIsDirty(true);
+  }, [site]);
+
+  // Auto-save to server every 30s when dirty and siteId exists
+  useEffect(() => {
+    if (!isDirty || !dbSiteId) return;
+    const timer = setTimeout(async () => {
+      const s = siteRef.current;
+      await fetch(`/api/sites/${dbSiteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: s.siteName,
+          blocks_json: { v: 2, pages: s.pages },
+          seo_json: s.pages[0]?.seo || emptySeo,
+          settings_json: { colorScheme: s.colorScheme, larubot: s.larubot, laruseo: s.laruseo, notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId, laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily },
+        }),
+      });
+      localStorage.setItem('laruHP_builder', JSON.stringify(s));
+      setIsDirty(false);
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [isDirty, dbSiteId]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 
   const pushHistory = useCallback((snapshot: SiteData) => {
     undoStack.current = [...undoStack.current, JSON.parse(JSON.stringify(snapshot))].slice(-50);
@@ -2662,6 +2718,7 @@ function BuilderContent() {
       if (s?.id) setDbSiteId(s.id);
     }
     localStorage.setItem('laruHP_builder', JSON.stringify(site));
+    setIsDirty(false);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -2979,9 +3036,10 @@ function BuilderContent() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${saved ? 'bg-green-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'} disabled:opacity-50`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 ${saved ? 'bg-green-500 text-white' : isDirty ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
           >
-            {saving ? '保存中...' : saved ? '保存済み' : '保存'}
+            {isDirty && !saving && !saved && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+            {saving ? '保存中...' : saved ? '保存済み ✓' : isDirty ? '未保存' : '保存'}
           </button>
           <button
             onClick={handlePublish}

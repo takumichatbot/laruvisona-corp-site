@@ -26,6 +26,7 @@ interface Stats {
   totalSites: number;
   publishedSites: number;
   mrr: number;
+  planBreakdown: { hp: number; 'hp-bot': number; 'hp-bot-seo': number };
 }
 
 const SUB_BADGE: Record<string, string> = {
@@ -152,21 +153,37 @@ export default function AdminPage() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            {[
-              { label: '総ユーザー', value: stats.totalUsers, color: 'text-white' },
-              { label: 'アクティブ', value: stats.activeUsers, color: 'text-green-400' },
-              { label: '支払い遅延', value: stats.pastDueUsers, color: 'text-red-400' },
-              { label: '総サイト数', value: stats.totalSites, color: 'text-blue-400' },
-              { label: '公開中', value: stats.publishedSites, color: 'text-cyan-400' },
-              { label: 'MRR', value: `¥${stats.mrr.toLocaleString()}`, color: 'text-emerald-400' },
-            ].map((s, i) => (
-              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-                <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-                <div className="text-slate-500 text-xs mt-1">{s.label}</div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+              {[
+                { label: '総ユーザー', value: stats.totalUsers, color: 'text-white' },
+                { label: 'アクティブ', value: stats.activeUsers, color: 'text-green-400' },
+                { label: '支払い遅延', value: stats.pastDueUsers, color: 'text-red-400' },
+                { label: '総サイト数', value: stats.totalSites, color: 'text-blue-400' },
+                { label: '公開中', value: stats.publishedSites, color: 'text-cyan-400' },
+                { label: 'MRR', value: `¥${stats.mrr.toLocaleString()}`, color: 'text-emerald-400' },
+              ].map((s, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                  <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
+                  <div className="text-slate-500 text-xs mt-1">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {stats.planBreakdown && (
+              <div className="grid grid-cols-3 gap-3 mb-8">
+                {[
+                  { label: 'HP (¥999)', value: stats.planBreakdown.hp || 0, color: 'text-slate-300' },
+                  { label: 'HP + Bot (¥4,980)', value: stats.planBreakdown['hp-bot'] || 0, color: 'text-indigo-300' },
+                  { label: 'HP + Bot + SEO (¥9,800)', value: stats.planBreakdown['hp-bot-seo'] || 0, color: 'text-emerald-300' },
+                ].map((p, i) => (
+                  <div key={i} className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-slate-500 text-xs">{p.label}</span>
+                    <span className={`text-lg font-bold ${p.color}`}>{p.value}人</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
 
         {/* Filters */}

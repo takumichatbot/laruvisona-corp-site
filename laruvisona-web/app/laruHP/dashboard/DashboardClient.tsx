@@ -145,7 +145,6 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -158,6 +157,7 @@ export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<Record<string, DayView[]>>({});
   const [contacts, setContacts] = useState<{ id: string; read: boolean }[]>([]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'7' | '30' | 'all'>('7');
+  const [deleteToast, setDeleteToast] = useState<{ site: Site; timer: ReturnType<typeof setTimeout> } | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -253,12 +253,28 @@ export default function DashboardPage() {
     setPublishing(null);
   };
 
-  const handleDelete = async (siteId: string) => {
-    if (!confirm('このサイトを削除しますか？この操作は取り消せません。')) return;
-    setDeleting(siteId);
-    await fetch(`/api/sites/${siteId}`, { method: 'DELETE' });
+  const handleDelete = (siteId: string) => {
+    const site = sites.find(s => s.id === siteId);
+    if (!site) return;
+    // Remove from UI immediately
     setSites(prev => prev.filter(s => s.id !== siteId));
-    setDeleting(null);
+    // Schedule actual delete after 5s, allow undo
+    if (deleteToast) {
+      clearTimeout(deleteToast.timer);
+      fetch(`/api/sites/${deleteToast.site.id}`, { method: 'DELETE' });
+    }
+    const timer = setTimeout(async () => {
+      await fetch(`/api/sites/${siteId}`, { method: 'DELETE' });
+      setDeleteToast(null);
+    }, 5000);
+    setDeleteToast({ site, timer });
+  };
+
+  const handleUndoDelete = () => {
+    if (!deleteToast) return;
+    clearTimeout(deleteToast.timer);
+    setSites(prev => [...prev, deleteToast.site].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+    setDeleteToast(null);
   };
 
   const handleDuplicate = async (siteId: string) => {
@@ -321,6 +337,19 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#030712] text-white">
 
+      {/* ── Delete undo toast ── */}
+      {deleteToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#1e293b] border border-white/10 rounded-xl px-4 py-3 shadow-2xl">
+          <span className="text-sm text-slate-300">「{deleteToast.site.name}」を削除しました</span>
+          <button
+            onClick={handleUndoDelete}
+            className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors whitespace-nowrap"
+          >
+            取り消す
+          </button>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <header className="border-b border-white/[0.07] bg-[#0a0f1e]/90 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
@@ -330,6 +359,9 @@ export default function DashboardPage() {
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-slate-500 text-xs hidden sm:block truncate max-w-[220px]">{userEmail}</span>
+            <Link href="/laruHP/settings" className="text-slate-400 hover:text-white text-xs border border-white/[0.07] hover:border-white/20 px-3 py-1.5 rounded-md transition-all">
+              設定
+            </Link>
             <button
               onClick={handleLogout}
               className="text-slate-400 hover:text-white text-xs border border-white/[0.07] hover:border-white/20 px-3 py-1.5 rounded-md transition-all"
@@ -732,11 +764,10 @@ export default function DashboardPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(site.id)}
-                          disabled={deleting === site.id}
                           title="削除"
-                          className="flex items-center justify-center text-[11px] text-slate-600 hover:text-red-400 border border-transparent hover:border-red-500/20 py-2 px-3 rounded-lg transition-all disabled:opacity-50"
+                          className="flex items-center justify-center text-[11px] text-slate-600 hover:text-red-400 border border-transparent hover:border-red-500/20 py-2 px-3 rounded-lg transition-all"
                         >
-                          {deleting === site.id ? '...' : <IcTrash />}
+                          <IcTrash />
                         </button>
                       </div>
                     </div>
