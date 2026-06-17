@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Builder canvas scroll — thin scrollbar on WebKit (Safari/Chrome) */
+.builder-canvas::-webkit-scrollbar {
+  width: 6px;
+}
+.builder-canvas::-webkit-scrollbar-track {
+  background: transparent;
+}
+.builder-canvas::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+.builder-canvas::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}

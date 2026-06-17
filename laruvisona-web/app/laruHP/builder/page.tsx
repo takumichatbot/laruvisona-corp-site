@@ -3148,15 +3148,18 @@ function BuilderContent() {
 
         {/* Canvas */}
         <div className="flex-1 relative">
-          <div className={`absolute inset-0 overflow-y-auto bg-gray-200`}>
-          <div className={`${preview ? 'flex flex-col items-center py-4 px-4' : 'py-6 px-4'}`}>
-            <div className={`bg-white shadow-2xl mx-auto transition-all duration-300 ${preview
+          <div
+            className="builder-canvas absolute inset-0 overflow-y-auto bg-[#e8eaed]"
+            style={{ overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
+          >
+          <div className={`${preview ? 'flex flex-col items-center py-8 px-6' : 'py-8 px-6'}`}>
+            <div className={`bg-white mx-auto transition-all duration-300 ${preview
               ? previewDevice === 'mobile'
-                ? 'w-[390px] rounded-2xl overflow-hidden border-4 border-gray-800'
+                ? 'w-[390px] rounded-2xl overflow-hidden border-4 border-gray-800 shadow-2xl'
                 : previewDevice === 'tablet'
-                ? 'w-[768px] rounded-xl overflow-hidden border-2 border-gray-400'
-                : 'w-full max-w-5xl rounded-none'
-              : 'max-w-3xl rounded-xl overflow-hidden'}`}>
+                ? 'w-[768px] rounded-xl overflow-hidden border-2 border-gray-300 shadow-xl'
+                : 'w-full max-w-5xl rounded-none shadow-none'
+              : 'max-w-3xl rounded-2xl overflow-hidden shadow-[0_4px_40px_rgba(0,0,0,0.12)]'}`}>
               {currentPage.blocks.length === 0 && (
                 <div className="h-64 flex items-center justify-center text-gray-400 text-center">
                   <div>
