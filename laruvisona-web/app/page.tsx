@@ -392,14 +392,18 @@ export default function Home() {
                   <span className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full">🤝 LARUbot連携</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  <a href="/laruHP" className="bg-white text-black font-bold py-4 px-8 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)] inline-flex items-center justify-center gap-2">
-                    詳細・料金を見る <i className="fas fa-arrow-right"></i>
+                  <a href="/laruHP/auth/signup" className="bg-white text-black font-bold py-4 px-8 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)] inline-flex items-center justify-center gap-2">
+                    🎁 無料で始める（初月1円）
                   </a>
                   <a href="/laruHP/builder" className="border border-white/20 text-slate-300 hover:text-white font-bold py-4 px-8 rounded-full hover:border-white/40 transition-all inline-flex items-center justify-center gap-2">
                     ▶ デモを体験
                   </a>
                 </div>
-                <p className="text-slate-600 text-xs mt-5 text-center lg:text-left">月額<strong className="text-white">999円</strong>（税別）初月<strong className="text-white">1円</strong> / 最低6ヶ月</p>
+                <div className="flex items-center gap-4 mt-5 justify-center lg:justify-start">
+                  <p className="text-slate-600 text-xs">月額<strong className="text-white">999円</strong>（税別）初月<strong className="text-white">1円</strong> / 最低6ヶ月</p>
+                  <span className="text-slate-700 text-xs">|</span>
+                  <a href="/laruHP/auth/login" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">ログイン →</a>
+                </div>
               </div>
               <div className="lg:w-1/2 w-full gsap-fade-up">
                 {/* Editor preview mockup */}

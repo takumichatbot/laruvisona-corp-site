@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED = ['/laruHP/dashboard', '/laruHP/builder'];
+const PROTECTED = ['/laruHP/dashboard', '/laruHP/builder', '/laruHP/admin'];
 const AUTH_PAGES = ['/laruHP/auth/login', '/laruHP/auth/signup'];
 
 const MAIN_HOST = (process.env.NEXT_PUBLIC_APP_URL || '')

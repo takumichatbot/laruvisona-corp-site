@@ -118,3 +118,8 @@ begin
   where custom_domain = site_domain and published = true;
 end;
 $$;
+
+-- Admin: feature flags and account suspension
+alter table public.profiles add column if not exists features jsonb not null default '{"builder":true,"publish":true,"ai":true}'::jsonb;
+alter table public.profiles add column if not exists is_suspended boolean not null default false;
+alter table public.profiles add column if not exists admin_notes text;

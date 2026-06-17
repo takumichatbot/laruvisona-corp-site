@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /laruHP/dashboard
+Disallow: /laruHP/builder
+Disallow: /laruHP/onboarding
+Disallow: /laruHP/admin
+Disallow: /api/
+
+Sitemap: https://laruvisona.jp/sitemap.xml
