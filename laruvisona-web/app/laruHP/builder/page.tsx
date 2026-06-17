@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
+import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -10,7 +11,10 @@ type BlockType =
   | 'two-col' | 'three-col' | 'divider' | 'cta'
   | 'services' | 'testimonials' | 'faq' | 'contact'
   | 'hours' | 'gallery' | 'larubot'
-  | 'video' | 'map' | 'countdown' | 'price-table' | 'booking' | 'news';
+  | 'video' | 'map' | 'countdown' | 'price-table' | 'booking' | 'news'
+  | 'popup' | 'newsletter'
+  | 'share' | 'stripe-buy'
+  | 'google-reviews';
 
 interface Block {
   id: string;
@@ -24,6 +28,7 @@ interface SEOSettings {
   keywords: string;
   ogTitle: string;
   ogDescription: string;
+  ogImage: string;
 }
 
 interface Page {
@@ -42,9 +47,13 @@ interface SiteData {
   laruseo: boolean;
   notifyEmail: string;
   gaTrackingId: string;
+  larubotPublicId: string;
+  laruseoPublicId: string;
+  customCss: string;
+  fontFamily: string;
 }
 
-const emptySeo: SEOSettings = { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '' };
+const emptySeo: SEOSettings = { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' };
 
 // ─── Default Block Data ────────────────────────────────────────────────────────
 const defaultBlock = (type: BlockType): Block => {
@@ -124,6 +133,8 @@ const defaultBlock = (type: BlockType): Block => {
       heading: 'お問い合わせ',
       subtext: 'お気軽にご相談ください。通常2営業日以内にご返信いたします。',
       fields: ['name', 'email', 'phone', 'message'],
+      extraFields: [] as string[],
+      multiStep: false,
       buttonText: '送信する',
       buttonColor: '#1e3a8a',
       bgColor: '#f8fafc',
@@ -195,6 +206,50 @@ const defaultBlock = (type: BlockType): Block => {
         { date: '2026-05-10', tag: '更新', title: 'お知らせ3のタイトルを入力' },
       ],
     },
+    popup: {
+      heading: '期間限定キャンペーン',
+      text: '今だけ初回限定20%OFFでご利用いただけます。',
+      buttonText: '詳細を見る',
+      buttonLink: '#contact',
+      trigger: 'delay',
+      delay: '3',
+      bgColor: '#1e3a8a',
+      textColor: '#ffffff',
+      buttonColor: '#ffffff',
+      buttonTextColor: '#1e3a8a',
+      overlayColor: 'rgba(0,0,0,0.6)',
+    },
+    newsletter: {
+      heading: 'メールマガジン登録',
+      subtext: '最新情報をお届けします',
+      placeholder: 'メールアドレスを入力',
+      buttonText: '登録する',
+      buttonColor: '#1e3a8a',
+      bgColor: '#f9fafb',
+    },
+    share: {
+      heading: 'シェアしてください',
+      showLine: true,
+      showTwitter: true,
+      showFacebook: true,
+      bgColor: '#ffffff',
+    },
+    'stripe-buy': {
+      label: '商品名',
+      description: '商品の説明を入力してください',
+      priceId: '',
+      buttonText: '今すぐ購入',
+      buttonColor: '#1e3a8a',
+    },
+    'google-reviews': {
+      heading: 'お客様の声',
+      placeId: '',
+      maxReviews: 3,
+      rating: 0,
+      totalRatings: 0,
+      reviews: [],
+      lastFetched: '',
+    },
   };
   return { id, type, data: defaults[type] };
 };
@@ -243,6 +298,13 @@ const BLOCK_PALETTE = [
   ]},
   { group: '連携', items: [
     { type: 'larubot' as BlockType, label: 'LARUbot', icon: '🤖' },
+  ]},
+  { group: '集客', items: [
+    { type: 'popup' as BlockType, label: 'ポップアップ', icon: '💬' },
+    { type: 'newsletter' as BlockType, label: 'メルマガ登録', icon: '📧' },
+    { type: 'share' as BlockType, label: 'SNSシェア', icon: '🔗' },
+    { type: 'stripe-buy' as BlockType, label: '購入ボタン', icon: '🛒' },
+    { type: 'google-reviews' as BlockType, label: 'Google口コミ', icon: '⭐' },
   ]},
 ];
 
@@ -319,6 +381,9 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
         return (
           <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-8 py-16 relative overflow-hidden" style={{ backgroundColor: d.bgColor as string, color: d.textColor as string }}>
             {(d.bgImage as string) ? <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${d.bgImage as string})` }} /> : null}
+            {d.abVariant === 'b' && (
+              <div className="absolute top-2 left-2 z-20 bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">B バリアント</div>
+            )}
             <div className="relative z-10 max-w-2xl">
               {editable('heading', 'h1', 'text-4xl font-black mb-4 block w-full')}
               {editable('subheading', 'p', 'text-lg mb-8 block opacity-90 w-full')}
@@ -336,17 +401,28 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
       case 'heading':
         return (
           <div className="px-8 py-12" style={{ textAlign: d.align as React.CSSProperties['textAlign'] }}>
+            {(d.image as string) && <img src={d.image as string} alt="" className="w-full rounded-xl mb-6 object-cover" style={{ height: '200px' }} />}
             {editable('text', 'h2', 'text-3xl font-black text-gray-800 block mb-2')}
             {editable('subtext', 'p', 'text-gray-500 block')}
           </div>
         );
 
-      case 'paragraph':
+      case 'paragraph': {
+        const imgPos = d.imagePosition as string;
+        if ((d.image as string) && imgPos && imgPos !== 'none') {
+          return (
+            <div className={`px-8 py-6 flex gap-8 items-start max-w-5xl mx-auto ${imgPos === 'right' ? 'flex-row-reverse' : ''}`}>
+              <img src={d.image as string} alt="" className="w-48 rounded-xl object-cover flex-shrink-0" style={{ height: '160px' }} />
+              <div className="flex-1">{editable('text', 'p', 'text-gray-700 leading-relaxed block w-full')}</div>
+            </div>
+          );
+        }
         return (
           <div className="px-8 py-6 max-w-3xl mx-auto">
             {editable('text', 'p', `text-gray-700 leading-relaxed block text-${d.fontSize || 16}px w-full`)}
           </div>
         );
+      }
 
       case 'image':
         return (
@@ -383,13 +459,19 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
       case 'two-col':
         return (
           <div className="px-8 py-8 grid grid-cols-2 gap-8">
-            <div className="bg-gray-50 rounded-xl p-6">
-              {editable('col1Title', 'h3', 'text-xl font-bold text-gray-800 block mb-3')}
-              {editable('col1Text', 'p', 'text-gray-600 leading-relaxed block')}
+            <div className="bg-gray-50 rounded-xl overflow-hidden">
+              {(d.col1Image as string) && <img src={d.col1Image as string} alt="" className="w-full object-cover" style={{ height: '160px' }} />}
+              <div className="p-6">
+                {editable('col1Title', 'h3', 'text-xl font-bold text-gray-800 block mb-3')}
+                {editable('col1Text', 'p', 'text-gray-600 leading-relaxed block')}
+              </div>
             </div>
-            <div className="bg-gray-50 rounded-xl p-6">
-              {editable('col2Title', 'h3', 'text-xl font-bold text-gray-800 block mb-3')}
-              {editable('col2Text', 'p', 'text-gray-600 leading-relaxed block')}
+            <div className="bg-gray-50 rounded-xl overflow-hidden">
+              {(d.col2Image as string) && <img src={d.col2Image as string} alt="" className="w-full object-cover" style={{ height: '160px' }} />}
+              <div className="p-6">
+                {editable('col2Title', 'h3', 'text-xl font-bold text-gray-800 block mb-3')}
+                {editable('col2Text', 'p', 'text-gray-600 leading-relaxed block')}
+              </div>
             </div>
           </div>
         );
@@ -398,10 +480,13 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
         return (
           <div className="px-8 py-8 grid grid-cols-3 gap-6">
             {[1,2,3].map(n => (
-              <div key={n} className="bg-gray-50 rounded-xl p-6 text-center">
-                {editable(`col${n}Icon`, 'div', 'text-3xl mb-3 block')}
-                {editable(`col${n}Title`, 'h3', 'text-lg font-bold text-gray-800 block mb-2')}
-                {editable(`col${n}Text`, 'p', 'text-gray-600 text-sm leading-relaxed block')}
+              <div key={n} className="bg-gray-50 rounded-xl overflow-hidden text-center">
+                {(d[`col${n}Image`] as string) && <img src={d[`col${n}Image`] as string} alt="" className="w-full object-cover" style={{ height: '130px' }} />}
+                <div className="p-6">
+                  {editable(`col${n}Icon`, 'div', 'text-3xl mb-3 block')}
+                  {editable(`col${n}Title`, 'h3', 'text-lg font-bold text-gray-800 block mb-2')}
+                  {editable(`col${n}Text`, 'p', 'text-gray-600 text-sm leading-relaxed block')}
+                </div>
               </div>
             ))}
           </div>
@@ -438,7 +523,7 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
         );
 
       case 'services': {
-        const items = (d.items as Array<{icon:string; title:string; description:string; price:string}>) || [];
+        const items = (d.items as Array<{icon:string; title:string; description:string; price:string; image?:string}>) || [];
         const cols = d.columns === '2' ? 'grid-cols-2' : 'grid-cols-3';
         return (
           <div className="px-8 py-12">
@@ -446,29 +531,32 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
             {editable('subtext', 'p', 'text-center text-gray-500 block mb-10')}
             <div className={`grid ${cols} gap-6`}>
               {items.map((item, i) => (
-                <div key={i} className="border border-gray-200 rounded-2xl p-6 text-center hover:shadow-md transition-shadow">
-                  <div
-                    contentEditable suppressContentEditableWarning
-                    className="text-3xl mb-3 block outline-none cursor-text"
-                    onBlur={e => {
-                      const newItems = [...items];
-                      newItems[i] = { ...newItems[i], icon: e.currentTarget.textContent || '' };
-                      onDataChange({ ...d, items: newItems });
-                    }}
-                    dangerouslySetInnerHTML={{ __html: item.icon }}
-                  />
-                  <div
-                    contentEditable suppressContentEditableWarning
-                    className="font-bold text-gray-800 text-lg mb-2 block outline-none cursor-text"
-                    onBlur={e => {
-                      const newItems = [...items];
-                      newItems[i] = { ...newItems[i], title: e.currentTarget.textContent || '' };
-                      onDataChange({ ...d, items: newItems });
-                    }}
-                    dangerouslySetInnerHTML={{ __html: item.title }}
-                  />
-                  <p className="text-gray-500 text-sm mb-3">{item.description}</p>
-                  {item.price && <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">{item.price}</span>}
+                <div key={i} className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                  {item.image && <img src={item.image} alt="" className="w-full object-cover" style={{ height: '150px' }} />}
+                  <div className="p-6 text-center">
+                    <div
+                      contentEditable suppressContentEditableWarning
+                      className="text-3xl mb-3 block outline-none cursor-text"
+                      onBlur={e => {
+                        const newItems = [...items];
+                        newItems[i] = { ...newItems[i], icon: e.currentTarget.textContent || '' };
+                        onDataChange({ ...d, items: newItems });
+                      }}
+                      dangerouslySetInnerHTML={{ __html: item.icon }}
+                    />
+                    <div
+                      contentEditable suppressContentEditableWarning
+                      className="font-bold text-gray-800 text-lg mb-2 block outline-none cursor-text"
+                      onBlur={e => {
+                        const newItems = [...items];
+                        newItems[i] = { ...newItems[i], title: e.currentTarget.textContent || '' };
+                        onDataChange({ ...d, items: newItems });
+                      }}
+                      dangerouslySetInnerHTML={{ __html: item.title }}
+                    />
+                    <p className="text-gray-500 text-sm mb-3">{item.description}</p>
+                    {item.price && <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">{item.price}</span>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -773,6 +861,102 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
         );
       }
 
+      case 'popup':
+        return (
+          <div className="px-8 py-5 border-l-4 border-yellow-400 bg-yellow-50 flex items-start gap-4">
+            <div className="text-2xl">💬</div>
+            <div className="flex-1">
+              <div className="font-bold text-yellow-900 mb-1">ポップアップ：{d.heading as string}</div>
+              <div className="text-yellow-700 text-sm mb-2">{d.text as string}</div>
+              <div className="flex items-center gap-3 text-xs text-yellow-600">
+                <span>トリガー: {d.trigger === 'delay' ? `${d.delay}秒後` : d.trigger === 'scroll' ? 'スクロール50%' : '離脱時'}</span>
+                <span className="bg-yellow-900 text-yellow-100 px-2 py-0.5 rounded-full font-bold">{d.buttonText as string}</span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'newsletter':
+        return (
+          <div className="px-8 py-10 text-center" style={{ background: d.bgColor as string }}>
+            {editable('heading', 'h2', 'text-2xl font-black text-gray-800 block mb-2')}
+            {editable('subtext', 'p', 'text-gray-500 block mb-6')}
+            <div className="flex max-w-md mx-auto gap-2">
+              <div className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-400 text-sm">{d.placeholder as string}</div>
+              <button
+                className="px-5 py-3 rounded-xl text-white font-bold text-sm flex-shrink-0"
+                style={{ background: d.buttonColor as string }}
+              >
+                {d.buttonText as string}
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'share':
+        return (
+          <div className="px-8 py-10 text-center" style={{ background: d.bgColor as string }}>
+            {!!(d.heading as string) && <h2 className="text-xl font-bold text-gray-800 mb-6">{d.heading as string}</h2>}
+            <div className="flex justify-center gap-3 flex-wrap">
+              {d.showLine !== false && <span className="bg-[#06c755] text-white px-5 py-2.5 rounded-full text-sm font-bold">LINE</span>}
+              {d.showTwitter !== false && <span className="bg-black text-white px-5 py-2.5 rounded-full text-sm font-bold">X (Twitter)</span>}
+              {d.showFacebook !== false && <span className="bg-[#1877f2] text-white px-5 py-2.5 rounded-full text-sm font-bold">Facebook</span>}
+            </div>
+          </div>
+        );
+
+      case 'google-reviews': {
+        type Review = { author_name: string; rating: number; text: string; relative_time_description: string };
+        const reviews = (d.reviews as Review[]) || [];
+        return (
+          <div className="px-8 py-10 bg-gray-50">
+            {!!(d.heading as string) && <h2 className="text-2xl font-black text-gray-800 text-center mb-2">{d.heading as string}</h2>}
+            {!!(d.placeId as string) ? (
+              reviews.length > 0 ? (
+                <div className="space-y-3 max-w-2xl mx-auto mt-4">
+                  {reviews.slice(0, (d.maxReviews as number) || 3).map((r, i) => (
+                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm text-gray-800">{r.author_name}</span>
+                        <span className="text-yellow-400 text-sm">{'★'.repeat(r.rating)}</span>
+                        <span className="text-gray-400 text-xs ml-auto">{r.relative_time_description}</span>
+                      </div>
+                      <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">{r.text}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-amber-600 text-sm bg-amber-50 border border-amber-200 rounded-xl max-w-sm mx-auto mt-4">
+                  右パネルの「口コミを取得」で読み込んでください
+                </div>
+              )
+            ) : (
+              <div className="text-center py-6 text-slate-400 text-sm border border-dashed border-gray-300 rounded-xl max-w-sm mx-auto mt-4">
+                Google Place ID を右パネルで設定してください
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case 'stripe-buy':
+        return (
+          <div className="px-8 py-10 text-center">
+            <div className="max-w-sm mx-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
+              <div className="text-2xl mb-2">🛒</div>
+              <div className="font-black text-xl text-gray-800 mb-2">{d.label as string}</div>
+              {!!(d.description as string) && <div className="text-gray-500 text-sm mb-4">{d.description as string}</div>}
+              {d.priceId
+                ? <div className="bg-gray-100 text-gray-500 text-[10px] font-mono px-2 py-1 rounded mb-4 truncate">{d.priceId as string}</div>
+                : <div className="text-amber-600 text-xs bg-amber-50 border border-amber-200 rounded px-3 py-1.5 mb-4">Stripe Price ID を設定してください</div>
+              }
+              <button className="w-full py-3 rounded-xl text-white font-bold" style={{ background: d.buttonColor as string }}>
+                {d.buttonText as string}
+              </button>
+            </div>
+          </div>
+        );
+
       default:
         return <div className="p-8 text-gray-400 text-center">Unknown block type: {block.type}</div>;
     }
@@ -793,8 +977,116 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
   );
 }
 
+// ─── AI Image Button ───────────────────────────────────────────────────────────
+function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: string) => void; defaultPrompt?: string }) {
+  const [generating, setGenerating] = useState(false);
+  const [prompt, setPrompt] = useState(defaultPrompt || '');
+  const [open, setOpen] = useState(false);
+
+  const generate = async () => {
+    if (!prompt.trim()) return;
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/ai/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      if (data.url) onGenerated(data.url);
+      else alert(data.error || '画像生成に失敗しました');
+    } catch {
+      alert('画像生成に失敗しました');
+    }
+    setGenerating(false);
+    setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="mt-1 w-full flex items-center gap-1.5 text-[10px] text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded px-2 py-1.5 transition-all">
+        ✨ AI画像生成
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-1 bg-purple-500/10 border border-purple-500/20 rounded p-2">
+      <textarea
+        rows={2}
+        value={prompt}
+        onChange={e => setPrompt(e.target.value)}
+        placeholder="例: 美容サロンの明るくおしゃれな内装"
+        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] resize-none mb-1.5"
+      />
+      <div className="flex gap-1">
+        <button onClick={generate} disabled={generating || !prompt.trim()}
+          className="flex-1 text-[10px] bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded px-2 py-1.5 font-bold transition-all">
+          {generating ? '生成中...' : '生成'}
+        </button>
+        <button onClick={() => setOpen(false)} className="text-[10px] text-slate-500 hover:text-slate-300 px-2">✕</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Right Panel ───────────────────────────────────────────────────────────────
-function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, gaTrackingId, onGaTrackingIdChange }: {
+function GoogleReviewsPanel({ d, blockId, onDataChange }: { d: Record<string, unknown>; blockId: string; onDataChange: (id: string, data: Record<string, unknown>) => void }) {
+  const [fetching, setFetching] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchReviews = async () => {
+    if (!(d.placeId as string)?.trim()) return;
+    setFetching(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/google/reviews?placeId=${encodeURIComponent(d.placeId as string)}`);
+      const data = await res.json() as { rating?: number; totalRatings?: number; reviews?: unknown[]; error?: string };
+      if (data.error) { setError(data.error); return; }
+      onDataChange(blockId, { ...d, rating: data.rating || 0, totalRatings: data.totalRatings || 0, reviews: data.reviews || [], lastFetched: new Date().toISOString() });
+    } catch { setError('取得に失敗しました'); }
+    finally { setFetching(false); }
+  };
+
+  return (
+    <>
+      <label className="block">
+        <span className="text-slate-400 block mb-1">見出し</span>
+        <input type="text" value={d.heading as string}
+          onChange={e => onDataChange(blockId, { ...d, heading: e.target.value })}
+          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+      </label>
+      <label className="block">
+        <span className="text-slate-400 block mb-1">Google Place ID</span>
+        <input type="text" value={d.placeId as string} placeholder="ChIJ..."
+          onChange={e => onDataChange(blockId, { ...d, placeId: e.target.value })}
+          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white font-mono text-xs" />
+        <span className="text-slate-600 text-[10px] mt-1 block">Google Maps で店舗を検索 → URL の place_id= の値</span>
+      </label>
+      <label className="block">
+        <span className="text-slate-400 block mb-1">表示件数</span>
+        <select value={d.maxReviews as number}
+          onChange={e => onDataChange(blockId, { ...d, maxReviews: Number(e.target.value) })}
+          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+          {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}件</option>)}
+        </select>
+      </label>
+      <button onClick={fetchReviews} disabled={fetching || !(d.placeId as string)?.trim()}
+        className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-300 text-xs py-2 rounded-lg transition-all disabled:opacity-40">
+        {fetching ? '取得中...' : '⭐ 口コミを取得'}
+      </button>
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {!!(d.lastFetched as string) && (
+        <p className="text-slate-600 text-[10px]">最終取得: {new Date(d.lastFetched as string).toLocaleString('ja-JP')}</p>
+      )}
+      {(d.rating as number) > 0 && (
+        <p className="text-slate-400 text-xs">評価 {d.rating as number} ⭐ ({(d.totalRatings as number).toLocaleString()} 件)</p>
+      )}
+    </>
+  );
+}
+
+function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus }: {
   block: Block | null;
   onDataChange: (id: string, data: Record<string, unknown>) => void;
   seo: SEOSettings;
@@ -809,10 +1101,60 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   onColorSchemeChange: (v: string) => void;
   gaTrackingId: string;
   onGaTrackingIdChange: (v: string) => void;
+  larubotPublicId: string;
+  onLarubotPublicIdChange: (v: string) => void;
+  laruseoPublicId: string;
+  onLaruseoPublicIdChange: (v: string) => void;
+  siteName: string;
+  customCss: string;
+  onCustomCssChange: (v: string) => void;
+  fontFamily: string;
+  onFontFamilyChange: (v: string) => void;
+  userPlan: string | null;
+  subscriptionStatus: string;
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
   const [uploadingImg, setUploadingImg] = useState<string | null>(null);
+  const [aiCopyLoading, setAiCopyLoading] = useState(false);
+  const [aiCopyResult, setAiCopyResult] = useState<Record<string, string> | null>(null);
   const d = block?.data || {};
+
+  const AI_COPY_BLOCKS = ['hero', 'heading', 'paragraph', 'cta', 'services'];
+
+  const handleAiCopy = async () => {
+    if (!block) return;
+    setAiCopyLoading(true);
+    setAiCopyResult(null);
+    try {
+      const currentText = [d.heading, d.text, d.subheading, d.subtext].filter(Boolean).join(' / ');
+      const res = await fetch('/api/ai/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockType: block.type, businessName: siteName, industry: '', currentText }),
+      });
+      const json = await res.json();
+      if (json.result) setAiCopyResult(json.result);
+    } finally {
+      setAiCopyLoading(false);
+    }
+  };
+
+  const applyAiCopy = () => {
+    if (!block || !aiCopyResult) return;
+    const updates: Record<string, unknown> = {};
+    if (aiCopyResult.heading !== undefined) updates.heading = aiCopyResult.heading;
+    if (aiCopyResult.subheading !== undefined) updates.subheading = aiCopyResult.subheading;
+    if (aiCopyResult.text !== undefined) updates.text = aiCopyResult.text;
+    if (aiCopyResult.subtext !== undefined) updates.subtext = aiCopyResult.subtext;
+    if (aiCopyResult.ctaText !== undefined) updates.ctaText = aiCopyResult.ctaText;
+    if (aiCopyResult.buttonText !== undefined) updates.buttonText = aiCopyResult.buttonText;
+    if (aiCopyResult.items !== undefined) {
+      const items = aiCopyResult.items as unknown as Array<{ icon: string; title: string; description: string }>;
+      if (Array.isArray(items)) updates.items = items.map(item => ({ icon: item.icon, title: item.title, description: item.description }));
+    }
+    onDataChange(block.id, { ...d, ...updates });
+    setAiCopyResult(null);
+  };
 
   const uploadImage = async (file: File, key: string, idx?: number) => {
     const slotKey = key + (idx !== undefined ? `-${idx}` : '');
@@ -904,7 +1246,140 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     </label>
                   </div>
                   {!!(d.bgImage as string) && <img src={d.bgImage as string} alt="" className="w-full h-12 object-cover rounded opacity-60" />}
+                  <AiImageButton
+                    onGenerated={(url: string) => onDataChange(block.id, { ...d, bgImage: url })}
+                    defaultPrompt={`${siteName || ''} business hero background`}
+                  />
                 </label>
+                <div className="border-t border-white/10 pt-3">
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">A/B テスト</span>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={d.abVariant === 'b'}
+                      onChange={e => onDataChange(block.id, { ...d, abVariant: e.target.checked ? 'b' : undefined })}
+                      className="w-4 h-4 rounded accent-orange-500"
+                    />
+                    <span className="text-slate-300 text-xs">このブロックをBバリアントに設定</span>
+                  </label>
+                  <p className="text-slate-600 text-[10px] mt-1.5">同じページにヒーローが2つある場合、公開時に50/50でランダム表示されます</p>
+                </div>
+              </>
+            )}
+            {block?.type === 'heading' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">画像（任意）</span>
+                  <div className="flex gap-1 mb-1">
+                    <input type="text" value={d.image as string || ''} placeholder="https://..."
+                      onChange={e => onDataChange(block.id, { ...d, image: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'image'); }}} />
+                      <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'image' ? 'opacity-50' : ''}`}>
+                        {uploadingImg === 'image' ? '...' : '↑'}
+                      </span>
+                    </label>
+                  </div>
+                  {(d.image as string) && <img src={d.image as string} alt="" className="w-full h-12 object-cover rounded mb-1" />}
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">テキスト揃え</span>
+                  <select value={d.align as string || 'left'} onChange={e => onDataChange(block.id, { ...d, align: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="left">左揃え</option>
+                    <option value="center">中央</option>
+                    <option value="right">右揃え</option>
+                  </select>
+                </label>
+              </>
+            )}
+            {block?.type === 'paragraph' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">画像（任意）</span>
+                  <div className="flex gap-1 mb-1">
+                    <input type="text" value={d.image as string || ''} placeholder="https://..."
+                      onChange={e => onDataChange(block.id, { ...d, image: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'image'); }}} />
+                      <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'image' ? 'opacity-50' : ''}`}>
+                        {uploadingImg === 'image' ? '...' : '↑'}
+                      </span>
+                    </label>
+                  </div>
+                  {(d.image as string) && <img src={d.image as string} alt="" className="w-full h-12 object-cover rounded mb-1" />}
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">画像位置</span>
+                  <select value={d.imagePosition as string || 'none'} onChange={e => onDataChange(block.id, { ...d, imagePosition: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="none">画像なし</option>
+                    <option value="left">テキスト右・画像左</option>
+                    <option value="right">テキスト左・画像右</option>
+                  </select>
+                </label>
+              </>
+            )}
+            {block?.type === 'two-col' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">左カラム画像</span>
+                  <div className="flex gap-1 mb-1">
+                    <input type="text" value={d.col1Image as string || ''} placeholder="https://..."
+                      onChange={e => onDataChange(block.id, { ...d, col1Image: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'col1Image'); }}} />
+                      <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'col1Image' ? 'opacity-50' : ''}`}>
+                        {uploadingImg === 'col1Image' ? '...' : '↑'}
+                      </span>
+                    </label>
+                  </div>
+                  {(d.col1Image as string) && <img src={d.col1Image as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">右カラム画像</span>
+                  <div className="flex gap-1 mb-1">
+                    <input type="text" value={d.col2Image as string || ''} placeholder="https://..."
+                      onChange={e => onDataChange(block.id, { ...d, col2Image: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'col2Image'); }}} />
+                      <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'col2Image' ? 'opacity-50' : ''}`}>
+                        {uploadingImg === 'col2Image' ? '...' : '↑'}
+                      </span>
+                    </label>
+                  </div>
+                  {(d.col2Image as string) && <img src={d.col2Image as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
+                </label>
+              </>
+            )}
+            {block?.type === 'three-col' && (
+              <>
+                {([['col1Image','カラム1'], ['col2Image','カラム2'], ['col3Image','カラム3']] as const).map(([key, label]) => (
+                  <label key={key} className="block">
+                    <span className="text-slate-400 block mb-1">{label}画像</span>
+                    <div className="flex gap-1 mb-1">
+                      <input type="text" value={d[key] as string || ''} placeholder="https://..."
+                        onChange={e => onDataChange(block.id, { ...d, [key]: e.target.value })}
+                        className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                      <label className="cursor-pointer flex-shrink-0">
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, key); }}} />
+                        <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === key ? 'opacity-50' : ''}`}>
+                          {uploadingImg === key ? '...' : '↑'}
+                        </span>
+                      </label>
+                    </div>
+                    {(d[key] as string) && <img src={d[key] as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
+                  </label>
+                ))}
               </>
             )}
             {block?.type === 'cta' && (
@@ -961,14 +1436,66 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               </>
             )}
             {block?.type === 'services' && (
-              <label className="block">
-                <span className="text-slate-400 block mb-1">カラム数</span>
-                <select value={d.columns as string} onChange={e => onDataChange(block.id, { ...d, columns: e.target.value })}
-                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
-                  <option value="2">2カラム</option>
-                  <option value="3">3カラム</option>
-                </select>
-              </label>
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">カラム数</span>
+                  <select value={d.columns as string} onChange={e => onDataChange(block.id, { ...d, columns: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="2">2カラム</option>
+                    <option value="3">3カラム</option>
+                  </select>
+                </label>
+                <div className="border-t border-white/10 pt-3">
+                  <div className="text-slate-400 text-[11px] mb-2">各サービスの画像</div>
+                  <div className="space-y-3">
+                    {((d.items as Array<{icon:string;title:string;description:string;price:string;image?:string}>) || []).map((item, i) => {
+                      const slotKey = `svc-img-${i}`;
+                      return (
+                        <div key={i}>
+                          <div className="text-slate-500 text-[10px] mb-1 truncate">{item.title || `サービス ${i + 1}`}</div>
+                          <div className="flex gap-1">
+                            <input type="text" value={item.image || ''} placeholder="URL"
+                              onChange={e => {
+                                const items = [...((d.items as Array<Record<string,unknown>>) || [])];
+                                items[i] = { ...items[i], image: e.target.value };
+                                onDataChange(block.id, { ...d, items });
+                              }}
+                              className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[9px]" />
+                            <label className="cursor-pointer flex-shrink-0">
+                              <input type="file" accept="image/*" className="hidden"
+                                onChange={async e => {
+                                  const f = e.target.files?.[0]; if (!f) return;
+                                  setUploadingImg(slotKey);
+                                  try {
+                                    const fd = new FormData(); fd.append('file', f);
+                                    const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
+                                    const json = await res.json();
+                                    if (json.url) {
+                                      const items = [...((d.items as Array<Record<string,unknown>>) || [])];
+                                      items[i] = { ...items[i], image: json.url };
+                                      onDataChange(block.id, { ...d, items });
+                                    }
+                                  } finally { setUploadingImg(null); }
+                                }} />
+                              <span className={`flex items-center px-1.5 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === slotKey ? 'opacity-50' : ''}`}>
+                                {uploadingImg === slotKey ? '...' : '↑'}
+                              </span>
+                            </label>
+                            {item.image && (
+                              <button onClick={() => {
+                                const items = [...((d.items as Array<Record<string,unknown>>) || [])];
+                                items[i] = { ...items[i], image: '' };
+                                onDataChange(block.id, { ...d, items });
+                              }} className="text-red-400/60 hover:text-red-400 text-[10px] px-1">✕</button>
+                            )}
+                          </div>
+                          {item.image && <img src={item.image} alt="" className="w-full h-8 object-cover rounded mt-1" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
             )}
             {block?.type === 'image' && (
               <>
@@ -1087,6 +1614,55 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
+            {block?.type === 'contact' && (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!d.multiStep}
+                    onChange={e => onDataChange(block.id, { ...d, multiStep: e.target.checked })}
+                    className="w-4 h-4 rounded" />
+                  <span className="text-slate-300 text-sm">マルチステップフォーム（3ステップ）</span>
+                </label>
+                <div>
+                  <span className="text-slate-400 block mb-2 text-xs">追加フィールド</span>
+                  <div className="space-y-1.5">
+                    {([['company', '会社名'], ['date', 'ご希望日時'], ['budget', 'ご予算'], ['prefer_contact', '連絡方法（メール/電話）']] as [string, string][]).map(([key, label]) => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox"
+                          checked={((d.extraFields as string[]) || []).includes(key)}
+                          onChange={e => {
+                            const cur = (d.extraFields as string[]) || [];
+                            onDataChange(block.id, { ...d, extraFields: e.target.checked ? [...cur, key] : cur.filter(f => f !== key) });
+                          }}
+                          className="w-4 h-4 rounded" />
+                        <span className="text-slate-300 text-xs">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">ボタン色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={d.buttonColor as string || '#1e3a8a'}
+                      onChange={e => onDataChange(block.id, { ...d, buttonColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={d.buttonColor as string || ''}
+                      onChange={e => onDataChange(block.id, { ...d, buttonColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">背景色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={d.bgColor as string || '#f8fafc'}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={d.bgColor as string || ''}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+              </>
+            )}
             {block?.type === 'booking' && (
               <>
                 <label className="block">
@@ -1156,9 +1732,228 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
-            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking'].includes(block.type) && (
+            {block?.type === 'popup' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">表示トリガー</span>
+                  <select value={d.trigger as string} onChange={e => onDataChange(block.id, { ...d, trigger: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="delay">時間経過後</option>
+                    <option value="scroll">スクロール50%</option>
+                    <option value="exit">離脱時</option>
+                  </select>
+                </label>
+                {(d.trigger as string) === 'delay' && (
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">表示までの秒数</span>
+                    <input type="number" min="1" max="30" value={d.delay as string}
+                      onChange={e => onDataChange(block.id, { ...d, delay: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </label>
+                )}
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">見出し</span>
+                  <input type="text" value={d.heading as string}
+                    onChange={e => onDataChange(block.id, { ...d, heading: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">本文</span>
+                  <textarea rows={3} value={d.text as string}
+                    onChange={e => onDataChange(block.id, { ...d, text: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white resize-none" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">ボタンテキスト</span>
+                  <input type="text" value={d.buttonText as string}
+                    onChange={e => onDataChange(block.id, { ...d, buttonText: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">ボタンリンク先</span>
+                  <input type="text" value={d.buttonLink as string}
+                    onChange={e => onDataChange(block.id, { ...d, buttonLink: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">背景色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={d.bgColor as string || '#1e3a8a'}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={d.bgColor as string}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+              </>
+            )}
+            {block?.type === 'newsletter' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">見出し</span>
+                  <input type="text" value={d.heading as string}
+                    onChange={e => onDataChange(block.id, { ...d, heading: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">サブテキスト</span>
+                  <input type="text" value={d.subtext as string}
+                    onChange={e => onDataChange(block.id, { ...d, subtext: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">ボタンテキスト</span>
+                  <input type="text" value={d.buttonText as string}
+                    onChange={e => onDataChange(block.id, { ...d, buttonText: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">ボタン色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={d.buttonColor as string || '#1e3a8a'}
+                      onChange={e => onDataChange(block.id, { ...d, buttonColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={d.buttonColor as string}
+                      onChange={e => onDataChange(block.id, { ...d, buttonColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+              </>
+            )}
+            {block?.type === 'share' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">見出し</span>
+                  <input type="text" value={d.heading as string}
+                    onChange={e => onDataChange(block.id, { ...d, heading: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <div className="space-y-2">
+                  <span className="text-slate-400 block mb-1">表示するSNS</span>
+                  {(['showLine', 'showTwitter', 'showFacebook'] as const).map((key) => (
+                    <label key={key} className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={d[key] !== false}
+                        onChange={e => onDataChange(block.id, { ...d, [key]: e.target.checked })}
+                        className="w-4 h-4 rounded" />
+                      <span className="text-slate-300 text-xs">{key === 'showLine' ? 'LINE' : key === 'showTwitter' ? 'X (Twitter)' : 'Facebook'}</span>
+                    </label>
+                  ))}
+                </div>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">背景色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={d.bgColor as string || '#ffffff'}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={d.bgColor as string}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+              </>
+            )}
+            {block?.type === 'stripe-buy' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">商品名</span>
+                  <input type="text" value={d.label as string}
+                    onChange={e => onDataChange(block.id, { ...d, label: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">説明文</span>
+                  <input type="text" value={d.description as string}
+                    onChange={e => onDataChange(block.id, { ...d, description: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">Stripe Price ID</span>
+                  <input type="text" value={d.priceId as string} placeholder="price_xxxxxxxx"
+                    onChange={e => onDataChange(block.id, { ...d, priceId: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white font-mono text-xs" />
+                  <span className="text-slate-600 text-[10px] mt-1 block">Stripeダッシュボード → 商品 → 価格のIDを入力</span>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">ボタンテキスト</span>
+                  <input type="text" value={d.buttonText as string}
+                    onChange={e => onDataChange(block.id, { ...d, buttonText: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">ボタン色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={d.buttonColor as string || '#1e3a8a'}
+                      onChange={e => onDataChange(block.id, { ...d, buttonColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={d.buttonColor as string}
+                      onChange={e => onDataChange(block.id, { ...d, buttonColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+              </>
+            )}
+            {block?.type === 'google-reviews' && (
+              <GoogleReviewsPanel
+                d={d}
+                blockId={block.id}
+                onDataChange={onDataChange}
+              />
+            )}
+            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews'].includes(block.type) && (
               <div className="text-slate-500 py-4 text-center">
                 キャンバス上でクリックしてテキストを直接編集できます
+              </div>
+            )}
+            {/* AI コピーライティング */}
+            {block && AI_COPY_BLOCKS.includes(block.type) && (
+              <div className="border-t border-white/10 pt-3 mt-2">
+                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">✨ AI コピーライティング</span>
+                <button
+                  onClick={handleAiCopy}
+                  disabled={aiCopyLoading}
+                  className="w-full text-xs bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold py-2.5 rounded-lg transition-all disabled:opacity-50"
+                >
+                  {aiCopyLoading ? '生成中...' : 'AIで文章を自動生成'}
+                </button>
+                {aiCopyResult && (
+                  <div className="mt-3 bg-white/[0.04] border border-white/10 rounded-lg p-3 space-y-2">
+                    <span className="text-[10px] text-slate-400 font-semibold block">生成結果プレビュー</span>
+                    {Object.entries(aiCopyResult).filter(([k]) => typeof aiCopyResult[k] === 'string').map(([k, v]) => (
+                      <div key={k} className="text-xs text-slate-300">
+                        <span className="text-slate-500">{k}:</span> {String(v)}
+                      </div>
+                    ))}
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={applyAiCopy} className="flex-1 text-xs bg-white text-black font-bold py-1.5 rounded transition-all hover:bg-blue-50">
+                        適用する
+                      </button>
+                      <button onClick={() => setAiCopyResult(null)} className="text-xs text-slate-500 hover:text-slate-300 px-2">
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* 全ブロック共通：モバイル/PC表示切り替え */}
+            {block && (
+              <div className="border-t border-white/10 pt-3 mt-2">
+                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">表示設定</span>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!(d.hideOnMobile)}
+                      onChange={e => onDataChange(block.id, { ...d, hideOnMobile: e.target.checked })}
+                      className="w-4 h-4 rounded" />
+                    <span className="text-slate-300 text-xs">スマホで非表示</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!(d.hideOnDesktop)}
+                      onChange={e => onDataChange(block.id, { ...d, hideOnDesktop: e.target.checked })}
+                      className="w-4 h-4 rounded" />
+                    <span className="text-slate-300 text-xs">PCで非表示</span>
+                  </label>
+                </div>
               </div>
             )}
           </>
@@ -1209,11 +2004,18 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                   onChange={e => onSeoChange({ ...seo, ogTitle: e.target.value })}
                   className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
               </label>
-              <label className="block">
+              <label className="block mb-2">
                 <span className="text-slate-500 block mb-1">OG説明文</span>
                 <textarea value={seo.ogDescription} rows={2} placeholder="SNSでシェアされた時の説明文"
                   onChange={e => onSeoChange({ ...seo, ogDescription: e.target.value })}
                   className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white resize-none" />
+              </label>
+              <label className="block">
+                <span className="text-slate-500 block mb-1">OG画像URL</span>
+                <input type="url" value={seo.ogImage ?? ''} placeholder="https://example.com/ogp.jpg"
+                  onChange={e => onSeoChange({ ...seo, ogImage: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                <span className="text-slate-600 text-[10px]">1200×630px 推奨。SNSシェア時のサムネイル画像</span>
               </label>
             </div>
           </>
@@ -1245,37 +2047,95 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-[10px] font-black flex-shrink-0">LB</div>
-                <div>
-                  <div className="font-bold text-white text-[11px]">LARUbot AI</div>
-                  <div className="text-slate-500 text-[10px]">チャットボット</div>
+            {/* LARUbot — hp-bot / hp-bot-seo プラン必須 */}
+            {(() => {
+              const canUse = userPlan === 'hp-bot' || userPlan === 'hp-bot-seo';
+              return (
+                <div className={`bg-white/5 rounded-xl mb-2 overflow-hidden relative ${!canUse ? 'opacity-60' : ''}`}>
+                  {!canUse && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 rounded-xl">
+                      <div className="text-center px-3">
+                        <div className="text-xs font-bold text-white mb-1">🔒 HP + Bot プラン以上</div>
+                        <a href="/laruHP/plans" className="text-[10px] text-blue-400 hover:text-blue-300 underline">プランをアップグレード →</a>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-[10px] font-black flex-shrink-0">LB</div>
+                      <div>
+                        <div className="font-bold text-white text-[11px]">LARUbot AI</div>
+                        <div className="text-slate-500 text-[10px]">チャットボット埋め込み</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => canUse && onLarubotChange(!larubot)}
+                      className={`w-10 h-5 rounded-full transition-colors relative ${larubot && canUse ? 'bg-blue-500' : 'bg-white/20'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${larubot && canUse ? 'left-5' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                  {larubot && canUse && (
+                    <div className="px-3 pb-3 border-t border-white/10 pt-2">
+                      <label className="text-slate-400 text-[10px] mb-1 block">Public ID</label>
+                      <input
+                        type="text"
+                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        value={larubotPublicId}
+                        onChange={e => onLarubotPublicIdChange(e.target.value)}
+                        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] font-mono"
+                      />
+                      <div className="text-slate-500 text-[10px] mt-1">LARUbotダッシュボードで確認できるPublic IDを入力</div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <button
-                onClick={() => onLarubotChange(!larubot)}
-                className={`w-10 h-5 rounded-full transition-colors relative ${larubot ? 'bg-blue-500' : 'bg-white/20'}`}
-              >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${larubot ? 'left-5' : 'left-0.5'}`} />
-              </button>
-            </div>
+              );
+            })()}
 
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[10px] font-black flex-shrink-0">SEO</div>
-                <div>
-                  <div className="font-bold text-white text-[11px]">LARU SEO</div>
-                  <div className="text-slate-500 text-[10px]">AI SEO最適化</div>
+            {/* LARUSEO — hp-bot-seo プラン必須 */}
+            {(() => {
+              const canUse = userPlan === 'hp-bot-seo';
+              return (
+                <div className={`bg-white/5 rounded-xl mb-4 overflow-hidden relative ${!canUse ? 'opacity-60' : ''}`}>
+                  {!canUse && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 rounded-xl">
+                      <div className="text-center px-3">
+                        <div className="text-xs font-bold text-white mb-1">🔒 HP + Bot + SEO プラン限定</div>
+                        <a href="/laruHP/plans" className="text-[10px] text-blue-400 hover:text-blue-300 underline">プランをアップグレード →</a>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[10px] font-black flex-shrink-0">SEO</div>
+                      <div>
+                        <div className="font-bold text-white text-[11px]">LARU SEO</div>
+                        <div className="text-slate-500 text-[10px]">AIブログ自動生成</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => canUse && onLaruseoChange(!laruseo)}
+                      className={`w-10 h-5 rounded-full transition-colors relative ${laruseo && canUse ? 'bg-blue-500' : 'bg-white/20'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${laruseo && canUse ? 'left-5' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                  {laruseo && canUse && (
+                    <div className="px-3 pb-3 border-t border-white/10 pt-2">
+                      <label className="text-slate-400 text-[10px] mb-1 block">data-id</label>
+                      <input
+                        type="text"
+                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        value={laruseoPublicId}
+                        onChange={e => onLaruseoPublicIdChange(e.target.value)}
+                        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] font-mono"
+                      />
+                      <div className="text-slate-500 text-[10px] mt-1">LARUSEOダッシュボードで確認できるdata-idを入力</div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <button
-                onClick={() => onLaruseoChange(!laruseo)}
-                className={`w-10 h-5 rounded-full transition-colors relative ${laruseo ? 'bg-blue-500' : 'bg-white/20'}`}
-              >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${laruseo ? 'left-5' : 'left-0.5'}`} />
-              </button>
-            </div>
+              );
+            })()}
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
@@ -1312,6 +2172,40 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               />
               <div className="text-slate-500 text-[10px] mt-1">お問い合わせ・予約フォーム送信時に通知</div>
             </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🔤</span>
+                <span className="font-bold text-sm">フォント</span>
+              </div>
+              <select
+                value={fontFamily}
+                onChange={e => onFontFamilyChange(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+              >
+                <option value="noto">Noto Sans JP（標準）</option>
+                <option value="zen">Zen Kaku Gothic New（モダン）</option>
+                <option value="mincho">Shippori Mincho（明朝体）</option>
+                <option value="rounded">M PLUS Rounded 1c（丸ゴシック）</option>
+                <option value="biz">BIZ UDPゴシック（ビジネス）</option>
+                <option value="kaisei">Kaisei Opti（上品な明朝）</option>
+              </select>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🎨</span>
+                <span className="font-bold text-sm">カスタムCSS</span>
+              </div>
+              <textarea
+                value={customCss}
+                onChange={e => onCustomCssChange(e.target.value)}
+                placeholder={`.my-section { padding: 80px; }\n.lhp-hero h1 { letter-spacing: .05em; }`}
+                rows={6}
+                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] font-mono resize-none"
+              />
+              <div className="text-slate-500 text-[10px] mt-1">公開サイトに適用されます。既存のスタイルを上書き可能</div>
+            </div>
           </>
         )}
       </div>
@@ -1345,6 +2239,10 @@ function BuilderContent() {
     laruseo: true,
     notifyEmail: '',
     gaTrackingId: '',
+    larubotPublicId: '',
+    laruseoPublicId: '',
+    customCss: '',
+    fontFamily: 'noto',
   };
 
   const [site, setSite] = useState<SiteData>(defaultSiteData);
@@ -1357,6 +2255,12 @@ function BuilderContent() {
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [pendingSiteId, setPendingSiteId] = useState<string | null>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [versions, setVersions] = useState<{ id: string; label: string; created_at: string }[]>([]);
+  const [restoringVersion, setRestoringVersion] = useState<string | null>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiLayouting, setAiLayouting] = useState(false);
   const [onboardingData, setOnboardingData] = useState<Record<string, unknown> | null>(null);
@@ -1367,9 +2271,25 @@ function BuilderContent() {
   const [canRedo, setCanRedo] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
   const undoStack = useRef<SiteData[]>([]);
   const redoStack = useRef<SiteData[]>([]);
   const siteRef = useRef<SiteData>(defaultSiteData);
+
+  // Fetch user plan for feature gating
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string } | null } }) => {
+      if (!user) return;
+      supabase.from('profiles').select('plan, subscription_status').eq('id', user.id).single().then(({ data }: { data: { plan: string | null; subscription_status: string } | null }) => {
+        if (data) {
+          setUserPlan(data.plan);
+          setSubscriptionStatus(data.subscription_status || 'inactive');
+        }
+      });
+    });
+  }, []);
 
   // Keep siteRef in sync for undo/redo to read current state without stale closure
   useEffect(() => { siteRef.current = site; }, [site]);
@@ -1436,6 +2356,10 @@ function BuilderContent() {
               laruseo: s.settings_json?.laruseo ?? true,
               notifyEmail: s.settings_json?.notifyEmail || '',
               gaTrackingId: s.settings_json?.gaTrackingId || '',
+              larubotPublicId: s.settings_json?.larubotPublicId || '',
+              laruseoPublicId: s.settings_json?.laruseoPublicId || '',
+              customCss: s.settings_json?.customCss || '',
+              fontFamily: s.settings_json?.fontFamily || 'noto',
             });
             setCurrentPageId(pages[0].id);
             setPublished(s.published);
@@ -1449,21 +2373,65 @@ function BuilderContent() {
       const d = JSON.parse(raw);
       setOnboardingData(d);
 
+      const ai = d.aiGenerated || {};
+
       const template = getTemplateForIndustry(d.industry);
       let blocks: Block[];
       if (template) {
         blocks = applyTemplateData(template, {
           name: d.businessName,
           address: d.address,
-          description: d.description,
-          catchphrase: d.catchphrase,
+          description: ai.aboutText || d.description,
+          catchphrase: ai.heroSubheading || d.catchphrase,
           phone: d.phone,
           services: d.services || [],
           hours: d.hours || [],
         });
+
+        // Override hero with AI-generated copy
+        if (ai.heroHeading || ai.heroSubheading || ai.ctaText) {
+          blocks = blocks.map(block => {
+            if (block.type === 'hero') {
+              return {
+                ...block,
+                data: {
+                  ...block.data,
+                  ...(ai.heroHeading && { heading: ai.heroHeading }),
+                  ...(ai.heroSubheading && { subheading: ai.heroSubheading }),
+                  ...(ai.ctaText && { ctaText: ai.ctaText }),
+                },
+              };
+            }
+            return block;
+          });
+        }
+
+        // Inject AI-generated FAQs into any faq block
+        if (ai.faqs?.length) {
+          blocks = blocks.map(block => {
+            if (block.type === 'faq') {
+              return { ...block, data: { ...block.data, items: ai.faqs } };
+            }
+            return block;
+          });
+        }
+
+        // Inject AI-generated testimonials
+        if (ai.testimonials?.length) {
+          blocks = blocks.map(block => {
+            if (block.type === 'testimonials') {
+              return { ...block, data: { ...block.data, items: ai.testimonials } };
+            }
+            return block;
+          });
+        }
       } else {
         const heroBlock = defaultBlock('hero');
-        heroBlock.data = { ...heroBlock.data, heading: d.businessName || 'ここに見出しを入力', subheading: d.catchphrase || 'キャッチフレーズを入力してください' };
+        heroBlock.data = {
+          ...heroBlock.data,
+          heading: ai.heroHeading || d.businessName || 'ここに見出しを入力',
+          subheading: ai.heroSubheading || d.catchphrase || 'キャッチフレーズを入力してください',
+        };
         blocks = [heroBlock, defaultBlock('services'), defaultBlock('contact')];
         if (d.larubot) blocks.push(defaultBlock('larubot'));
       }
@@ -1476,18 +2444,23 @@ function BuilderContent() {
           path: '/',
           blocks,
           seo: {
-            title: `${d.businessName || ''} | ${(d.address || '').split('都')[0]}`,
-            description: (d.description || '').slice(0, 160),
-            keywords: '',
-            ogTitle: d.businessName || '',
-            ogDescription: d.catchphrase || '',
+            title: ai.seoTitle || `${d.businessName || ''} | ${(d.address || '').split('都')[0]}`,
+            description: ai.seoDescription || (ai.aboutText || d.description || '').slice(0, 160),
+            keywords: ai.keywords || '',
+            ogTitle: ai.heroHeading || d.businessName || '',
+            ogDescription: ai.heroSubheading || d.catchphrase || '',
+            ogImage: '',
           },
         }],
         colorScheme: d.colorScheme || 'professional-blue',
         larubot: d.larubot ?? true,
         laruseo: d.laruseo ?? true,
-        notifyEmail: '',
+        notifyEmail: d.email || '',
         gaTrackingId: '',
+        larubotPublicId: '',
+        laruseoPublicId: '',
+        customCss: '',
+        fontFamily: 'noto',
       });
     } else {
       const savedStr = typeof window !== 'undefined' ? localStorage.getItem('laruHP_builder') : null;
@@ -1505,6 +2478,10 @@ function BuilderContent() {
             laruseo: parsed.laruseo ?? true,
             notifyEmail: parsed.notifyEmail || '',
             gaTrackingId: parsed.gaTrackingId || '',
+            larubotPublicId: parsed.larubotPublicId || '',
+            laruseoPublicId: parsed.laruseoPublicId || '',
+            customCss: parsed.customCss || '',
+            fontFamily: parsed.fontFamily || 'noto',
           });
         }
       }
@@ -1632,13 +2609,42 @@ function BuilderContent() {
     }));
   };
 
+  const DESIGN_TEMPLATES = [
+    { id: 'business', name: 'ビジネス', desc: 'プロフェッショナルな印象', colorScheme: 'professional-blue', colors: ['#1e3a8a','#3b82f6'], blocks: ['hero','heading','paragraph','two-col','services','cta','contact'] },
+    { id: 'warm', name: 'ウォームカフェ', desc: '温かみのある飲食向け', colorScheme: 'warm-earth', colors: ['#92400e','#d97706'], blocks: ['hero','services','testimonials','hours','gallery','cta','contact'] },
+    { id: 'elegant', name: 'エレガント', desc: '上品でラグジュアリー', colorScheme: 'elegant-dark', colors: ['#1e1b4b','#7c3aed'], blocks: ['hero','heading','paragraph','three-col','testimonials','faq','cta'] },
+    { id: 'fresh', name: 'フレッシュ', desc: 'クリーンな医療・健康系', colorScheme: 'fresh-green', colors: ['#064e3b','#10b981'], blocks: ['hero','three-col','services','faq','hours','map','contact'] },
+    { id: 'pink', name: 'モダンピンク', desc: '美容・サロン向け', colorScheme: 'modern-pink', colors: ['#831843','#ec4899'], blocks: ['hero','heading','paragraph','services','gallery','testimonials','booking','cta'] },
+    { id: 'orange', name: 'ボールド', desc: 'エネルギッシュで力強い', colorScheme: 'bold-orange', colors: ['#7c2d12','#f97316'], blocks: ['hero','three-col','services','testimonials','cta','contact'] },
+  ] as const;
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = DESIGN_TEMPLATES.find(t => t.id === templateId);
+    if (!tpl) return;
+    pushHistory(siteRef.current);
+    const cs = COLOR_SCHEMES.find(c => c.id === tpl.colorScheme);
+    const newBlocks = (tpl.blocks as unknown as BlockType[]).map(type => {
+      const b = defaultBlock(type);
+      if (cs && type === 'hero') return { ...b, data: { ...b.data, bgColor: cs.colors[0] } };
+      if (cs && type === 'cta') return { ...b, data: { ...b.data, bgColor: cs.colors[0] } };
+      return b;
+    });
+    setSite(prev => ({
+      ...prev,
+      colorScheme: tpl.colorScheme,
+      pages: prev.pages.map((p, i) => i === 0 ? { ...p, blocks: newBlocks } : p),
+    }));
+    setShowTemplateModal(false);
+    setSelectedId(null);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const payload = {
       name: site.siteName,
       blocks_json: { v: 2, pages: site.pages },
       seo_json: site.pages[0]?.seo || emptySeo,
-      settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId },
+      settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily },
     };
     if (dbSiteId) {
       await fetch(`/api/sites/${dbSiteId}`, {
@@ -1672,7 +2678,7 @@ function BuilderContent() {
           name: site.siteName,
           blocks_json: { v: 2, pages: site.pages },
           seo_json: site.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId },
+          settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily },
           industry: onboardingData?.industry,
         }),
       });
@@ -1686,9 +2692,8 @@ function BuilderContent() {
     const data = await res.json();
     if (data.error === 'subscription_required') {
       setPublishing(false);
-      if (confirm('サイトを公開するにはサブスクリプションが必要です。今すぐ申し込みますか？')) {
-        window.location.href = '/laruHP/dashboard';
-      }
+      setPendingSiteId(id);
+      setShowPlanModal(true);
       return;
     }
     if (data.success) {
@@ -1696,6 +2701,27 @@ function BuilderContent() {
       setPublishedSlug(data.slug);
     }
     setPublishing(false);
+  };
+
+  const handleOpenHistory = async () => {
+    if (!dbSiteId) return;
+    const res = await fetch(`/api/sites/${dbSiteId}/versions`);
+    const data = await res.json();
+    setVersions(data.versions || []);
+    setShowHistoryPanel(true);
+  };
+
+  const handleRestoreVersion = async (versionId: string) => {
+    if (!dbSiteId) return;
+    if (!confirm('このバージョンに戻しますか？現在の内容は上書きされます。')) return;
+    setRestoringVersion(versionId);
+    const res = await fetch(`/api/sites/${dbSiteId}/versions/${versionId}`, { method: 'POST' });
+    if (res.ok) {
+      // Reload site data from DB
+      window.location.reload();
+    }
+    setRestoringVersion(null);
+    setShowHistoryPanel(false);
   };
 
   const handleAiLayout = async () => {
@@ -1778,6 +2804,41 @@ function BuilderContent() {
     }
     setAiGenerating(false);
   };
+
+  // Subscription paywall — block builder access for canceled/inactive plans
+  const isLocked = subscriptionStatus === 'canceled' || subscriptionStatus === 'inactive' || subscriptionStatus === 'past_due';
+
+  if (isLocked) {
+    return (
+      <div className="h-screen bg-[#030712] flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-3xl mx-auto mb-6">🔒</div>
+          <h1 className="text-2xl font-bold text-white mb-3">
+            {subscriptionStatus === 'past_due' ? 'お支払いの確認が必要です' : 'サブスクリプションが無効です'}
+          </h1>
+          <p className="text-slate-400 text-sm leading-relaxed mb-8">
+            {subscriptionStatus === 'past_due'
+              ? 'お支払い情報を更新してください。確認後すぐにアクセスが回復されます。'
+              : 'LARU HP のプランに加入するとビルダーを利用できます。サイトのデータは保持されています。'}
+          </p>
+          <div className="flex flex-col gap-3">
+            <a
+              href="/laruHP/plans"
+              className="block bg-blue-500 hover:bg-blue-400 text-white font-bold py-3 px-8 rounded-xl transition-colors"
+            >
+              プランを確認する →
+            </a>
+            <a
+              href="/laruHP/dashboard"
+              className="block text-slate-500 hover:text-slate-300 text-sm transition-colors"
+            >
+              ダッシュボードに戻る
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-[#030712] text-white flex flex-col overflow-hidden">
@@ -1868,12 +2929,26 @@ function BuilderContent() {
               className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 text-sm"
             >↪</button>
           </div>
+          {dbSiteId && (
+            <button
+              onClick={handleOpenHistory}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10"
+            >
+              履歴
+            </button>
+          )}
+          <button
+            onClick={() => setShowTemplateModal(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white/10 text-slate-300 hover:bg-white/20 border border-white/10"
+          >
+            テンプレート
+          </button>
           <button
             onClick={handleAiLayout}
             disabled={aiLayouting}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 disabled:opacity-50"
           >
-            {aiLayouting ? '🧩 提案中...' : '🧩 AIレイアウト'}
+            {aiLayouting ? '提案中...' : 'AIレイアウト'}
           </button>
           <button
             onClick={handleAiGenerate}
@@ -2047,6 +3122,17 @@ function BuilderContent() {
             }}
             gaTrackingId={site.gaTrackingId}
             onGaTrackingIdChange={v => setSite(prev => ({ ...prev, gaTrackingId: v }))}
+            larubotPublicId={site.larubotPublicId}
+            onLarubotPublicIdChange={v => setSite(prev => ({ ...prev, larubotPublicId: v }))}
+            laruseoPublicId={site.laruseoPublicId}
+            onLaruseoPublicIdChange={v => setSite(prev => ({ ...prev, laruseoPublicId: v }))}
+            siteName={site.siteName}
+            customCss={site.customCss}
+            onCustomCssChange={v => setSite(prev => ({ ...prev, customCss: v }))}
+            fontFamily={site.fontFamily}
+            onFontFamilyChange={v => setSite(prev => ({ ...prev, fontFamily: v }))}
+            userPlan={userPlan}
+            subscriptionStatus={subscriptionStatus}
           />
         )}
       </div>
@@ -2054,6 +3140,129 @@ function BuilderContent() {
       {!preview && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-2.5 text-xs text-slate-400 flex items-center gap-3 shadow-2xl z-20">
           <span>ブロックをクリックして選択 · テキストをクリックして直接編集 · 左パネルからブロックを追加 · ドラッグで並び替え · ↩↪ または Cmd+Z で元に戻す</span>
+        </div>
+      )}
+
+      {/* Template picker modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-2xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-white font-bold text-lg">デザインテンプレート</h2>
+              <button onClick={() => setShowTemplateModal(false)} className="text-slate-500 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            <p className="text-slate-500 text-xs mb-5">選択するとブロック構成とカラーが変わります（現在の内容は置き換えられます）</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {DESIGN_TEMPLATES.map(tpl => (
+                <button
+                  key={tpl.id}
+                  onClick={() => applyTemplate(tpl.id)}
+                  className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-xl overflow-hidden transition-all text-left group"
+                >
+                  {/* Mini preview */}
+                  <div className="h-20 relative overflow-hidden" style={{ background: tpl.colors[0] }}>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-3">
+                      <div className="w-3/4 h-2 rounded-full bg-white/40" />
+                      <div className="w-1/2 h-1.5 rounded-full bg-white/25" />
+                      <div className="flex gap-1 mt-1">
+                        {[1,2,3].map(n => <div key={n} className="w-8 h-5 rounded bg-white/10 border border-white/20" />)}
+                      </div>
+                    </div>
+                    <div className="absolute top-2 right-2 w-3 h-3 rounded-full" style={{ background: tpl.colors[1] }} />
+                  </div>
+                  <div className="p-3">
+                    <div className="text-white text-xs font-bold">{tpl.name}</div>
+                    <div className="text-slate-500 text-[10px] mt-0.5">{tpl.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Version history panel */}
+      {showHistoryPanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-white font-bold text-lg">バージョン履歴</h2>
+              <button onClick={() => setShowHistoryPanel(false)} className="text-slate-500 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            {versions.length === 0 ? (
+              <p className="text-slate-500 text-sm text-center py-6">履歴がありません。公開すると自動保存されます。</p>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {versions.map(v => (
+                  <div key={v.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                    <div>
+                      <div className="text-white text-sm font-medium">{v.label}</div>
+                      <div className="text-slate-500 text-xs">{new Date(v.created_at).toLocaleString('ja-JP')}</div>
+                    </div>
+                    <button
+                      onClick={() => handleRestoreVersion(v.id)}
+                      disabled={restoringVersion === v.id}
+                      className="text-xs bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 text-slate-300"
+                    >
+                      {restoringVersion === v.id ? '復元中...' : '復元'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-slate-600 text-xs mt-4">公開するたびに最大20件まで自動保存されます</p>
+          </div>
+        </div>
+      )}
+
+      {/* Plan picker modal */}
+      {showPlanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+            <h2 className="text-white font-bold text-lg mb-1">プランを選択して公開</h2>
+            <p className="text-slate-400 text-sm mb-5">初月1円でお試しいただけます</p>
+            <div className="space-y-3">
+              {([
+                { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
+                { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP作成 + AIチャットボット搭載' },
+                { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800', sub: '/月', badge: '半年間限定', desc: 'HP + チャットボット + AIブログSEO' },
+              ] as const).map(plan => (
+                <button
+                  key={plan.id}
+                  onClick={async () => {
+                    setShowPlanModal(false);
+                    const res = await fetch('/api/stripe/checkout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ siteId: pendingSiteId, plan: plan.id }),
+                    });
+                    const d = await res.json();
+                    if (d.url) window.location.href = d.url;
+                    else alert('決済ページの取得に失敗しました。もう一度お試しください。');
+                  }}
+                  className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all text-left"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-sm">{plan.label}</span>
+                      {plan.badge && <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold">{plan.badge}</span>}
+                    </div>
+                    <div className="text-slate-400 text-[11px] mt-0.5">{plan.desc}</div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <div className="text-white font-black text-base">{plan.price}<span className="text-slate-400 text-[11px] font-normal">{plan.sub}</span></div>
+                    <div className="text-blue-400 text-[10px]">初月1円</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowPlanModal(false)}
+              className="mt-4 w-full text-slate-500 text-sm hover:text-slate-300 transition-colors"
+            >
+              キャンセル
+            </button>
+          </div>
         </div>
       )}
     </div>

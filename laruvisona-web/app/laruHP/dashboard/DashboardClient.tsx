@@ -1,8 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+interface SiteSettings {
+  larubot?: boolean;
+  laruseo?: boolean;
+  larubotPublicId?: string;
+  laruseoPublicId?: string;
+}
 
 interface Site {
   id: string;
@@ -14,11 +21,13 @@ interface Site {
   updated_at: string;
   view_count: number;
   custom_domain: string | null;
+  settings_json: SiteSettings | null;
 }
 
 interface Profile {
   business_name: string | null;
   subscription_status: string;
+  plan: string | null;
   contract_ends_at: string | null;
   stripe_customer_id: string | null;
 }
@@ -100,6 +109,35 @@ function IcGlobe() {
   return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
 }
 
+// ── Mini bar chart ──────────────────────────────────────────────────────────
+type DayView = { date: string; views: number };
+
+function MiniChart({ data }: { data: DayView[] }) {
+  const max = Math.max(...data.map(d => d.views), 1);
+  const DOW = ['日', '月', '火', '水', '木', '金', '土'];
+  const showLabels = data.length <= 7;
+  return (
+    <div className="flex items-end gap-px h-10 w-full">
+      {data.map((d, i) => {
+        const pct = Math.round((d.views / max) * 100);
+        const dow = DOW[new Date(d.date + 'T12:00:00').getDay()];
+        return (
+          <div key={d.date} className="flex flex-col items-center gap-0.5 flex-1 h-full justify-end group relative">
+            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded pointer-events-none opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
+              {d.date.slice(5)} {d.views}PV
+            </div>
+            <div
+              className={`w-full rounded-sm transition-all ${i === data.length - 1 ? 'bg-blue-400/60' : 'bg-white/20'}`}
+              style={{ height: pct ? `${Math.max(pct, 8)}%` : '2px', minHeight: '2px' }}
+            />
+            {showLabels && <span className="text-[8px] text-slate-600 leading-none">{dow}</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const [sites, setSites] = useState<Site[]>([]);
@@ -115,6 +153,11 @@ export default function DashboardPage() {
   const [paymentBanner, setPaymentBanner] = useState<'success' | 'canceled' | null>(null);
   const [domainInputs, setDomainInputs] = useState<Record<string, string>>({});
   const [savingDomain, setSavingDomain] = useState<string | null>(null);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [pendingSiteId, setPendingSiteId] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<Record<string, DayView[]>>({});
+  const [contacts, setContacts] = useState<{ id: string; read: boolean }[]>([]);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<'7' | '30' | 'all'>('7');
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -133,9 +176,11 @@ export default function DashboardPage() {
       if (!user) { router.push('/laruHP/auth/login'); return; }
       setUserEmail(user.email || '');
 
-      const [sitesRes, profileRes] = await Promise.all([
+      const [sitesRes, profileRes, analyticsRes, contactsRes] = await Promise.all([
         fetch('/api/sites'),
-        supabase.from('profiles').select('business_name, subscription_status, contract_ends_at, stripe_customer_id').eq('id', user.id).single(),
+        supabase.from('profiles').select('business_name, subscription_status, plan, contract_ends_at, stripe_customer_id').eq('id', user.id).single(),
+        fetch('/api/sites/analytics?days=7'),
+        fetch('/api/contacts'),
       ]);
 
       const sitesData = await sitesRes.json();
@@ -145,9 +190,23 @@ export default function DashboardPage() {
       for (const s of loadedSites) initDomains[s.id] = s.custom_domain || '';
       setDomainInputs(initDomains);
       setProfile(profileRes.data);
+      const analyticsData = await analyticsRes.json();
+      setAnalytics(analyticsData.data || {});
+      const contactsData = await contactsRes.json();
+      setContacts((contactsData.contacts || []).map((c: { id: string; read: boolean }) => ({ id: c.id, read: c.read })));
       setLoading(false);
     })();
   }, []);
+
+  const fetchAnalytics = useCallback(async (period: '7' | '30' | 'all') => {
+    const res = await fetch(`/api/sites/analytics?days=${period}`);
+    const data = await res.json();
+    setAnalytics(data.data || {});
+  }, []);
+
+  useEffect(() => {
+    if (!loading) fetchAnalytics(analyticsPeriod);
+  }, [analyticsPeriod, loading, fetchAnalytics]);
 
   const handlePublish = async (siteId: string) => {
     setPublishing(siteId);
@@ -155,9 +214,8 @@ export default function DashboardPage() {
     const data = await res.json();
     if (data.error === 'subscription_required') {
       setPublishing(null);
-      if (confirm('サイトを公開するにはサブスクリプションが必要です。今すぐ申し込みますか？')) {
-        handleCheckout();
-      }
+      setPendingSiteId(siteId);
+      setShowPlanModal(true);
       return;
     }
     if (data.success) {
@@ -364,6 +422,44 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ── Plan upgrade nudge ── */}
+        {profile?.subscription_status === 'active' && profile.plan === 'hp' && (
+          <div className="grid sm:grid-cols-2 gap-3 mb-6">
+            <div className="bg-indigo-500/[0.06] border border-indigo-500/20 rounded-xl p-4 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-[11px] font-black text-indigo-300 flex-shrink-0">LB</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm text-white mb-0.5">LARUbot AI チャットボット</div>
+                <p className="text-slate-500 text-xs leading-relaxed mb-2">24時間対応のAIチャットが問い合わせ数を平均2.3倍に増加。</p>
+                <a href="/laruHP/plans" className="text-indigo-400 hover:text-indigo-300 text-xs font-semibold transition-colors">
+                  HP + Bot プランへアップグレード →
+                </a>
+              </div>
+            </div>
+            <div className="bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[11px] font-black text-emerald-300 flex-shrink-0">SEO</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm text-white mb-0.5">LARU SEO AIブログ自動生成</div>
+                <p className="text-slate-500 text-xs leading-relaxed mb-2">毎週AIがSEO記事を自動公開。検索流入を継続的に獲得。</p>
+                <a href="/laruHP/plans" className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold transition-colors">
+                  HP + Bot + SEO プランへアップグレード →
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+        {profile?.subscription_status === 'active' && profile.plan === 'hp-bot' && (
+          <div className="bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[11px] font-black text-emerald-300 flex-shrink-0">SEO</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm text-white mb-0.5">LARU SEO — AIブログで検索流入を自動化</div>
+              <p className="text-slate-500 text-xs leading-relaxed mb-2">毎週AIがSEO最適化記事を自動公開。放置するだけで検索順位が上がります。</p>
+              <a href="/laruHP/plans" className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold transition-colors">
+                HP + Bot + SEO プランへアップグレード →
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* ── Sites Header ── */}
         <div className="flex justify-between items-center mb-5">
           <div>
@@ -375,6 +471,32 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="flex gap-2">
+            <Link
+              href="/laruHP/contacts"
+              className="relative flex items-center gap-1.5 text-xs border border-white/[0.07] hover:border-white/20 px-3 py-2 rounded-lg transition-all text-slate-300"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              問い合わせ
+              {contacts.filter(c => !c.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {contacts.filter(c => !c.read).length}
+                </span>
+              )}
+            </Link>
+            <Link
+              href="/laruHP/newsletter"
+              className="flex items-center gap-1.5 text-xs border border-white/[0.07] hover:border-white/20 px-3 py-2 rounded-lg transition-all text-slate-300"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <span className="hidden sm:inline">メール</span>
+            </Link>
+            <Link
+              href="/laruHP/blog"
+              className="flex items-center gap-1.5 text-xs border border-white/[0.07] hover:border-white/20 px-3 py-2 rounded-lg transition-all text-slate-300"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span className="hidden sm:inline">ブログ</span>
+            </Link>
             <Link
               href="/laruHP/onboarding"
               className="flex items-center gap-1.5 text-xs border border-white/[0.07] hover:border-blue-500/40 hover:text-blue-400 px-3 py-2 rounded-lg transition-all"
@@ -488,6 +610,57 @@ export default function DashboardPage() {
                       <p className="text-slate-600 text-[10px] mt-0.5">更新 {relativeTime(site.updated_at)}</p>
                     </div>
 
+                    {/* アクセス解析グラフ */}
+                    {site.published && analytics[site.id] && (
+                      <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 pt-2 pb-1.5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex gap-1">
+                            {(['7', '30', 'all'] as const).map(p => (
+                              <button
+                                key={p}
+                                onClick={() => setAnalyticsPeriod(p)}
+                                className={`text-[9px] px-1.5 py-0.5 rounded transition-all ${analyticsPeriod === p ? 'bg-blue-500/20 text-blue-400' : 'text-slate-600 hover:text-slate-400'}`}
+                              >
+                                {p === '7' ? '7日' : p === '30' ? '30日' : '全期間'}
+                              </button>
+                            ))}
+                          </div>
+                          <span className="text-[9px] text-slate-600">
+                            {analytics[site.id].reduce((s, d) => s + d.views, 0).toLocaleString()} PV
+                          </span>
+                        </div>
+                        <MiniChart data={analytics[site.id]} />
+                      </div>
+                    )}
+
+                    {/* LARUbot未連携バナー */}
+                    {site.settings_json?.larubot && !site.settings_json?.larubotPublicId && (
+                      <Link
+                        href={`/laruHP/builder?siteId=${site.id}`}
+                        className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-3 py-2 hover:bg-indigo-500/20 transition-all"
+                      >
+                        <div className="w-5 h-5 rounded bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-[9px] font-black flex-shrink-0">LB</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-indigo-300 text-[10px] font-semibold">LARUbot未連携</div>
+                          <div className="text-indigo-400/70 text-[9px]">Public IDを設定してください</div>
+                        </div>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-indigo-400 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
+                      </Link>
+                    )}
+                    {site.settings_json?.laruseo && !site.settings_json?.laruseoPublicId && (
+                      <Link
+                        href={`/laruHP/builder?siteId=${site.id}`}
+                        className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2 hover:bg-emerald-500/20 transition-all"
+                      >
+                        <div className="w-5 h-5 rounded bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[9px] font-black flex-shrink-0">SEO</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-emerald-300 text-[10px] font-semibold">LARUSEO未連携</div>
+                          <div className="text-emerald-400/70 text-[9px]">data-idを設定してください</div>
+                        </div>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-400 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
+                      </Link>
+                    )}
+
                     {/* Custom domain */}
                     <div className="flex gap-1.5">
                       <div className="flex-1 relative min-w-0">
@@ -585,6 +758,57 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Plan picker modal */}
+      {showPlanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+            <h2 className="text-white font-bold text-lg mb-1">プランを選択して公開</h2>
+            <p className="text-slate-400 text-sm mb-5">初月1円でお試しいただけます</p>
+            <div className="space-y-3">
+              {([
+                { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
+                { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP作成 + AIチャットボット搭載' },
+                { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800', sub: '/月', badge: '半年間限定', desc: 'HP + チャットボット + AIブログSEO' },
+              ] as const).map(plan => (
+                <button
+                  key={plan.id}
+                  onClick={async () => {
+                    setShowPlanModal(false);
+                    const res = await fetch('/api/stripe/checkout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ siteId: pendingSiteId, plan: plan.id }),
+                    });
+                    const d = await res.json();
+                    if (d.url) window.location.href = d.url;
+                    else alert('決済ページの取得に失敗しました。もう一度お試しください。');
+                  }}
+                  className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all text-left"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-sm">{plan.label}</span>
+                      {plan.badge && <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold">{plan.badge}</span>}
+                    </div>
+                    <div className="text-slate-400 text-[11px] mt-0.5">{plan.desc}</div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-4">
+                    <div className="text-white font-black text-base">{plan.price}<span className="text-slate-400 text-[11px] font-normal">{plan.sub}</span></div>
+                    <div className="text-blue-400 text-[10px]">初月1円</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowPlanModal(false)}
+              className="mt-4 w-full text-slate-500 text-sm hover:text-slate-300 transition-colors"
+            >
+              キャンセル
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

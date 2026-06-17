@@ -3,7 +3,10 @@ export type BlockType =
   | 'two-col' | 'three-col' | 'divider' | 'cta'
   | 'services' | 'testimonials' | 'faq' | 'contact'
   | 'hours' | 'gallery' | 'larubot'
-  | 'video' | 'map' | 'countdown' | 'price-table' | 'booking' | 'news';
+  | 'video' | 'map' | 'countdown' | 'price-table' | 'booking' | 'news'
+  | 'popup' | 'newsletter'
+  | 'share' | 'stripe-buy'
+  | 'google-reviews';
 
 export interface Block {
   id: string;
@@ -17,6 +20,7 @@ export interface SEOSettings {
   keywords: string;
   ogTitle: string;
   ogDescription: string;
+  ogImage: string;
 }
 
 export interface Page {
@@ -33,6 +37,11 @@ export interface SiteSettings {
   larubot: boolean;
   laruseo: boolean;
   gaTrackingId?: string;
+  larubotPublicId?: string;
+  laruseoPublicId?: string;
+  notifyEmail?: string;
+  customCss?: string;
+  fontFamily?: string;
 }
 
 export interface Site {

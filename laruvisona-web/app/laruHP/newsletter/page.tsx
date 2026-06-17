@@ -1,0 +1,290 @@
+'use client';
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+
+interface Subscriber {
+  id: string;
+  email: string;
+  name: string | null;
+  subscribed_at: string;
+  unsubscribed_at: string | null;
+}
+
+interface Site {
+  id: string;
+  name: string;
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'たった今';
+  if (mins < 60) return `${mins}分前`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}時間前`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}日前`;
+  return new Date(dateStr).toLocaleDateString('ja-JP');
+}
+
+export default function NewsletterPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const [sites, setSites] = useState<Site[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [subLoading, setSubLoading] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<string | null>(null);
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'unsubscribed'>('active');
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/laruHP/auth/login'); return; }
+      const res = await fetch('/api/sites');
+      const data = await res.json();
+      const s: Site[] = (data.sites || []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name }));
+      setSites(s);
+      if (s.length > 0) setSelectedSiteId(s[0].id);
+      setLoading(false);
+    })();
+  }, []);
+
+  const loadSubscribers = useCallback(async (siteId: string) => {
+    setSubLoading(true);
+    const res = await fetch(`/api/newsletter/${siteId}/subscribers`);
+    const data = await res.json();
+    setSubscribers(data.subscribers || []);
+    setSubLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (selectedSiteId) loadSubscribers(selectedSiteId);
+  }, [selectedSiteId, loadSubscribers]);
+
+  const handleUnsubscribe = async (email: string) => {
+    if (!selectedSiteId) return;
+    await fetch(`/api/newsletter/${selectedSiteId}/subscribers`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    setSubscribers(prev => prev.map(s => s.email === email ? { ...s, unsubscribed_at: new Date().toISOString() } : s));
+  };
+
+  const handleExportCsv = () => {
+    const active = subscribers.filter(s => !s.unsubscribed_at);
+    const csv = ['メール,お名前,登録日', ...active.map(s =>
+      `${s.email},${s.name || ''},${new Date(s.subscribed_at).toLocaleDateString('ja-JP')}`
+    )].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'subscribers.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSend = async () => {
+    if (!selectedSiteId || !subject.trim() || !body.trim()) return;
+    setSending(true);
+    setSendResult(null);
+    const res = await fetch('/api/newsletter/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siteId: selectedSiteId, subject, html: body.replace(/\n/g, '<br>') }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setSendResult(`${data.sent}件に送信しました`);
+      setSubject('');
+      setBody('');
+    } else {
+      setSendResult(`エラー: ${data.error}`);
+    }
+    setSending(false);
+  };
+
+  const filtered = subscribers.filter(s => {
+    if (filterActive === 'active') return !s.unsubscribed_at;
+    if (filterActive === 'unsubscribed') return !!s.unsubscribed_at;
+    return true;
+  });
+
+  const activeCount = subscribers.filter(s => !s.unsubscribed_at).length;
+
+  return (
+    <div className="min-h-screen bg-[#030712] text-white">
+      <header className="border-b border-white/[0.07] bg-[#0a0f1e]/90 backdrop-blur-xl sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+          <Link href="/laruHP/dashboard" className="text-slate-500 hover:text-slate-300 text-sm transition-colors">← ダッシュボード</Link>
+          <span className="text-white/20">/</span>
+          <h1 className="text-sm font-bold">メールニュースレター</h1>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {loading ? (
+          <div className="text-slate-500 text-sm">読み込み中...</div>
+        ) : sites.length === 0 ? (
+          <div className="text-slate-500 text-sm">サイトがありません</div>
+        ) : (
+          <>
+            {/* Site selector + actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedSiteId || ''}
+                  onChange={e => setSelectedSiteId(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                >
+                  {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <span className="text-slate-500 text-sm">登録者 <span className="text-white font-bold">{activeCount}</span> 件</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleExportCsv}
+                  disabled={activeCount === 0}
+                  className="text-xs border border-white/[0.07] hover:border-white/20 px-3 py-2 rounded-lg transition-all text-slate-300 disabled:opacity-40"
+                >
+                  CSV エクスポート
+                </button>
+                <button
+                  onClick={() => { setShowSendModal(true); setSendResult(null); }}
+                  disabled={activeCount === 0}
+                  className="text-xs bg-white text-black font-bold px-4 py-2 rounded-lg hover:bg-blue-50 transition-all disabled:opacity-40"
+                >
+                  メール送信
+                </button>
+              </div>
+            </div>
+
+            {/* Filter tabs */}
+            <div className="flex gap-1 mb-4 border-b border-white/[0.07] pb-0">
+              {([
+                { key: 'active', label: `有効 (${subscribers.filter(s => !s.unsubscribed_at).length})` },
+                { key: 'unsubscribed', label: `解除済み (${subscribers.filter(s => !!s.unsubscribed_at).length})` },
+                { key: 'all', label: `全て (${subscribers.length})` },
+              ] as const).map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilterActive(tab.key)}
+                  className={`text-xs px-3 py-2 border-b-2 transition-all ${filterActive === tab.key ? 'border-white text-white' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Subscribers table */}
+            {subLoading ? (
+              <div className="text-slate-500 text-sm py-8 text-center">読み込み中...</div>
+            ) : filtered.length === 0 ? (
+              <div className="py-16 text-center border border-white/[0.07] border-dashed rounded-xl">
+                <p className="text-slate-500 text-sm">登録者がいません</p>
+                <p className="text-slate-600 text-xs mt-1">ニュースレター登録ブロックをサイトに追加して公開してください</p>
+              </div>
+            ) : (
+              <div className="border border-white/[0.07] rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.07] bg-white/[0.02]">
+                      {['メールアドレス', 'お名前', '登録日', 'ステータス', '操作'].map(h => (
+                        <th key={h} className="px-4 py-3 text-left text-[11px] text-slate-500 font-semibold">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(sub => (
+                      <tr key={sub.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                        <td className="px-4 py-3 text-xs text-white font-mono">{sub.email}</td>
+                        <td className="px-4 py-3 text-xs text-slate-400">{sub.name || '—'}</td>
+                        <td className="px-4 py-3 text-[11px] text-slate-500">{timeAgo(sub.subscribed_at)}</td>
+                        <td className="px-4 py-3">
+                          {sub.unsubscribed_at ? (
+                            <span className="text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">解除済み</span>
+                          ) : (
+                            <span className="text-[10px] text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">有効</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {!sub.unsubscribed_at && (
+                            <button
+                              onClick={() => handleUnsubscribe(sub.email)}
+                              className="text-[10px] text-red-400/60 hover:text-red-400 transition-colors"
+                            >
+                              解除
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+
+      {/* Send modal */}
+      {showSendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white font-bold">ニュースレター送信</h2>
+              <span className="text-slate-500 text-xs">{activeCount} 件に送信</span>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">件名</label>
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  placeholder="メールの件名を入力..."
+                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:border-white/20"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">本文</label>
+                <textarea
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  placeholder="メールの本文を入力... (改行はそのままHTMLに変換されます)"
+                  rows={8}
+                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 outline-none focus:border-white/20 resize-none"
+                />
+              </div>
+            </div>
+            {sendResult && (
+              <p className={`text-xs mt-3 ${sendResult.startsWith('エラー') ? 'text-red-400' : 'text-green-400'}`}>{sendResult}</p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setShowSendModal(false)}
+                className="flex-1 text-sm text-slate-400 hover:text-slate-200 border border-white/10 py-2.5 rounded-lg transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={sending || !subject.trim() || !body.trim()}
+                className="flex-1 text-sm bg-white text-black font-bold py-2.5 rounded-lg hover:bg-blue-50 transition-all disabled:opacity-50"
+              >
+                {sending ? '送信中...' : '送信する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

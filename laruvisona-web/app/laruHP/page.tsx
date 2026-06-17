@@ -28,21 +28,72 @@ const FEATURES = [
   { num: '08', title: 'マルチページ対応',             desc: '「トップ」「会社概要」「アクセス」など複数ページを作成可能。ナビゲーションバーも自動生成。',                                                   color: 'purple' },
 ];
 
-const PLAN_FEATURES = [
-  '独自ドメイン対応（サブドメイン無料）',
-  'AI自動コンテンツ生成（無制限）',
-  'ビジュアルエディタ（全ブロック）',
-  '業種別テンプレート 全種類',
-  'SEO自動最適化（メタタグ・構造化データ）',
-  'LARUbot連携（AIチャットボット）',
-  'LARUSEO連携（SEO分析ツール）',
-  'SSL証明書・サーバー費用込み',
-  'モバイル完全対応',
-  'Google Analytics連携',
-  '画像・動画アップロード 5GB',
-  'お問い合わせ・予約フォーム（メール通知付き）',
-  'マルチページ対応（ナビゲーションバー自動生成）',
-  'サイト複製機能',
+const PLANS = [
+  {
+    id: 'hp',
+    name: 'HP単体',
+    price: 999,
+    badge: null,
+    highlight: false,
+    features: [
+      'HP作成・公開',
+      'AIコンテンツ生成',
+      'ビジュアルエディタ',
+      'SEO自動最適化',
+      '独自ドメイン対応',
+      'SSL・サーバー費用込み',
+      'Google Analytics連携',
+      'お問い合わせフォーム',
+      'メールサポート',
+    ],
+    missing: [
+      'LARUbot AIチャットボット',
+      'LARUSEO AIブログ',
+    ],
+  },
+  {
+    id: 'hp-bot',
+    name: 'HP + LARUbot',
+    price: 4980,
+    badge: 'おすすめ',
+    highlight: true,
+    features: [
+      'HP作成・公開',
+      'AIコンテンツ生成',
+      'ビジュアルエディタ',
+      'SEO自動最適化',
+      'LARUbot AIチャットボット',
+      '独自ドメイン対応',
+      'SSL・サーバー費用込み',
+      'Google Analytics連携',
+      'お問い合わせフォーム',
+      'チャットサポート',
+    ],
+    missing: [
+      'LARUSEO AIブログ',
+    ],
+  },
+  {
+    id: 'hp-bot-seo',
+    name: 'HP + Bot + SEO',
+    price: 9800,
+    badge: '半年間限定',
+    highlight: false,
+    features: [
+      'HP作成・公開',
+      'AIコンテンツ生成',
+      'ビジュアルエディタ',
+      'SEO自動最適化',
+      'LARUbot AIチャットボット',
+      'LARUSEO AIブログ',
+      '独自ドメイン対応',
+      'SSL・サーバー費用込み',
+      'Google Analytics連携',
+      'お問い合わせフォーム',
+      '優先サポート',
+    ],
+    missing: [],
+  },
 ];
 
 const FAQ_ITEMS = [
@@ -206,7 +257,7 @@ export default function LaruHPLandingPage() {
           {[
             { num: '5分', label: 'でサイト完成', sub: 'AI自動生成', color: 'from-blue-500/20 to-transparent' },
             { num: '12+', label: '業種テンプレート', sub: '随時追加中', color: 'from-purple-500/20 to-transparent' },
-            { num: '999円', label: '/月（初月1円）', sub: '税別', color: 'from-cyan-500/20 to-transparent' },
+            { num: '¥999〜', label: '/月（初月1円）', sub: '税別', color: 'from-cyan-500/20 to-transparent' },
             { num: '100%', label: 'SEO自動化', sub: 'AI最適化', color: 'from-emerald-500/20 to-transparent' },
           ].map((stat, i) => (
             <div key={i} className={`relative bg-gradient-to-br ${stat.color} border border-white/10 rounded-2xl p-5 text-center backdrop-blur-sm hover:border-white/20 hover:-translate-y-1 transition-all duration-300 overflow-hidden`}>
@@ -405,44 +456,86 @@ export default function LaruHPLandingPage() {
 
       {/* Pricing */}
       <section id="pricing" className="py-16 md:py-24 px-6 border-t border-white/5">
-        <div className="max-w-3xl mx-auto text-center">
+        <div className="max-w-5xl mx-auto text-center">
           <span className="text-blue-500 font-bold text-xs tracking-[0.2em] uppercase">PRICING</span>
-          <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4">シンプルな料金</h2>
-          <p className="text-slate-400 text-lg mb-12">すべての機能が使えるプラン1つだけ。隠れたコストゼロ。</p>
+          <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4">料金プラン</h2>
+          <p className="text-slate-400 text-lg mb-4">全プラン 初月1円・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
+          <p className="text-slate-600 text-sm mb-12">クレジットカード決済 / Stripe安全決済</p>
 
-          <div className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent border border-blue-500/30 rounded-3xl p-10 relative overflow-hidden">
-            <div className="absolute top-5 right-5 bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-              初月1円
-            </div>
+          {/* 3-plan grid */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            {PLANS.map((plan) => (
+              <div
+                key={plan.id}
+                className={`relative rounded-3xl p-8 flex flex-col text-left transition-all duration-300 hover:-translate-y-1 ${
+                  plan.highlight
+                    ? 'border border-blue-500/50 bg-blue-500/5'
+                    : 'border border-white/10 bg-white/5'
+                }`}
+              >
+                {/* Badge */}
+                {plan.badge && (
+                  <div className={`absolute top-5 right-5 text-xs font-bold px-3 py-1 rounded-full ${
+                    plan.badge === 'おすすめ'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-amber-500 text-black'
+                  }`}>
+                    {plan.badge}
+                  </div>
+                )}
 
-            <div className="mb-2">
-              <span className="text-slate-500 text-2xl">¥</span>
-              <span className="text-7xl font-black">999</span>
-            </div>
-            <div className="text-slate-400 mb-2">/ 月（税別）</div>
-            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-sm text-slate-300 mb-10">
-              <span>最低契約期間 6ヶ月</span>
-              <span className="text-slate-600">|</span>
-              <span>7ヶ月目〜いつでも解約可</span>
-            </div>
+                {/* Plan name */}
+                <div className="text-xs font-bold text-slate-500 tracking-widest uppercase mb-3">{plan.id}</div>
+                <h3 className="text-xl font-black mb-4">{plan.name}</h3>
 
-            <ul className="text-left space-y-3 mb-10 max-w-md mx-auto">
-              {PLAN_FEATURES.map((item, i) => (
-                <li key={i} className="text-sm text-slate-300 flex items-center gap-3">
-                  <span className="text-emerald-400 text-base">✓</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
+                {/* Price */}
+                <div className="mb-1">
+                  <span className="text-slate-500 text-lg">¥</span>
+                  <span className="text-5xl font-black">{plan.price.toLocaleString()}</span>
+                </div>
+                <div className="text-slate-400 text-sm mb-1">/ 月（税別）</div>
+                <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full mb-6 self-start">
+                  初月1円
+                </div>
 
-            <Link href="/laruHP/onboarding" className="bg-white text-black font-black text-lg px-12 py-4 rounded-2xl hover:scale-105 transition-transform inline-block shadow-[0_0_40px_rgba(255,255,255,0.15)]">
-              初月1円で始める →
-            </Link>
-            <p className="text-slate-600 text-xs mt-4">クレジットカード決済 / Stripe安全決済 / 自動更新（7ヶ月目〜）</p>
+                {/* Features */}
+                <ul className="space-y-2.5 mb-8 flex-1">
+                  {plan.features.map((f, i) => (
+                    <li key={i} className="text-sm text-slate-300 flex items-start gap-2.5">
+                      <span className="text-emerald-400 font-bold mt-0.5 flex-shrink-0">✓</span>
+                      {f}
+                    </li>
+                  ))}
+                  {plan.missing.map((f, i) => (
+                    <li key={i} className="text-sm text-slate-600 flex items-start gap-2.5">
+                      <span className="mt-0.5 flex-shrink-0">−</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <Link
+                  href="/laruHP/onboarding"
+                  className={`text-center font-black py-3.5 rounded-2xl text-sm transition-all hover:scale-105 ${
+                    plan.highlight
+                      ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.15)]'
+                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+                  }`}
+                >
+                  初月1円で始める →
+                </Link>
+              </div>
+            ))}
           </div>
 
+          {/* Link to plans page */}
+          <Link href="/laruHP/plans" className="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors mb-12">
+            プランを詳しく比較する →
+          </Link>
+
           {/* Competitor comparison */}
-          <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="mt-4 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             <div className="grid grid-cols-4 text-xs border-b border-white/10">
               <div className="p-3 text-slate-500">サービス</div>
               <div className="p-3 text-slate-500 text-center">月額</div>

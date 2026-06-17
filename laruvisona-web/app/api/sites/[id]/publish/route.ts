@@ -66,6 +66,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
+  // Save version snapshot (fire-and-forget)
+  void supabase.from('site_versions').insert({
+    site_id: id,
+    label: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+    blocks_json: site.blocks_json,
+    seo_json: site.seo_json,
+    settings_json: site.settings_json,
+  });
+
   return NextResponse.json({
     success: true,
     slug: updated.slug,

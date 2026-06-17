@@ -4,45 +4,48 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function renderBlock(block: Block): string {
+function renderBlockInner(block: Block): string {
   const d = block.data;
   const str = (key: string) => escapeHtml(String(d[key] ?? ''));
   const raw = (key: string) => String(d[key] ?? '');
 
   switch (block.type) {
-    case 'hero':
+    case 'hero': {
+      const abVariant = raw('abVariant');
+      const abAttr = abVariant ? ` data-ab="${abVariant}"` : '';
       return `
-<section class="lhp-hero" style="background-color:${raw('bgColor')};color:${raw('textColor')};${raw('bgImage') ? `background-image:url(${raw('bgImage')});background-size:cover;background-position:center;` : ''}">
+<section data-lhp-anim class="lhp-hero"${abAttr} style="background-color:${raw('bgColor')};color:${raw('textColor')};${raw('bgImage') ? `background-image:url(${raw('bgImage')});background-size:cover;background-position:center;` : ''}">
   <div class="lhp-hero-inner">
     <h1>${str('heading')}</h1>
     <p class="lhp-hero-sub">${str('subheading')}</p>
     <a href="${raw('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
   </div>
 </section>`;
+    }
 
     case 'heading':
       return `
-<section class="lhp-section" style="text-align:${raw('align')}">
+<section data-lhp-anim class="lhp-section" style="text-align:${raw('align')}">
   <h2 class="lhp-section-title">${str('text')}</h2>
   ${d['subtext'] ? `<p class="lhp-section-sub">${str('subtext')}</p>` : ''}
 </section>`;
 
     case 'paragraph':
       return `
-<section class="lhp-section lhp-text-block" style="text-align:${raw('align')}">
+<section data-lhp-anim class="lhp-section lhp-text-block" style="text-align:${raw('align')}">
   <p>${str('text')}</p>
 </section>`;
 
     case 'image':
       return d['src'] ? `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <img src="${raw('src')}" alt="${str('alt')}" class="lhp-img" style="height:${raw('height')}px;object-fit:${raw('objectFit')}" />
   ${d['caption'] ? `<p class="lhp-img-caption">${str('caption')}</p>` : ''}
 </section>` : '';
 
     case 'two-col':
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <div class="lhp-two-col">
     <div class="lhp-col"><h3>${str('col1Title')}</h3><p>${str('col1Text')}</p></div>
     <div class="lhp-col"><h3>${str('col2Title')}</h3><p>${str('col2Text')}</p></div>
@@ -51,7 +54,7 @@ function renderBlock(block: Block): string {
 
     case 'three-col':
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <div class="lhp-three-col">
     ${[1,2,3].map(n => `<div class="lhp-col lhp-col-card"><div class="lhp-col-icon">${raw(`col${n}Icon`)}</div><h3>${str(`col${n}Title`)}</h3><p>${str(`col${n}Text`)}</p></div>`).join('')}
   </div>
@@ -66,7 +69,7 @@ function renderBlock(block: Block): string {
 
     case 'cta':
       return `
-<section class="lhp-cta" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
+<section data-lhp-anim class="lhp-cta" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
   <h2>${str('heading')}</h2>
   <p>${str('subtext')}</p>
   <a href="${raw('buttonLink')}" class="lhp-btn-cta">${str('buttonText')}</a>
@@ -76,7 +79,7 @@ function renderBlock(block: Block): string {
       const items = (d['items'] as Array<{icon:string;title:string;description:string;price:string}>) ?? [];
       const cols = d['columns'] === '2' ? 2 : 3;
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   ${d['subtext'] ? `<p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>` : ''}
   <div class="lhp-grid lhp-grid-${cols}">
@@ -94,7 +97,7 @@ function renderBlock(block: Block): string {
     case 'testimonials': {
       const items = (d['items'] as Array<{name:string;age:string;rating:number;text:string}>) ?? [];
       return `
-<section class="lhp-section lhp-testimonials-bg">
+<section data-lhp-anim class="lhp-section lhp-testimonials-bg">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <div class="lhp-grid lhp-grid-3">
     ${items.map(t => `
@@ -110,7 +113,7 @@ function renderBlock(block: Block): string {
     case 'faq': {
       const items = (d['items'] as Array<{q:string;a:string}>) ?? [];
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title">${str('heading')}</h2>
   <div class="lhp-faq">
     ${items.map(item => `
@@ -122,9 +125,97 @@ function renderBlock(block: Block): string {
 </section>`;
     }
 
-    case 'contact':
+    case 'contact': {
+      const extraFields = (d['extraFields'] as string[]) || [];
+      const extraFieldsHtml = extraFields.map(f => {
+        if (f === 'company') return `<input type="text" name="company" placeholder="会社名" />`;
+        if (f === 'date') return `<input type="datetime-local" name="date" />`;
+        if (f === 'budget') return `<select name="budget"><option value="">ご予算を選択</option><option>〜5万円</option><option>5〜10万円</option><option>10〜30万円</option><option>30万円以上</option></select>`;
+        if (f === 'prefer_contact') return `<select name="prefer_contact"><option value="">ご連絡方法</option><option value="email">メール</option><option value="phone">電話</option></select>`;
+        return '';
+      }).join('\n    ');
+      const btnColor = raw('buttonColor') || '#1e3a8a';
+      const btnText = str('buttonText') || '送信する';
+
+      if (d['multiStep']) {
+        return `
+<section data-lhp-anim class="lhp-contact" id="contact" style="background-color:${raw('bgColor')}">
+  <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
+  <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
+  <div class="lhp-mform" id="lhp-mform">
+    <div class="lhp-mform-steps">
+      <div class="lhp-mform-dot active" id="lhp-mdot-1">1</div>
+      <div class="lhp-mform-line" id="lhp-mline-1"></div>
+      <div class="lhp-mform-dot" id="lhp-mdot-2">2</div>
+      <div class="lhp-mform-line" id="lhp-mline-2"></div>
+      <div class="lhp-mform-dot" id="lhp-mdot-3">確認</div>
+    </div>
+    <div id="lhp-mstep-1" class="lhp-mstep">
+      <p class="lhp-mstep-label">STEP 1 — お客様情報</p>
+      <div class="lhp-form">
+        <div class="lhp-form-row">
+          <input type="text" id="lhp-mf-name" placeholder="お名前 *" required />
+          <input type="email" id="lhp-mf-email" placeholder="メールアドレス *" required />
+        </div>
+        <button type="button" onclick="lhpMNext(1)" style="background:${btnColor}" class="lhp-mform-btn">次へ →</button>
+      </div>
+    </div>
+    <div id="lhp-mstep-2" class="lhp-mstep" style="display:none">
+      <p class="lhp-mstep-label">STEP 2 — お問い合わせ内容</p>
+      <div class="lhp-form">
+        <input type="tel" id="lhp-mf-phone" placeholder="電話番号" />
+        ${extraFieldsHtml.replace(/name="/g, 'id="lhp-mf-').replace(/name="/g, 'id="lhp-mf-')}
+        <textarea id="lhp-mf-message" placeholder="メッセージ *" rows="4" required></textarea>
+        <div class="lhp-form-row">
+          <button type="button" onclick="lhpMBack(2)" class="lhp-mform-btn lhp-mform-btn-back">← 戻る</button>
+          <button type="button" onclick="lhpMNext(2)" style="background:${btnColor}" class="lhp-mform-btn">確認画面へ →</button>
+        </div>
+      </div>
+    </div>
+    <div id="lhp-mstep-3" class="lhp-mstep" style="display:none">
+      <p class="lhp-mstep-label">STEP 3 — 送信確認</p>
+      <div class="lhp-mform-confirm" id="lhp-mconfirm"></div>
+      <div class="lhp-form">
+        <div class="lhp-form-row">
+          <button type="button" onclick="lhpMBack(3)" class="lhp-mform-btn lhp-mform-btn-back">← 戻る</button>
+          <button type="button" onclick="lhpMSubmit()" id="lhp-mbtn-submit" style="background:${btnColor}" class="lhp-mform-btn">${btnText}</button>
+        </div>
+        <p class="lhp-form-note" id="lhp-mnote"></p>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(function(){
+  function v(id){return (document.getElementById(id)||{}).value||'';}
+  function show(step){[1,2,3].forEach(function(s){var el=document.getElementById('lhp-mstep-'+s);if(el)el.style.display=s===step?'block':'none';document.getElementById('lhp-mdot-'+s)?.classList.toggle('active',s<=step);document.getElementById('lhp-mline-'+s)?.classList.toggle('active',s<step);});}
+  window.lhpMNext=function(step){
+    if(step===1){if(!v('lhp-mf-name')||!v('lhp-mf-email')){alert('お名前とメールアドレスを入力してください');return;}show(2);}
+    if(step===2){if(!v('lhp-mf-message')){alert('メッセージを入力してください');return;}
+      var html='<table class="lhp-mconfirm-table"><tbody>';
+      [['お名前',v('lhp-mf-name')],['メール',v('lhp-mf-email')],['電話',v('lhp-mf-phone')],['メッセージ',v('lhp-mf-message')]].forEach(function(r){if(r[1])html+='<tr><th>'+r[0]+'</th><td>'+r[1]+'</td></tr>';});
+      html+='</tbody></table>';
+      document.getElementById('lhp-mconfirm').innerHTML=html;
+      show(3);}
+  };
+  window.lhpMBack=function(step){show(step-1);};
+  window.lhpMSubmit=async function(){
+    var btn=document.getElementById('lhp-mbtn-submit');
+    var note=document.getElementById('lhp-mnote');
+    btn.textContent='送信中...';btn.disabled=true;
+    try{
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:v('lhp-mf-name'),email:v('lhp-mf-email'),phone:v('lhp-mf-phone'),message:v('lhp-mf-message')})});
+      var res=await r.json();
+      if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">✅ 送信完了！2営業日以内にご連絡いたします。</div>';}
+      else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+    }catch(e){btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+  };
+})();
+</script>`;
+      }
+
       return `
-<section class="lhp-contact" id="contact" style="background-color:${raw('bgColor')}">
+<section data-lhp-anim class="lhp-contact" id="contact" style="background-color:${raw('bgColor')}">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
   <form class="lhp-form" id="lhp-form-contact">
@@ -133,8 +224,10 @@ function renderBlock(block: Block): string {
       <input type="email" name="email" placeholder="メールアドレス" required />
     </div>
     <input type="tel" name="phone" placeholder="電話番号" />
+    ${extraFieldsHtml}
     <textarea name="message" placeholder="お問い合わせ内容" rows="5" required></textarea>
-    <button type="submit" id="lhp-btn-contact" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
+    <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
+    <button type="submit" id="lhp-btn-contact" style="background-color:${btnColor}">${btnText}</button>
     <p class="lhp-form-note" id="lhp-note-contact"></p>
   </form>
 </section>
@@ -144,23 +237,25 @@ function renderBlock(block: Block): string {
   if(!f)return;
   f.addEventListener('submit',async function(e){
     e.preventDefault();
+    if(f._hp&&f._hp.value)return;
     var btn=document.getElementById('lhp-btn-contact');
     var note=document.getElementById('lhp-note-contact');
     btn.textContent='送信中...';btn.disabled=true;
     try{
-      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:f.name.value,email:f.email.value,phone:f.phone.value,message:f.message.value})});
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:f.name.value,email:f.email.value,phone:f.phone?.value||'',message:f.message.value})});
       var d=await r.json();
       if(d.ok){f.innerHTML='<div class="lhp-form-success">✅ 送信完了！2営業日以内にご連絡いたします。</div>';}
-      else{btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。再度お試しください。';}
-    }catch(err){btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+      else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。再度お試しください。';}
+    }catch(err){btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
   });
 })();
 </script>`;
+    }
 
     case 'hours': {
       const schedule = (d['schedule'] as Array<{day:string;hours:string;closed:boolean}>) ?? [];
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title">${str('heading')}</h2>
   <table class="lhp-hours">
     <tbody>
@@ -181,7 +276,7 @@ function renderBlock(block: Block): string {
       const validImages = images.filter(Boolean);
       if (!validImages.length) return '';
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <div class="lhp-gallery lhp-gallery-${cols}">
     ${validImages.map(src => `<img src="${src}" alt="ギャラリー" class="lhp-gallery-img" />`).join('')}
@@ -210,7 +305,7 @@ function renderBlock(block: Block): string {
         ? `https://www.youtube.com/embed/${ytMatch[1]}`
         : vmMatch ? `https://player.vimeo.com/video/${vmMatch[1]}` : url;
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   ${d['heading'] ? `<h2 class="lhp-section-title">${str('heading')}</h2>` : ''}
   <div class="lhp-video-wrap" style="aspect-ratio:${raw('aspectRatio') || '16/9'}">
     <iframe src="${embedUrl}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>
@@ -221,14 +316,14 @@ function renderBlock(block: Block): string {
     case 'map':
       if (!d['embedUrl']) return '';
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   ${d['heading'] ? `<h2 class="lhp-section-title">${str('heading')}</h2>` : ''}
   <iframe src="${raw('embedUrl')}" class="lhp-map" style="height:${raw('height') || 400}px" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
 </section>`;
 
     case 'countdown':
       return `
-<section class="lhp-countdown" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
+<section data-lhp-anim class="lhp-countdown" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
   <h2>${str('heading')}</h2>
   <p>${str('subtext')}</p>
   <div class="lhp-countdown-timer" data-target="${raw('targetDate')}">
@@ -257,7 +352,7 @@ function renderBlock(block: Block): string {
       type PricePlan = { name:string; price:string; period:string; description:string; features:string[]; highlighted:boolean; buttonText:string; buttonLink:string };
       const plans = (d['plans'] as PricePlan[]) ?? [];
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   ${d['subtext'] ? `<p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>` : ''}
   <div class="lhp-price-grid">
@@ -278,7 +373,7 @@ function renderBlock(block: Block): string {
 
     case 'booking':
       return `
-<section class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
+<section data-lhp-anim class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
   <form class="lhp-form" id="lhp-form-booking">
@@ -305,6 +400,7 @@ function renderBlock(block: Block): string {
       <input type="tel" placeholder="電話番号" />
     </div>
     <input type="email" placeholder="メールアドレス" />
+    <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
     <button type="submit" id="lhp-btn-booking" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
     <p class="lhp-form-note" id="lhp-note-booking"></p>
   </form>
@@ -315,6 +411,7 @@ function renderBlock(block: Block): string {
   if(!f)return;
   f.addEventListener('submit',async function(e){
     e.preventDefault();
+    if(f._hp&&f._hp.value)return;
     var btn=document.getElementById('lhp-btn-booking');
     var note=document.getElementById('lhp-note-booking');
     btn.textContent='送信中...';btn.disabled=true;
@@ -332,17 +429,136 @@ function renderBlock(block: Block): string {
 </script>`;
 
     case 'news': {
-      type NewsItem = { date:string; tag:string; title:string };
-      const items = (d['items'] as NewsItem[]) ?? [];
+      const blockId = block.id;
       return `
-<section class="lhp-section">
+<section data-lhp-anim class="lhp-section" id="lhp-news-${blockId}">
   <h2 class="lhp-section-title">${str('heading')}</h2>
-  <div class="lhp-news">
-    ${items.map(item => `
-    <div class="lhp-news-item">
-      <span class="lhp-news-date">${escapeHtml(item.date)}</span>
-      <span class="lhp-news-tag">${escapeHtml(item.tag)}</span>
-      <span class="lhp-news-title">${escapeHtml(item.title)}</span>
+  <div class="lhp-news" id="lhp-news-list-${blockId}"><div class="lhp-news-loading">読み込み中...</div></div>
+</section>
+<script>
+(function(){
+  var sid=window.__LHPSID;
+  if(!sid)return;
+  fetch('/api/sites/'+sid+'/posts').then(function(r){return r.json();}).then(function(data){
+    var list=document.getElementById('lhp-news-list-${blockId}');
+    if(!list)return;
+    var posts=data.posts||[];
+    if(!posts.length){list.innerHTML='<p style="color:#9ca3af;font-size:.9rem;text-align:center;padding:24px">投稿がありません</p>';return;}
+    list.innerHTML=posts.map(function(p){
+      var d=new Date(p.published_at);
+      var ds=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');
+      return '<div class="lhp-news-item">'+(p.category?'<span class="lhp-news-tag">'+p.category+'</span>':'')+'<span class="lhp-news-date">'+ds+'</span><span class="lhp-news-title">'+p.title+'</span></div>';
+    }).join('');
+  }).catch(function(){});
+})();
+</script>`;
+    }
+
+    case 'popup': {
+      const trigger = raw('trigger');
+      const delay = raw('delay') || '3';
+      const triggerJs = trigger === 'scroll'
+        ? `window.addEventListener('scroll',function h(){if(window.scrollY>document.body.scrollHeight*0.5){show();window.removeEventListener('scroll',h);}});`
+        : trigger === 'exit'
+        ? `document.addEventListener('mouseleave',function h(e){if(e.clientY<0){show();document.removeEventListener('mouseleave',h);}});`
+        : `setTimeout(show,${Number(delay)*1000});`;
+      return `
+<div id="lhp-popup-overlay" style="display:none;position:fixed;inset:0;background:${raw('overlayColor')||'rgba(0,0,0,0.6)'};z-index:9990;align-items:center;justify-content:center;">
+  <div style="background:${raw('bgColor')};color:${raw('textColor')};max-width:480px;width:90%;border-radius:20px;padding:40px 32px;position:relative;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <button onclick="document.getElementById('lhp-popup-overlay').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:${raw('textColor')};font-size:1.25rem;cursor:pointer;opacity:.7">✕</button>
+    <h2 style="font-size:1.4rem;font-weight:900;margin-bottom:12px">${str('heading')}</h2>
+    <p style="opacity:.85;margin-bottom:28px;line-height:1.6">${str('text')}</p>
+    <a href="${raw('buttonLink')}" style="display:inline-block;background:${raw('buttonColor')||'#fff'};color:${raw('buttonTextColor')||'#111'};padding:14px 40px;border-radius:9999px;font-weight:700;text-decoration:none;font-size:1rem">${str('buttonText')}</a>
+  </div>
+</div>
+<script>
+(function(){
+  function show(){var o=document.getElementById('lhp-popup-overlay');if(o&&!sessionStorage.getItem('lhp-popup-shown')){o.style.display='flex';sessionStorage.setItem('lhp-popup-shown','1');}}
+  ${triggerJs}
+  document.getElementById('lhp-popup-overlay').addEventListener('click',function(e){if(e.target===this)this.style.display='none';});
+})();
+</script>`;
+    }
+
+    case 'newsletter':
+      return `
+<section data-lhp-anim class="lhp-section lhp-newsletter" style="background:${raw('bgColor')};text-align:center">
+  <h2 class="lhp-section-title">${str('heading')}</h2>
+  ${d['subtext'] ? `<p class="lhp-section-sub">${str('subtext')}</p>` : ''}
+  <form class="lhp-nl-form" id="lhp-form-nl">
+    <input type="email" name="email" placeholder="${str('placeholder') || 'メールアドレスを入力'}" required />
+    <button type="submit" style="background:${raw('buttonColor')}">${str('buttonText')}</button>
+    <p class="lhp-form-note" id="lhp-note-nl"></p>
+  </form>
+</section>
+<script>
+(function(){
+  var f=document.getElementById('lhp-form-nl');if(!f)return;
+  f.addEventListener('submit',async function(e){
+    e.preventDefault();
+    var btn=f.querySelector('button');var note=document.getElementById('lhp-note-nl');
+    btn.textContent='送信中...';btn.disabled=true;
+    try{
+      var r=await fetch('/api/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',email:f.email.value})});
+      var d=await r.json();
+      if(d.ok){f.innerHTML='<div class="lhp-form-success">✅ 登録完了！メールをご確認ください。</div>';}
+      else{btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent=d.error||'エラーが発生しました。';}
+    }catch(err){btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+  });
+})();
+</script>`;
+
+    case 'share': {
+      const pageUrl = 'window.location.href';
+      const pageTitle = 'document.title';
+      const buttons: string[] = [];
+      if (d['showLine'] !== false) buttons.push(`<a href="#" onclick="window.open('https://social-plugins.line.me/lineit/share?url='+encodeURIComponent(${pageUrl}),'_blank');return false;" class="lhp-share-btn lhp-share-line">LINE</a>`);
+      if (d['showTwitter'] !== false) buttons.push(`<a href="#" onclick="window.open('https://twitter.com/intent/tweet?url='+encodeURIComponent(${pageUrl})+'&text='+encodeURIComponent(${pageTitle}),'_blank');return false;" class="lhp-share-btn lhp-share-tw">X (Twitter)</a>`);
+      if (d['showFacebook'] !== false) buttons.push(`<a href="#" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(${pageUrl}),'_blank');return false;" class="lhp-share-btn lhp-share-fb">Facebook</a>`);
+      return `
+<section data-lhp-anim class="lhp-section" style="background:${raw('bgColor') || '#ffffff'}">
+  ${d['heading'] ? `<h3 class="lhp-section-title" style="margin-bottom:1.5rem">${str('heading')}</h3>` : ''}
+  <div class="lhp-share-row">${buttons.join('')}</div>
+</section>`;
+    }
+
+    case 'stripe-buy':
+      return d['priceId'] ? `
+<section data-lhp-anim class="lhp-section" style="text-align:center">
+  <div class="lhp-buy-card">
+    ${d['label'] ? `<h3 class="lhp-buy-label">${str('label')}</h3>` : ''}
+    ${d['description'] ? `<p class="lhp-buy-desc">${str('description')}</p>` : ''}
+    <button id="lhp-buy-${str('priceId')}" class="lhp-btn-primary" style="background:${raw('buttonColor') || '#1e3a8a'}" onclick="lhpBuy(this,'${str('priceId')}')">${str('buttonText') || '今すぐ購入'}</button>
+  </div>
+</section>
+<script>
+async function lhpBuy(btn, priceId) {
+  btn.disabled=true; btn.textContent='処理中...';
+  try {
+    var r=await fetch('/api/stripe/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({priceId:priceId,siteUrl:window.location.href})});
+    var d=await r.json();
+    if(d.url) window.location.href=d.url;
+    else { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; alert('エラーが発生しました'); }
+  } catch(e) { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; }
+}
+</script>` : '';
+
+    case 'google-reviews': {
+      type Review = { author_name: string; rating: number; text: string; relative_time_description: string };
+      const reviews = ((d['reviews'] as Review[]) || []).slice(0, Number(d['maxReviews']) || 3);
+      const rating = Number(d['rating'] || 0).toFixed(1);
+      const totalRatings = d['totalRatings'] ? `（${d['totalRatings']}件）` : '';
+      const stars = (r: number) => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r));
+      return `
+<section data-lhp-anim class="lhp-section lhp-reviews">
+  <h2 class="lhp-section-title">${str('heading')}</h2>
+  ${d['rating'] ? `<div class="lhp-reviews-summary"><span class="lhp-reviews-score">${rating}</span><span class="lhp-reviews-stars">${stars(Number(d['rating']))}</span><span class="lhp-reviews-count">${totalRatings}</span></div>` : ''}
+  <div class="lhp-reviews-grid">
+    ${reviews.map(r => `
+    <div class="lhp-review-card">
+      <div class="lhp-review-stars">${stars(r.rating)}</div>
+      <p class="lhp-review-text">${escapeHtml(r.text)}</p>
+      <div class="lhp-review-author">${escapeHtml(r.author_name)} <span>${escapeHtml(r.relative_time_description)}</span></div>
     </div>`).join('')}
   </div>
 </section>`;
@@ -353,9 +569,20 @@ function renderBlock(block: Block): string {
   }
 }
 
+function renderBlock(block: Block): string {
+  const html = renderBlockInner(block);
+  if (!html) return '';
+  const d = block.data;
+  const classes = [
+    d['hideOnMobile'] ? 'lhp-hide-mobile' : '',
+    d['hideOnDesktop'] ? 'lhp-hide-desktop' : '',
+  ].filter(Boolean).join(' ');
+  return classes ? `<div class="${classes}">${html}</div>` : html;
+}
+
 const CSS = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans JP',sans-serif;color:#111;line-height:1.6}
+body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;line-height:1.6}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
 .lhp-navbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -476,6 +703,43 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-news-tag{font-size:.7rem;font-weight:700;background:#eff6ff;color:#2563eb;padding:2px 10px;border-radius:9999px;white-space:nowrap;flex-shrink:0}
 .lhp-news-title{font-size:.9rem;font-weight:600;color:#111;line-height:1.5;flex:1;min-width:200px}
 .lhp-form-success{text-align:center;padding:40px 24px;color:#16a34a;font-weight:700;font-size:1.1rem;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0}
+.lhp-share-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.lhp-share-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:9999px;font-size:.85rem;font-weight:700;text-decoration:none;transition:opacity .2s}
+.lhp-share-btn:hover{opacity:.8}
+.lhp-share-line{background:#06c755;color:#fff}
+.lhp-share-tw{background:#000;color:#fff}
+.lhp-share-fb{background:#1877f2;color:#fff}
+.lhp-buy-card{max-width:480px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:32px;text-align:center}
+.lhp-buy-label{font-size:1.4rem;font-weight:900;margin-bottom:8px;color:#111}
+.lhp-buy-desc{font-size:.9rem;color:#6b7280;margin-bottom:24px}
+.lhp-news-loading{color:#9ca3af;font-size:.9rem;padding:24px;text-align:center}
+.lhp-mform{max-width:560px;margin:40px auto 0}
+.lhp-mform-steps{display:flex;align-items:center;margin-bottom:32px;gap:0}
+.lhp-mform-dot{width:32px;height:32px;border-radius:50%;background:#e5e7eb;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;transition:all .3s}
+.lhp-mform-dot.active{background:#2563eb;color:#fff}
+.lhp-mform-line{flex:1;height:2px;background:#e5e7eb;transition:background .3s}
+.lhp-mform-line.active{background:#2563eb}
+.lhp-mstep-label{font-size:.8rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:20px}
+.lhp-mform-btn{width:100%;padding:14px;border:none;border-radius:12px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}
+.lhp-mform-btn:hover{opacity:.85}
+.lhp-mform-btn-back{background:#f3f4f6!important;color:#374151!important}
+.lhp-mform-confirm{background:#f9fafb;border-radius:12px;padding:20px;margin-bottom:20px}
+.lhp-mconfirm-table{width:100%;border-collapse:collapse}
+.lhp-mconfirm-table th{width:8rem;text-align:left;font-size:.85rem;color:#6b7280;font-weight:600;padding:8px 0;border-bottom:1px solid #e5e7eb;vertical-align:top}
+.lhp-mconfirm-table td{font-size:.9rem;color:#111;padding:8px 0;border-bottom:1px solid #e5e7eb;white-space:pre-line}
+.lhp-reviews-summary{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.lhp-reviews-score{font-size:2.5rem;font-weight:900;color:#111;line-height:1}
+.lhp-reviews-stars{color:#f59e0b;font-size:1.3rem}
+.lhp-reviews-count{color:#9ca3af;font-size:.9rem}
+.lhp-reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px}
+@media(max-width:768px){.lhp-reviews-grid{grid-template-columns:1fr}}
+.lhp-review-card{background:#f9fafb;border-radius:12px;padding:20px}
+.lhp-review-stars{color:#f59e0b;font-size:.95rem;margin-bottom:8px}
+.lhp-review-text{color:#444;font-size:.875rem;line-height:1.6;margin-bottom:12px}
+.lhp-review-author{font-size:.8rem;font-weight:700;color:#111}
+.lhp-review-author span{font-weight:400;color:#9ca3af;margin-left:6px}
+@media(max-width:600px){.lhp-hide-mobile{display:none!important}}
+@media(min-width:601px){.lhp-hide-desktop{display:none!important}}
 @media(max-width:768px){
   .lhp-hero{min-height:300px;padding:56px 20px}
   .lhp-hero h1{font-size:clamp(1.6rem,7vw,3rem)}
@@ -588,6 +852,25 @@ window.addEventListener('popstate',function(){
     ? `<script>window.__LHPSID='${businessInfo.siteId}';</script>`
     : '';
 
+  // Dynamic OGP image via /api/og
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.com';
+  const ogImageUrl = `${appUrl}/api/og?title=${encodeURIComponent(title.slice(0, 40))}&desc=${encodeURIComponent(desc.slice(0, 60))}${businessInfo?.industry ? `&industry=${businessInfo.industry}` : ''}`;
+
+  // A/B test: detect if any page has both A and B hero variants
+  const hasABTest = pages.some(p =>
+    p.blocks.some(b => b.type === 'hero' && b.data.abVariant === 'b')
+  );
+  const abScript = hasABTest ? `<script>
+(function(){
+  var k='laru_ab_'+(window.__LHPSID||'x');
+  var v=sessionStorage.getItem(k);
+  if(!v){v=Math.random()<0.5?'a':'b';sessionStorage.setItem(k,v);}
+  document.querySelectorAll('[data-ab]').forEach(function(el){
+    if(el.getAttribute('data-ab')!==v)el.style.display='none';
+  });
+})();
+</script>` : '';
+
   const schemaType = businessInfo?.industry === 'restaurant' ? 'Restaurant'
     : businessInfo?.industry === 'beauty' ? 'BeautySalon'
     : businessInfo?.industry === 'clinic' ? 'MedicalClinic'
@@ -609,19 +892,42 @@ window.addEventListener('popstate',function(){
     url: '',
   };
 
-  const laruBotScript = settings.larubot ? `
-<script>
-(function(){
-  var b=document.createElement('div');
-  b.style='position:fixed;bottom:24px;right:24px;z-index:9999;cursor:pointer;';
-  b.innerHTML='<div style="width:56px;height:56px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 20px rgba(0,0,0,.25);" title="LARUbot チャット">🤖</div>';
-  document.body.appendChild(b);
-})();
-</script>` : '';
+  const laruBotScript = (settings.larubot && settings.larubotPublicId)
+    ? `<script src="https://larubot.tokyo/static/embed.js" data-public-id="${settings.larubotPublicId}" defer></script>`
+    : '';
+
+  const laruSeoScript = (settings.laruseo && settings.laruseoPublicId)
+    ? `<script src="https://larubot.tokyo/embed/blog.js" data-id="${settings.laruseoPublicId}" data-limit="6" defer></script>`
+    : '';
 
   const gaScript = settings.gaTrackingId ? `
 <script async src="https://www.googletagmanager.com/gtag/js?id=${settings.gaTrackingId}"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${settings.gaTrackingId}');</script>` : '';
+
+  // Font selection
+  const FONT_MAP: Record<string, { url: string; family: string }> = {
+    'noto':     { url: 'Noto+Sans+JP:wght@400;500;700;900', family: "'Noto Sans JP'" },
+    'zen':      { url: 'Zen+Kaku+Gothic+New:wght@400;500;700;900', family: "'Zen Kaku Gothic New'" },
+    'mincho':   { url: 'Shippori+Mincho:wght@400;500;700;800', family: "'Shippori Mincho'" },
+    'rounded':  { url: 'M+PLUS+Rounded+1c:wght@400;500;700;900', family: "'M PLUS Rounded 1c'" },
+    'biz':      { url: 'BIZ+UDPGothic:wght@400;700', family: "'BIZ UDPGothic'" },
+    'kaisei':   { url: 'Kaisei+Opti:wght@400;500;700;800', family: "'Kaisei Opti'" },
+  };
+  const fontKey = settings.fontFamily || 'noto';
+  const font = FONT_MAP[fontKey] || FONT_MAP['noto'];
+  const fontCss = `body,input,textarea,select,button{font-family:${font.family},-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}`;
+
+  // Scroll animation script
+  const animScript = `<script>
+(function(){
+  var els=document.querySelectorAll('[data-lhp-anim]');
+  if(!els.length)return;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lhp-visible');io.unobserve(e.target);}});
+  },{threshold:0.08});
+  els.forEach(function(el){io.observe(el);});
+})();
+</script>`;
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -633,18 +939,64 @@ window.addEventListener('popstate',function(){
 ${seo.keywords ? `<meta name="keywords" content="${escapeHtml(seo.keywords)}">` : ''}
 <meta property="og:title" content="${escapeHtml(seo.ogTitle || title)}">
 <meta property="og:description" content="${escapeHtml(seo.ogDescription || desc)}">
+<meta property="og:image" content="${escapeHtml(seo.ogImage || ogImageUrl)}">
 <meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(seo.ogTitle || title)}">
+<meta name="twitter:description" content="${escapeHtml(seo.ogDescription || desc)}">
+<meta name="twitter:image" content="${escapeHtml(seo.ogImage || ogImageUrl)}">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="">
 <script type="application/ld+json">${JSON.stringify(schema)}</script>
 ${siteIdScript}
+${abScript}
 ${gaScript}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=${font.url}&display=swap" rel="stylesheet">
 <style>${CSS}</style>
+<style>${fontCss}
+[data-lhp-anim]{opacity:0;transform:translateY(24px);transition:opacity .55s ease,transform .55s ease}
+[data-lhp-anim].lhp-visible{opacity:1;transform:none}
+</style>
+${settings.customCss ? `<style>${settings.customCss}</style>` : ''}
 </head>
 <body>
 ${navBar}
 ${pagesHtml}
 ${laruBotScript}
+${laruSeoScript}
+${animScript}
+<div id="lhp-cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e293b;border-top:1px solid rgba(255,255,255,0.1);padding:14px 20px;font-family:inherit">
+  <div style="max-width:800px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <p style="margin:0;font-size:13px;color:#cbd5e1;flex:1;min-width:240px">
+      このサイトはCookieを使用してユーザー体験を向上させています。続けることで同意したとみなします。
+      <a href="/privacy" style="color:#60a5fa;text-decoration:underline;margin-left:4px">プライバシーポリシー</a>
+    </p>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button id="lhp-cookie-reject" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#94a3b8;font-size:13px;cursor:pointer;font-family:inherit">拒否</button>
+      <button id="lhp-cookie-accept" style="padding:8px 20px;border-radius:8px;border:none;background:#3b82f6;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">同意する</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var KEY='lhp_cookie_consent';
+  if(!localStorage.getItem(KEY)){
+    var b=document.getElementById('lhp-cookie-banner');
+    if(b)b.style.display='block';
+  }
+  function dismiss(val){
+    localStorage.setItem(KEY,val);
+    var b=document.getElementById('lhp-cookie-banner');
+    if(b)b.style.display='none';
+  }
+  var acc=document.getElementById('lhp-cookie-accept');
+  var rej=document.getElementById('lhp-cookie-reject');
+  if(acc)acc.addEventListener('click',function(){dismiss('accepted');});
+  if(rej)rej.addEventListener('click',function(){dismiss('rejected');});
+})();
+</script>
 </body>
 </html>`;
 }
