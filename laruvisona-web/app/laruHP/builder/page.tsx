@@ -2468,11 +2468,11 @@ function BuilderContent() {
             const rawBlocks = s.blocks_json;
             let pages: Page[];
             if (Array.isArray(rawBlocks)) {
-              pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: rawBlocks, seo: s.seo_json || emptySeo }];
+              pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: rawBlocks, seo: { ...emptySeo, ...(s.seo_json || {}) } }];
             } else if (rawBlocks?.v === 2 && rawBlocks.pages) {
               pages = rawBlocks.pages;
             } else {
-              pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: [], seo: s.seo_json || emptySeo }];
+              pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: [], seo: { ...emptySeo, ...(s.seo_json || {}) } }];
             }
             setSite({
               siteName: s.name,

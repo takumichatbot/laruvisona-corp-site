@@ -323,13 +323,18 @@ export default function DashboardPage() {
   };
 
   const handleNewSite = async () => {
-    const res = await fetch('/api/sites', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: '新しいサイト' }),
-    });
-    const data = await res.json();
-    if (data.site) router.push(`/laruHP/builder?siteId=${data.site.id}`);
+    try {
+      const res = await fetch('/api/sites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '新しいサイト', seo_json: { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' } }),
+      });
+      const data = await res.json();
+      if (data.site) router.push(`/laruHP/builder?siteId=${data.site.id}`);
+      else alert(data.error || 'サイトの作成に失敗しました');
+    } catch {
+      alert('サイトの作成に失敗しました。もう一度お試しください。');
+    }
   };
 
   const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && userEmail === process.env.NEXT_PUBLIC_ADMIN_EMAIL;

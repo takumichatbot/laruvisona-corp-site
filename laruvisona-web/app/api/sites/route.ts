@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       slug,
       industry: industry || null,
       blocks_json: blocks_json || [],
-      seo_json: seo_json || {},
+      seo_json: seo_json || { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' },
       settings_json: settings_json || {},
     })
     .select()
