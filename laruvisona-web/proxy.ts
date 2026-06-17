@@ -4,7 +4,38 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PROTECTED = ['/laruHP/dashboard', '/laruHP/builder'];
 const AUTH_PAGES = ['/laruHP/auth/login', '/laruHP/auth/signup'];
 
+const MAIN_HOST = (process.env.NEXT_PUBLIC_APP_URL || '')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/$/, '');
+
 export async function proxy(request: NextRequest) {
+  const hostname = (request.headers.get('host') || '').split(':')[0];
+  const pathname = request.nextUrl.pathname;
+
+  // Custom domain routing: rewrite non-system hostnames to /hp/by-domain/[domain]
+  if (
+    !pathname.startsWith('/_next') &&
+    !pathname.startsWith('/api') &&
+    !pathname.startsWith('/hp') &&
+    !pathname.startsWith('/laruHP') &&
+    pathname !== '/favicon.ico'
+  ) {
+    const isSystemHost =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.endsWith('.vercel.app') ||
+      hostname.endsWith('.onrender.com') ||
+      hostname.endsWith('.local') ||
+      (MAIN_HOST && (hostname === MAIN_HOST || hostname === `www.${MAIN_HOST}`));
+
+    if (!isSystemHost && hostname) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/hp/by-domain/${hostname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  // Auth session handling for laruHP routes
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -25,7 +56,6 @@ export async function proxy(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const { pathname } = request.nextUrl;
 
   // Redirect unauthenticated users away from protected pages
   const isProtected = PROTECTED.some(p => pathname.startsWith(p));
@@ -45,5 +75,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/laruHP/dashboard/:path*', '/laruHP/builder/:path*', '/laruHP/auth/:path*'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico).*)'],
 };
