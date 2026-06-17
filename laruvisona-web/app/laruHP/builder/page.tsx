@@ -2968,7 +2968,7 @@ function BuilderContent() {
   }
 
   return (
-    <div className="h-screen bg-[#030712] text-white flex flex-col overflow-hidden">
+    <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100dvh' }}>
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-[#0f172a] border-b border-white/10 flex-shrink-0 z-30">
         <div className="flex items-center gap-2 min-w-0">
@@ -3121,7 +3121,7 @@ function BuilderContent() {
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex overflow-hidden" style={{ minHeight: 0 }}>
         {/* Left Panel - Block Palette */}
         {!preview && (
           <div className="w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0 min-h-0">
@@ -3147,11 +3147,10 @@ function BuilderContent() {
         )}
 
         {/* Canvas */}
-        <div className="flex-1 relative">
-          <div
-            className="builder-canvas absolute inset-0 overflow-y-auto bg-[#e8eaed]"
-            style={{ overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
-          >
+        <div
+          className="builder-canvas bg-[#e8eaed]"
+          style={{ flex: '1 1 0', minWidth: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
+        >
           <div className={`${preview ? 'flex flex-col items-center py-8 px-6' : 'py-8 px-6'}`}>
             <div className={`bg-white mx-auto transition-all duration-300 ${preview
               ? previewDevice === 'mobile'
@@ -3214,7 +3213,6 @@ function BuilderContent() {
                 </div>
               )}
             </div>
-          </div>
           </div>
         </div>
 
