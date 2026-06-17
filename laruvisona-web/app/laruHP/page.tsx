@@ -3,69 +3,29 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 const INDUSTRIES = [
-  { emoji: '🍜', name: '飲食店・カフェ', id: 'restaurant' },
-  { emoji: '💇', name: '美容室・サロン', id: 'beauty' },
-  { emoji: '💊', name: '整体・クリニック', id: 'clinic' },
-  { emoji: '⚖️', name: '士業・コンサル', id: 'legal' },
-  { emoji: '🏗️', name: '建設・工務店', id: 'construction' },
-  { emoji: '🏠', name: '不動産', id: 'realestate' },
-  { emoji: '🛍️', name: '小売・EC', id: 'retail' },
-  { emoji: '💪', name: 'フィットネス', id: 'fitness' },
-  { emoji: '🏨', name: 'ホテル・旅館', id: 'hotel' },
-  { emoji: '📚', name: '教育・スクール', id: 'education' },
-  { emoji: '💒', name: 'ウェディング', id: 'wedding' },
-  { emoji: '🐾', name: 'ペットサロン', id: 'pet' },
+  { color: 'from-orange-900/60 to-red-900/60',   name: '飲食店・カフェ', id: 'restaurant' },
+  { color: 'from-pink-900/60 to-purple-900/60',  name: '美容室・サロン', id: 'beauty' },
+  { color: 'from-blue-900/60 to-teal-900/60',    name: '整体・クリニック', id: 'clinic' },
+  { color: 'from-slate-800/80 to-slate-900',     name: '士業・コンサル', id: 'legal' },
+  { color: 'from-amber-900/60 to-yellow-900/60', name: '建設・工務店', id: 'construction' },
+  { color: 'from-emerald-900/60 to-green-900/60',name: '不動産', id: 'realestate' },
+  { color: 'from-violet-900/60 to-purple-900/60',name: '小売・EC', id: 'retail' },
+  { color: 'from-red-900/60 to-orange-900/60',   name: 'フィットネス', id: 'fitness' },
+  { color: 'from-sky-900/60 to-blue-900/60',     name: 'ホテル・旅館', id: 'hotel' },
+  { color: 'from-indigo-900/60 to-blue-900/60',  name: '教育・スクール', id: 'education' },
+  { color: 'from-rose-900/60 to-pink-900/60',    name: 'ウェディング', id: 'wedding' },
+  { color: 'from-amber-900/60 to-stone-900/60',  name: 'ペットサロン', id: 'pet' },
 ];
 
 const FEATURES = [
-  {
-    icon: '🤖',
-    title: 'AI自動コンテンツ生成',
-    desc: '業種と情報を入力するだけ。AIが魅力的なコピーと最適なレイアウトを自動生成します。',
-    color: 'blue',
-  },
-  {
-    icon: '🎨',
-    title: '直感的なビジュアルエディタ',
-    desc: 'プログラミング不要。ブロックを追加・編集するだけでプロ品質のサイトに。画像・テキスト・カラム・ライン何でも対応。',
-    color: 'purple',
-  },
-  {
-    icon: '📈',
-    title: 'SEO最大化エンジン',
-    desc: 'メタタグ・構造化データ・ページ速度最適化を自動設定。業種別JSON-LDスキーマで検索上位表示を狙います。',
-    color: 'green',
-  },
-  {
-    icon: '🤝',
-    title: 'LARUbot ワンクリック連携',
-    desc: 'AIチャットボット「LARUbot」をエディタからワンクリックで埋め込み。24時間問い合わせ対応を自動化。',
-    color: 'indigo',
-  },
-  {
-    icon: '📊',
-    title: 'LARUSEO 連携',
-    desc: 'SEO分析ツール「LARUSEO」でリアルタイムSEOスコア確認。キーワード分析・改善提案も自動で。',
-    color: 'emerald',
-  },
-  {
-    icon: '📱',
-    title: '完全レスポンシブ',
-    desc: 'PC・スマホ・タブレットで完璧に表示。モバイルファーストなデザインで機会損失をゼロに。',
-    color: 'cyan',
-  },
-  {
-    icon: '📩',
-    title: '予約・お問い合わせフォーム',
-    desc: '日程・サービス選択付きの予約フォームと問い合わせフォームを自動設置。送信時にメール通知も届きます。',
-    color: 'blue',
-  },
-  {
-    icon: '📄',
-    title: 'マルチページ対応',
-    desc: '「トップ」「会社概要」「アクセス」など複数ページを作成可能。ナビゲーションバーも自動生成。',
-    color: 'purple',
-  },
+  { num: '01', title: 'AI自動コンテンツ生成',       desc: '業種と情報を入力するだけ。AIが魅力的なコピーと最適なレイアウトを自動生成します。',                                                           color: 'blue' },
+  { num: '02', title: '直感的なビジュアルエディタ', desc: 'プログラミング不要。ブロックを追加・編集するだけでプロ品質のサイトに。画像・テキスト・カラム・ライン何でも対応。',                             color: 'purple' },
+  { num: '03', title: 'SEO最大化エンジン',           desc: 'メタタグ・構造化データ・ページ速度最適化を自動設定。業種別JSON-LDスキーマで検索上位表示を狙います。',                                        color: 'green' },
+  { num: '04', title: 'LARUbot ワンクリック連携',    desc: 'AIチャットボット「LARUbot」をエディタからワンクリックで埋め込み。24時間問い合わせ対応を自動化。',                                             color: 'indigo' },
+  { num: '05', title: 'LARUSEO 連携',                desc: 'SEO分析ツール「LARUSEO」でリアルタイムSEOスコア確認。キーワード分析・改善提案も自動で。',                                                     color: 'emerald' },
+  { num: '06', title: '完全レスポンシブ',             desc: 'PC・スマホ・タブレットで完璧に表示。モバイルファーストなデザインで機会損失をゼロに。',                                                        color: 'cyan' },
+  { num: '07', title: '予約・お問い合わせフォーム', desc: '日程・サービス選択付きの予約フォームと問い合わせフォームを自動設置。送信時にメール通知も届きます。',                                            color: 'blue' },
+  { num: '08', title: 'マルチページ対応',             desc: '「トップ」「会社概要」「アクセス」など複数ページを作成可能。ナビゲーションバーも自動生成。',                                                   color: 'purple' },
 ];
 
 const PLAN_FEATURES = [
@@ -233,7 +193,7 @@ export default function LaruHPLandingPage() {
 
           {/* フローティングバッジ */}
           <div className="hidden md:flex justify-center gap-3 mt-8 flex-wrap">
-            {['🤖 AIコンテンツ生成', '📈 SEO自動最適化', '🤝 LARUbot連携', '📱 モバイル完全対応', '🔒 SSL込み'].map((tag, i) => (
+            {['AI コンテンツ生成', 'SEO 自動最適化', 'LARUbot 連携', 'モバイル完全対応', 'SSL 込み'].map((tag, i) => (
               <span key={i} className="bg-white/5 border border-white/10 text-slate-400 text-xs px-3 py-1.5 rounded-full hover:border-white/20 hover:text-slate-200 transition-all">
                 {tag}
               </span>
@@ -269,13 +229,13 @@ export default function LaruHPLandingPage() {
           <div className="grid md:grid-cols-3 gap-6 relative">
             <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-[1px] bg-gradient-to-r from-blue-500/40 via-blue-500/20 to-blue-500/40" />
             {[
-              { step: '01', title: '情報を入力', desc: '業種・店舗名・住所・サービス内容などを入力。AIが残りを全部やってくれます。', icon: '📝', tag: '約2分' },
-              { step: '02', title: 'AIが自動生成', desc: '業種に最適化されたテンプレートにビジネス情報を組み込み、コンテンツを自動作成。', icon: '🤖', tag: '約1分' },
-              { step: '03', title: 'エディタで仕上げ', desc: 'ビジュアルエディタで微調整。画像変更・テキスト編集・ブロック追加削除が直感的に。', icon: '🎨', tag: '約2分' },
+              { step: '01', title: '情報を入力',    desc: '業種・店舗名・住所・サービス内容などを入力。AIが残りを全部やってくれます。',                                       tag: '約2分' },
+              { step: '02', title: 'AIが自動生成',  desc: '業種に最適化されたテンプレートにビジネス情報を組み込み、コンテンツを自動作成。',                                   tag: '約1分' },
+              { step: '03', title: 'エディタで仕上げ', desc: 'ビジュアルエディタで微調整。画像変更・テキスト編集・ブロック追加削除が直感的に。',                             tag: '約2分' },
             ].map((step, i) => (
               <div key={i} className="relative bg-white/5 border border-white/10 rounded-2xl p-8 hover:border-blue-500/30 hover:-translate-y-1 transition-all duration-300">
                 <div className="absolute top-4 right-4 bg-blue-500/20 text-blue-400 text-xs font-bold px-2 py-1 rounded-full">{step.tag}</div>
-                <div className="text-4xl mb-4">{step.icon}</div>
+                <div className="text-4xl font-black text-white/5 font-mono mb-4 leading-none">{step.step}</div>
                 <div className="text-blue-500 font-black text-xs tracking-[0.2em] mb-2 font-mono">STEP {step.step}</div>
                 <h3 className="text-xl font-bold mb-3">{step.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
@@ -296,7 +256,7 @@ export default function LaruHPLandingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
               <div key={i} className={`border rounded-2xl p-6 hover:-translate-y-1 transition-all duration-300 ${COLOR_MAP[f.color]}`}>
-                <div className="text-3xl mb-4">{f.icon}</div>
+                <div className="text-xs font-black text-slate-600 font-mono mb-4">{f.num}</div>
                 <h3 className="text-lg font-bold mb-2">{f.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
               </div>
@@ -313,7 +273,7 @@ export default function LaruHPLandingPage() {
               </div>
               <div className="flex-1 bg-white/10 rounded-lg px-3 py-1 text-xs text-slate-400 font-mono">your-shop.laruvisona.com</div>
               <div className="flex gap-2">
-                <button className="text-xs bg-white/10 px-3 py-1 rounded-lg text-slate-300">👁 プレビュー</button>
+                <button className="text-xs bg-white/10 px-3 py-1 rounded-lg text-slate-300">プレビュー</button>
                 <button className="text-xs bg-blue-500 px-3 py-1 rounded-lg text-white font-bold">公開する</button>
               </div>
             </div>
@@ -321,7 +281,7 @@ export default function LaruHPLandingPage() {
               {/* Left sidebar mock */}
               <div className="w-48 bg-white/3 border-r border-white/10 p-3 flex flex-col gap-1 text-xs text-slate-400">
                 <div className="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-wider">ブロックを追加</div>
-                {['🦸 ヒーロー', '📝 テキスト', '🖼 画像', '⚡ サービス', '📞 お問合せ', '📍 マップ', '❓ FAQ', '🕐 営業時間', '⭐ お客様の声', '➖ 区切り線', '📋 2カラム', '🏗 3カラム'].map((b, i) => (
+                {['ヒーロー', 'テキスト', '画像', 'サービス', 'お問合せ', 'マップ', 'FAQ', '営業時間', 'お客様の声', '区切り線', '2カラム', '3カラム'].map((b, i) => (
                   <div key={i} className="px-2 py-1.5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors">{b}</div>
                 ))}
               </div>
@@ -342,7 +302,6 @@ export default function LaruHPLandingPage() {
                 <div className="grid grid-cols-3 gap-2">
                   {['首・肩', '腰痛', '膝'].map(s => (
                     <div key={s} className="bg-gray-50 rounded-lg p-3 text-center">
-                      <div className="text-lg">💆</div>
                       <div className="text-xs font-bold text-gray-700">{s}</div>
                     </div>
                   ))}
@@ -365,7 +324,7 @@ export default function LaruHPLandingPage() {
                   <div className="border-t border-white/10 pt-3">
                     <div className="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-wider">SEO設定</div>
                     <div className="bg-white/10 rounded px-2 py-1 mb-1">SEOスコア: 87/100</div>
-                    <div className="text-[10px] text-emerald-400">✅ LARUbotオン</div>
+                    <div className="text-[10px] text-emerald-400">LARUbotオン</div>
                   </div>
                 </div>
               </div>
@@ -389,8 +348,10 @@ export default function LaruHPLandingPage() {
                 href={`/laruHP/onboarding?industry=${ind.id}`}
                 className={`rounded-2xl p-5 text-center border transition-all cursor-pointer group ${activeIndustry === i ? 'bg-blue-500/20 border-blue-500/50 scale-105 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'bg-white/5 border-white/10 hover:border-blue-500/30 hover:bg-white/10'}`}
               >
-                <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">{ind.emoji}</div>
-                <div className="text-sm font-medium text-slate-300 leading-tight">{ind.name}</div>
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${ind.color} flex items-center justify-center mx-auto mb-3 text-sm font-black text-white/50 group-hover:scale-105 transition-transform`}>
+                  {ind.name[0]}
+                </div>
+                <div className="text-xs font-medium text-slate-300 leading-tight">{ind.name}</div>
               </Link>
             ))}
           </div>
@@ -407,8 +368,7 @@ export default function LaruHPLandingPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-8">
             <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-3xl p-8 hover:border-indigo-500/50 transition-all">
-              <div className="text-4xl mb-4">🤖</div>
-              <div className="inline-block bg-indigo-500/20 text-indigo-300 text-xs font-bold px-3 py-1 rounded-full mb-3">LARUbot 連携</div>
+              <div className="inline-block bg-indigo-500/20 text-indigo-300 text-xs font-bold px-3 py-1 rounded-full mb-4">LARUbot 連携</div>
               <h3 className="text-2xl font-black mb-4">AIチャットボットを即導入</h3>
               <p className="text-slate-400 leading-relaxed mb-6">
                 LARUVisonaのAIチャットボット「LARUbot」をワンクリックで埋め込み。24時間365日、問い合わせ対応・予約受付・FAQ対応を自動化します。
@@ -416,15 +376,14 @@ export default function LaruHPLandingPage() {
               <div className="bg-white/5 rounded-2xl p-4 text-sm text-slate-300 font-mono space-y-1">
                 <div>① エディタ → 連携設定</div>
                 <div>② LARUbotアカウントを接続</div>
-                <div>③ ウィジェットをオン → 完了 ✅</div>
+                <div>③ ウィジェットをオン → 完了</div>
               </div>
               <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm mt-4">
                 LARUbot公式サイト →
               </a>
             </div>
             <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-3xl p-8 hover:border-emerald-500/50 transition-all">
-              <div className="text-4xl mb-4">📊</div>
-              <div className="inline-block bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full mb-3">LARUSEO 連携</div>
+              <div className="inline-block bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full mb-4">LARUSEO 連携</div>
               <h3 className="text-2xl font-black mb-4">SEO分析をリアルタイムで</h3>
               <p className="text-slate-400 leading-relaxed mb-6">
                 SEO分析ツール「LARUSEO」と連携してSEOスコアをリアルタイム表示。キーワード分析・競合比較・改善提案をエディタ内で確認できます。
@@ -437,7 +396,7 @@ export default function LaruHPLandingPage() {
                 <div className="w-full bg-white/10 rounded-full h-2">
                   <div className="bg-emerald-400 h-2 rounded-full" style={{ width: '87%' }} />
                 </div>
-                <div className="text-xs text-slate-500">メタタグ ✅ 構造化データ ✅ 画像alt ✅ ページ速度 ✅</div>
+                <div className="text-xs text-slate-500">メタタグ ✓ 構造化データ ✓ 画像alt ✓ ページ速度 ✓</div>
               </div>
             </div>
           </div>
@@ -453,7 +412,7 @@ export default function LaruHPLandingPage() {
 
           <div className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent border border-blue-500/30 rounded-3xl p-10 relative overflow-hidden">
             <div className="absolute top-5 right-5 bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-full animate-pulse">
-              🎁 初月1円
+              初月1円
             </div>
 
             <div className="mb-2">
@@ -491,10 +450,10 @@ export default function LaruHPLandingPage() {
               <div className="p-3 text-slate-500 text-center">SEO自動化</div>
             </div>
             {[
-              { name: 'LARU HP', price: '999円〜', ai: '✅ フル搭載', seo: '✅ 完全自動', highlight: true },
+              { name: 'LARU HP', price: '999円〜', ai: '◎ フル搭載', seo: '◎ 完全自動', highlight: true },
               { name: 'Wix', price: '2,000円〜', ai: '△ 限定的', seo: '△ 手動設定' },
-              { name: 'STUDIO', price: '2,000円〜', ai: '❌ なし', seo: '△ 手動設定' },
-              { name: 'WordPress.com', price: '1,100円〜', ai: '❌ なし', seo: '△ プラグイン必要' },
+              { name: 'STUDIO', price: '2,000円〜', ai: '− なし', seo: '△ 手動設定' },
+              { name: 'WordPress.com', price: '1,100円〜', ai: '− なし', seo: '△ プラグイン必要' },
             ].map((row, i) => (
               <div key={i} className={`grid grid-cols-4 text-xs border-b border-white/5 last:border-0 ${row.highlight ? 'bg-blue-500/10 text-white font-bold' : 'text-slate-400'}`}>
                 <div className="p-3">{row.name}</div>

@@ -4,19 +4,19 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 const INDUSTRIES = [
-  { id: 'restaurant', emoji: '🍜', name: '飲食店・カフェ', desc: 'レストラン、居酒屋、カフェ、ラーメン店など', color: 'orange' },
-  { id: 'beauty', emoji: '💇', name: '美容室・サロン', desc: '美容室、ネイルサロン、エステ、スパなど', color: 'pink' },
-  { id: 'clinic', emoji: '💊', name: '整体・クリニック', desc: '整体院、接骨院、歯科、医療クリニックなど', color: 'teal' },
-  { id: 'legal', emoji: '⚖️', name: '士業・コンサル', desc: '弁護士、税理士、行政書士、コンサルタントなど', color: 'indigo' },
-  { id: 'construction', emoji: '🏗️', name: '建設・工務店', desc: 'リフォーム、建設、内装工事、外構など', color: 'yellow' },
-  { id: 'realestate', emoji: '🏠', name: '不動産', desc: '賃貸仲介、売買、管理、不動産投資など', color: 'blue' },
-  { id: 'retail', emoji: '🛍️', name: '小売・EC', desc: '実店舗、オンラインショップ、専門店など', color: 'purple' },
-  { id: 'fitness', emoji: '💪', name: 'フィットネス・ジム', desc: 'パーソナルジム、ヨガスタジオ、スポーツクラブなど', color: 'green' },
-  { id: 'hotel', emoji: '🏨', name: 'ホテル・旅館', desc: 'ホテル、旅館、民泊、グランピングなど', color: 'amber' },
-  { id: 'education', emoji: '📚', name: '教育・スクール', desc: '塾、教室、スクール、研修機関など', color: 'cyan' },
-  { id: 'wedding', emoji: '💒', name: '結婚式場・イベント', desc: 'ウェディング、イベントホール、パーティーなど', color: 'rose' },
-  { id: 'pet', emoji: '🐾', name: 'ペットサロン', desc: 'トリミング、ペットホテル、動物病院、ペットショップなど', color: 'lime' },
-  { id: 'other', emoji: '✨', name: 'その他', desc: '上記に当てはまらない業種', color: 'slate' },
+  { id: 'restaurant',   name: '飲食店・カフェ',     desc: 'レストラン、居酒屋、カフェ、ラーメン店など',                  color: 'orange' },
+  { id: 'beauty',       name: '美容室・サロン',     desc: '美容室、ネイルサロン、エステ、スパなど',                       color: 'pink' },
+  { id: 'clinic',       name: '整体・クリニック',   desc: '整体院、接骨院、歯科、医療クリニックなど',                    color: 'teal' },
+  { id: 'legal',        name: '士業・コンサル',     desc: '弁護士、税理士、行政書士、コンサルタントなど',                color: 'indigo' },
+  { id: 'construction', name: '建設・工務店',       desc: 'リフォーム、建設、内装工事、外構など',                        color: 'yellow' },
+  { id: 'realestate',   name: '不動産',             desc: '賃貸仲介、売買、管理、不動産投資など',                        color: 'blue' },
+  { id: 'retail',       name: '小売・EC',           desc: '実店舗、オンラインショップ、専門店など',                      color: 'purple' },
+  { id: 'fitness',      name: 'フィットネス・ジム', desc: 'パーソナルジム、ヨガスタジオ、スポーツクラブなど',           color: 'green' },
+  { id: 'hotel',        name: 'ホテル・旅館',       desc: 'ホテル、旅館、民泊、グランピングなど',                        color: 'amber' },
+  { id: 'education',    name: '教育・スクール',     desc: '塾、教室、スクール、研修機関など',                            color: 'cyan' },
+  { id: 'wedding',      name: '結婚式場・イベント', desc: 'ウェディング、イベントホール、パーティーなど',                color: 'rose' },
+  { id: 'pet',          name: 'ペットサロン',       desc: 'トリミング、ペットホテル、動物病院、ペットショップなど',      color: 'lime' },
+  { id: 'other',        name: 'その他',             desc: '上記に当てはまらない業種',                                    color: 'slate' },
 ];
 
 const COLOR_SCHEMES = [
@@ -30,7 +30,7 @@ const COLOR_SCHEMES = [
 
 const STYLE_OPTIONS = [
   { id: 'modern', name: 'モダン・ミニマル', icon: '◻', desc: 'シンプルで洗練されたデザイン' },
-  { id: 'warm', name: '温かみ・親しみやすい', icon: '🌿', desc: '自然で柔らかい印象' },
+  { id: 'warm', name: '温かみ・親しみやすい', icon: '◉', desc: '自然で柔らかい印象' },
   { id: 'bold', name: 'ダイナミック・インパクト', icon: '⚡', desc: '大胆で存在感のあるデザイン' },
   { id: 'elegant', name: 'エレガント・高級感', icon: '♦', desc: '上品で信頼感のある印象' },
 ];
@@ -196,7 +196,6 @@ function OnboardingContent() {
                       : 'bg-white/5 border-white/10 hover:border-white/30'
                   }`}
                 >
-                  <div className="text-3xl mb-2">{ind.emoji}</div>
                   <div className="font-bold text-sm mb-0.5">{ind.name}</div>
                   <div className="text-slate-500 text-xs leading-tight">{ind.desc}</div>
                 </button>
@@ -353,7 +352,7 @@ function OnboardingContent() {
               <div className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${form.larubot ? 'bg-indigo-500/20 border-indigo-500/40' : 'bg-white/5 border-white/10'}`}
                 onClick={() => updateForm('larubot', !form.larubot)}>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">🤖</span>
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-xs font-black flex-shrink-0">LB</div>
                   <div>
                     <div className="font-bold text-sm">LARUbot AIチャットボット</div>
                     <div className="text-slate-500 text-xs">問い合わせ対応を24時間自動化</div>
@@ -366,7 +365,7 @@ function OnboardingContent() {
               <div className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${form.laruseo ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-white/5 border-white/10'}`}
                 onClick={() => updateForm('laruseo', !form.laruseo)}>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">📊</span>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-xs font-black flex-shrink-0">SEO</div>
                   <div>
                     <div className="font-bold text-sm">LARUSEO SEO分析</div>
                     <div className="text-slate-500 text-xs">リアルタイムSEOスコア・改善提案</div>
@@ -480,7 +479,7 @@ function OnboardingContent() {
                   <button onClick={() => setStep(2)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
                 </div>
                 <div className="space-y-2 text-sm text-slate-300">
-                  <div><span className="text-slate-500">業種: </span>{selectedIndustry?.emoji} {selectedIndustry?.name}</div>
+                  <div><span className="text-slate-500">業種: </span>{selectedIndustry?.name}</div>
                   <div><span className="text-slate-500">店舗名: </span>{form.businessName || '未入力'}</div>
                   <div><span className="text-slate-500">住所: </span>{form.address || '未入力'}</div>
                   <div><span className="text-slate-500">電話: </span>{form.phone || '未入力'}</div>
@@ -497,8 +496,8 @@ function OnboardingContent() {
                   <div><span className="text-slate-500">カラー: </span>{selectedScheme?.name}</div>
                   <div><span className="text-slate-500">スタイル: </span>{STYLE_OPTIONS.find(s => s.id === form.style)?.name}</div>
                   <div className="flex gap-2 mt-1">
-                    {form.larubot && <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full">🤖 LARUbot</span>}
-                    {form.laruseo && <span className="bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full">📊 LARUSEO</span>}
+                    {form.larubot && <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full">LARUbot</span>}
+                    {form.laruseo && <span className="bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full">LARUSEO</span>}
                   </div>
                 </div>
               </div>
@@ -524,7 +523,9 @@ function OnboardingContent() {
             {/* Generate button */}
             {generating ? (
               <div className="text-center py-10">
-                <div className="text-4xl mb-4 animate-bounce">🤖</div>
+                <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center animate-pulse">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
                 <div className="text-lg font-bold mb-2">AIがサイトを生成中...</div>
                 <div className="text-slate-400 text-sm mb-6">業種別テンプレートにデータを組み込んでいます</div>
                 <div className="w-full bg-white/10 rounded-full h-2 max-w-xs mx-auto overflow-hidden">
@@ -536,7 +537,7 @@ function OnboardingContent() {
                 onClick={handleGenerate}
                 className="w-full bg-white text-black py-5 rounded-2xl font-black text-lg hover:scale-[1.02] transition-transform shadow-[0_0_40px_rgba(255,255,255,0.1)]"
               >
-                🚀 AIでサイトを生成する
+                AIでサイトを生成する →
               </button>
             )}
 

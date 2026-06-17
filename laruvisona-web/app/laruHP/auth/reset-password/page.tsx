@@ -41,7 +41,9 @@ export default function ResetPasswordPage() {
 
           {sent ? (
             <div className="text-center py-4">
-              <div className="text-5xl mb-4">📧</div>
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
               <p className="text-green-400 font-bold mb-2">メールを送信しました</p>
               <p className="text-slate-400 text-sm">
                 受信トレイをご確認ください。<br />

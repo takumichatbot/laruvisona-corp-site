@@ -259,7 +259,7 @@ export default function AdminPage() {
                       onClick={() => { setNotesUser(user.id); setNotesText(user.admin_notes || ''); }}
                       className="text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/30 px-3 py-2 rounded-xl transition-all"
                     >
-                      📝 メモ
+                      メモ
                     </button>
                     <button
                       onClick={() => toggleSuspend(user)}

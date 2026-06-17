@@ -81,9 +81,9 @@ const defaultBlock = (type: BlockType): Block => {
       gap: '2rem',
     },
     'three-col': {
-      col1Title: 'カラム1', col1Icon: '⭐', col1Text: 'コンテンツを入力',
-      col2Title: 'カラム2', col2Icon: '🚀', col2Text: 'コンテンツを入力',
-      col3Title: 'カラム3', col3Icon: '💡', col3Text: 'コンテンツを入力',
+      col1Title: 'カラム1', col1Icon: '01', col1Text: 'コンテンツを入力',
+      col2Title: 'カラム2', col2Icon: '02', col2Text: 'コンテンツを入力',
+      col3Title: 'カラム3', col3Icon: '03', col3Text: 'コンテンツを入力',
     },
     divider: { style: 'solid', color: '#e5e7eb', thickness: '1', margin: '2', label: '' },
     cta: {
@@ -99,9 +99,9 @@ const defaultBlock = (type: BlockType): Block => {
       subtext: '',
       columns: '3',
       items: [
-        { icon: '⭐', title: 'サービス1', description: '説明を入力してください', price: '' },
-        { icon: '🚀', title: 'サービス2', description: '説明を入力してください', price: '' },
-        { icon: '💡', title: 'サービス3', description: '説明を入力してください', price: '' },
+        { icon: '01', title: 'サービス1', description: '説明を入力してください', price: '' },
+        { icon: '02', title: 'サービス2', description: '説明を入力してください', price: '' },
+        { icon: '03', title: 'サービス3', description: '説明を入力してください', price: '' },
       ],
     },
     testimonials: {
@@ -356,7 +356,7 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
             ) : (
               <label className="block w-full rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-50 transition-colors" style={{ height: `${d.height || 300}px` }}>
                 <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                  <div className="text-4xl mb-2">🖼</div>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2 text-gray-300"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                   <div className="font-medium">クリックして画像をアップロード</div>
                   <div className="text-sm mt-1">PNG, JPG, WebP 対応 (最大5MB)</div>
                 </div>
@@ -573,7 +573,7 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
                     <img src={src} alt={`gallery-${i}`} className="w-full h-full object-cover" />
                   ) : (
                     <div className="h-full flex items-center justify-center text-gray-400">
-                      <div className="text-center"><div className="text-2xl">📸</div><div className="text-xs mt-1">画像を追加</div></div>
+                      <div className="text-center text-gray-400 text-xs">画像を追加</div>
                     </div>
                   )}
                   <input type="file" accept="image/*" className="hidden" onChange={async e => {
@@ -606,14 +606,14 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
         return (
           <div className="px-8 py-6 bg-indigo-50 border-l-4 border-indigo-500">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0">🤖</div>
+              <div className="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-black text-sm">LB</div>
               <div>
                 <div className="font-bold text-indigo-900">LARUbot チャットウィジェット</div>
                 <div className="text-indigo-600 text-sm">AIチャットボットが右下に表示されます。訪問者の質問に24時間自動回答。</div>
               </div>
               <div className="ml-auto">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${d.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {d.enabled ? '✅ 有効' : '⭕ 無効'}
+                  {d.enabled ? '有効' : '無効'}
                 </span>
               </div>
             </div>
@@ -658,7 +658,7 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
             ) : (
               <div className="w-full bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center" style={{ height: '300px' }}>
                 <div className="text-center text-gray-400 p-8">
-                  <div className="text-4xl mb-2">📍</div>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2 mx-auto text-gray-300"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                   <div className="text-sm font-medium">右パネルでGoogle MapsのEmbedURLを入力</div>
                 </div>
               </div>
@@ -785,7 +785,7 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
     >
       {selected && (
         <div className="absolute -top-7 left-0 z-20 flex items-center gap-1 bg-blue-500 text-white text-xs rounded-t-lg px-2 py-1 pointer-events-none">
-          <span>✏️ 選択中: {block.type}</span>
+          <span>選択中: {block.type}</span>
         </div>
       )}
       {inner()}
@@ -852,7 +852,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
         {(['block', 'seo', 'integrations'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-3 text-xs font-bold transition-colors ${tab === t ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'}`}>
-            {t === 'block' ? '⚙ ブロック' : t === 'seo' ? '📈 SEO' : '🔗 連携'}
+            {t === 'block' ? 'ブロック' : t === 'seo' ? 'SEO' : '連携'}
           </button>
         ))}
       </div>
@@ -862,7 +862,6 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
           <>
             {!block && (
               <div className="text-slate-500 text-center py-8">
-                <div className="text-3xl mb-3">👆</div>
                 ブロックを選択してください
               </div>
             )}
@@ -900,7 +899,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       <input type="file" accept="image/*" className="hidden"
                         onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'bgImage'); }}} />
                       <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'bgImage' ? 'opacity-50' : ''}`}>
-                        {uploadingImg === 'bgImage' ? '...' : '📤'}
+                        {uploadingImg === 'bgImage' ? '...' : '↑'}
                       </span>
                     </label>
                   </div>
@@ -983,7 +982,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       <input type="file" accept="image/*" className="hidden"
                         onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'src'); }}} />
                       <span className={`flex items-center px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === 'src' ? 'opacity-50' : ''}`}>
-                        {uploadingImg === 'src' ? '...' : '📤 アップロード'}
+                        {uploadingImg === 'src' ? '...' : 'アップロード'}
                       </span>
                     </label>
                   </div>
@@ -1136,7 +1135,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                           <input type="file" accept="image/*" className="hidden"
                             onChange={async e => { const f = e.target.files?.[0]; if (f) { e.target.value = ''; await uploadImage(f, 'images', idx); }}} />
                           <span className={`flex items-center px-1.5 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === slotKey ? 'opacity-50' : ''}`}>
-                            {uploadingImg === slotKey ? '...' : '📤'}
+                            {uploadingImg === slotKey ? '...' : '↑'}
                           </span>
                         </label>
                         {src && (
@@ -1248,7 +1247,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🤖</span>
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/30 flex items-center justify-center text-indigo-300 text-[10px] font-black flex-shrink-0">LB</div>
                 <div>
                   <div className="font-bold text-white text-[11px]">LARUbot AI</div>
                   <div className="text-slate-500 text-[10px]">チャットボット</div>
@@ -1264,7 +1263,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-lg">📈</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[10px] font-black flex-shrink-0">SEO</div>
                 <div>
                   <div className="font-bold text-white text-[11px]">LARU SEO</div>
                   <div className="text-slate-500 text-[10px]">AI SEO最適化</div>
@@ -1280,7 +1279,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">📊</span>
+                <div className="w-7 h-7 rounded-lg bg-orange-500/30 flex items-center justify-center text-orange-300 text-[10px] font-black flex-shrink-0">GA</div>
                 <span className="font-bold text-sm">Google Analytics</span>
               </div>
               <input type="text" placeholder="G-XXXXXXXXXX"
@@ -1881,11 +1880,11 @@ function BuilderContent() {
             disabled={aiGenerating}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 disabled:opacity-50"
           >
-            {aiGenerating ? '🤖 生成中...' : '🤖 AI生成'}
+            {aiGenerating ? '生成中...' : 'AI生成'}
           </button>
           {preview && (
             <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
-              {([['desktop', '🖥', 'PC'], ['tablet', '📱', 'Tab'], ['mobile', '📱', 'SP']] as const).map(([device, , label]) => (
+              {([['desktop', 'PC'], ['tablet', 'Tab'], ['mobile', 'SP']] as const).map(([device, label]) => (
                 <button
                   key={device}
                   onClick={() => setPreviewDevice(device)}
@@ -1900,21 +1899,21 @@ function BuilderContent() {
             onClick={() => setPreview(!preview)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${preview ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
           >
-            {preview ? '✏️ 編集' : '👁 プレビュー'}
+            {preview ? '編集' : 'プレビュー'}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${saved ? 'bg-green-500 text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'} disabled:opacity-50`}
           >
-            {saving ? '保存中...' : saved ? '✅ 保存済み' : '💾 保存'}
+            {saving ? '保存中...' : saved ? '保存済み' : '保存'}
           </button>
           <button
             onClick={handlePublish}
             disabled={publishing}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition-all text-white disabled:opacity-50"
           >
-            {publishing ? '公開中...' : published ? '🔄 再公開' : '🚀 公開する'}
+            {publishing ? '公開中...' : published ? '再公開' : '公開する'}
           </button>
         </div>
       </div>
@@ -1934,7 +1933,6 @@ function BuilderContent() {
                         onClick={() => addBlock(item.type, selectedId || undefined)}
                         className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-all text-left"
                       >
-                        <span className="text-base w-5 text-center flex-shrink-0">{item.icon}</span>
                         <span className="truncate">{item.label}</span>
                       </button>
                     ))}
@@ -1958,7 +1956,7 @@ function BuilderContent() {
               {currentPage.blocks.length === 0 && (
                 <div className="h-64 flex items-center justify-center text-gray-400 text-center">
                   <div>
-                    <div className="text-4xl mb-3">📄</div>
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
                     <div className="font-medium">左のパレットからブロックを追加してください</div>
                   </div>
                 </div>
@@ -2003,8 +2001,8 @@ function BuilderContent() {
               {/* LARUbot preview */}
               {site.larubot && (
                 <div className="fixed bottom-6 right-6 z-40">
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl text-white cursor-pointer shadow-lg hover:scale-110 transition-transform" style={{ backgroundColor: '#4f46e5' }}>
-                    🤖
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white text-sm font-black cursor-pointer shadow-lg hover:scale-110 transition-transform" style={{ backgroundColor: '#4f46e5' }}>
+                    LB
                   </div>
                 </div>
               )}
@@ -2055,7 +2053,6 @@ function BuilderContent() {
 
       {!preview && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-2.5 text-xs text-slate-400 flex items-center gap-3 shadow-2xl z-20">
-          <span>💡</span>
           <span>ブロックをクリックして選択 · テキストをクリックして直接編集 · 左パネルからブロックを追加 · ドラッグで並び替え · ↩↪ または Cmd+Z で元に戻す</span>
         </div>
       )}
