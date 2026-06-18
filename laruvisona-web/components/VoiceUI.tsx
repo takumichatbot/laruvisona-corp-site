@@ -40,6 +40,20 @@ export default function VoiceUI() {
       }
     };
 
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+        setText("マイクの許可が必要です");
+      } else if (event.error === 'no-speech') {
+        setText("音声が検出されませんでした");
+      } else if (event.error === 'network') {
+        setText("ネットワークエラーが発生しました");
+      } else {
+        setText("エラーが発生しました");
+      }
+      setTimeout(() => setText("SYSTEM_STANDBY"), 3000);
+    };
+
     recognition.onend = () => {
       setIsListening(false);
       setTimeout(() => setText("SYSTEM_STANDBY"), 2500);

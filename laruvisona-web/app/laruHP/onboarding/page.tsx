@@ -631,7 +631,7 @@ function OnboardingContent() {
           </Link>
           <div className="flex flex-col items-end">
             <div className="text-slate-500 text-sm">サイト作成ウィザード</div>
-            <div className="text-slate-600 text-[11px]">初月1円 · いつでも解約可</div>
+            <div className="text-slate-600 text-[11px]">初月1円 · 最低6ヶ月契約</div>
           </div>
         </div>
       </header>

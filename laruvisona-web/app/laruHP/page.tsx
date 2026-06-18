@@ -179,7 +179,18 @@ export default function LaruHPLandingPage() {
               初月1円で始める →
             </Link>
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-white w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10">
-              {isMenuOpen ? '✕' : '☰'}
+              {isMenuOpen ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <line x1="2" y1="2" x2="14" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="14" y1="2" x2="2" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+                  <line x1="0" y1="1" x2="18" y2="1" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="0" y1="6" x2="18" y2="6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="0" y1="11" x2="14" y2="11" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              )}
             </button>
           </div>
         </div>
@@ -216,7 +227,7 @@ export default function LaruHPLandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
             </span>
-            NEW — AI搭載 HPビルダー 2026
+            新登場 — AI搭載 HPビルダー 2026
           </div>
 
           <h1 className="text-[2.8rem] sm:text-6xl md:text-[6.5rem] font-black tracking-tighter mb-6 leading-[1.05] md:leading-[1.02]">
@@ -279,7 +290,7 @@ export default function LaruHPLandingPage() {
       <section className="py-16 md:py-24 px-6 border-t border-white/5">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">HOW IT WORKS</span>
+            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">使い方</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">3ステップで完成</h2>
             <p className="text-slate-500 text-sm">業種情報を入力するだけ。5分でプロ品質のHPが完成します</p>
           </div>
@@ -293,7 +304,7 @@ export default function LaruHPLandingPage() {
               <div key={i} className="relative bg-white/[0.03] border border-white/[0.07] rounded-2xl p-8 hover:border-blue-500/20 hover:-translate-y-1 transition-all duration-300">
                 <div className="absolute top-4 right-4 bg-blue-500/10 text-blue-400/70 text-[10px] font-medium px-2 py-1 rounded-full">{step.tag}</div>
                 <div className={`text-5xl font-black mb-4 leading-none font-mono ${COLOR_NUM['blue']}`}>{step.step}</div>
-                <div className="text-blue-500/60 font-medium text-[10px] tracking-[0.2em] mb-2 font-mono">STEP {step.step}</div>
+                <div className="text-blue-500/60 font-medium text-[10px] tracking-[0.2em] mb-2">ステップ {step.step}</div>
                 <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
               </div>
@@ -306,7 +317,7 @@ export default function LaruHPLandingPage() {
       <section id="features" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">FEATURES</span>
+            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">機能一覧</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">すべてが揃っている</h2>
             <p className="text-slate-500">プロのエージェンシーが使う機能を、月額<span className="text-slate-300">999円</span>で。</p>
           </div>
@@ -391,7 +402,7 @@ export default function LaruHPLandingPage() {
       <section id="templates" className="py-16 md:py-24 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">TEMPLATES</span>
+            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">テンプレート</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">業種別テンプレート</h2>
             <p className="text-slate-500">各業種のベストプラクティスを詰め込んだプロテンプレート。SEO設定・構造化データ付き。</p>
           </div>
@@ -417,7 +428,7 @@ export default function LaruHPLandingPage() {
       <section id="showcase" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <span className="text-emerald-500/70 font-medium text-xs tracking-[0.2em] uppercase">SHOWCASE</span>
+            <span className="text-emerald-500/70 font-medium text-xs tracking-[0.2em]">デモ・実例</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">こんなサイトが作れます</h2>
             <p className="text-slate-500">AIが3分で生成。あとはクリックして好みに調整するだけ。</p>
           </div>
@@ -762,7 +773,7 @@ export default function LaruHPLandingPage() {
       <section className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">INTEGRATIONS</span>
+            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">連携機能</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">強力な連携機能</h2>
             <p className="text-slate-500">AIチャットボット・SEOツールとシームレスに連携。集客を自動化します。</p>
           </div>
@@ -808,7 +819,7 @@ export default function LaruHPLandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <span className="text-purple-400/70 font-medium text-xs tracking-[0.2em] uppercase">FOR AGENCIES</span>
+              <span className="text-purple-400/70 font-medium text-xs tracking-[0.2em]">代理店・制作会社向け</span>
               <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-4">Web制作会社・フリーランス向け</h2>
               <p className="text-slate-400 text-base leading-relaxed mb-6">
                 複数クライアントのサイトを1アカウントで一元管理。エージェンシーモードで全クライアントの状況をひと目で把握。
@@ -874,7 +885,7 @@ export default function LaruHPLandingPage() {
       {/* Pricing */}
       <section id="pricing" className="py-16 md:py-24 px-6 border-t border-white/5">
         <div className="max-w-5xl mx-auto text-center">
-          <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">PRICING</span>
+          <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">料金プラン</span>
           <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">料金プラン</h2>
           <p className="text-slate-500 mb-2">全プラン 初月1円・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
           <p className="text-slate-600 text-xs mb-12">クレジットカード決済 / Stripe安全決済</p>
@@ -899,7 +910,7 @@ export default function LaruHPLandingPage() {
                   </div>
                 )}
 
-                <div className="text-[10px] font-medium text-slate-600 tracking-widest uppercase mb-3">{plan.id}</div>
+                <div className="text-[10px] font-medium text-slate-600 tracking-widest mb-3">プラン {PLANS.indexOf(plan) + 1}</div>
                 <h3 className="text-lg font-semibold mb-1">{plan.name}</h3>
                 <p className="text-slate-600 text-xs mb-4">{plan.sub}</p>
 
@@ -976,7 +987,7 @@ export default function LaruHPLandingPage() {
       <section className="py-16 md:py-24 px-6 border-t border-white/5">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">TESTIMONIALS</span>
+            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">お客様の声</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">導入オーナーの声</h2>
             <p className="text-slate-500 text-sm">全国の小規模ビジネスオーナーにご利用いただいています</p>
           </div>
@@ -1032,7 +1043,7 @@ export default function LaruHPLandingPage() {
       <section id="faq" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">FAQ</span>
+            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">よくある質問</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3">よくある質問</h2>
           </div>
           <div className="space-y-2">

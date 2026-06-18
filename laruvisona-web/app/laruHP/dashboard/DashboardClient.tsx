@@ -821,7 +821,7 @@ export default function DashboardPage() {
               <IcSparkle />
               AIでサイトを作る（無料）
             </Link>
-            <p className="text-slate-600 text-[11px] mt-4">✓ 初月1円 &nbsp;✓ いつでも解約 &nbsp;✓ 公開まで最短5分</p>
+            <p className="text-slate-600 text-[11px] mt-4">✓ 初月1円 &nbsp;✓ 最低6ヶ月契約 &nbsp;✓ 公開まで最短5分</p>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
