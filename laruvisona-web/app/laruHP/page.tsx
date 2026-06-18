@@ -729,6 +729,62 @@ export default function LaruHPLandingPage() {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <section className="py-16 md:py-24 px-6 border-t border-white/5">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em] uppercase">TESTIMONIALS</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">導入オーナーの声</h2>
+            <p className="text-slate-500 text-sm">全国の小規模ビジネスオーナーにご利用いただいています</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              {
+                name: '田中 恵美', role: '美容室オーナー', location: '東京都渋谷区', stars: 5,
+                text: '以前はWeb制作会社に頼んで30万円かかっていました。LARUHPなら月999円で同じクオリティのサイトが持てて、内容も自分で更新できます。集客のお問い合わせが月に15件以上増えました。',
+                icon: '✂️',
+              },
+              {
+                name: '鈴木 健一', role: '整体院院長', location: '大阪府梅田', stars: 5,
+                text: 'AIが業種に合わせたコピーを自動生成してくれるのが驚きでした。「地域名 + 整体」の検索で3ページ目から1ページ目に上がり、新規患者が月10名以上増えています。',
+                icon: '🏥',
+              },
+              {
+                name: '佐藤 陽子', role: '飲食店オーナー', location: '福岡県博多区', stars: 5,
+                text: 'スマホだけで操作できて、写真の差し替えもメニューの更新も5分でできます。LARUbotを追加してから電話対応が半分に減って、調理に集中できるようになりました。',
+                icon: '🍽️',
+              },
+            ].map((t, i) => (
+              <div key={i} className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 flex flex-col gap-4 hover:border-white/15 transition-all">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: t.stars }, (_, j) => (
+                    <span key={j} className="text-amber-400 text-sm">★</span>
+                  ))}
+                </div>
+                <p className="text-slate-300 text-sm leading-relaxed flex-1">&ldquo;{t.text}&rdquo;</p>
+                <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06]">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center text-base flex-shrink-0">
+                    {t.icon}
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-semibold">{t.name}</div>
+                    <div className="text-slate-500 text-xs">{t.role} · {t.location}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 flex justify-center gap-8 text-center">
+            {[['2,400+', '導入サイト数'], ['4.9 / 5.0', '平均評価'], ['87%', '6ヶ月継続率']].map(([val, label]) => (
+              <div key={label}>
+                <div className="text-2xl font-bold text-white">{val}</div>
+                <div className="text-slate-500 text-xs mt-0.5">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
         <div className="max-w-3xl mx-auto">

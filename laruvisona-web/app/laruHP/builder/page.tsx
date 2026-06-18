@@ -2347,6 +2347,8 @@ function BuilderContent() {
   const [aiLayouting, setAiLayouting] = useState(false);
   const [builderToast, setBuilderToast] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
+  const [restoreConfirmVersionId, setRestoreConfirmVersionId] = useState<string | null>(null);
+  const [aiLayoutProposal, setAiLayoutProposal] = useState<{ layout: string[]; reasoning: string } | null>(null);
   const [onboardingData, setOnboardingData] = useState<Record<string, unknown> | null>(null);
   const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -2471,13 +2473,32 @@ function BuilderContent() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.key !== 'z') return;
-      e.preventDefault();
-      if (e.shiftKey) redo(); else undo();
+      // Undo / Redo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+      }
+      // Skip when focus is inside an input / editable element
+      const tag = (e.target as HTMLElement).tagName;
+      const editable = (e.target as HTMLElement).isContentEditable;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || editable) return;
+      // Delete / Backspace → delete selected block
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        e.preventDefault();
+        deleteBlock(selectedId);
+        return;
+      }
+      // Escape → deselect
+      if (e.key === 'Escape' && selectedId) {
+        e.preventDefault();
+        setSelectedId(null);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [undo, redo, selectedId]);
 
   // Current page derived from site + currentPageId
   const currentPage = site.pages.find(p => p.id === currentPageId) || site.pages[0];
@@ -2882,17 +2903,18 @@ function BuilderContent() {
     setShowHistoryPanel(true);
   };
 
-  const handleRestoreVersion = async (versionId: string) => {
-    if (!dbSiteId) return;
-    if (!confirm('このバージョンに戻しますか？現在の内容は上書きされます。')) return;
-    setRestoringVersion(versionId);
-    const res = await fetch(`/api/sites/${dbSiteId}/versions/${versionId}`, { method: 'POST' });
-    if (res.ok) {
-      // Reload site data from DB
-      window.location.reload();
-    }
+  const handleRestoreVersion = (versionId: string) => {
+    setRestoreConfirmVersionId(versionId);
+  };
+
+  const confirmRestoreVersion = async () => {
+    if (!dbSiteId || !restoreConfirmVersionId) return;
+    setRestoringVersion(restoreConfirmVersionId);
+    const res = await fetch(`/api/sites/${dbSiteId}/versions/${restoreConfirmVersionId}`, { method: 'POST' });
+    if (res.ok) window.location.reload();
     setRestoringVersion(null);
     setShowHistoryPanel(false);
+    setRestoreConfirmVersionId(null);
   };
 
   const handleAiLayout = async () => {
@@ -2919,20 +2941,24 @@ function BuilderContent() {
       });
       const { layout, reasoning } = await res.json();
       if (!layout?.length) return;
-      const ok = confirm(`AIが提案するレイアウト:\n${layout.join(' → ')}\n\n理由: ${reasoning}\n\n現在のブロックを置き換えますか？`);
-      if (!ok) return;
-      pushHistory(siteRef.current);
-      const newBlocks = (layout as BlockType[]).map(t => defaultBlock(t));
-      setSite(prev => ({
-        ...prev,
-        pages: prev.pages.map(p =>
-          p.id === currentPageId ? { ...p, blocks: newBlocks } : p
-        ),
-      }));
-      setSelectedId(null);
+      setAiLayoutProposal({ layout, reasoning });
     } finally {
       setAiLayouting(false);
     }
+  };
+
+  const handleApplyAiLayout = () => {
+    if (!aiLayoutProposal) return;
+    pushHistory(siteRef.current);
+    const newBlocks = (aiLayoutProposal.layout as BlockType[]).map(t => defaultBlock(t));
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map(p =>
+        p.id === currentPageId ? { ...p, blocks: newBlocks } : p
+      ),
+    }));
+    setSelectedId(null);
+    setAiLayoutProposal(null);
   };
 
   const handleAiGenerate = async () => {
@@ -3473,6 +3499,64 @@ function BuilderContent() {
       )}
 
       {/* Version history panel */}
+      {/* Version restore confirmation */}
+      {restoreConfirmVersionId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4 text-xl">⏪</div>
+            <h2 className="text-white font-bold mb-2">このバージョンに戻しますか？</h2>
+            <p className="text-slate-400 text-sm mb-5">現在の編集内容は上書きされます。この操作は取り消せません。</p>
+            <div className="flex gap-2">
+              <button onClick={() => setRestoreConfirmVersionId(null)} className="flex-1 text-sm text-slate-400 hover:text-slate-200 border border-white/10 py-2.5 rounded-lg transition-colors">
+                キャンセル
+              </button>
+              <button onClick={confirmRestoreVersion} disabled={!!restoringVersion} className="flex-1 text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold py-2.5 rounded-lg transition-all">
+                {restoringVersion ? '復元中...' : '復元する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI layout proposal modal */}
+      {aiLayoutProposal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-lg flex-shrink-0">✨</div>
+              <div>
+                <h2 className="text-white font-bold">AIレイアウト提案</h2>
+                <p className="text-slate-500 text-xs mt-0.5">現在のブロックを以下の構成に置き換えます</p>
+              </div>
+            </div>
+            <div className="space-y-1.5 mb-4">
+              {aiLayoutProposal.layout.map((block, i) => (
+                <div key={i} className="flex items-center gap-2.5 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2">
+                  <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                  <span className="text-white text-sm font-medium">{block}</span>
+                </div>
+              ))}
+            </div>
+            {aiLayoutProposal.reasoning && (
+              <div className="bg-blue-500/5 border border-blue-500/15 rounded-xl px-4 py-3 mb-4">
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  <span className="text-blue-400 font-semibold">AI の理由: </span>
+                  {aiLayoutProposal.reasoning}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setAiLayoutProposal(null)} className="flex-1 text-sm text-slate-400 hover:text-slate-200 border border-white/10 py-2.5 rounded-lg transition-colors">
+                キャンセル
+              </button>
+              <button onClick={handleApplyAiLayout} className="flex-1 text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-2.5 rounded-lg transition-all">
+                適用する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showHistoryPanel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">

@@ -17,14 +17,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .single();
 
   if (!data) return { title: 'Not Found' };
-  const seo = data.seo_json as { title?: string; description?: string; ogTitle?: string; ogDescription?: string };
+  const seo = data.seo_json as { title?: string; description?: string; ogTitle?: string; ogDescription?: string; ogImage?: string };
+  const ogTitle = seo.ogTitle || seo.title || data.name;
+  const ogDesc = seo.ogDescription || seo.description || '';
+  const ogImage = seo.ogImage || `https://laruvisona.com/og-default.png`;
 
   return {
     title: seo.title || data.name,
     description: seo.description || '',
     openGraph: {
-      title: seo.ogTitle || seo.title || data.name,
-      description: seo.ogDescription || seo.description || '',
+      title: ogTitle,
+      description: ogDesc,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: ogTitle }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDesc,
+      images: [ogImage],
     },
   };
 }

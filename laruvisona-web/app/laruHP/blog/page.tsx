@@ -38,6 +38,7 @@ export default function BlogPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', content: '', category: 'お知らせ', image_url: '', published: true, published_at: new Date().toISOString().split('T')[0] });
 
   useEffect(() => {
@@ -94,10 +95,15 @@ export default function BlogPage() {
     loadPosts(selectedSiteId);
   };
 
-  const handleDelete = async (postId: string) => {
-    if (!confirm('この投稿を削除しますか？')) return;
-    await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
-    setPosts(prev => prev.filter(p => p.id !== postId));
+  const handleDelete = (postId: string) => {
+    setDeleteConfirmId(postId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    await fetch(`/api/posts/${deleteConfirmId}`, { method: 'DELETE' });
+    setPosts(prev => prev.filter(p => p.id !== deleteConfirmId));
+    setDeleteConfirmId(null);
   };
 
   const handleTogglePublish = async (post: Post) => {
@@ -189,6 +195,24 @@ export default function BlogPage() {
           </>
         )}
       </main>
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4 text-xl">🗑️</div>
+            <h2 className="text-white font-bold mb-2">この投稿を削除しますか？</h2>
+            <p className="text-slate-400 text-sm mb-5">削除した投稿は元に戻せません。</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 text-sm text-slate-400 hover:text-slate-200 border border-white/10 py-2.5 rounded-lg transition-colors">
+                キャンセル
+              </button>
+              <button onClick={confirmDelete} className="flex-1 text-sm bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-lg transition-all">
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">

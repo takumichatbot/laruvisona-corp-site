@@ -206,9 +206,9 @@ export default function DashboardPage() {
   const [savingDomain, setSavingDomain] = useState<string | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [pendingSiteId, setPendingSiteId] = useState<string | null>(null);
-  const [analytics, setAnalytics] = useState<Record<string, DayView[]>>({});
+  const [analytics, setAnalytics] = useState<Partial<Record<'7'|'30'|'all', Record<string, DayView[]>>>>({ '7': {} });
   const [contacts, setContacts] = useState<{ id: string; read: boolean }[]>([]);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState<'7' | '30' | 'all'>('7');
+  const [analyticsPeriods, setAnalyticsPeriods] = useState<Record<string, '7' | '30' | 'all'>>({});
   const [deleteToast, setDeleteToast] = useState<{ site: Site; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [domainErrors, setDomainErrors] = useState<Record<string, string>>({});
@@ -247,7 +247,7 @@ export default function DashboardPage() {
       setDomainInputs(initDomains);
       setProfile(profileRes.data);
       const analyticsData = await analyticsRes.json();
-      setAnalytics(analyticsData.data || {});
+      setAnalytics(prev => ({ ...prev, '7': analyticsData.data || {} }));
       const contactsData = await contactsRes.json();
       setContacts((contactsData.contacts || []).map((c: { id: string; read: boolean }) => ({ id: c.id, read: c.read })));
       setLoading(false);
@@ -259,15 +259,11 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/sites/analytics?days=${period}`);
       const data = await res.json();
-      setAnalytics(data.data || {});
+      setAnalytics(prev => ({ ...prev, [period]: data.data || {} }));
     } finally {
       setAnalyticsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    if (!loading) fetchAnalytics(analyticsPeriod);
-  }, [analyticsPeriod, loading, fetchAnalytics]);
 
   const handlePublish = async (siteId: string) => {
     setPublishing(siteId);
@@ -723,30 +719,38 @@ export default function DashboardPage() {
                     </div>
 
                     {/* アクセス解析グラフ */}
-                    {site.published && analytics[site.id] && (
-                      <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 pt-2 pb-1.5">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-1">
-                            {(['7', '30', 'all'] as const).map(p => (
-                              <button
-                                key={p}
-                                onClick={() => setAnalyticsPeriod(p)}
-                                className={`text-[9px] px-1.5 py-0.5 rounded transition-all ${analyticsPeriod === p ? 'bg-blue-500/20 text-blue-400' : 'text-slate-600 hover:text-slate-400'}`}
-                              >
-                                {p === '7' ? '7日' : p === '30' ? '30日' : '全期間'}
-                              </button>
-                            ))}
-                            {analyticsLoading && (
-                              <svg className="animate-spin text-slate-600 ml-0.5" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                            )}
+                    {(() => {
+                      const sp = (analyticsPeriods[site.id] ?? '7') as '7' | '30' | 'all';
+                      const siteData = analytics[sp]?.[site.id];
+                      if (!site.published || !siteData) return null;
+                      return (
+                        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 pt-2 pb-1.5">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1">
+                              {(['7', '30', 'all'] as const).map(p => (
+                                <button
+                                  key={p}
+                                  onClick={() => {
+                                    setAnalyticsPeriods(prev => ({ ...prev, [site.id]: p }));
+                                    if (!analytics[p]) fetchAnalytics(p);
+                                  }}
+                                  className={`text-[9px] px-1.5 py-0.5 rounded transition-all ${sp === p ? 'bg-blue-500/20 text-blue-400' : 'text-slate-600 hover:text-slate-400'}`}
+                                >
+                                  {p === '7' ? '7日' : p === '30' ? '30日' : '全期間'}
+                                </button>
+                              ))}
+                              {analyticsLoading && (
+                                <svg className="animate-spin text-slate-600 ml-0.5" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                              )}
+                            </div>
+                            <span className="text-[9px] text-slate-600">
+                              {siteData.reduce((s: number, d: DayView) => s + d.views, 0).toLocaleString()} PV
+                            </span>
                           </div>
-                          <span className="text-[9px] text-slate-600">
-                            {analytics[site.id].reduce((s, d) => s + d.views, 0).toLocaleString()} PV
-                          </span>
+                          <MiniChart data={siteData} />
                         </div>
-                        <MiniChart data={analytics[site.id]} />
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* LARUbot未連携バナー */}
                     {site.settings_json?.larubot && !site.settings_json?.larubotPublicId && (
