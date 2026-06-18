@@ -2369,6 +2369,13 @@ function BuilderContent() {
     return () => el.removeEventListener('wheel', stop);
   }, []);
 
+  // Auto-scroll canvas to newly selected/added block
+  useEffect(() => {
+    if (!selectedId || !canvasRef.current) return;
+    const el = canvasRef.current.querySelector(`[data-block-id="${selectedId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [selectedId]);
+
 
   // Fetch user plan for feature gating
   useEffect(() => {
@@ -3184,18 +3191,27 @@ function BuilderContent() {
               {currentPage.blocks.map((block, index) => (
                 <div
                   key={block.id}
-                  className={`relative group transition-all ${!preview && dragOverId === block.id && draggedId !== block.id ? 'border-t-2 border-blue-400' : ''}`}
+                  data-block-id={block.id}
+                  className={`relative group transition-all duration-150 ${
+                    !preview && dragOverId === block.id && draggedId !== block.id
+                      ? 'border-t-[3px] border-blue-500 shadow-[0_-3px_0_0_#3b82f6]'
+                      : ''
+                  } ${!preview && draggedId === block.id ? 'scale-[0.98] shadow-xl' : ''}`}
                   draggable={!preview}
-                  onDragStart={!preview ? () => setDraggedId(block.id) : undefined}
-                  onDragOver={!preview ? (e) => { e.preventDefault(); setDragOverId(block.id); } : undefined}
+                  onDragStart={!preview ? (e) => {
+                    setDraggedId(block.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                  } : undefined}
+                  onDragOver={!preview ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverId(block.id); } : undefined}
                   onDragLeave={!preview ? () => setDragOverId(null) : undefined}
-                  onDrop={!preview ? () => {
+                  onDrop={!preview ? (e) => {
+                    e.preventDefault();
                     if (draggedId) reorderBlocks(draggedId, block.id);
                     setDraggedId(null);
                     setDragOverId(null);
                   } : undefined}
                   onDragEnd={!preview ? () => { setDraggedId(null); setDragOverId(null); } : undefined}
-                  style={!preview && draggedId === block.id ? { opacity: 0.4 } : undefined}
+                  style={!preview && draggedId === block.id ? { opacity: 0.45, cursor: 'grabbing' } : !preview ? { cursor: 'grab' } : undefined}
                 >
                   <BlockCanvas
                     block={block}
