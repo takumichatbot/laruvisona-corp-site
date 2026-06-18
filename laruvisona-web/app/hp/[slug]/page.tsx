@@ -1,6 +1,18 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
+import { revalidateTag } from 'next/cache';
 import type { Metadata } from 'next';
+
+// Re-exported so publish route can call it
+export { revalidateTag };
+
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -8,7 +20,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = getServiceClient();
   const { data } = await supabase
     .from('sites')
     .select('name, seo_json')
@@ -41,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PublishedSitePage({ params }: Props) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = getServiceClient();
 
   const { data: site } = await supabase
     .from('sites')
@@ -54,7 +66,7 @@ export default async function PublishedSitePage({ params }: Props) {
     notFound();
   }
 
-  // Fire-and-forget view count increment (uses security definer RPC, no auth needed)
+  // Fire-and-forget view count increment
   void supabase.rpc('increment_view_count', { site_slug: slug });
 
   return (
@@ -65,4 +77,5 @@ export default async function PublishedSitePage({ params }: Props) {
   );
 }
 
-export const dynamic = 'force-dynamic';
+// ISR: cache 1 hour, bust on publish via revalidateTag('site-${slug}')
+export const revalidate = 3600;

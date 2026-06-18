@@ -1,12 +1,13 @@
 export type BlockType =
-  | 'hero' | 'heading' | 'paragraph' | 'image'
+  | 'nav' | 'hero' | 'heading' | 'paragraph' | 'image'
   | 'two-col' | 'three-col' | 'divider' | 'cta'
   | 'services' | 'testimonials' | 'faq' | 'contact'
   | 'hours' | 'gallery' | 'larubot'
   | 'video' | 'map' | 'countdown' | 'price-table' | 'booking' | 'news'
   | 'popup' | 'newsletter'
   | 'share' | 'stripe-buy'
-  | 'google-reviews';
+  | 'google-reviews'
+  | 'announcement-bar' | 'instagram';
 
 export interface Block {
   id: string;
@@ -29,11 +30,24 @@ export interface Page {
   path: string;
   blocks: Block[];
   seo: SEOSettings;
+  password?: string;
+}
+
+export interface GlobalFooter {
+  enabled: boolean;
+  logo: string;
+  tagline: string;
+  links: Array<{ label: string; href: string }>;
+  sns: Array<{ platform: string; url: string }>;
+  copyright: string;
+  bgColor: string;
+  textColor: string;
 }
 
 export interface SiteSettings {
   colorScheme: string;
   style: string;
+  designStyle?: string;
   larubot: boolean;
   laruseo: boolean;
   gaTrackingId?: string;
@@ -42,6 +56,14 @@ export interface SiteSettings {
   notifyEmail?: string;
   customCss?: string;
   fontFamily?: string;
+  globalFooter?: GlobalFooter;
+  abStats?: { a?: number; b?: number };
+  customPalette?: string[];
+  previewToken?: string;
+  lineNotifyToken?: string;
+  clarityId?: string;
+  webhookUrl?: string;
+  sitePassword?: string;
 }
 
 export interface Site {

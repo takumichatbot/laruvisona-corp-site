@@ -199,6 +199,10 @@ export async function POST(req: Request) {
 </body>
 </html>`;
 
+  const lineToken = (settings?.lineNotifyToken as string) || '';
+  const webhookUrl = (settings?.webhookUrl as string) || '';
+  const lineMessage = `\n【${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}】${site.name}\nお名前: ${name}\nメール: ${email}${phone ? `\nTEL: ${phone}` : ''}${message ? `\nメッセージ: ${message.slice(0, 200)}` : ''}`;
+
   await Promise.all([
     resend.emails.send({
       from: 'LARU HP <noreply@laruvisona.jp>',
@@ -215,6 +219,23 @@ export async function POST(req: Request) {
         : `【受付完了】お問い合わせを承りました — ${site.name}`,
       html: autoReplyHtml,
     }),
+    ...(lineToken ? [
+      fetch('https://notify-api.line.me/api/notify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lineToken}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ message: lineMessage }),
+      }).catch(() => {}),
+    ] : []),
+    ...(webhookUrl ? [
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: type || 'contact', siteName: site.name, name, email, phone: phone || null, message: message || null, extraFields: extraFields || null }),
+      }).catch(() => {}),
+    ] : []),
   ]);
 
   return NextResponse.json({ ok: true });

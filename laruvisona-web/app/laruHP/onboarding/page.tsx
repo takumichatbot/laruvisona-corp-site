@@ -16,6 +16,9 @@ const INDUSTRIES = [
   { id: 'education',    icon: '📚', name: '教育・スクール',     desc: '塾、教室、スクール、研修機関など',                  color: 'cyan' },
   { id: 'wedding',      icon: '💒', name: '結婚式場・イベント', desc: 'ウェディング、イベントホール、パーティーなど',      color: 'rose' },
   { id: 'pet',          icon: '🐾', name: 'ペットサロン',       desc: 'トリミング、ペットホテル、動物病院など',            color: 'lime' },
+  { id: 'dental',       icon: '🦷', name: '歯科クリニック',     desc: '歯科医院、矯正歯科、審美歯科など',                  color: 'sky' },
+  { id: 'photo',        icon: '📷', name: 'フォトスタジオ',     desc: 'フォトスタジオ、カメラマン、写真館など',            color: 'stone' },
+  { id: 'accounting',   icon: '📊', name: '税理士・会計士',     desc: '税理士、会計士、行政書士、社労士など',              color: 'blue' },
   { id: 'other',        icon: '✨', name: 'その他',             desc: '上記に当てはまらない業種',                          color: 'slate' },
 ];
 
@@ -32,13 +35,16 @@ const INDUSTRY_COLOR_MAP: Record<string, string> = {
   education: 'professional-blue',
   wedding: 'elegant-dark',
   pet: 'fresh-green',
+  dental: 'professional-blue',
+  photo: 'elegant-dark',
+  accounting: 'professional-blue',
   other: 'professional-blue',
 };
 
 const TEMPLATE_PRESETS = [
   {
     id: 'professional-blue',
-    name: 'プロフェッショナル',
+    name: 'プロブルー',
     desc: '信頼感・実績を前面に',
     colorScheme: 'professional-blue',
     style: 'elegant',
@@ -47,7 +53,7 @@ const TEMPLATE_PRESETS = [
   },
   {
     id: 'warm-earth',
-    name: 'ナチュラル・温かみ',
+    name: 'ナチュラル',
     desc: '親しみやすく地域密着',
     colorScheme: 'warm-earth',
     style: 'warm',
@@ -56,7 +62,7 @@ const TEMPLATE_PRESETS = [
   },
   {
     id: 'elegant-dark',
-    name: 'エレガント・高級感',
+    name: 'エレガント',
     desc: '上品で洗練された印象',
     colorScheme: 'elegant-dark',
     style: 'elegant',
@@ -65,7 +71,7 @@ const TEMPLATE_PRESETS = [
   },
   {
     id: 'fresh-green',
-    name: 'フレッシュ・健康的',
+    name: 'フレッシュ',
     desc: '活力・清潔感のある印象',
     colorScheme: 'fresh-green',
     style: 'modern',
@@ -74,7 +80,7 @@ const TEMPLATE_PRESETS = [
   },
   {
     id: 'modern-pink',
-    name: 'キュート・フェミニン',
+    name: 'フェミニン',
     desc: 'おしゃれで可愛らしい印象',
     colorScheme: 'modern-pink',
     style: 'warm',
@@ -83,12 +89,120 @@ const TEMPLATE_PRESETS = [
   },
   {
     id: 'bold-orange',
-    name: 'アクティブ・エネルギー',
+    name: 'アクティブ',
     desc: '活発でエネルギッシュな印象',
     colorScheme: 'bold-orange',
     style: 'bold',
     hero: { bg: '#7c2d12', accent: '#f97316' },
     card: { bg: '#fff7ed', stripe: '#fed7aa' },
+  },
+  {
+    id: 'midnight-gold',
+    name: 'ミッドナイト',
+    desc: '高級感あふれるダーク×ゴールド',
+    colorScheme: 'midnight-gold',
+    style: 'elegant',
+    hero: { bg: '#0d1b2a', accent: '#d4a017' },
+    card: { bg: '#fdf8ec', stripe: '#f5d98a' },
+  },
+  {
+    id: 'ocean-teal',
+    name: 'オーシャン',
+    desc: '爽やかで信頼感のある水色系',
+    colorScheme: 'ocean-teal',
+    style: 'modern',
+    hero: { bg: '#0d4e5c', accent: '#14b8a6' },
+    card: { bg: '#f0fdfa', stripe: '#99f6e4' },
+  },
+  {
+    id: 'lavender-night',
+    name: 'ラベンダー',
+    desc: 'やさしい紫。癒し・美容系に',
+    colorScheme: 'lavender-night',
+    style: 'elegant',
+    hero: { bg: '#1e1b4b', accent: '#8b5cf6' },
+    card: { bg: '#f5f3ff', stripe: '#ddd6fe' },
+  },
+  {
+    id: 'terracotta',
+    name: 'テラコッタ',
+    desc: '土感のある温かみ。飲食・雑貨に',
+    colorScheme: 'terracotta',
+    style: 'warm',
+    hero: { bg: '#8b3a2a', accent: '#d4856a' },
+    card: { bg: '#fdf5f2', stripe: '#f5c7b8' },
+  },
+  {
+    id: 'cyber-neon',
+    name: 'サイバー',
+    desc: 'ダーク×ネオン。IT・テック向け',
+    colorScheme: 'cyber-neon',
+    style: 'bold',
+    hero: { bg: '#050505', accent: '#00e676' },
+    card: { bg: '#f0fdf4', stripe: '#86efac' },
+  },
+  {
+    id: 'rose-gold',
+    name: 'ローズゴールド',
+    desc: '洗練されたブライダル・美容系',
+    colorScheme: 'rose-gold',
+    style: 'warm',
+    hero: { bg: '#6b2f41', accent: '#d4846a' },
+    card: { bg: '#fdf4f1', stripe: '#f8c4b4' },
+  },
+  {
+    id: 'monochrome',
+    name: 'モノクロ',
+    desc: 'シンプル＆ミニマル。全業種OK',
+    colorScheme: 'monochrome',
+    style: 'modern',
+    hero: { bg: '#111111', accent: '#e0e0e0' },
+    card: { bg: '#f9f9f9', stripe: '#d4d4d4' },
+  },
+  {
+    id: 'sky-clear',
+    name: 'スカイブルー',
+    desc: '明るくクリーン。医療・教育系',
+    colorScheme: 'sky-clear',
+    style: 'modern',
+    hero: { bg: '#1565c0', accent: '#90caf9' },
+    card: { bg: '#e3f2fd', stripe: '#bbdefb' },
+  },
+  {
+    id: 'sunset-dusk',
+    name: 'サンセット',
+    desc: 'クリエイティブ向け紫×オレンジ',
+    colorScheme: 'sunset-dusk',
+    style: 'bold',
+    hero: { bg: '#2d1b54', accent: '#f97316' },
+    card: { bg: '#fff7ed', stripe: '#fdba74' },
+  },
+  {
+    id: 'deep-crimson',
+    name: 'クリムゾン',
+    desc: '情熱的な赤。飲食・スポーツに',
+    colorScheme: 'deep-crimson',
+    style: 'bold',
+    hero: { bg: '#7f1d1d', accent: '#ef4444' },
+    card: { bg: '#fef2f2', stripe: '#fca5a5' },
+  },
+  {
+    id: 'sage-forest',
+    name: 'セージグリーン',
+    desc: 'ナチュラル×モダン。ヘルス系',
+    colorScheme: 'sage-forest',
+    style: 'modern',
+    hero: { bg: '#1a3528', accent: '#6db97c' },
+    card: { bg: '#f0fdf4', stripe: '#bbf7d0' },
+  },
+  {
+    id: 'navy-gold',
+    name: 'ネイビーゴールド',
+    desc: '高品格。士業・コンサル向け',
+    colorScheme: 'navy-gold',
+    style: 'elegant',
+    hero: { bg: '#0f172a', accent: '#eab308' },
+    card: { bg: '#fefce8', stripe: '#fde68a' },
   },
 ];
 
@@ -107,6 +221,7 @@ interface FormData {
   hours: Array<{ day: string; open: string; close: string; closed: boolean }>;
   colorScheme: string;
   style: string;
+  designStyle: string;
   larubot: boolean;
   laruseo: boolean;
 }
@@ -124,6 +239,7 @@ const defaultForm: FormData = {
   hours: defaultHours,
   colorScheme: 'professional-blue',
   style: 'modern',
+  designStyle: 'modern',
   larubot: true,
   laruseo: true,
 };
@@ -513,7 +629,10 @@ function OnboardingContent() {
             <div className="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-black text-sm">L</div>
             <span className="font-bold tracking-tight">LARU<span className="text-blue-400 font-light">HP</span></span>
           </Link>
-          <div className="text-slate-500 text-sm">サイト作成ウィザード</div>
+          <div className="flex flex-col items-end">
+            <div className="text-slate-500 text-sm">サイト作成ウィザード</div>
+            <div className="text-slate-600 text-[11px]">初月1円 · いつでも解約可</div>
+          </div>
         </div>
       </header>
 
@@ -574,8 +693,17 @@ function OnboardingContent() {
               <span key={i} className={i + 1 === step ? 'text-white font-bold' : ''}>{s}</span>
             ))}
           </div>
-          <div className="sm:hidden text-center text-sm text-white font-bold mt-2">
-            STEP {step} / {STEPS.length}: {STEPS[step - 1]}
+          <div className="sm:hidden mt-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-slate-400">STEP {step} / {STEPS.length}</span>
+              <span className="text-xs text-white font-bold">{STEPS[step - 1]}</span>
+            </div>
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500"
+                style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
+              />
+            </div>
           </div>
           <div className="text-center text-[11px] text-slate-500 mt-2">
             このステップの目安: <span className="text-slate-400 font-semibold">{STEP_TIMES[step - 1]}</span>
@@ -755,6 +883,40 @@ function OnboardingContent() {
                   onClick={() => selectTemplate(preset)}
                 />
               ))}
+            </div>
+
+            {/* Design style picker */}
+            <div className="mt-8">
+              <h3 className="font-bold mb-1">デザインスタイル</h3>
+              <p className="text-slate-500 text-sm mb-4">ボタン・カード・余白の形を選択（後でエディタから変更可）</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {([
+                  { id: 'modern',  label: 'モダン',   sub: 'ピル型・標準的',     preview: { btn: '9999px', card: '16px' } },
+                  { id: 'minimal', label: 'ミニマル', sub: 'フラット・余白少なめ', preview: { btn: '8px',    card: '8px'  } },
+                  { id: 'bold',    label: 'ボールド', sub: '大きく力強い',        preview: { btn: '8px',    card: '8px'  } },
+                  { id: 'elegant', label: 'エレガント', sub: '細身・上品な余白',  preview: { btn: '4px',    card: '4px'  } },
+                  { id: 'rounded', label: 'ラウンド', sub: '丸み・やさしい印象',  preview: { btn: '9999px', card: '24px' } },
+                  { id: 'sharp',   label: 'シャープ', sub: '角型・編集的',        preview: { btn: '0px',    card: '0px'  } },
+                ] as const).map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => updateForm('designStyle', s.id)}
+                    className={`rounded-2xl p-4 text-left transition-all border ${form.designStyle === s.id ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}
+                  >
+                    {/* Mini visual preview */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-6 px-3 bg-blue-500 text-white text-[9px] font-bold flex items-center" style={{ borderRadius: s.preview.btn }}>
+                        ボタン
+                      </div>
+                      <div className="flex-1 h-6 bg-white/10 border border-white/20 flex items-center px-2" style={{ borderRadius: s.preview.card }}>
+                        <div className="h-1.5 w-12 bg-white/30 rounded-full" />
+                      </div>
+                    </div>
+                    <div className="font-bold text-sm text-white">{s.label}</div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">{s.sub}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
           </div>
@@ -1102,12 +1264,18 @@ function OnboardingContent() {
         {/* Navigation */}
         {step < 5 && !generating && (
           <div className="flex justify-between mt-10">
-            <button
-              onClick={() => goStep(Math.max(1, step - 1))}
-              className={`px-6 py-3 rounded-xl border border-white/10 text-slate-300 hover:border-white/30 transition-all ${step === 1 ? 'invisible' : ''}`}
-            >
-              ← 戻る
-            </button>
+            {step === 1 ? (
+              <Link href="/laruHP" className="px-6 py-3 rounded-xl border border-white/10 text-slate-500 hover:text-slate-300 hover:border-white/30 transition-all text-sm">
+                ← トップへ戻る
+              </Link>
+            ) : (
+              <button
+                onClick={() => goStep(step - 1)}
+                className="px-6 py-3 rounded-xl border border-white/10 text-slate-300 hover:border-white/30 transition-all"
+              >
+                ← 戻る
+              </button>
+            )}
             <button
               onClick={() => goStep(Math.min(5, step + 1))}
               disabled={!canNext()}

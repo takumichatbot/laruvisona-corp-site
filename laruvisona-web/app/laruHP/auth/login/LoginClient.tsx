@@ -113,8 +113,8 @@ export default function LoginPage() {
           <Link href="/laruHP/auth/signup" className="text-blue-400 hover:text-blue-300">新規登録</Link>
         </p>
         <p className="text-center mt-3">
-          <Link href="/laruHP/auth/reset-password" className="text-slate-500 hover:text-slate-300 text-sm">
-            パスワードを忘れた方
+          <Link href="/laruHP/auth/reset-password" className="text-blue-400/70 hover:text-blue-400 text-sm transition-colors">
+            パスワードをお忘れですか？
           </Link>
         </p>
         <p className="text-center mt-2">

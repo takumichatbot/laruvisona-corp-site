@@ -1,20 +1,21 @@
 'use client';
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BlockType =
-  | 'hero' | 'heading' | 'paragraph' | 'image'
+  | 'nav' | 'hero' | 'heading' | 'paragraph' | 'image'
   | 'two-col' | 'three-col' | 'divider' | 'cta'
   | 'services' | 'testimonials' | 'faq' | 'contact'
   | 'hours' | 'gallery' | 'larubot'
   | 'video' | 'map' | 'countdown' | 'price-table' | 'booking' | 'news'
   | 'popup' | 'newsletter'
   | 'share' | 'stripe-buy'
-  | 'google-reviews';
+  | 'google-reviews'
+  | 'announcement-bar' | 'instagram';
 
 interface Block {
   id: string;
@@ -39,10 +40,22 @@ interface Page {
   seo: SEOSettings;
 }
 
+interface GlobalFooter {
+  enabled: boolean;
+  logo: string;
+  tagline: string;
+  links: Array<{ label: string; href: string }>;
+  sns: Array<{ platform: string; url: string }>;
+  copyright: string;
+  bgColor: string;
+  textColor: string;
+}
+
 interface SiteData {
   siteName: string;
   pages: Page[];
   colorScheme: string;
+  designStyle: string;
   larubot: boolean;
   laruseo: boolean;
   notifyEmail: string;
@@ -51,7 +64,16 @@ interface SiteData {
   laruseoPublicId: string;
   customCss: string;
   fontFamily: string;
+  globalFooter: GlobalFooter;
+  customPalette: string[];
+  lineNotifyToken: string;
+  clarityId: string;
+  webhookUrl: string;
+  sitePassword: string;
 }
+
+const DEFAULT_PALETTE = ['#1e3a8a', '#3b82f6', '#111827', '#ffffff', '#6b7280', '#f59e0b'];
+const PALETTE_LABELS = ['プライマリ', 'アクセント', 'テキスト', '背景', 'サブ', 'ポイント'];
 
 const emptySeo: SEOSettings = { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' };
 
@@ -59,6 +81,21 @@ const emptySeo: SEOSettings = { title: '', description: '', keywords: '', ogTitl
 const defaultBlock = (type: BlockType): Block => {
   const id = `block-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const defaults: Record<BlockType, Record<string, unknown>> = {
+    nav: {
+      logo: 'サイト名',
+      links: [
+        { label: 'トップ', href: '#' },
+        { label: 'サービス', href: '#services' },
+        { label: 'よくある質問', href: '#faq' },
+        { label: 'お問い合わせ', href: '#contact' },
+      ],
+      ctaText: '無料相談',
+      ctaLink: '#contact',
+      bgColor: '#ffffff',
+      textColor: '#111827',
+      sticky: true,
+      showCta: true,
+    },
     hero: {
       heading: 'ここに見出しを入力',
       subheading: 'サブタイトル・キャッチコピーを入力してください',
@@ -250,23 +287,49 @@ const defaultBlock = (type: BlockType): Block => {
       reviews: [],
       lastFetched: '',
     },
+    'announcement-bar': {
+      text: '🎉 期間限定キャンペーン開催中！今すぐチェック',
+      link: '#contact',
+      bgColor: '#1e40af',
+      textColor: '#ffffff',
+      closeable: 'true',
+    },
+    instagram: {
+      heading: 'Instagram',
+      username: '',
+      photos: [] as string[],
+      columns: '3',
+    },
   };
   return { id, type, data: defaults[type] };
 };
 
 // ─── Color Schemes ────────────────────────────────────────────────────────────
 const COLOR_SCHEMES = [
-  { id: 'professional-blue', name: 'プロ', colors: ['#1e3a8a', '#3b82f6'] },
-  { id: 'warm-earth',        name: 'ナチュラル', colors: ['#78350f', '#d97706'] },
-  { id: 'elegant-dark',      name: 'エレガント', colors: ['#111827', '#6b7280'] },
-  { id: 'fresh-green',       name: 'フレッシュ', colors: ['#064e3b', '#10b981'] },
-  { id: 'modern-pink',       name: 'フェミニン', colors: ['#831843', '#ec4899'] },
-  { id: 'bold-orange',       name: 'アクティブ', colors: ['#7c2d12', '#f97316'] },
+  { id: 'professional-blue', name: 'プロブルー',    colors: ['#1e3a8a', '#3b82f6'] },
+  { id: 'warm-earth',        name: 'ナチュラル',    colors: ['#78350f', '#d97706'] },
+  { id: 'elegant-dark',      name: 'エレガント',    colors: ['#111827', '#6b7280'] },
+  { id: 'fresh-green',       name: 'フレッシュ',    colors: ['#064e3b', '#10b981'] },
+  { id: 'modern-pink',       name: 'フェミニン',    colors: ['#831843', '#ec4899'] },
+  { id: 'bold-orange',       name: 'アクティブ',    colors: ['#7c2d12', '#f97316'] },
+  { id: 'midnight-gold',     name: 'ミッドナイト', colors: ['#0d1b2a', '#d4a017'] },
+  { id: 'ocean-teal',        name: 'オーシャン',    colors: ['#0d4e5c', '#14b8a6'] },
+  { id: 'lavender-night',    name: 'ラベンダー',    colors: ['#1e1b4b', '#8b5cf6'] },
+  { id: 'terracotta',        name: 'テラコッタ',    colors: ['#8b3a2a', '#d4856a'] },
+  { id: 'cyber-neon',        name: 'サイバー',      colors: ['#050505', '#00e676'] },
+  { id: 'rose-gold',         name: 'ローズゴールド', colors: ['#6b2f41', '#d4846a'] },
+  { id: 'monochrome',        name: 'モノクロ',      colors: ['#111111', '#e0e0e0'] },
+  { id: 'sky-clear',         name: 'スカイ',        colors: ['#1565c0', '#90caf9'] },
+  { id: 'sunset-dusk',       name: 'サンセット',    colors: ['#2d1b54', '#f97316'] },
+  { id: 'deep-crimson',      name: 'クリムゾン',    colors: ['#7f1d1d', '#ef4444'] },
+  { id: 'sage-forest',       name: 'セージ',        colors: ['#1a3528', '#6db97c'] },
+  { id: 'navy-gold',         name: 'ネイビーゴールド', colors: ['#0f172a', '#eab308'] },
 ];
 
 // ─── Block Palette Config ─────────────────────────────────────────────────────
 const BLOCK_PALETTE = [
   { group: 'レイアウト', items: [
+    { type: 'nav' as BlockType, label: 'ナビバー', icon: '🧭' },
     { type: 'hero' as BlockType, label: 'ヒーロー', icon: '🦸' },
     { type: 'two-col' as BlockType, label: '2カラム', icon: '▣' },
     { type: 'three-col' as BlockType, label: '3カラム', icon: '⊞' },
@@ -300,11 +363,13 @@ const BLOCK_PALETTE = [
     { type: 'larubot' as BlockType, label: 'LARUbot', icon: '🤖' },
   ]},
   { group: '集客', items: [
+    { type: 'announcement-bar' as BlockType, label: 'お知らせバー', icon: '📢' },
     { type: 'popup' as BlockType, label: 'ポップアップ', icon: '💬' },
     { type: 'newsletter' as BlockType, label: 'メルマガ登録', icon: '📧' },
     { type: 'share' as BlockType, label: 'SNSシェア', icon: '🔗' },
     { type: 'stripe-buy' as BlockType, label: '購入ボタン', icon: '🛒' },
     { type: 'google-reviews' as BlockType, label: 'Google口コミ', icon: '⭐' },
+    { type: 'instagram' as BlockType, label: 'Instagram', icon: '📷' },
   ]},
 ];
 
@@ -348,10 +413,11 @@ function CountdownTimer({ targetDate, textColor }: { targetDate: string; textCol
 }
 
 // ─── Block Renderer (Canvas) ──────────────────────────────────────────────────
-function BlockCanvas({ block, selected, onSelect, onDataChange }: {
+function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }: {
   block: Block;
   selected: boolean;
-  onSelect: () => void;
+  multiSelected: boolean;
+  onSelect: (e: React.MouseEvent) => void;
   onDataChange: (data: Record<string, unknown>) => void;
 }) {
   const d = block.data;
@@ -377,6 +443,30 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
 
   const inner = () => {
     switch (block.type) {
+      case 'nav': {
+        const links = (d.links as { label: string; href: string }[]) || [];
+        return (
+          <div className="flex items-center justify-between px-6 py-4 shadow-sm" style={{ backgroundColor: d.bgColor as string, color: d.textColor as string }}>
+            <span
+              contentEditable suppressContentEditableWarning
+              className="font-black text-lg outline-none cursor-text hover:bg-black/5 rounded px-1"
+              onBlur={(e: React.FocusEvent<HTMLElement>) => onDataChange({ ...d, logo: e.currentTarget.textContent || '' })}
+              dangerouslySetInnerHTML={{ __html: (d.logo as string) || 'サイト名' }}
+            />
+            <div className="flex items-center gap-5 text-sm">
+              {links.map((l, i) => (
+                <span key={i} className="opacity-80 hover:opacity-100 cursor-pointer">{l.label}</span>
+              ))}
+              {!!d.showCta && (
+                <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold">
+                  {d.ctaText as string}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      }
+
       case 'hero':
         return (
           <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-8 py-16 relative overflow-hidden" style={{ backgroundColor: d.bgColor as string, color: d.textColor as string }}>
@@ -398,28 +488,36 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
           </div>
         );
 
-      case 'heading':
+      case 'heading': {
+        const hFsMap: Record<string, string> = { sm: 'text-sm', base: 'text-base', xl: 'text-xl', '2xl': 'text-2xl', '3xl': 'text-3xl', '4xl': 'text-4xl' };
+        const hFwMap: Record<string, string> = { normal: 'font-normal', semibold: 'font-semibold', bold: 'font-bold', extrabold: 'font-extrabold', black: 'font-black' };
         return (
-          <div className="px-8 py-12" style={{ textAlign: d.align as React.CSSProperties['textAlign'] }}>
+          <div className="px-8 py-12" style={{ textAlign: d.align as React.CSSProperties['textAlign'], color: (d.color as string) || '#111827' }}>
             {(d.image as string) && <img src={d.image as string} alt="" className="w-full rounded-xl mb-6 object-cover" style={{ height: '200px' }} />}
-            {editable('text', 'h2', 'text-3xl font-black text-gray-800 block mb-2')}
+            {editable('text', 'h2', `${hFsMap[d.fontSize as string] || 'text-3xl'} ${hFwMap[d.fontWeight as string] || 'font-black'} block mb-2`)}
             {editable('subtext', 'p', 'text-gray-500 block')}
           </div>
         );
+      }
 
       case 'paragraph': {
+        const pFsMap: Record<string, string> = { sm: 'text-sm', base: 'text-base', lg: 'text-lg', xl: 'text-xl' };
+        const pMwMap: Record<string, string> = { full: 'max-w-full', prose: 'max-w-prose', lg: 'max-w-2xl', md: 'max-w-xl', sm: 'max-w-lg' };
+        const pFontClass = `${pFsMap[d.fontSize as string] || 'text-base'} leading-relaxed block w-full`;
+        const pColor = (d.color as string) || '#374151';
+        const pAlign = d.align as React.CSSProperties['textAlign'];
         const imgPos = d.imagePosition as string;
         if ((d.image as string) && imgPos && imgPos !== 'none') {
           return (
-            <div className={`px-8 py-6 flex gap-8 items-start max-w-5xl mx-auto ${imgPos === 'right' ? 'flex-row-reverse' : ''}`}>
+            <div className={`px-8 py-6 flex gap-8 items-start max-w-5xl mx-auto ${imgPos === 'right' ? 'flex-row-reverse' : ''}`} style={{ textAlign: pAlign, color: pColor }}>
               <img src={d.image as string} alt="" className="w-48 rounded-xl object-cover flex-shrink-0" style={{ height: '160px' }} />
-              <div className="flex-1">{editable('text', 'p', 'text-gray-700 leading-relaxed block w-full')}</div>
+              <div className="flex-1">{editable('text', 'p', pFontClass)}</div>
             </div>
           );
         }
         return (
-          <div className="px-8 py-6 max-w-3xl mx-auto">
-            {editable('text', 'p', `text-gray-700 leading-relaxed block text-${d.fontSize || 16}px w-full`)}
+          <div className={`px-8 py-6 mx-auto ${pMwMap[d.maxWidth as string] || 'max-w-3xl'}`} style={{ textAlign: pAlign, color: pColor }}>
+            {editable('text', 'p', pFontClass)}
           </div>
         );
       }
@@ -554,8 +652,14 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
                       }}
                       dangerouslySetInnerHTML={{ __html: item.title }}
                     />
-                    <p className="text-gray-500 text-sm mb-3">{item.description}</p>
-                    {item.price && <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">{item.price}</span>}
+                    <p contentEditable suppressContentEditableWarning
+                      className="text-gray-500 text-sm mb-3 outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
+                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],description:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
+                      dangerouslySetInnerHTML={{ __html: item.description }} />
+                    {item.price && <span contentEditable suppressContentEditableWarning
+                      className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold outline-none cursor-text inline-block"
+                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],price:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
+                      dangerouslySetInnerHTML={{ __html: item.price }} />}
                   </div>
                 </div>
               ))}
@@ -575,8 +679,20 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
                   <div className="flex gap-1 mb-3">
                     {[...Array(item.rating)].map((_, j) => <span key={j} className="text-yellow-400">★</span>)}
                   </div>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-4">{item.text}</p>
-                  <div className="text-gray-800 font-bold text-sm">{item.name}<span className="text-gray-400 font-normal ml-1">({item.age})</span></div>
+                  <p contentEditable suppressContentEditableWarning
+                    className="text-gray-600 text-sm leading-relaxed mb-4 outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
+                    onBlur={e => { const ni=[...items]; ni[i]={...ni[i],text:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
+                    dangerouslySetInnerHTML={{ __html: item.text }} />
+                  <div className="text-gray-800 font-bold text-sm">
+                    <span contentEditable suppressContentEditableWarning className="outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
+                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],name:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
+                      dangerouslySetInnerHTML={{ __html: item.name }} />
+                    <span className="text-gray-400 font-normal ml-1">(
+                      <span contentEditable suppressContentEditableWarning className="outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
+                        onBlur={e => { const ni=[...items]; ni[i]={...ni[i],age:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
+                        dangerouslySetInnerHTML={{ __html: item.age }} />
+                    )</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -594,11 +710,17 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
                 <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
                   <div className="p-5 flex gap-3">
                     <span className="text-blue-500 font-black text-lg flex-shrink-0">Q.</span>
-                    <p className="font-bold text-gray-800">{item.q}</p>
+                    <p contentEditable suppressContentEditableWarning
+                      className="font-bold text-gray-800 outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded flex-1"
+                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],q:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
+                      dangerouslySetInnerHTML={{ __html: item.q }} />
                   </div>
                   <div className="px-5 pb-5 pt-0 flex gap-3 bg-gray-50">
                     <span className="text-gray-400 font-black text-lg flex-shrink-0">A.</span>
-                    <p className="text-gray-600 text-sm">{item.a}</p>
+                    <p contentEditable suppressContentEditableWarning
+                      className="text-gray-600 text-sm outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded flex-1"
+                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],a:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
+                      dangerouslySetInnerHTML={{ __html: item.a }} />
                   </div>
                 </div>
               ))}
@@ -957,6 +1079,39 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
           </div>
         );
 
+      case 'announcement-bar':
+        return (
+          <div className="flex items-center justify-between px-4 py-3 text-sm font-medium" style={{ background: d.bgColor as string, color: d.textColor as string }}>
+            <div className="flex-1 text-center">{d.text as string}</div>
+            {d.closeable !== 'false' && <span className="ml-3 opacity-60 text-base">✕</span>}
+          </div>
+        );
+
+      case 'instagram': {
+        const photos = (d.photos as string[])?.filter(Boolean) ?? [];
+        return (
+          <div className="px-8 py-10 text-center">
+            {!!(d.heading as string) && <h2 className="text-2xl font-black text-gray-800 mb-6">{d.heading as string}</h2>}
+            {photos.length > 0 ? (
+              <div className="grid gap-2 mb-6" style={{ gridTemplateColumns: `repeat(${d.columns || 3},1fr)` }}>
+                {photos.slice(0, 9).map((src, i) => (
+                  <div key={i} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 mb-6 max-w-xs mx-auto">
+                {[...Array(6)].map((_, i) => <div key={i} className="aspect-square bg-gradient-to-br from-pink-100 to-purple-100 rounded-lg" />)}
+              </div>
+            )}
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-5 py-2.5 rounded-full font-bold text-sm">
+              📷 {d.username ? `@${d.username}` : 'Instagram'} をフォロー
+            </div>
+          </div>
+        );
+      }
+
       default:
         return <div className="p-8 text-gray-400 text-center">Unknown block type: {block.type}</div>;
     }
@@ -965,10 +1120,14 @@ function BlockCanvas({ block, selected, onSelect, onDataChange }: {
   return (
     <div
       onClick={onSelect}
-      className={`relative group cursor-pointer transition-all ${selected ? 'ring-2 ring-blue-500 ring-offset-0' : 'hover:ring-1 hover:ring-blue-300'}`}
+      className={`relative group cursor-pointer transition-all ${
+        selected ? 'ring-2 ring-blue-500 ring-offset-0' :
+        multiSelected ? 'ring-2 ring-orange-400 ring-offset-0' :
+        'hover:ring-1 hover:ring-blue-300'
+      }`}
     >
-      {selected && (
-        <div className="absolute -top-7 left-0 z-20 flex items-center gap-1 bg-blue-500 text-white text-xs rounded-t-lg px-2 py-1 pointer-events-none">
+      {(selected || multiSelected) && (
+        <div className={`absolute -top-7 left-0 z-20 flex items-center gap-1 ${selected ? 'bg-blue-500' : 'bg-orange-400'} text-white text-xs rounded-t-lg px-2 py-1 pointer-events-none`}>
           <span>選択中: {block.type}</span>
         </div>
       )}
@@ -1088,7 +1247,272 @@ function GoogleReviewsPanel({ d, blockId, onDataChange }: { d: Record<string, un
   );
 }
 
-function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus }: {
+function UrlImportModal({ onImport, onClose }: {
+  onImport: (data: Record<string, unknown>) => void;
+  onClose: () => void;
+}) {
+  const [url, setUrl] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState('');
+
+  const handleScan = async () => {
+    if (!url.trim()) return;
+    setScanning(true);
+    setError('');
+    setResult(null);
+    const res = await fetch('/api/ai/scan-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url.trim() }),
+    });
+    const data = await res.json();
+    setScanning(false);
+    if (data.extracted) {
+      setResult(data.extracted);
+    } else {
+      setError(data.error === 'fetch_failed' ? 'サイトへのアクセスに失敗しました。URLを確認してください。'
+        : data.error === 'no_content' ? 'コンテンツを取得できませんでした。'
+        : 'スキャンに失敗しました。');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div>
+            <h2 className="font-bold text-white">🔗 既存サイトからインポート</h2>
+            <p className="text-slate-500 text-[11px] mt-0.5">URLを入力すると、AIが情報を自動抽出してサイトに反映します</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white text-xl">✕</button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex gap-2">
+            <input type="url" value={url} onChange={e => setUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleScan()}
+              placeholder="https://example.com"
+              className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+            />
+            <button onClick={handleScan} disabled={scanning || !url.trim()}
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all whitespace-nowrap">
+              {scanning ? 'スキャン中...' : 'スキャン'}
+            </button>
+          </div>
+          {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-300 text-sm">{error}</div>}
+          {result && (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
+              <p className="text-emerald-400 text-sm font-semibold mb-3">✓ 情報を取得しました</p>
+              {([
+                ['店舗・会社名', result.businessName],
+                ['電話番号', result.phone],
+                ['住所', result.address],
+                ['メール', result.email],
+                ['キャッチフレーズ', result.catchphrase],
+                ['説明文', result.description],
+              ] as [string, unknown][]).map(([label, value]) => value ? (
+                <div key={label} className="flex gap-2">
+                  <span className="text-slate-500 text-[10px] w-24 flex-shrink-0 pt-0.5">{label}</span>
+                  <span className="text-slate-200 text-[10px] flex-1 leading-relaxed">{String(value).slice(0, 120)}</span>
+                </div>
+              ) : null)}
+              {Array.isArray(result.services) && result.services.length > 0 && (
+                <div className="flex gap-2">
+                  <span className="text-slate-500 text-[10px] w-24 flex-shrink-0 pt-0.5">サービス</span>
+                  <span className="text-slate-200 text-[10px]">{(result.services as Array<{ name: string }>).map(s => s.name).join(' / ')}</span>
+                </div>
+              )}
+              <button onClick={() => { onImport(result); onClose(); }}
+                className="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold py-2.5 rounded-lg transition-all">
+                この内容でサイトに適用する
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+  const [query, setQuery] = useState('');
+  const [photos, setPhotos] = useState<{ id: string; url: string; thumb: string; alt: string; credit: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const search = async (q: string) => {
+    if (!q.trim()) return;
+    setLoading(true);
+    const res = await fetch(`/api/images/unsplash?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    setPhotos(data.photos || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { search('business interior'); }, []);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    const fd = new FormData(); fd.append('file', file);
+    const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    setUploading(false);
+    if (data.url) onSelect(data.url);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
+          <h2 className="font-bold text-white">画像ライブラリ</h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-white text-xl leading-none">✕</button>
+        </div>
+        <div className="px-4 py-3 border-b border-white/10 flex gap-2 flex-shrink-0">
+          <input
+            type="text" value={query} placeholder="Unsplashで検索（例: cafe interior, office, nature）"
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && search(query)}
+            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500"
+          />
+          <button onClick={() => search(query)} disabled={loading}
+            className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all disabled:opacity-50">
+            {loading ? '...' : '検索'}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+          <button onClick={() => fileRef.current?.click()} disabled={uploading}
+            className="bg-white/10 hover:bg-white/20 border border-white/20 text-slate-300 text-sm font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-50">
+            {uploading ? '...' : '↑ アップロード'}
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          {photos.length === 0 && !loading && (
+            <div className="text-center text-slate-500 text-sm py-8">キーワードを入力して検索してください</div>
+          )}
+          <div className="grid grid-cols-3 gap-2">
+            {photos.map(p => (
+              <button key={p.id} onClick={() => { onSelect(p.url); onClose(); }}
+                className="group relative rounded-xl overflow-hidden aspect-video bg-white/5 hover:ring-2 hover:ring-blue-500 transition-all">
+                <img src={p.thumb} alt={p.alt} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-end p-1.5">
+                  <span className="text-[9px] text-white/70 group-hover:text-white/90 truncate">{p.credit}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="px-4 py-2.5 border-t border-white/10 flex-shrink-0">
+          <p className="text-[10px] text-slate-600">写真提供: Unsplash（無料・商用利用可）</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ChatMessage = { role: 'user' | 'assistant'; text: string };
+type AiAction = { type: 'update_block'; blockId: string; data: Record<string, unknown> };
+
+function AiChatSidebar({ open, onClose, blocks, selectedBlockId, onApplyActions, siteName, industry }: {
+  open: boolean;
+  onClose: () => void;
+  blocks: Block[];
+  selectedBlockId: string | null;
+  onApplyActions: (actions: AiAction[]) => void;
+  siteName: string;
+  industry: string;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: 'assistant', text: 'こんにちは！サイトの編集をお手伝いします。\n例: 「ヒーローの見出しをもっとキャッチーにして」「CTAボタンのテキストを変えて」' },
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, open]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput('');
+    const newMessages: ChatMessage[] = [...messages, { role: 'user', text }];
+    setMessages(newMessages);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/ai/chat-edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, blocks, selectedBlockId, siteName, industry }),
+      });
+      const data = await res.json();
+      if (data.actions?.length > 0) onApplyActions(data.actions);
+      setMessages(prev => [...prev, { role: 'assistant', text: data.reply || 'エラーが発生しました' }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', text: 'エラーが発生しました。再試行してください。' }]);
+    }
+    setLoading(false);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed right-[300px] bottom-4 z-40 w-80 bg-[#0f1729] border border-white/15 rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: '70vh' }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">✨</span>
+          <span className="font-bold text-white text-sm">AIアシスタント</span>
+        </div>
+        <button onClick={onClose} className="text-slate-500 hover:text-white text-lg leading-none">✕</button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+              m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-200'
+            }`}>
+              {m.text}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-white/10 rounded-xl px-3 py-2 text-xs text-slate-400">考え中...</div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+      <div className="flex gap-2 p-3 border-t border-white/10 flex-shrink-0">
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+          placeholder="指示を入力..."
+          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+        />
+        <button onClick={send} disabled={loading || !input.trim()}
+          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all flex-shrink-0">
+          送信
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PaletteSwatches({ palette, onPick }: { palette: string[]; onPick: (c: string) => void }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  return (
+    <div className="flex gap-1.5 flex-wrap">
+      {palette.map((c, i) => (
+        <button key={i} type="button"
+          onClick={() => { onPick(c); setCopied(c); setTimeout(() => setCopied(null), 1200); }}
+          title={`${PALETTE_LABELS[i]}: ${c}`}
+          style={{ background: c, outline: copied === c ? '2px solid #60a5fa' : undefined }}
+          className="w-6 h-6 rounded-full border border-white/30 flex-shrink-0 hover:scale-110 transition-transform" />
+      ))}
+    </div>
+  );
+}
+
+function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, designStyle, onDesignStyleChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus, onOpenImageLib, globalFooter, onGlobalFooterChange, customPalette, onCustomPaletteChange, lineNotifyToken, onLineNotifyTokenChange, clarityId, onClarityIdChange, webhookUrl, onWebhookUrlChange, sitePassword, onSitePasswordChange }: {
   block: Block | null;
   onDataChange: (id: string, data: Record<string, unknown>) => void;
   seo: SEOSettings;
@@ -1101,6 +1525,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   onNotifyEmailChange: (v: string) => void;
   colorScheme: string;
   onColorSchemeChange: (v: string) => void;
+  designStyle: string;
+  onDesignStyleChange: (v: string) => void;
   gaTrackingId: string;
   onGaTrackingIdChange: (v: string) => void;
   larubotPublicId: string;
@@ -1114,6 +1540,19 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   onFontFamilyChange: (v: string) => void;
   userPlan: string | null;
   subscriptionStatus: string;
+  onOpenImageLib: (cb: (url: string) => void) => void;
+  globalFooter: GlobalFooter;
+  onGlobalFooterChange: (f: GlobalFooter) => void;
+  customPalette: string[];
+  onCustomPaletteChange: (p: string[]) => void;
+  lineNotifyToken: string;
+  onLineNotifyTokenChange: (v: string) => void;
+  clarityId: string;
+  onClarityIdChange: (v: string) => void;
+  webhookUrl: string;
+  onWebhookUrlChange: (v: string) => void;
+  sitePassword: string;
+  onSitePasswordChange: (v: string) => void;
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
   const [uploadingImg, setUploadingImg] = useState<string | null>(null);
@@ -1181,13 +1620,17 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
     }
   };
 
-  const seoScore = [
-    seo.title.length > 10,
-    seo.description.length > 30,
-    seo.keywords.length > 0,
-    larubot,
-    laruseo,
-  ].filter(Boolean).length;
+  const seoChecks = [
+    { id: 'title-exists',  label: 'ページタイトルを設定',       tip: '未設定は検索結果でURLがそのまま表示される',    pass: seo.title.length > 0 },
+    { id: 'title-len',     label: 'タイトルが15〜60文字',         tip: `現在${seo.title.length}文字。短すぎると評価されにくい`,  pass: seo.title.length >= 15 && seo.title.length <= 60 },
+    { id: 'desc-exists',   label: 'メタ説明文を設定',            tip: '未設定はGoogleが自動抽出するため不正確になりやすい', pass: seo.description.length > 0 },
+    { id: 'desc-len',      label: '説明文が50〜160文字',          tip: `現在${seo.description.length}文字。長すぎると切れる`,  pass: seo.description.length >= 50 && seo.description.length <= 160 },
+    { id: 'keywords',      label: 'キーワードを設定',             tip: '検索キーワードを3〜5個カンマ区切りで入力',       pass: seo.keywords.length > 0 },
+    { id: 'og-title',      label: 'OGタイトルを設定',            tip: 'SNSシェア時のカード表示に使われる',             pass: seo.ogTitle.length > 0 },
+    { id: 'og-image',      label: 'OG画像URLを設定',             tip: '1200×630px推奨。未設定はSNSシェア時に画像なし',  pass: (seo.ogImage ?? '').length > 0 },
+    { id: 'laruseo',       label: 'LARUSEO連携を有効化',          tip: 'AI自動SEO最適化でクロール評価を継続改善',       pass: laruseo },
+  ] as const;
+  const seoScore = seoChecks.filter(c => c.pass).length;
 
   return (
     <div className="w-64 bg-[#0f172a] border-l border-white/10 flex flex-col flex-shrink-0 min-h-0">
@@ -1205,10 +1648,81 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
         {tab === 'block' && (
           <>
             {!block && (
-              <div className="text-slate-500 text-center py-8">
-                ブロックを選択してください
+              <div className="text-slate-500 text-center py-8 space-y-2">
+                <div>ブロックを選択してください</div>
+                <div className="text-[10px] text-slate-600">Shift+クリックで複数選択</div>
               </div>
             )}
+            {block && customPalette.some(c => c !== '#ffffff') && (
+              <div className="border border-white/10 rounded-lg p-2 mb-3 bg-white/[0.03]">
+                <span className="text-[10px] text-slate-500 block mb-1.5">マイカラー（クリックでコピー）</span>
+                <PaletteSwatches palette={customPalette} onPick={c => navigator.clipboard?.writeText(c)} />
+              </div>
+            )}
+            {block?.type === 'nav' && (() => {
+              const links = (d.links as { label: string; href: string }[]) || [];
+              return (
+                <>
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">ロゴ・サイト名</span>
+                    <input type="text" value={d.logo as string || ''} onChange={e => onDataChange(block.id, { ...d, logo: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </label>
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-slate-400">メニューリンク</span>
+                      <button onClick={() => onDataChange(block.id, { ...d, links: [...links, { label: '新しいリンク', href: '#' }] })}
+                        className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors">+ 追加</button>
+                    </div>
+                    <div className="space-y-2">
+                      {links.map((l, i) => (
+                        <div key={i} className="flex gap-1.5 items-center">
+                          <input type="text" value={l.label} placeholder="ラベル"
+                            onChange={e => { const nl = [...links]; nl[i] = { ...l, label: e.target.value }; onDataChange(block.id, { ...d, links: nl }); }}
+                            className="w-24 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[11px]" />
+                          <input type="text" value={l.href} placeholder="#section"
+                            onChange={e => { const nl = [...links]; nl[i] = { ...l, href: e.target.value }; onDataChange(block.id, { ...d, links: nl }); }}
+                            className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[11px]" />
+                          <button onClick={() => onDataChange(block.id, { ...d, links: links.filter((_, j) => j !== i) })}
+                            className="text-red-400 hover:text-red-300 text-xs px-1">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">CTAボタンを表示</span>
+                    <input type="checkbox" checked={!!d.showCta}
+                      onChange={e => onDataChange(block.id, { ...d, showCta: e.target.checked })}
+                      className="w-4 h-4 accent-blue-500" />
+                  </div>
+                  {d.showCta && (
+                    <>
+                      <label className="block">
+                        <span className="text-slate-400 block mb-1">CTAテキスト</span>
+                        <input type="text" value={d.ctaText as string || ''} onChange={e => onDataChange(block.id, { ...d, ctaText: e.target.value })}
+                          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                      </label>
+                      <label className="block">
+                        <span className="text-slate-400 block mb-1">CTAリンク先</span>
+                        <input type="text" value={d.ctaLink as string || ''} onChange={e => onDataChange(block.id, { ...d, ctaLink: e.target.value })}
+                          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                      </label>
+                    </>
+                  )}
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">背景色</span>
+                    <input type="color" value={d.bgColor as string || '#ffffff'} onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                  </label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">スクロール時に固定</span>
+                    <input type="checkbox" checked={!!d.sticky}
+                      onChange={e => onDataChange(block.id, { ...d, sticky: e.target.checked })}
+                      className="w-4 h-4 accent-blue-500" />
+                  </div>
+                </>
+              );
+            })()}
             {block?.type === 'hero' && (
               <>
                 <label className="block">
@@ -1246,6 +1760,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                         {uploadingImg === 'bgImage' ? '...' : '↑'}
                       </span>
                     </label>
+                    <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, bgImage: url }))}
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
                   </div>
                   {!!(d.bgImage as string) && <img src={d.bgImage as string} alt="" className="w-full h-12 object-cover rounded opacity-60" />}
                   <AiImageButton
@@ -1283,6 +1799,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                         {uploadingImg === 'image' ? '...' : '↑'}
                       </span>
                     </label>
+                    <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, image: url }))}
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
                   </div>
                   {(d.image as string) && <img src={d.image as string} alt="" className="w-full h-12 object-cover rounded mb-1" />}
                 </label>
@@ -1312,6 +1830,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                         {uploadingImg === 'image' ? '...' : '↑'}
                       </span>
                     </label>
+                    <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, image: url }))}
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
                   </div>
                   {(d.image as string) && <img src={d.image as string} alt="" className="w-full h-12 object-cover rounded mb-1" />}
                 </label>
@@ -1341,6 +1861,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                         {uploadingImg === 'col1Image' ? '...' : '↑'}
                       </span>
                     </label>
+                    <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, col1Image: url }))}
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
                   </div>
                   {(d.col1Image as string) && <img src={d.col1Image as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
                 </label>
@@ -1357,6 +1879,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                         {uploadingImg === 'col2Image' ? '...' : '↑'}
                       </span>
                     </label>
+                    <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, col2Image: url }))}
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
                   </div>
                   {(d.col2Image as string) && <img src={d.col2Image as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
                 </label>
@@ -1378,6 +1902,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                           {uploadingImg === key ? '...' : '↑'}
                         </span>
                       </label>
+                      <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, [key]: url }))}
+                        className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
                     </div>
                     {(d[key] as string) && <img src={d[key] as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
                   </label>
@@ -1514,6 +2040,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                         {uploadingImg === 'src' ? '...' : 'アップロード'}
                       </span>
                     </label>
+                    <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, src: url }))}
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼 ライブラリ</button>
                   </div>
                   {!!(d.src as string) && <img src={d.src as string} alt="" className="w-full h-16 object-cover rounded mb-1" />}
                 </label>
@@ -1663,6 +2191,73 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
                   </div>
                 </label>
+                <div className="border-t border-white/10 pt-3">
+                  <span className="text-slate-400 block mb-1 text-[11px] font-semibold uppercase tracking-wide">条件分岐</span>
+                  <div className="text-slate-500 text-[10px] mb-2">「お問い合わせ種別」選択肢を設定すると、種別によって追加フィールドが表示されます</div>
+                  {(() => {
+                    const opts: string[] = (d.typeOptions as string[]) || [];
+                    const cond: Record<string, string[]> = (d.conditionalFields as Record<string, string[]>) || {};
+                    return (
+                      <>
+                        <div className="space-y-1 mb-2">
+                          {opts.map((opt, i) => (
+                            <div key={i} className="flex items-center gap-1">
+                              <input type="text" value={opt}
+                                onChange={e => { const n = [...opts]; n[i] = e.target.value; onDataChange(block.id, { ...d, typeOptions: n }); }}
+                                className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]"
+                                placeholder={`選択肢 ${i + 1}`} />
+                              <button onClick={() => {
+                                const n = opts.filter((_, j) => j !== i);
+                                const nc = { ...cond }; delete nc[opt];
+                                onDataChange(block.id, { ...d, typeOptions: n, conditionalFields: nc });
+                              }} className="text-red-400/60 hover:text-red-400 text-xs px-1">✕</button>
+                            </div>
+                          ))}
+                        </div>
+                        <button onClick={() => onDataChange(block.id, { ...d, typeOptions: [...opts, ''] })}
+                          className="w-full text-xs bg-white/10 hover:bg-white/20 text-white py-1.5 rounded-lg mb-2">+ 選択肢を追加</button>
+                        {opts.filter(Boolean).map(opt => (
+                          <div key={opt} className="mb-2">
+                            <div className="text-slate-500 text-[10px] mb-1">「{opt}」選択時の追加フィールド</div>
+                            {(['date', 'budget', 'company'] as string[]).map(f => {
+                              const labels: Record<string, string> = { date: '希望日時', budget: '予算', company: '会社名' };
+                              const cur = cond[opt] || [];
+                              return (
+                                <label key={f} className="flex items-center gap-1.5 cursor-pointer mb-0.5">
+                                  <input type="checkbox" checked={cur.includes(f)}
+                                    onChange={e => {
+                                      const nc = { ...cond, [opt]: e.target.checked ? [...cur, f] : cur.filter(x => x !== f) };
+                                      onDataChange(block.id, { ...d, conditionalFields: nc });
+                                    }}
+                                    className="w-3 h-3 rounded accent-blue-500" />
+                                  <span className="text-slate-400 text-[10px]">{labels[f]}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="border-t border-white/10 pt-3">
+                  <span className="text-slate-400 block mb-1 text-[11px] font-semibold uppercase tracking-wide">送信後の動作</span>
+                  <label className="block mb-2">
+                    <span className="text-slate-400 block mb-1">サンクスメッセージ</span>
+                    <input type="text" value={(d.thankYouMessage as string) || ''}
+                      placeholder="お問い合わせありがとうございます！"
+                      onChange={e => onDataChange(block.id, { ...d, thankYouMessage: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                  </label>
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">リダイレクト先URL（任意）</span>
+                    <input type="text" value={(d.redirectUrl as string) || ''}
+                      placeholder="https://example.com/thanks"
+                      onChange={e => onDataChange(block.id, { ...d, redirectUrl: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] font-mono" />
+                    <div className="text-slate-600 text-[10px] mt-1">設定するとサンクスページへリダイレクト</div>
+                  </label>
+                </div>
               </>
             )}
             {block?.type === 'booking' && (
@@ -1716,6 +2311,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                             {uploadingImg === slotKey ? '...' : '↑'}
                           </span>
                         </label>
+                        <button type="button" onClick={() => onOpenImageLib(url => { const imgs = [...images]; imgs[idx] = url; onDataChange(block.id, { ...d, images: imgs }); })}
+                          className="flex items-center px-1.5 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
                         {src && (
                           <button onClick={() => { const imgs = [...images]; imgs[idx] = ''; onDataChange(block.id, { ...d, images: imgs.filter((_, i) => i < imgs.length) }); }}
                             className="text-red-400/50 hover:text-red-400 text-xs px-1">✕</button>
@@ -1738,20 +2335,33 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               <>
                 <label className="block">
                   <span className="text-slate-400 block mb-1">表示トリガー</span>
-                  <select value={d.trigger as string} onChange={e => onDataChange(block.id, { ...d, trigger: e.target.value })}
+                  <select value={(d.trigger as string) || 'delay'} onChange={e => onDataChange(block.id, { ...d, trigger: e.target.value })}
                     className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
-                    <option value="delay">時間経過後</option>
-                    <option value="scroll">スクロール50%</option>
-                    <option value="exit">離脱時</option>
+                    <option value="delay">⏱ 時間経過後</option>
+                    <option value="scroll">📜 スクロール量</option>
+                    <option value="exit">🚪 離脱インテント</option>
+                    <option value="click">👆 ボタンクリック</option>
                   </select>
                 </label>
                 {(d.trigger as string) === 'delay' && (
                   <label className="block">
                     <span className="text-slate-400 block mb-1">表示までの秒数</span>
-                    <input type="number" min="1" max="30" value={d.delay as string}
+                    <input type="number" min="1" max="60" value={(d.delay as string) || '3'}
                       onChange={e => onDataChange(block.id, { ...d, delay: e.target.value })}
                       className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
                   </label>
+                )}
+                {(d.trigger as string) === 'scroll' && (
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">スクロール量 ({(d.scrollPercent as string) || '50'}%)</span>
+                    <input type="range" min="10" max="90" step="10" value={(d.scrollPercent as string) || '50'}
+                      onChange={e => onDataChange(block.id, { ...d, scrollPercent: e.target.value })}
+                      className="w-full accent-blue-500" />
+                    <div className="flex justify-between text-slate-600 text-[10px] mt-0.5"><span>10%</span><span>90%</span></div>
+                  </label>
+                )}
+                {(d.trigger as string) === 'exit' && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 text-amber-300 text-[10px]">マウスがウィンドウ上端を越えたときに表示されます</div>
                 )}
                 <label className="block">
                   <span className="text-slate-400 block mb-1">見出し</span>
@@ -1902,7 +2512,371 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 onDataChange={onDataChange}
               />
             )}
-            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews'].includes(block.type) && (
+            {block?.type === 'announcement-bar' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">テキスト</span>
+                  <input type="text" value={d.text as string}
+                    onChange={e => onDataChange(block.id, { ...d, text: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">リンク先（省略可）</span>
+                  <input type="text" value={(d.link as string) || ''}
+                    onChange={e => onDataChange(block.id, { ...d, link: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white"
+                    placeholder="#contact" />
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">背景色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={(d.bgColor as string) || '#1e40af'}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={(d.bgColor as string) || '#1e40af'}
+                      onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">文字色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={(d.textColor as string) || '#ffffff'}
+                      onChange={e => onDataChange(block.id, { ...d, textColor: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={(d.textColor as string) || '#ffffff'}
+                      onChange={e => onDataChange(block.id, { ...d, textColor: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={(d.closeable as string) !== 'false'}
+                    onChange={e => onDataChange(block.id, { ...d, closeable: e.target.checked ? 'true' : 'false' })}
+                    className="w-4 h-4 rounded accent-blue-500" />
+                  <span className="text-slate-300 text-sm">閉じるボタンを表示</span>
+                </label>
+              </>
+            )}
+            {block?.type === 'instagram' && (() => {
+              const photos = (d.photos as string[]) || [];
+              return (
+                <>
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">見出し</span>
+                    <input type="text" value={(d.heading as string) || ''}
+                      onChange={e => onDataChange(block.id, { ...d, heading: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </label>
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">Instagram ユーザー名</span>
+                    <input type="text" value={(d.username as string) || ''}
+                      onChange={e => onDataChange(block.id, { ...d, username: e.target.value.replace('@', '') })}
+                      placeholder="@なし で入力"
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </label>
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">カラム数</span>
+                    <select value={(d.columns as string) || '3'}
+                      onChange={e => onDataChange(block.id, { ...d, columns: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                      <option value="3">3列</option>
+                      <option value="4">4列</option>
+                    </select>
+                  </label>
+                  <span className="text-slate-400 block mt-2 mb-1 text-[11px]">投稿写真URL（最大9枚）</span>
+                  <div className="space-y-1.5">
+                    {[...Array(9)].map((_, i) => (
+                      <input key={i} type="url" value={photos[i] || ''}
+                        placeholder={`写真 ${i + 1} の URL`}
+                        onChange={e => { const np = [...photos]; np[i] = e.target.value; onDataChange(block.id, { ...d, photos: np.filter((_, j) => j <= i || np[j]) }); }}
+                        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[11px]" />
+                    ))}
+                  </div>
+                  <div className="text-slate-500 text-[10px] mt-2">Instagram の投稿を右クリック→「リンクをコピー」で画像URLを取得できます</div>
+                </>
+              );
+            })()}
+            {block?.type === 'testimonials' && (() => {
+              type TestItem = {name:string;age:string;rating:number;text:string};
+              const items = (d.items as TestItem[]) || [];
+              return (
+                <>
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">お客様の声</span>
+                  <div className="space-y-3">
+                    {items.map((item, i) => (
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-[10px]">#{i + 1}</span>
+                          <button onClick={() => onDataChange(block.id, { ...d, items: items.filter((_,j) => j !== i) })}
+                            className="text-red-400/60 hover:text-red-400 text-xs">✕</button>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 text-[10px] block mb-0.5">評価</span>
+                          <div className="flex gap-0.5">
+                            {[1,2,3,4,5].map(star => (
+                              <button key={star} onClick={() => { const ni=[...items]; ni[i]={...ni[i],rating:star}; onDataChange(block.id,{...d,items:ni}); }}
+                                className={`text-base ${star <= item.rating ? 'text-yellow-400' : 'text-white/20'}`}>★</button>
+                            ))}
+                          </div>
+                        </div>
+                        <label className="block">
+                          <span className="text-slate-500 text-[10px] block mb-0.5">名前</span>
+                          <input type="text" value={item.name}
+                            onChange={e => { const ni=[...items]; ni[i]={...ni[i],name:e.target.value}; onDataChange(block.id,{...d,items:ni}); }}
+                            className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                        </label>
+                        <label className="block">
+                          <span className="text-slate-500 text-[10px] block mb-0.5">属性（年齢・職業など）</span>
+                          <input type="text" value={item.age}
+                            onChange={e => { const ni=[...items]; ni[i]={...ni[i],age:e.target.value}; onDataChange(block.id,{...d,items:ni}); }}
+                            className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                        </label>
+                        <label className="block">
+                          <span className="text-slate-500 text-[10px] block mb-0.5">コメント</span>
+                          <textarea rows={3} value={item.text}
+                            onChange={e => { const ni=[...items]; ni[i]={...ni[i],text:e.target.value}; onDataChange(block.id,{...d,items:ni}); }}
+                            className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs resize-none" />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => onDataChange(block.id, { ...d, items: [...items, { name: '氏名', age: '30代', rating: 5, text: 'コメントを入力してください。' }] })}
+                    className="w-full mt-2 text-xs bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">+ 追加</button>
+                </>
+              );
+            })()}
+            {block?.type === 'faq' && (() => {
+              type FaqItem = {q:string;a:string};
+              const items = (d.items as FaqItem[]) || [];
+              return (
+                <>
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">よくある質問</span>
+                  <div className="space-y-2">
+                    {items.map((item, i) => (
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-[10px]">Q{i + 1}</span>
+                          <button onClick={() => onDataChange(block.id, { ...d, items: items.filter((_,j) => j !== i) })}
+                            className="text-red-400/60 hover:text-red-400 text-xs">✕</button>
+                        </div>
+                        <label className="block">
+                          <span className="text-slate-500 text-[10px] block mb-0.5">質問</span>
+                          <input type="text" value={item.q}
+                            onChange={e => { const ni=[...items]; ni[i]={...ni[i],q:e.target.value}; onDataChange(block.id,{...d,items:ni}); }}
+                            className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                        </label>
+                        <label className="block">
+                          <span className="text-slate-500 text-[10px] block mb-0.5">回答</span>
+                          <textarea rows={2} value={item.a}
+                            onChange={e => { const ni=[...items]; ni[i]={...ni[i],a:e.target.value}; onDataChange(block.id,{...d,items:ni}); }}
+                            className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs resize-none" />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => onDataChange(block.id, { ...d, items: [...items, { q: '質問を入力', a: '回答を入力' }] })}
+                    className="w-full mt-2 text-xs bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">+ 追加</button>
+                </>
+              );
+            })()}
+            {block?.type === 'hours' && (() => {
+              type SchRow = {day:string;hours:string;closed:boolean};
+              const schedule = (d.schedule as SchRow[]) || [];
+              return (
+                <>
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">営業時間</span>
+                  <div className="space-y-1.5">
+                    {schedule.map((row, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <span className="w-6 text-slate-400 text-xs flex-shrink-0 text-center">{row.day}</span>
+                        <label className="flex items-center gap-1 flex-shrink-0 cursor-pointer">
+                          <input type="checkbox" checked={row.closed}
+                            onChange={e => { const ns=[...schedule]; ns[i]={...ns[i],closed:e.target.checked}; onDataChange(block.id,{...d,schedule:ns}); }}
+                            className="w-3 h-3 rounded accent-red-500" />
+                          <span className="text-[10px] text-slate-500">休</span>
+                        </label>
+                        {!row.closed ? (
+                          <input type="text" value={row.hours} placeholder="9:00〜18:00"
+                            onChange={e => { const ns=[...schedule]; ns[i]={...ns[i],hours:e.target.value}; onDataChange(block.id,{...d,schedule:ns}); }}
+                            className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-0.5 text-white text-[10px]" />
+                        ) : (
+                          <span className="flex-1 text-red-400/60 text-[10px]">定休日</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <label className="block mt-3">
+                    <span className="text-slate-400 block mb-1 text-[10px]">備考（例：祝日は休診）</span>
+                    <input type="text" value={(d.note as string) || ''}
+                      onChange={e => onDataChange(block.id, { ...d, note: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                  </label>
+                </>
+              );
+            })()}
+            {block?.type === 'price-table' && (() => {
+              type PPlan = {name:string;price:string;period:string;description:string;features:string[];highlighted:boolean;buttonText:string;buttonLink:string};
+              const plans = (d.plans as PPlan[]) || [];
+              return (
+                <>
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">料金プラン</span>
+                  <div className="space-y-3">
+                    {plans.map((plan, i) => (
+                      <div key={i} className={`bg-white/5 border rounded-lg p-3 space-y-2 ${plan.highlighted ? 'border-blue-500/40' : 'border-white/10'}`}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-300 text-xs font-semibold truncate mr-2">{plan.name || `プラン ${i+1}`}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input type="checkbox" checked={plan.highlighted}
+                                onChange={e => { const np=[...plans]; np[i]={...np[i],highlighted:e.target.checked}; onDataChange(block.id,{...d,plans:np}); }}
+                                className="w-3 h-3 rounded accent-blue-500" />
+                              <span className="text-[10px] text-blue-400">推奨</span>
+                            </label>
+                            <button onClick={() => onDataChange(block.id, { ...d, plans: plans.filter((_,j) => j !== i) })}
+                              className="text-red-400/60 hover:text-red-400 text-xs">✕</button>
+                          </div>
+                        </div>
+                        <label className="block">
+                          <span className="text-slate-500 text-[10px] block mb-0.5">プラン名</span>
+                          <input type="text" value={plan.name}
+                            onChange={e => { const np=[...plans]; np[i]={...np[i],name:e.target.value}; onDataChange(block.id,{...d,plans:np}); }}
+                            className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                        </label>
+                        <div className="flex gap-1.5">
+                          <label className="flex-1 block">
+                            <span className="text-slate-500 text-[10px] block mb-0.5">価格</span>
+                            <input type="text" value={plan.price} placeholder="¥9,800"
+                              onChange={e => { const np=[...plans]; np[i]={...np[i],price:e.target.value}; onDataChange(block.id,{...d,plans:np}); }}
+                              className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                          </label>
+                          <label className="w-14 block">
+                            <span className="text-slate-500 text-[10px] block mb-0.5">単位</span>
+                            <input type="text" value={plan.period} placeholder="/月"
+                              onChange={e => { const np=[...plans]; np[i]={...np[i],period:e.target.value}; onDataChange(block.id,{...d,plans:np}); }}
+                              className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                          </label>
+                        </div>
+                        <label className="block">
+                          <span className="text-slate-500 text-[10px] block mb-0.5">機能リスト（1行1項目）</span>
+                          <textarea rows={3} value={(plan.features||[]).join('\n')}
+                            onChange={e => { const np=[...plans]; np[i]={...np[i],features:e.target.value.split('\n')}; onDataChange(block.id,{...d,plans:np}); }}
+                            className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] resize-none font-mono" />
+                        </label>
+                        <div className="flex gap-1.5">
+                          <label className="flex-1 block">
+                            <span className="text-slate-500 text-[10px] block mb-0.5">ボタン文字</span>
+                            <input type="text" value={plan.buttonText}
+                              onChange={e => { const np=[...plans]; np[i]={...np[i],buttonText:e.target.value}; onDataChange(block.id,{...d,plans:np}); }}
+                              className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                          </label>
+                          <label className="flex-1 block">
+                            <span className="text-slate-500 text-[10px] block mb-0.5">リンク</span>
+                            <input type="text" value={plan.buttonLink} placeholder="#contact"
+                              onChange={e => { const np=[...plans]; np[i]={...np[i],buttonLink:e.target.value}; onDataChange(block.id,{...d,plans:np}); }}
+                              className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => onDataChange(block.id, { ...d, plans: [...plans, { name: '新しいプラン', price: '¥0', period: '/月', description: '', features: ['機能1','機能2'], highlighted: false, buttonText: '申し込む', buttonLink: '#contact' }] })}
+                    className="w-full mt-2 text-xs bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">+ プラン追加</button>
+                </>
+              );
+            })()}
+            {block?.type === 'heading' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">テキスト配置</span>
+                  <select value={(d.align as string) || 'left'} onChange={e => onDataChange(block.id, { ...d, align: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="left">左寄せ</option>
+                    <option value="center">中央</option>
+                    <option value="right">右寄せ</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">フォントサイズ</span>
+                  <select value={(d.fontSize as string) || '3xl'} onChange={e => onDataChange(block.id, { ...d, fontSize: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="sm">小 (sm)</option>
+                    <option value="base">標準 (base)</option>
+                    <option value="xl">中 (xl)</option>
+                    <option value="2xl">大 (2xl)</option>
+                    <option value="3xl">特大 (3xl)</option>
+                    <option value="4xl">超特大 (4xl)</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">フォントウェイト</span>
+                  <select value={(d.fontWeight as string) || 'black'} onChange={e => onDataChange(block.id, { ...d, fontWeight: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="normal">通常</option>
+                    <option value="semibold">セミボールド</option>
+                    <option value="bold">ボールド</option>
+                    <option value="extrabold">エクストラボールド</option>
+                    <option value="black">ブラック</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">文字色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={(d.color as string) || '#111827'}
+                      onChange={e => onDataChange(block.id, { ...d, color: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={(d.color as string) || '#111827'}
+                      onChange={e => onDataChange(block.id, { ...d, color: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+              </>
+            )}
+            {block?.type === 'paragraph' && (
+              <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">テキスト配置</span>
+                  <select value={(d.align as string) || 'left'} onChange={e => onDataChange(block.id, { ...d, align: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="left">左寄せ</option>
+                    <option value="center">中央</option>
+                    <option value="right">右寄せ</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">フォントサイズ</span>
+                  <select value={(d.fontSize as string) || 'base'} onChange={e => onDataChange(block.id, { ...d, fontSize: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="sm">小 (sm)</option>
+                    <option value="base">標準 (base)</option>
+                    <option value="lg">大 (lg)</option>
+                    <option value="xl">特大 (xl)</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">文字色</span>
+                  <div className="flex gap-2">
+                    <input type="color" value={(d.color as string) || '#374151'}
+                      onChange={e => onDataChange(block.id, { ...d, color: e.target.value })}
+                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+                    <input type="text" value={(d.color as string) || '#374151'}
+                      onChange={e => onDataChange(block.id, { ...d, color: e.target.value })}
+                      className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">テキスト幅</span>
+                  <select value={(d.maxWidth as string) || 'full'} onChange={e => onDataChange(block.id, { ...d, maxWidth: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="full">全幅</option>
+                    <option value="prose">読みやすい幅</option>
+                    <option value="lg">広め</option>
+                    <option value="md">中</option>
+                    <option value="sm">狭め</option>
+                  </select>
+                </label>
+              </>
+            )}
+            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram'].includes(block.type) && (
               <div className="text-slate-500 py-4 text-center">
                 キャンバス上でクリックしてテキストを直接編集できます
               </div>
@@ -1938,11 +2912,57 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 )}
               </div>
             )}
-            {/* 全ブロック共通：モバイル/PC表示切り替え */}
+            {/* 全ブロック共通：余白・アニメーション・表示設定 */}
             {block && (
-              <div className="border-t border-white/10 pt-3 mt-2">
-                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">表示設定</span>
-                <div className="space-y-2">
+              <div className="border-t border-white/10 pt-3 mt-2 space-y-3">
+                <span className="text-slate-400 block text-[11px] font-semibold uppercase tracking-wide">余白・アニメーション</span>
+                <div className="flex gap-2">
+                  <label className="flex-1 block">
+                    <span className="text-slate-500 text-[10px] block mb-0.5">上余白</span>
+                    <select value={(d.paddingTop as string) || 'md'} onChange={e => onDataChange(block.id, { ...d, paddingTop: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-1.5 py-1 text-white text-[10px]">
+                      <option value="none">なし</option>
+                      <option value="sm">小</option>
+                      <option value="md">中</option>
+                      <option value="lg">大</option>
+                      <option value="xl">特大</option>
+                    </select>
+                  </label>
+                  <label className="flex-1 block">
+                    <span className="text-slate-500 text-[10px] block mb-0.5">下余白</span>
+                    <select value={(d.paddingBottom as string) || 'md'} onChange={e => onDataChange(block.id, { ...d, paddingBottom: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-1.5 py-1 text-white text-[10px]">
+                      <option value="none">なし</option>
+                      <option value="sm">小</option>
+                      <option value="md">中</option>
+                      <option value="lg">大</option>
+                      <option value="xl">特大</option>
+                    </select>
+                  </label>
+                </div>
+                <label className="block">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">入場アニメーション</span>
+                  <select value={(d.animation as string) || 'fade'} onChange={e => onDataChange(block.id, { ...d, animation: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]">
+                    <option value="fade">フェード（標準）</option>
+                    <option value="slide-up">スライドアップ</option>
+                    <option value="slide-left">左からスライド</option>
+                    <option value="slide-right">右からスライド</option>
+                    <option value="zoom">ズームイン</option>
+                    <option value="none">なし</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">アニメーション速度</span>
+                  <select value={(d.animationDuration as string) || '600'} onChange={e => onDataChange(block.id, { ...d, animationDuration: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]">
+                    <option value="300">速い (0.3s)</option>
+                    <option value="600">標準 (0.6s)</option>
+                    <option value="900">ゆっくり (0.9s)</option>
+                    <option value="1200">とてもゆっくり (1.2s)</option>
+                  </select>
+                </label>
+                <div className="space-y-2 pt-1 border-t border-white/5">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={!!(d.hideOnMobile)}
                       onChange={e => onDataChange(block.id, { ...d, hideOnMobile: e.target.checked })}
@@ -1963,15 +2983,31 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
         {tab === 'seo' && (
           <>
-            <div className="bg-white/5 rounded-xl p-3 mb-4">
-              <div className="flex justify-between mb-1">
-                <span className="text-slate-400">SEOスコア</span>
-                <span className={`font-bold ${seoScore >= 4 ? 'text-green-400' : seoScore >= 2 ? 'text-yellow-400' : 'text-red-400'}`}>
-                  {seoScore * 20}/100
+            {/* SEO Score Card */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-sm">SEOスコア</span>
+                <span className={`text-xl font-black ${seoScore >= 7 ? 'text-green-400' : seoScore >= 4 ? 'text-yellow-400' : 'text-red-400'}`}>
+                  {Math.round(seoScore / seoChecks.length * 100)}
+                  <span className="text-xs font-normal text-slate-500">/100</span>
                 </span>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-1.5">
-                <div className={`h-full rounded-full transition-all ${seoScore >= 4 ? 'bg-green-400' : seoScore >= 2 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${seoScore * 20}%` }} />
+              <div className="w-full bg-white/10 rounded-full h-2 mb-3">
+                <div className={`h-full rounded-full transition-all duration-500 ${seoScore >= 7 ? 'bg-green-400' : seoScore >= 4 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                  style={{ width: `${Math.round(seoScore / seoChecks.length * 100)}%` }} />
+              </div>
+              <div className="space-y-1.5">
+                {seoChecks.map(c => (
+                  <div key={c.id} className="flex items-start gap-2">
+                    <span className={`flex-shrink-0 mt-0.5 ${c.pass ? 'text-green-400' : 'text-slate-600'}`}>
+                      {c.pass ? '✓' : '○'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-[11px] ${c.pass ? 'text-slate-300' : 'text-slate-500'}`}>{c.label}</span>
+                      {!c.pass && <div className="text-[10px] text-slate-600 leading-tight">{c.tip}</div>}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -2064,6 +3100,34 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Custom Palette */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🖌️</span>
+                <span className="font-bold text-sm">マイカラー（6色）</span>
+              </div>
+              <p className="text-slate-500 text-[10px] mb-3">色を定義するとブロック編集時のカラー選択に表示されます</p>
+              <div className="grid grid-cols-3 gap-2">
+                {PALETTE_LABELS.map((label, i) => (
+                  <label key={i} className="block">
+                    <span className="text-[10px] text-slate-500 block mb-0.5">{label}</span>
+                    <input type="color"
+                      value={customPalette[i] || DEFAULT_PALETTE[i]}
+                      onChange={e => {
+                        const next = [...customPalette];
+                        next[i] = e.target.value;
+                        onCustomPaletteChange(next);
+                      }}
+                      className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" />
+                  </label>
+                ))}
+              </div>
+              <button type="button" onClick={() => onCustomPaletteChange([...DEFAULT_PALETTE])}
+                className="mt-2 text-[10px] text-slate-500 hover:text-slate-300 underline">
+                リセット
+              </button>
             </div>
 
             {/* LARUbot */}
@@ -2254,6 +3318,79 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               <div className="text-slate-500 text-[10px] mt-1">お問い合わせ・予約フォーム送信時に通知</div>
             </div>
 
+            {/* LINE Notify */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg" style={{ color: '#06c755' }}>💬</span>
+                <span className="font-bold text-sm">LINE 通知</span>
+              </div>
+              <input
+                type="password"
+                value={lineNotifyToken}
+                placeholder="LINE Notify トークン"
+                onChange={e => onLineNotifyTokenChange(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] mb-1"
+              />
+              <div className="text-slate-500 text-[10px]">フォーム送信時に LINE へ即時通知。<a href="https://notify-bot.line.me/ja/" target="_blank" rel="noreferrer" className="underline hover:text-slate-400">LINE Notify</a> でトークンを取得して貼り付けてください。</div>
+            </div>
+
+            {/* Webhook */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🔗</span>
+                <span className="font-bold text-sm">Webhook（Zapier / Make）</span>
+              </div>
+              <input
+                type="url"
+                value={webhookUrl}
+                placeholder="https://hooks.zapier.com/..."
+                onChange={e => onWebhookUrlChange(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] mb-1"
+              />
+              <div className="text-slate-500 text-[10px]">フォーム送信時に任意の URL へ JSON でデータを POST します。Zapier・Make などに対応。</div>
+            </div>
+
+            {/* Microsoft Clarity */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">👁</span>
+                <span className="font-bold text-sm">Microsoft Clarity</span>
+              </div>
+              <input
+                type="text"
+                value={clarityId}
+                placeholder="Clarity プロジェクト ID（例: abc123xyz）"
+                onChange={e => onClarityIdChange(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] mb-1"
+              />
+              <div className="text-slate-500 text-[10px]">ヒートマップ・セッション録画。<a href="https://clarity.microsoft.com/" target="_blank" rel="noreferrer" className="underline hover:text-slate-400">clarity.microsoft.com</a> でプロジェクト ID を取得してください。</div>
+            </div>
+
+            {/* サイトパスワード保護 */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🔒</span>
+                <span className="font-bold text-sm">パスワード保護</span>
+              </div>
+              <input
+                type="text"
+                value={sitePassword}
+                placeholder="パスワードを設定（空欄で無効）"
+                onChange={e => onSitePasswordChange(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] mb-1"
+              />
+              <div className="text-slate-500 text-[10px]">設定すると公開サイトにアクセス時にパスワードの入力が必要になります。</div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">👥</span>
+                <span className="font-bold text-sm">エージェンシー管理</span>
+              </div>
+              <div className="text-slate-500 text-[10px] mb-2">クライアント情報（名前・メール・メモ）はエージェンシー管理画面から設定できます。</div>
+              <a href="/laruHP/agency" target="_blank" className="block text-center w-full bg-white/10 hover:bg-white/20 text-white text-[10px] py-1.5 rounded-lg transition-all">エージェンシー管理画面を開く →</a>
+            </div>
+
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">🔤</span>
@@ -2275,6 +3412,33 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">✦</span>
+                <span className="font-bold text-sm">デザインスタイル</span>
+              </div>
+              <div className="text-slate-500 text-[10px] mb-2">ボタン・カード・余白・見出しの形を一括変更（公開サイトに適用）</div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { id: 'modern',  label: 'モダン',    sub: 'ピル型・標準' },
+                  { id: 'minimal', label: 'ミニマル',  sub: 'フラット・軽量' },
+                  { id: 'bold',    label: 'ボールド',  sub: '大きく・力強い' },
+                  { id: 'elegant', label: 'エレガント',sub: '細身・余白大' },
+                  { id: 'rounded', label: 'ラウンド',  sub: '丸み・柔らか' },
+                  { id: 'sharp',   label: 'シャープ',  sub: '角型・編集的' },
+                ] as const).map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => onDesignStyleChange(s.id)}
+                    className={`rounded-lg p-2 flex flex-col items-start gap-0.5 transition-all border text-left ${designStyle === s.id ? 'border-blue-500/70 bg-blue-500/10' : 'border-transparent hover:border-white/20 bg-white/[0.03]'}`}
+                  >
+                    <span className="text-white text-[11px] font-bold leading-none">{s.label}</span>
+                    <span className="text-slate-500 text-[9px] leading-none">{s.sub}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">🎨</span>
                 <span className="font-bold text-sm">カスタムCSS</span>
               </div>
@@ -2287,6 +3451,65 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               />
               <div className="text-slate-500 text-[10px] mt-1">公開サイトに適用されます。既存のスタイルを上書き可能</div>
             </div>
+
+            {/* Global Footer */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🦶</span>
+                  <span className="font-bold text-sm">グローバルフッター</span>
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={globalFooter.enabled}
+                    onChange={e => onGlobalFooterChange({ ...globalFooter, enabled: e.target.checked })}
+                    className="w-4 h-4 rounded accent-blue-500" />
+                  <span className="text-xs text-slate-400">有効</span>
+                </label>
+              </div>
+              {globalFooter.enabled && (
+                <div className="space-y-2">
+                  <input type="text" placeholder="サイト名" value={globalFooter.logo}
+                    onChange={e => onGlobalFooterChange({ ...globalFooter, logo: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                  <input type="text" placeholder="タグライン（任意）" value={globalFooter.tagline}
+                    onChange={e => onGlobalFooterChange({ ...globalFooter, tagline: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                  <input type="text" placeholder="コピーライト" value={globalFooter.copyright}
+                    onChange={e => onGlobalFooterChange({ ...globalFooter, copyright: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <div className="text-slate-500 text-[10px] mb-1">背景色</div>
+                      <input type="color" value={globalFooter.bgColor}
+                        onChange={e => onGlobalFooterChange({ ...globalFooter, bgColor: e.target.value })}
+                        className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-slate-500 text-[10px] mb-1">文字色</div>
+                      <input type="color" value={globalFooter.textColor}
+                        onChange={e => onGlobalFooterChange({ ...globalFooter, textColor: e.target.value })}
+                        className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500 text-[10px] mb-1">リンク</div>
+                    {globalFooter.links.map((l, i) => (
+                      <div key={i} className="flex gap-1 mb-1">
+                        <input type="text" placeholder="ラベル" value={l.label}
+                          onChange={e => { const ls=[...globalFooter.links]; ls[i]={...ls[i],label:e.target.value}; onGlobalFooterChange({...globalFooter,links:ls}); }}
+                          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                        <input type="text" placeholder="URL" value={l.href}
+                          onChange={e => { const ls=[...globalFooter.links]; ls[i]={...ls[i],href:e.target.value}; onGlobalFooterChange({...globalFooter,links:ls}); }}
+                          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]" />
+                        <button onClick={() => onGlobalFooterChange({...globalFooter,links:globalFooter.links.filter((_,j)=>j!==i)})} className="text-red-400/50 hover:text-red-400 text-xs px-1">✕</button>
+                      </div>
+                    ))}
+                    <button onClick={() => onGlobalFooterChange({...globalFooter,links:[...globalFooter.links,{label:'',href:'#'}]})}
+                      className="text-blue-400 hover:text-blue-300 text-[10px] font-semibold">+ リンク追加</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -2297,6 +3520,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 // ─── Main Builder ──────────────────────────────────────────────────────────────
 function BuilderContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const fromOnboarding = searchParams.get('from') === 'onboarding';
   const siteId = searchParams.get('siteId');
 
@@ -2316,6 +3540,7 @@ function BuilderContent() {
       seo: emptySeo,
     }],
     colorScheme: 'professional-blue',
+    designStyle: 'modern',
     larubot: true,
     laruseo: true,
     notifyEmail: '',
@@ -2324,12 +3549,28 @@ function BuilderContent() {
     laruseoPublicId: '',
     customCss: '',
     fontFamily: 'noto',
+    customPalette: [...DEFAULT_PALETTE],
+    lineNotifyToken: '',
+    clarityId: '',
+    webhookUrl: '',
+    sitePassword: '',
+    globalFooter: {
+      enabled: false,
+      logo: 'サイト名',
+      tagline: '',
+      links: [{ label: 'トップ', href: '#' }, { label: 'お問い合わせ', href: '#contact' }],
+      sns: [],
+      copyright: `© ${new Date().getFullYear()} All Rights Reserved.`,
+      bgColor: '#111827',
+      textColor: '#9ca3af',
+    },
   };
 
   const [site, setSite] = useState<SiteData>(defaultSiteData);
   const [currentPageId, setCurrentPageId] = useState<string>('page-main');
   const [dbSiteId, setDbSiteId] = useState<string | null>(siteId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2354,6 +3595,8 @@ function BuilderContent() {
   const [renameValue, setRenameValue] = useState('');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showPublishSuccess, setShowPublishSuccess] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -2361,6 +3604,28 @@ function BuilderContent() {
   const [userPlan, setUserPlan] = useState<string | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [showMobileBlocks, setShowMobileBlocks] = useState(false);
+  const [showImageLib, setShowImageLib] = useState(false);
+  const [imageLibCallback, setImageLibCallback] = useState<((url: string) => void) | null>(null);
+  const [showAiChat, setShowAiChat] = useState(false);
+  const [showUrlImport, setShowUrlImport] = useState(false);
+  const [showPreviewLink, setShowPreviewLink] = useState(false);
+  const [previewToken, setPreviewToken] = useState<string | null>(null);
+  const [previewTokenLoading, setPreviewTokenLoading] = useState(false);
+  const [copiedBlock, setCopiedBlock] = useState<Block | null>(null);
+  const [copyToast, setCopyToast] = useState(false);
+  const [showPageSpeed, setShowPageSpeed] = useState(false);
+  const [snippets, setSnippets] = useState<Array<{ id: string; name: string; blocks: Block[] }>>(() => {
+    if (typeof window === 'undefined') return [];
+    try { return JSON.parse(localStorage.getItem('laruHP_snippets') || '[]'); } catch { return []; }
+  });
+  const [pageSpeedLoading, setPageSpeedLoading] = useState(false);
+  const [pageSpeedData, setPageSpeedData] = useState<{
+    url: string;
+    mobile: { performance: number; accessibility: number; seo: number; bestPractices: number } | null;
+    desktop: { performance: number; accessibility: number; seo: number; bestPractices: number } | null;
+  } | null>(null);
   const undoStack = useRef<SiteData[]>([]);
   const redoStack = useRef<SiteData[]>([]);
   const siteRef = useRef<SiteData>(defaultSiteData);
@@ -2388,7 +3653,8 @@ function BuilderContent() {
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
+      if (!user) { setIsLoggedIn(false); return; }
+      setIsLoggedIn(true);
       const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
       if (adminEmail && user.email === adminEmail) {
         setIsAdmin(true);
@@ -2427,11 +3693,12 @@ function BuilderContent() {
           name: s.siteName,
           blocks_json: { v: 2, pages: s.pages },
           seo_json: s.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: s.colorScheme, larubot: s.larubot, laruseo: s.laruseo, notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId, laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily },
+          settings_json: { colorScheme: s.colorScheme, designStyle: s.designStyle, larubot: s.larubot, laruseo: s.laruseo, notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId, laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily, customPalette: s.customPalette, lineNotifyToken: s.lineNotifyToken, clarityId: s.clarityId, webhookUrl: s.webhookUrl, sitePassword: s.sitePassword },
         }),
       });
       localStorage.setItem('laruHP_builder', JSON.stringify(s));
       setIsDirty(false);
+      setLastSavedAt(new Date());
     }, 30000);
     return () => clearTimeout(timer);
   }, [isDirty, dbSiteId]);
@@ -2471,6 +3738,89 @@ function BuilderContent() {
     setCanRedo(redoStack.current.length > 0);
   }, []);
 
+  const handleUrlImport = useCallback((extracted: Record<string, unknown>) => {
+    setSite(prev => {
+      const updated = JSON.parse(JSON.stringify(prev));
+      if (extracted.businessName) updated.siteName = extracted.businessName as string;
+      const firstPage = updated.pages[updated.currentPageIndex ?? 0];
+      if (firstPage) {
+        firstPage.blocks = firstPage.blocks.map((b: { type: string; data: Record<string, unknown> }) => {
+          if (b.type === 'hero') {
+            return {
+              ...b, data: {
+                ...b.data,
+                ...(extracted.catchphrase ? { title: extracted.catchphrase } : {}),
+                ...(extracted.description ? { subtitle: extracted.description } : {}),
+              }
+            };
+          }
+          if (b.type === 'contact') {
+            return {
+              ...b, data: {
+                ...b.data,
+                ...(extracted.phone ? { phone: extracted.phone } : {}),
+                ...(extracted.address ? { address: extracted.address } : {}),
+                ...(extracted.email ? { email: extracted.email } : {}),
+              }
+            };
+          }
+          if (b.type === 'hours' && Array.isArray(extracted.hours) && (extracted.hours as unknown[]).length > 0) {
+            return { ...b, data: { ...b.data, hours: extracted.hours } };
+          }
+          return b;
+        });
+      }
+      return updated;
+    });
+  }, []);
+
+  const deleteSelectedBlocks = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    pushHistory(siteRef.current);
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map(p =>
+        p.id === currentPageId ? { ...p, blocks: p.blocks.filter(b => !selectedIds.has(b.id)) } : p
+      ),
+    }));
+    setSelectedIds(new Set());
+    setSelectedId(null);
+  }, [selectedIds, currentPageId]);
+
+  const moveSelectedBlocksUp = useCallback(() => {
+    pushHistory(siteRef.current);
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map(p => {
+        if (p.id !== currentPageId) return p;
+        const blocks = [...p.blocks];
+        const indices = blocks.reduce<number[]>((acc, b, i) => selectedIds.has(b.id) ? [...acc, i] : acc, []);
+        if (!indices.length || indices[0] === 0) return p;
+        for (const idx of indices) {
+          [blocks[idx - 1], blocks[idx]] = [blocks[idx], blocks[idx - 1]];
+        }
+        return { ...p, blocks };
+      }),
+    }));
+  }, [selectedIds, currentPageId]);
+
+  const moveSelectedBlocksDown = useCallback(() => {
+    pushHistory(siteRef.current);
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map(p => {
+        if (p.id !== currentPageId) return p;
+        const blocks = [...p.blocks];
+        const indices = blocks.reduce<number[]>((acc, b, i) => selectedIds.has(b.id) ? [...acc, i] : acc, []);
+        if (!indices.length || indices[indices.length - 1] === blocks.length - 1) return p;
+        for (const idx of [...indices].reverse()) {
+          [blocks[idx], blocks[idx + 1]] = [blocks[idx + 1], blocks[idx]];
+        }
+        return { ...p, blocks };
+      }),
+    }));
+  }, [selectedIds, currentPageId]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Undo / Redo
@@ -2479,26 +3829,70 @@ function BuilderContent() {
         if (e.shiftKey) redo(); else undo();
         return;
       }
+      // Copy selected block
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && selectedId) {
+        const tag2 = (e.target as HTMLElement).tagName;
+        const editable2 = (e.target as HTMLElement).isContentEditable;
+        if (tag2 !== 'INPUT' && tag2 !== 'TEXTAREA' && !editable2) {
+          const block = currentPage?.blocks.find(b => b.id === selectedId);
+          if (block) {
+            setCopiedBlock(JSON.parse(JSON.stringify(block)));
+            setCopyToast(true);
+            setTimeout(() => setCopyToast(false), 1500);
+          }
+          return;
+        }
+      }
+      // Paste copied block after selected (or at end)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'v' && copiedBlock) {
+        const tag3 = (e.target as HTMLElement).tagName;
+        const editable3 = (e.target as HTMLElement).isContentEditable;
+        if (tag3 !== 'INPUT' && tag3 !== 'TEXTAREA' && !editable3) {
+          e.preventDefault();
+          pushHistory(siteRef.current);
+          const newBlock: Block = { ...JSON.parse(JSON.stringify(copiedBlock)), id: crypto.randomUUID() };
+          setSite(prev => ({
+            ...prev,
+            pages: prev.pages.map(p => {
+              if (p.id !== currentPageId) return p;
+              const blocks = [...p.blocks];
+              const idx = selectedId ? blocks.findIndex(b => b.id === selectedId) : blocks.length - 1;
+              blocks.splice(idx + 1, 0, newBlock);
+              return { ...p, blocks };
+            }),
+          }));
+          setSelectedId(newBlock.id);
+          return;
+        }
+      }
       // Skip when focus is inside an input / editable element
       const tag = (e.target as HTMLElement).tagName;
       const editable = (e.target as HTMLElement).isContentEditable;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || editable) return;
-      // Delete / Backspace → delete selected block
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-        e.preventDefault();
-        deleteBlock(selectedId);
-        return;
+      // Delete / Backspace → delete selected block(s)
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedIds.size > 0) {
+          e.preventDefault();
+          deleteSelectedBlocks();
+          return;
+        }
+        if (selectedId) {
+          e.preventDefault();
+          deleteBlock(selectedId);
+          return;
+        }
       }
       // Escape → deselect
-      if (e.key === 'Escape' && selectedId) {
+      if (e.key === 'Escape' && (selectedId || selectedIds.size > 0)) {
         e.preventDefault();
         setSelectedId(null);
+        setSelectedIds(new Set());
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [undo, redo, selectedId]);
+  }, [undo, redo, selectedId, selectedIds, copiedBlock, currentPageId, deleteSelectedBlocks]);
 
   // Current page derived from site + currentPageId
   const currentPage = site.pages.find(p => p.id === currentPageId) || site.pages[0];
@@ -2523,6 +3917,7 @@ function BuilderContent() {
               siteName: s.name,
               pages,
               colorScheme: s.settings_json?.colorScheme || 'professional-blue',
+              designStyle: s.settings_json?.designStyle || 'modern',
               larubot: s.settings_json?.larubot ?? true,
               laruseo: s.settings_json?.laruseo ?? true,
               notifyEmail: s.settings_json?.notifyEmail || '',
@@ -2531,10 +3926,17 @@ function BuilderContent() {
               laruseoPublicId: s.settings_json?.laruseoPublicId || '',
               customCss: s.settings_json?.customCss || '',
               fontFamily: s.settings_json?.fontFamily || 'noto',
+              globalFooter: s.settings_json?.globalFooter || defaultSiteData.globalFooter,
+              customPalette: s.settings_json?.customPalette || [...DEFAULT_PALETTE],
+              lineNotifyToken: s.settings_json?.lineNotifyToken || '',
+              clarityId: s.settings_json?.clarityId || '',
+              webhookUrl: s.settings_json?.webhookUrl || '',
+              sitePassword: s.settings_json?.sitePassword || '',
             });
             setCurrentPageId(pages[0].id);
             setPublished(s.published);
             setPublishedSlug(s.slug);
+            if (s.settings_json?.previewToken) setPreviewToken(s.settings_json.previewToken);
           }
         })
         .catch(() => {});
@@ -2643,6 +4045,7 @@ function BuilderContent() {
           },
         }],
         colorScheme: d.colorScheme || 'professional-blue',
+        designStyle: d.designStyle || 'modern',
         larubot: d.larubot ?? true,
         laruseo: d.laruseo ?? true,
         notifyEmail: d.email || '',
@@ -2651,6 +4054,12 @@ function BuilderContent() {
         laruseoPublicId: '',
         customCss: '',
         fontFamily: 'noto',
+        globalFooter: defaultSiteData.globalFooter,
+        customPalette: [...DEFAULT_PALETTE],
+        lineNotifyToken: '',
+        clarityId: '',
+        webhookUrl: '',
+        sitePassword: '',
       });
     } else {
       const savedStr = typeof window !== 'undefined' ? localStorage.getItem('laruHP_builder') : null;
@@ -2664,6 +4073,7 @@ function BuilderContent() {
             siteName: parsed.siteName || 'マイサイト',
             pages: [{ id: 'page-main', name: 'トップページ', path: '/', blocks: parsed.blocks, seo: parsed.seo || emptySeo }],
             colorScheme: parsed.colorScheme || 'professional-blue',
+            designStyle: parsed.designStyle || 'modern',
             larubot: parsed.larubot ?? true,
             laruseo: parsed.laruseo ?? true,
             notifyEmail: parsed.notifyEmail || '',
@@ -2672,6 +4082,12 @@ function BuilderContent() {
             laruseoPublicId: parsed.laruseoPublicId || '',
             customCss: parsed.customCss || '',
             fontFamily: parsed.fontFamily || 'noto',
+            globalFooter: parsed.globalFooter || defaultSiteData.globalFooter,
+            customPalette: parsed.customPalette || [...DEFAULT_PALETTE],
+            lineNotifyToken: parsed.lineNotifyToken || '',
+            clarityId: parsed.clarityId || '',
+            webhookUrl: parsed.webhookUrl || '',
+            sitePassword: parsed.sitePassword || '',
           });
         }
       }
@@ -2800,12 +4216,29 @@ function BuilderContent() {
   };
 
   const DESIGN_TEMPLATES = [
-    { id: 'business', name: 'ビジネス', desc: 'プロフェッショナルな印象', colorScheme: 'professional-blue', colors: ['#1e3a8a','#3b82f6'], blocks: ['hero','heading','paragraph','two-col','services','cta','contact'] },
-    { id: 'warm', name: 'ウォームカフェ', desc: '温かみのある飲食向け', colorScheme: 'warm-earth', colors: ['#92400e','#d97706'], blocks: ['hero','services','testimonials','hours','gallery','cta','contact'] },
-    { id: 'elegant', name: 'エレガント', desc: '上品でラグジュアリー', colorScheme: 'elegant-dark', colors: ['#1e1b4b','#7c3aed'], blocks: ['hero','heading','paragraph','three-col','testimonials','faq','cta'] },
-    { id: 'fresh', name: 'フレッシュ', desc: 'クリーンな医療・健康系', colorScheme: 'fresh-green', colors: ['#064e3b','#10b981'], blocks: ['hero','three-col','services','faq','hours','map','contact'] },
-    { id: 'pink', name: 'モダンピンク', desc: '美容・サロン向け', colorScheme: 'modern-pink', colors: ['#831843','#ec4899'], blocks: ['hero','heading','paragraph','services','gallery','testimonials','booking','cta'] },
-    { id: 'orange', name: 'ボールド', desc: 'エネルギッシュで力強い', colorScheme: 'bold-orange', colors: ['#7c2d12','#f97316'], blocks: ['hero','three-col','services','testimonials','cta','contact'] },
+    // ── 既存 ──────────────────────────────────────────────────
+    { id: 'business',   name: 'ビジネス',       desc: 'プロフェッショナルな印象',         colorScheme: 'professional-blue', designStyle: 'modern',   colors: ['#1e3a8a','#3b82f6'], blocks: ['hero','heading','paragraph','two-col','services','cta','contact'] },
+    { id: 'warm',       name: 'ウォームカフェ', desc: '温かみのある飲食向け',             colorScheme: 'warm-earth',        designStyle: 'rounded',  colors: ['#92400e','#d97706'], blocks: ['hero','services','testimonials','hours','gallery','cta','contact'] },
+    { id: 'elegant',    name: 'エレガント',     desc: '上品でラグジュアリー',             colorScheme: 'elegant-dark',      designStyle: 'elegant',  colors: ['#1e1b4b','#7c3aed'], blocks: ['hero','heading','paragraph','three-col','testimonials','faq','cta'] },
+    { id: 'fresh',      name: 'フレッシュ',     desc: 'クリーンな医療・健康系',           colorScheme: 'fresh-green',       designStyle: 'minimal',  colors: ['#064e3b','#10b981'], blocks: ['hero','three-col','services','faq','hours','map','contact'] },
+    { id: 'pink',       name: 'モダンピンク',   desc: '美容・サロン向け',                 colorScheme: 'modern-pink',       designStyle: 'rounded',  colors: ['#831843','#ec4899'], blocks: ['hero','heading','paragraph','services','gallery','testimonials','booking','cta'] },
+    { id: 'orange',     name: 'ボールド',       desc: 'エネルギッシュで力強い',           colorScheme: 'bold-orange',       designStyle: 'bold',     colors: ['#7c2d12','#f97316'], blocks: ['hero','three-col','services','testimonials','cta','contact'] },
+    // ── 新規 ──────────────────────────────────────────────────
+    { id: 'midnight',   name: 'ミッドナイト',   desc: '高級感あふれるダーク系',           colorScheme: 'midnight-gold',     designStyle: 'sharp',    colors: ['#0d1b2a','#d4a017'], blocks: ['hero','heading','paragraph','three-col','testimonials','price-table','cta','contact'] },
+    { id: 'ocean',      name: 'オーシャン',     desc: '爽やかで信頼感のある水色',         colorScheme: 'ocean-teal',        designStyle: 'modern',   colors: ['#0d4e5c','#14b8a6'], blocks: ['hero','three-col','services','gallery','testimonials','cta','contact'] },
+    { id: 'lavender',   name: 'ラベンダー',     desc: 'やさしい紫。癒し・美容に',         colorScheme: 'lavender-night',    designStyle: 'elegant',  colors: ['#1e1b4b','#8b5cf6'], blocks: ['hero','heading','services','gallery','testimonials','booking','contact'] },
+    { id: 'terracotta', name: 'テラコッタ',     desc: '土感のある温かみ。飲食・雑貨に',   colorScheme: 'terracotta',        designStyle: 'elegant',  colors: ['#8b3a2a','#d4856a'], blocks: ['hero','heading','paragraph','services','gallery','hours','contact'] },
+    { id: 'cyber',      name: 'サイバー',       desc: 'ダーク×ネオン。IT・ゲームに',      colorScheme: 'cyber-neon',        designStyle: 'bold',     colors: ['#050505','#00e676'], blocks: ['hero','three-col','services','price-table','faq','cta','contact'] },
+    { id: 'rosegold',   name: 'ローズゴールド', desc: '洗練されたブライダル・美容向け',   colorScheme: 'rose-gold',         designStyle: 'elegant',  colors: ['#6b2f41','#d4846a'], blocks: ['hero','heading','paragraph','gallery','services','testimonials','booking','contact'] },
+    { id: 'mono',       name: 'モノクロ',       desc: 'シンプル＆ミニマル。全業種対応',   colorScheme: 'monochrome',        designStyle: 'minimal',  colors: ['#111111','#e0e0e0'], blocks: ['hero','heading','paragraph','services','cta','contact'] },
+    { id: 'sky',        name: 'スカイブルー',   desc: '明るくクリーン。医療・教育に',     colorScheme: 'sky-clear',         designStyle: 'minimal',  colors: ['#1565c0','#90caf9'], blocks: ['hero','three-col','services','hours','faq','map','contact'] },
+    { id: 'sunset',     name: 'サンセット',     desc: 'クリエイティブ向け紫×オレンジ',   colorScheme: 'sunset-dusk',       designStyle: 'bold',     colors: ['#2d1b54','#f97316'], blocks: ['hero','heading','paragraph','gallery','services','testimonials','cta'] },
+    { id: 'crimson',    name: 'クリムゾン',     desc: '情熱的な赤。飲食・スポーツに',     colorScheme: 'deep-crimson',      designStyle: 'bold',     colors: ['#7f1d1d','#ef4444'], blocks: ['hero','three-col','services','testimonials','cta','hours','contact'] },
+    { id: 'sage',       name: 'セージグリーン', desc: 'ナチュラル×モダン。ヘルス系に',   colorScheme: 'sage-forest',       designStyle: 'rounded',  colors: ['#1a3528','#6db97c'], blocks: ['hero','heading','paragraph','three-col','services','faq','contact'] },
+    { id: 'navygold',   name: 'ネイビーゴールド', desc: '高品格。士業・コンサル向け',    colorScheme: 'navy-gold',         designStyle: 'sharp',    colors: ['#0f172a','#eab308'], blocks: ['hero','heading','services','cta','faq','hours','contact'] },
+    { id: 'minimal',    name: 'ミニマル LP',    desc: 'シンプルな集客LP。離脱率↓',       colorScheme: 'elegant-dark',      designStyle: 'minimal',  colors: ['#111827','#6b7280'], blocks: ['hero','three-col','testimonials','faq','cta'] },
+    { id: 'portfolio',  name: 'ポートフォリオ', desc: '作品・実績を前面に出す',           colorScheme: 'midnight-gold',     designStyle: 'minimal',  colors: ['#0d1b2a','#d4a017'], blocks: ['hero','gallery','services','two-col','contact'] },
+    { id: 'fullmenu',   name: 'フルセット',     desc: '全ブロック入りの完全構成',         colorScheme: 'professional-blue', designStyle: 'modern',   colors: ['#1e3a8a','#3b82f6'], blocks: ['hero','heading','three-col','services','gallery','testimonials','price-table','faq','hours','map','booking','cta','contact'] },
   ] as const;
 
   const applyTemplate = (templateId: string) => {
@@ -2822,10 +4255,47 @@ function BuilderContent() {
     setSite(prev => ({
       ...prev,
       colorScheme: tpl.colorScheme,
+      designStyle: tpl.designStyle,
       pages: prev.pages.map((p, i) => i === 0 ? { ...p, blocks: newBlocks } : p),
     }));
     setShowTemplateModal(false);
     setSelectedId(null);
+  };
+
+  const saveSnippet = (blocks: Block[], name: string) => {
+    const snippet = { id: crypto.randomUUID(), name, blocks };
+    const next = [...snippets, snippet];
+    setSnippets(next);
+    localStorage.setItem('laruHP_snippets', JSON.stringify(next));
+  };
+  const deleteSnippet = (id: string) => {
+    const next = snippets.filter(s => s.id !== id);
+    setSnippets(next);
+    localStorage.setItem('laruHP_snippets', JSON.stringify(next));
+  };
+  const insertSnippet = (snippet: { id: string; name: string; blocks: Block[] }) => {
+    const newBlocks = snippet.blocks.map(b => ({ ...b, id: crypto.randomUUID() }));
+    setSite(prev => {
+      const pages = prev.pages.map(p => {
+        if (p.id !== currentPageId) return p;
+        const idx = selectedId ? p.blocks.findIndex(b => b.id === selectedId) + 1 : p.blocks.length;
+        const next = [...p.blocks];
+        next.splice(idx, 0, ...newBlocks);
+        return { ...p, blocks: next };
+      });
+      return { ...prev, pages };
+    });
+  };
+
+  const handlePageSpeed = async () => {
+    if (!dbSiteId) return;
+    setPageSpeedLoading(true);
+    setPageSpeedData(null);
+    setShowPageSpeed(true);
+    const res = await fetch(`/api/sites/${dbSiteId}/pagespeed`);
+    const data = await res.json();
+    setPageSpeedData(res.ok ? data : null);
+    setPageSpeedLoading(false);
   };
 
   const handleSave = async () => {
@@ -2834,7 +4304,7 @@ function BuilderContent() {
       name: site.siteName,
       blocks_json: { v: 2, pages: site.pages },
       seo_json: site.pages[0]?.seo || emptySeo,
-      settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily },
+      settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl },
     };
     if (dbSiteId) {
       await fetch(`/api/sites/${dbSiteId}`, {
@@ -2855,6 +4325,7 @@ function BuilderContent() {
     setIsDirty(false);
     setSaving(false);
     setSaved(true);
+    setLastSavedAt(new Date());
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -2869,7 +4340,7 @@ function BuilderContent() {
           name: site.siteName,
           blocks_json: { v: 2, pages: site.pages },
           seo_json: site.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: site.colorScheme, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily },
+          settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl, sitePassword: site.sitePassword },
           industry: onboardingData?.industry,
         }),
       });
@@ -3004,8 +4475,53 @@ function BuilderContent() {
     setAiGenerating(false);
   };
 
-  // Subscription paywall — block builder access for canceled/inactive plans
-  const isLocked = !isAdmin && (subscriptionStatus === 'canceled' || subscriptionStatus === 'inactive' || subscriptionStatus === 'past_due');
+  const handleAiFullSite = async () => {
+    const d = onboardingData || JSON.parse(localStorage.getItem('laruHP_data') || '{}');
+    if (!d.businessName && !site.siteName) {
+      setBuilderToast('ビジネス情報が不足しています。まずサイト名を設定してください');
+      setTimeout(() => setBuilderToast(''), 3000);
+      return;
+    }
+    if (!confirm('現在のブロックをすべて削除して AI で一括生成しますか？')) return;
+    setAiGenerating(true);
+    try {
+      const res = await fetch('/api/ai/generate-site', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: d.businessName || site.siteName,
+          industry: d.industry || 'general',
+          description: d.description || '',
+          phone: d.phone || '',
+          address: d.address || '',
+          services: d.services || [],
+          colorScheme: site.colorScheme,
+        }),
+      });
+      const { data: gen } = await res.json();
+      if (!gen) { setAiGenerating(false); return; }
+      pushHistory(siteRef.current);
+      const newBlocks: Block[] = [
+        defaultBlock('nav'),
+        { ...defaultBlock('hero'), data: { ...defaultBlock('hero').data, heading: gen.hero?.heading, subheading: gen.hero?.subheading, buttonText: gen.hero?.buttonText } },
+        { ...defaultBlock('heading'), data: { ...defaultBlock('heading').data, text: gen.about?.heading } },
+        { ...defaultBlock('paragraph'), data: { ...defaultBlock('paragraph').data, text: gen.about?.text } },
+        gen.services?.length ? { ...defaultBlock('services'), data: { ...defaultBlock('services').data, heading: 'サービス一覧', items: gen.services } } : null,
+        gen.faq?.length ? { ...defaultBlock('faq'), data: { ...defaultBlock('faq').data, heading: 'よくある質問', items: gen.faq } } : null,
+        { ...defaultBlock('cta'), data: { ...defaultBlock('cta').data, heading: gen.cta?.heading, text: gen.cta?.text, buttonText: gen.cta?.buttonText } },
+        defaultBlock('contact'),
+      ].filter(Boolean) as Block[];
+      setSite(prev => ({
+        ...prev,
+        pages: prev.pages.map(p => p.id === currentPageId ? { ...p, blocks: newBlocks } : p),
+      }));
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Subscription paywall — only lock logged-in users with inactive/canceled plans (not demo visitors)
+  const isLocked = isLoggedIn === true && !isAdmin && (subscriptionStatus === 'canceled' || subscriptionStatus === 'inactive' || subscriptionStatus === 'past_due');
 
   if (isLocked) {
     return (
@@ -3050,6 +4566,12 @@ function BuilderContent() {
       )}
 
       {/* First publish success modal (onboarding flow) */}
+      {copyToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#1e293b] border border-white/15 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-xl pointer-events-none animate-fadeIn">
+          📋 ブロックをコピーしました — Ctrl+V で貼り付け
+        </div>
+      )}
+
       {showPublishSuccess && publishedSlug && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
           <div className="bg-[#0f172a] border border-white/10 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
@@ -3086,20 +4608,51 @@ function BuilderContent() {
           </div>
         </div>
       )}
+      {/* Leave confirmation modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
+            <h2 className="text-white font-bold mb-2">保存されていない変更があります</h2>
+            <p className="text-slate-400 text-sm mb-5">このまま移動すると変更が失われます。保存してから移動しますか？</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowLeaveConfirm(false)} className="flex-1 text-sm text-slate-400 hover:text-slate-200 border border-white/10 py-2.5 rounded-lg transition-colors">
+                キャンセル
+              </button>
+              <button onClick={() => { setShowLeaveConfirm(false); router.push('/laruHP/dashboard'); }} className="flex-1 text-sm text-red-400 hover:text-red-300 border border-red-500/20 py-2.5 rounded-lg transition-colors">
+                保存せず移動
+              </button>
+              <button onClick={async () => { await handleSave(); setShowLeaveConfirm(false); router.push('/laruHP/dashboard'); }} className="flex-1 text-sm bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition-all">
+                保存して移動
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-[#0f172a] border-b border-white/10 flex-shrink-0 z-30">
         <div className="flex items-center gap-2 min-w-0">
-          <Link href="/laruHP/dashboard" className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors flex-shrink-0">
+          <button
+            onClick={() => isDirty ? setShowLeaveConfirm(true) : router.push('/laruHP/dashboard')}
+            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors flex-shrink-0 group"
+            title="ダッシュボードへ戻る"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-0.5 transition-transform"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
             <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black text-xs">L</div>
             <span className="hidden sm:block font-bold">LARU<span className="text-blue-400 font-light">HP</span></span>
-          </Link>
+          </button>
           <span className="text-slate-700">/</span>
-          <input
-            type="text"
-            value={site.siteName}
-            onChange={e => setSite(prev => ({ ...prev, siteName: e.target.value }))}
-            className="bg-transparent border-b border-transparent hover:border-white/30 focus:border-blue-500 text-sm font-bold outline-none transition-colors px-1 py-0.5 w-28 flex-shrink-0"
-          />
+          <div className="flex items-center gap-1 group/sitename">
+            <input
+              type="text"
+              value={site.siteName}
+              onChange={e => setSite(prev => ({ ...prev, siteName: e.target.value }))}
+              className="bg-transparent border-b border-transparent hover:border-white/30 focus:border-blue-500 text-sm font-bold outline-none transition-colors px-1 py-0.5 w-28 flex-shrink-0"
+              title="クリックでサイト名を編集"
+            />
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700 group-hover/sitename:text-slate-400 transition-colors flex-shrink-0 pointer-events-none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
 
           {/* Page Tabs */}
           <div className="hidden sm:flex items-center gap-0.5 ml-1 overflow-x-auto max-w-[240px]" style={{ scrollbarWidth: 'none' }}>
@@ -3188,18 +4741,42 @@ function BuilderContent() {
             テンプレート
           </button>
           <button
+            onClick={() => setShowAiChat(v => !v)}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showAiChat ? 'bg-blue-500/30 text-blue-200 border-blue-500/40' : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border-blue-500/30'}`}
+            title="AIアシスタントでテキストやレイアウトを自然言語で編集"
+          >
+            ✨ AIチャット
+          </button>
+          <button
+            onClick={() => setShowUrlImport(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
+            title="既存サイトURLを入力して情報を自動取り込み"
+          >
+            🔗 URLインポート
+          </button>
+          <button
             onClick={handleAiLayout}
             disabled={aiLayouting}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 disabled:opacity-50"
+            title={aiLayouting ? 'AIがレイアウトを提案中です…' : 'AIが最適なブロック構成を提案します'}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 disabled:opacity-50 disabled:cursor-wait"
           >
             {aiLayouting ? '提案中...' : 'AIレイアウト'}
           </button>
           <button
             onClick={handleAiGenerate}
             disabled={aiGenerating}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 disabled:opacity-50"
+            title={aiGenerating ? 'AIがコンテンツを生成中です…' : 'AIが各ブロックのテキストを自動生成します'}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 disabled:opacity-50 disabled:cursor-wait"
           >
             {aiGenerating ? '生成中...' : 'AI生成'}
+          </button>
+          <button
+            onClick={handleAiFullSite}
+            disabled={aiGenerating}
+            title="全ブロックを AI で一括生成（既存ブロックは削除されます）"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 disabled:opacity-50 disabled:cursor-wait"
+          >
+            {aiGenerating ? '生成中...' : '✨ AI一括'}
           </button>
           {preview && (
             <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
@@ -3229,6 +4806,22 @@ function BuilderContent() {
           >
             {preview ? '編集' : 'プレビュー'}
           </button>
+          {dbSiteId && (
+            <button
+              onClick={() => setShowPreviewLink(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white/10 text-slate-300 hover:bg-white/20"
+              title="閲覧専用プレビューリンクを発行"
+            >
+              🔗
+            </button>
+          )}
+          {lastSavedAt && !isDirty && !saved && (
+            <span className="hidden sm:block text-slate-600 text-[10px] whitespace-nowrap">
+              {Math.floor((Date.now() - lastSavedAt.getTime()) / 60000) < 1
+                ? 'たった今保存'
+                : `${Math.floor((Date.now() - lastSavedAt.getTime()) / 60000)}分前に保存`}
+            </span>
+          )}
           <button
             onClick={handleSave}
             disabled={saving}
@@ -3237,6 +4830,15 @@ function BuilderContent() {
             {isDirty && !saving && !saved && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
             {saving ? '保存中...' : saved ? '保存済み ✓' : isDirty ? '未保存' : '保存'}
           </button>
+          {published && dbSiteId && (
+            <button
+              onClick={handlePageSpeed}
+              title="サイト速度チェック"
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all text-slate-300"
+            >
+              ⚡ 速度
+            </button>
+          )}
           <button
             onClick={handlePublish}
             disabled={publishing}
@@ -3248,10 +4850,46 @@ function BuilderContent() {
       </div>
 
       <div className="flex overflow-hidden" style={{ minHeight: 0 }}>
-        {/* Left Panel - Block Palette */}
+        {/* Left Panel - Block Palette (desktop) */}
         {!preview && (
-          <div data-lenis-prevent-wheel className="w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0 min-h-0">
+          <div data-lenis-prevent-wheel className="hidden sm:block w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0 min-h-0">
             <div className="p-3">
+              {/* Saved snippets */}
+              {snippets.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">保存済みセクション</div>
+                  <div className="space-y-1">
+                    {snippets.map(s => (
+                      <div key={s.id} className="flex items-center gap-1">
+                        <button
+                          onClick={() => insertSnippet(s)}
+                          className="flex-1 text-left px-2 py-1.5 rounded-lg hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-all truncate"
+                          title={s.name}
+                        >
+                          📌 {s.name}
+                        </button>
+                        <button onClick={() => deleteSnippet(s.id)} className="text-slate-600 hover:text-red-400 text-xs px-1">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Save selected block as snippet */}
+              {selectedId && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => {
+                      const block = currentPage.blocks.find(b => b.id === selectedId);
+                      if (!block) return;
+                      const name = prompt('スニペット名を入力してください', block.type) || block.type;
+                      saveSnippet([block], name);
+                    }}
+                    className="w-full text-[10px] text-slate-500 hover:text-slate-300 border border-dashed border-white/10 hover:border-white/20 rounded-lg py-1.5 px-2 transition-all text-left"
+                  >
+                    📎 このブロックをスニペット保存
+                  </button>
+                </div>
+              )}
               {BLOCK_PALETTE.map(group => (
                 <div key={group.group} className="mb-4">
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">{group.group}</div>
@@ -3271,14 +4909,68 @@ function BuilderContent() {
             </div>
           </div>
         )}
+        {/* Mobile block palette sheet */}
+        {!preview && showMobileBlocks && (
+          <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm" onClick={() => setShowMobileBlocks(false)}>
+            <div className="bg-[#0f172a] border-t border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                <span className="text-xs font-bold text-white">ブロックを追加</span>
+                <button onClick={() => setShowMobileBlocks(false)} className="text-slate-500 hover:text-white text-lg leading-none">✕</button>
+              </div>
+              <div className="px-3 pb-6">
+                {BLOCK_PALETTE.map(group => (
+                  <div key={group.group} className="mb-4">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">{group.group}</div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {group.items.map(item => (
+                        <button
+                          key={item.type}
+                          onClick={() => { addBlock(item.type, selectedId || undefined); setShowMobileBlocks(false); }}
+                          className="flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] text-slate-300 hover:text-white transition-all border border-white/5 hover:border-white/20"
+                        >
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Canvas */}
         <div
           ref={canvasRef}
           data-lenis-prevent-wheel
           className="builder-canvas bg-[#e8eaed]"
-          style={{ flex: '1 1 0', minWidth: 0, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
+          style={{ flex: '1 1 0', minWidth: 0, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent', position: 'relative' }}
         >
+          {/* Inject design style CSS vars into canvas scope */}
+          <style>{`.lhp-canvas-scope{${({
+            modern:  '--lhp-r:16px;--lhp-btn-r:9999px;--lhp-img-r:12px',
+            minimal: '--lhp-r:8px;--lhp-btn-r:8px;--lhp-img-r:4px',
+            bold:    '--lhp-r:8px;--lhp-btn-r:8px;--lhp-img-r:8px',
+            elegant: '--lhp-r:4px;--lhp-btn-r:4px;--lhp-img-r:0px',
+            rounded: '--lhp-r:24px;--lhp-btn-r:9999px;--lhp-img-r:20px',
+            sharp:   '--lhp-r:0px;--lhp-btn-r:0px;--lhp-img-r:0px',
+          } as Record<string, string>)[site.designStyle] ?? '--lhp-r:16px;--lhp-btn-r:9999px;--lhp-img-r:12px'}}`}</style>
+          {/* Design style indicator badge */}
+          {!preview && (
+            <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm border border-white/10 px-2.5 py-1 rounded-full pointer-events-none">
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                site.designStyle === 'modern' ? 'bg-blue-400' :
+                site.designStyle === 'minimal' ? 'bg-slate-400' :
+                site.designStyle === 'bold' ? 'bg-orange-400' :
+                site.designStyle === 'elegant' ? 'bg-purple-400' :
+                site.designStyle === 'rounded' ? 'bg-green-400' :
+                site.designStyle === 'sharp' ? 'bg-red-400' : 'bg-blue-400'
+              }`} />
+              <span className="text-[9px] text-slate-300 font-medium">
+                {site.designStyle === 'modern' ? 'モダン' : site.designStyle === 'minimal' ? 'ミニマル' : site.designStyle === 'bold' ? 'ボールド' : site.designStyle === 'elegant' ? 'エレガント' : site.designStyle === 'rounded' ? 'ラウンド' : site.designStyle === 'sharp' ? 'シャープ' : site.designStyle}
+              </span>
+            </div>
+          )}
           <div className={`${preview ? 'flex flex-col items-center py-8 px-6' : 'py-8 px-6'}`}>
             {/* Desktop browser chrome */}
             {preview && previewDevice === 'desktop' && (
@@ -3332,6 +5024,15 @@ function BuilderContent() {
                   </div>
                 </div>
               )}
+              {selectedIds.size > 1 && !preview && (
+                <div className="sticky top-0 z-30 bg-orange-500 text-white text-xs px-4 py-2 flex items-center gap-3 shadow-lg">
+                  <span className="font-bold">{selectedIds.size}個のブロックを選択中</span>
+                  <button onClick={deleteSelectedBlocks} className="bg-red-600/50 hover:bg-red-600/70 px-2 py-0.5 rounded font-semibold">削除</button>
+                  <button onClick={moveSelectedBlocksUp} className="bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded">↑ 上へ</button>
+                  <button onClick={moveSelectedBlocksDown} className="bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded">↓ 下へ</button>
+                  <button onClick={() => { setSelectedIds(new Set()); setSelectedId(null); }} className="ml-auto hover:bg-white/20 px-2 py-0.5 rounded">✕ 解除</button>
+                </div>
+              )}
               {currentPage.blocks.map((block, index) => (
                 <div
                   key={block.id}
@@ -3359,8 +5060,27 @@ function BuilderContent() {
                 >
                   <BlockCanvas
                     block={block}
-                    selected={selectedId === block.id && !preview}
-                    onSelect={() => !preview && setSelectedId(block.id)}
+                    selected={selectedId === block.id && !preview && selectedIds.size === 0}
+                    multiSelected={!preview && selectedIds.has(block.id)}
+                    onSelect={(e) => {
+                      if (preview) return;
+                      if (e.shiftKey) {
+                        setSelectedIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(block.id)) {
+                            next.delete(block.id);
+                          } else {
+                            next.add(block.id);
+                            if (selectedId) next.add(selectedId);
+                          }
+                          return next;
+                        });
+                        if (!selectedId) setSelectedId(block.id);
+                      } else {
+                        setSelectedId(block.id);
+                        setSelectedIds(new Set());
+                      }
+                    }}
                     onDataChange={(data) => updateBlockData(block.id, data)}
                   />
                   {!preview && (
@@ -3370,13 +5090,37 @@ function BuilderContent() {
                       <button onClick={() => moveBlock(block.id, 1)} disabled={index === currentPage.blocks.length - 1}
                         className="w-6 h-6 bg-blue-500 text-white rounded text-xs flex items-center justify-center disabled:opacity-30 hover:bg-blue-600">↓</button>
                       <button onClick={() => duplicateBlock(block.id)}
-                        className="w-6 h-6 bg-slate-600 text-white rounded text-xs flex items-center justify-center hover:bg-slate-500">⧉</button>
+                        className="w-6 h-6 bg-slate-600 text-white rounded text-xs flex items-center justify-center hover:bg-slate-500" title="複製">⧉</button>
+                      <button onClick={() => { setCopiedBlock(JSON.parse(JSON.stringify(block))); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }}
+                        className="w-6 h-6 bg-slate-700 text-white rounded text-xs flex items-center justify-center hover:bg-slate-600" title="コピー (Ctrl+C)">📋</button>
                       <button onClick={() => deleteBlock(block.id)}
                         className="w-6 h-6 bg-red-500 text-white rounded text-xs flex items-center justify-center hover:bg-red-600">✕</button>
                     </div>
                   )}
                 </div>
               ))}
+
+              {/* Global footer preview */}
+              {site.globalFooter?.enabled && (
+                <div className="mt-0" style={{ backgroundColor: site.globalFooter.bgColor, color: site.globalFooter.textColor }}>
+                  <div className="max-w-5xl mx-auto px-8 py-10">
+                    <div className="flex flex-wrap gap-8 mb-6">
+                      <div className="flex-1 min-w-[180px]">
+                        <div className="font-black text-lg mb-1" style={{ color: '#ffffff' }}>{site.globalFooter.logo}</div>
+                        {site.globalFooter.tagline && <div className="text-sm opacity-60">{site.globalFooter.tagline}</div>}
+                      </div>
+                      {site.globalFooter.links.length > 0 && (
+                        <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
+                          {site.globalFooter.links.map((l, i) => (
+                            <span key={i} className="text-sm opacity-70 hover:opacity-100 cursor-pointer">{l.label}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-white/10 pt-4 text-xs opacity-50">{site.globalFooter.copyright}</div>
+                  </div>
+                </div>
+              )}
 
               {/* LARUbot preview */}
               {site.larubot && (
@@ -3405,7 +5149,7 @@ function BuilderContent() {
         {/* Right Panel */}
         {!preview && (
           <RightPanel
-            block={selectedBlock}
+            block={selectedIds.size > 1 ? null : selectedBlock}
             onDataChange={updateBlockData}
             seo={currentPage.seo}
             onSeoChange={seo => setSite(prev => ({
@@ -3448,8 +5192,23 @@ function BuilderContent() {
             onCustomCssChange={v => setSite(prev => ({ ...prev, customCss: v }))}
             fontFamily={site.fontFamily}
             onFontFamilyChange={v => setSite(prev => ({ ...prev, fontFamily: v }))}
+            designStyle={site.designStyle}
+            onDesignStyleChange={v => setSite(prev => ({ ...prev, designStyle: v }))}
             userPlan={userPlan}
             subscriptionStatus={subscriptionStatus}
+            onOpenImageLib={cb => { setImageLibCallback(() => cb); setShowImageLib(true); }}
+            globalFooter={site.globalFooter}
+            onGlobalFooterChange={f => setSite(prev => ({ ...prev, globalFooter: f }))}
+            customPalette={site.customPalette}
+            onCustomPaletteChange={p => setSite(prev => ({ ...prev, customPalette: p }))}
+            lineNotifyToken={site.lineNotifyToken}
+            onLineNotifyTokenChange={v => setSite(prev => ({ ...prev, lineNotifyToken: v }))}
+            clarityId={site.clarityId}
+            onClarityIdChange={v => setSite(prev => ({ ...prev, clarityId: v }))}
+            webhookUrl={site.webhookUrl}
+            onWebhookUrlChange={v => setSite(prev => ({ ...prev, webhookUrl: v }))}
+            sitePassword={site.sitePassword}
+            onSitePasswordChange={v => setSite(prev => ({ ...prev, sitePassword: v }))}
           />
         )}
       </div>
@@ -3458,6 +5217,158 @@ function BuilderContent() {
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-2.5 text-xs text-slate-400 flex items-center gap-3 shadow-2xl z-20">
           <span>ブロックをクリックして選択 · テキストをクリックして直接編集 · 左パネルからブロックを追加 · ドラッグで並び替え · ↩↪ または Cmd+Z で元に戻す</span>
         </div>
+      )}
+
+      {/* Mobile floating action button — block palette */}
+      {!preview && (
+        <button
+          onClick={() => setShowMobileBlocks(true)}
+          className="sm:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-sm font-bold px-5 py-3 rounded-full shadow-xl shadow-blue-900/40 transition-all"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          ブロック追加
+        </button>
+      )}
+
+      {/* AI Chat Sidebar */}
+      <AiChatSidebar
+        open={showAiChat}
+        onClose={() => setShowAiChat(false)}
+        blocks={currentPage.blocks}
+        selectedBlockId={selectedId}
+        siteName={site.siteName}
+        industry={String(onboardingData?.industry ?? '')}
+        onApplyActions={actions => {
+          pushHistory(siteRef.current);
+          actions.forEach(a => {
+            if (a.type === 'update_block') {
+              updateBlockData(a.blockId, a.data);
+            }
+          });
+        }}
+      />
+
+      {/* URL import modal */}
+      {showUrlImport && (
+        <UrlImportModal
+          onImport={handleUrlImport}
+          onClose={() => setShowUrlImport(false)}
+        />
+      )}
+
+      {/* Preview link modal */}
+      {showPreviewLink && dbSiteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white font-bold text-base">閲覧専用プレビューリンク</h2>
+              <button onClick={() => setShowPreviewLink(false)} className="text-slate-500 hover:text-white text-xl">✕</button>
+            </div>
+            <p className="text-slate-400 text-xs mb-4">公開前に関係者へ共有できるリンクです。URLを知っている人だけが閲覧できます。</p>
+            {previewToken ? (
+              <>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3 mb-3 flex items-center gap-2">
+                  <span className="text-slate-300 text-xs flex-1 break-all">
+                    {`${typeof window !== 'undefined' ? window.location.origin : ''}/hp/preview/${previewToken}`}
+                  </span>
+                  <button
+                    onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/hp/preview/${previewToken}`)}
+                    className="text-[10px] bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 px-2 py-1 rounded flex-shrink-0">
+                    コピー
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      setPreviewTokenLoading(true);
+                      const res = await fetch(`/api/sites/${dbSiteId}/preview-token`, { method: 'POST' });
+                      const data = await res.json();
+                      if (data.token) setPreviewToken(data.token);
+                      setPreviewTokenLoading(false);
+                    }}
+                    disabled={previewTokenLoading}
+                    className="flex-1 text-xs bg-white/10 hover:bg-white/20 text-slate-300 px-3 py-2 rounded-lg disabled:opacity-50">
+                    {previewTokenLoading ? '...' : '再発行（URLを変更）'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await fetch(`/api/sites/${dbSiteId}/preview-token`, { method: 'DELETE' });
+                      setPreviewToken(null);
+                    }}
+                    className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-2 rounded-lg">
+                    無効化
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button
+                onClick={async () => {
+                  setPreviewTokenLoading(true);
+                  const res = await fetch(`/api/sites/${dbSiteId}/preview-token`, { method: 'POST' });
+                  const data = await res.json();
+                  if (data.token) setPreviewToken(data.token);
+                  setPreviewTokenLoading(false);
+                }}
+                disabled={previewTokenLoading}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-3 rounded-xl disabled:opacity-50">
+                {previewTokenLoading ? '発行中...' : 'プレビューリンクを発行'}
+              </button>
+            )}
+            <p className="text-slate-600 text-[10px] mt-3">※ 公開サイトとは別のリンクです。公開したい場合は「公開する」ボタンを使ってください。</p>
+          </div>
+        </div>
+      )}
+
+      {/* PageSpeed modal */}
+      {showPageSpeed && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowPageSpeed(false)}>
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-bold text-white text-base flex items-center gap-2">⚡ サイト速度チェック</div>
+              <button onClick={() => setShowPageSpeed(false)} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
+            </div>
+            {pageSpeedLoading ? (
+              <div className="text-center py-10">
+                <div className="inline-block w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+                <div className="text-slate-400 text-sm">PageSpeed Insights で計測中... (30秒ほどかかります)</div>
+              </div>
+            ) : pageSpeedData ? (
+              <>
+                <div className="text-slate-500 text-[11px] mb-4 truncate">{pageSpeedData.url}</div>
+                {(['mobile', 'desktop'] as const).map(device => {
+                  const d = pageSpeedData[device];
+                  if (!d) return null;
+                  const scoreColor = (s: number) => s >= 90 ? 'text-green-400' : s >= 50 ? 'text-amber-400' : 'text-red-400';
+                  const scoreBg = (s: number) => s >= 90 ? 'bg-green-500/20' : s >= 50 ? 'bg-amber-500/20' : 'bg-red-500/20';
+                  return (
+                    <div key={device} className="mb-4">
+                      <div className="text-xs font-bold text-slate-400 mb-2">{device === 'mobile' ? '📱 モバイル' : '🖥 デスクトップ'}</div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {([['performance', 'パフォーマンス'], ['accessibility', 'アクセシビリティ'], ['seo', 'SEO'], ['bestPractices', 'ベスプラ']] as [keyof typeof d, string][]).map(([key, label]) => (
+                          <div key={key} className={`${scoreBg(d[key])} rounded-xl p-2 text-center`}>
+                            <div className={`text-2xl font-black ${scoreColor(d[key])}`}>{d[key]}</div>
+                            <div className="text-[9px] text-slate-400 mt-0.5">{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                <button onClick={handlePageSpeed} className="w-full bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-bold py-2 rounded-lg mt-1">再計測</button>
+              </>
+            ) : (
+              <div className="text-center py-8 text-slate-400 text-sm">計測に失敗しました。再度お試しください。</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Image library modal */}
+      {showImageLib && imageLibCallback && (
+        <ImageLibraryModal
+          onSelect={url => { imageLibCallback(url); setShowImageLib(false); setImageLibCallback(null); }}
+          onClose={() => { setShowImageLib(false); setImageLibCallback(null); }}
+        />
       )}
 
       {/* Template picker modal */}
@@ -3488,7 +5399,19 @@ function BuilderContent() {
                     <div className="absolute top-2 right-2 w-3 h-3 rounded-full" style={{ background: tpl.colors[1] }} />
                   </div>
                   <div className="p-3">
-                    <div className="text-white text-xs font-bold">{tpl.name}</div>
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="text-white text-xs font-bold">{tpl.name}</div>
+                      <span className={`flex-shrink-0 text-[8px] px-1.5 py-0.5 rounded font-bold ${
+                        tpl.designStyle === 'modern'  ? 'bg-blue-500/20 text-blue-400' :
+                        tpl.designStyle === 'minimal' ? 'bg-slate-500/20 text-slate-400' :
+                        tpl.designStyle === 'bold'    ? 'bg-orange-500/20 text-orange-400' :
+                        tpl.designStyle === 'elegant' ? 'bg-purple-500/20 text-purple-400' :
+                        tpl.designStyle === 'rounded' ? 'bg-green-500/20 text-green-400' :
+                        tpl.designStyle === 'sharp'   ? 'bg-red-500/20 text-red-400' : 'bg-slate-500/20 text-slate-400'
+                      }`}>
+                        {({ modern: 'モダン', minimal: 'ミニマル', bold: 'ボールド', elegant: 'エレガント', rounded: 'ラウンド', sharp: 'シャープ' } as Record<string, string>)[tpl.designStyle]}
+                      </span>
+                    </div>
                     <div className="text-slate-500 text-[10px] mt-0.5">{tpl.desc}</div>
                   </div>
                 </button>

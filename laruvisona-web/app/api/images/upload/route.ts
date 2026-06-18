@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import sharp from 'sharp';
 
 function getAdminStorage() {
   return createAdminClient(
@@ -19,23 +20,40 @@ export async function POST(req: Request) {
   if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 });
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+  const allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
   if (!allowed.includes(ext)) {
     return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
   }
-  if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 });
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 });
   }
 
-  const path = `${user.id}/${Date.now()}.${ext}`;
+  const input = Buffer.from(await file.arrayBuffer());
+  let buffer: Buffer;
+  let contentType: string;
+  let uploadExt: string;
+
+  if (ext === 'gif') {
+    // Keep GIFs as-is (animation)
+    buffer = input;
+    contentType = 'image/gif';
+    uploadExt = 'gif';
+  } else {
+    // Convert to WebP with quality 85, max 2000px wide
+    buffer = await sharp(input)
+      .resize({ width: 2000, withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toBuffer();
+    contentType = 'image/webp';
+    uploadExt = 'webp';
+  }
+
+  const path = `${user.id}/${Date.now()}.${uploadExt}`;
   const admin = getAdminStorage();
 
   const { error } = await admin.storage
     .from('site-images')
-    .upload(path, await file.arrayBuffer(), {
-      contentType: file.type,
-      upsert: false,
-    });
+    .upload(path, buffer, { contentType, upsert: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

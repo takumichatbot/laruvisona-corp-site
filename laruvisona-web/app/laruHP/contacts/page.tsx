@@ -107,25 +107,25 @@ export default function ContactsPage() {
   return (
     <div className="min-h-screen bg-[#080f1e] text-white">
       {/* Header */}
-      <header className="border-b border-white/[0.07] px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-slate-500 hover:text-slate-300 text-sm transition-colors">← ダッシュボード</Link>
+      <header className="border-b border-white/[0.07] px-4 sm:px-6 py-3.5 flex items-center gap-3">
+        <Link href="/laruHP/dashboard" className="text-slate-500 hover:text-slate-300 text-sm transition-colors flex-shrink-0">← ダッシュボード</Link>
         <div className="flex-1" />
-        <h1 className="text-sm font-bold text-white">問い合わせ管理</h1>
+        <h1 className="text-sm font-bold text-white">問い合わせ</h1>
         {unreadCount > 0 && (
-          <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadCount}件 未読</span>
+          <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">{unreadCount}件 未読</span>
         )}
         <button
           onClick={exportCsv}
           disabled={filtered.length === 0}
-          className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.1] text-slate-300 hover:bg-white/[0.1] transition-colors disabled:opacity-30"
+          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.1] text-slate-300 hover:bg-white/[0.1] transition-colors disabled:opacity-30 flex-shrink-0"
         >
-          CSV出力
+          CSV
         </button>
       </header>
 
-      <div className="flex h-[calc(100vh-57px)]">
-        {/* Sidebar: list */}
-        <div className="w-80 border-r border-white/[0.07] flex flex-col flex-shrink-0">
+      <div className="flex h-[calc(100vh-53px)]">
+        {/* Sidebar: list — hidden on mobile when detail is shown */}
+        <div className={`${selected ? 'hidden sm:flex' : 'flex'} flex-col sm:w-80 w-full border-r border-white/[0.07] flex-shrink-0`}>
           {/* Filters */}
           <div className="p-3 border-b border-white/[0.07] flex gap-2">
             <select
@@ -185,10 +185,16 @@ export default function ContactsPage() {
           </div>
         </div>
 
-        {/* Detail panel */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Detail panel — hidden on mobile when no selection */}
+        <div className={`${!selected ? 'hidden sm:flex' : 'flex'} flex-1 overflow-y-auto`}>
           {selected ? (
-            <div className="p-8 max-w-xl">
+            <div className="p-4 sm:p-8 max-w-xl w-full">
+              <button
+                onClick={() => setSelected(null)}
+                className="sm:hidden mb-4 flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                ← 一覧に戻る
+              </button>
               <div className="flex items-center gap-3 mb-6">
                 <span className={`text-xs font-bold px-2 py-1 rounded ${selected.type === 'booking' ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'}`}>
                   {selected.type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}
@@ -229,7 +235,7 @@ export default function ContactsPage() {
               </a>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-slate-600 text-sm">
+            <div className="hidden sm:flex items-center justify-center h-full text-slate-600 text-sm">
               左のリストから選択してください
             </div>
           )}

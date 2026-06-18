@@ -39,6 +39,10 @@ body {
   100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateY(var(--d)) scale(0.4); }
 }
 
+/* Hide scrollbar utility */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 /* Builder canvas scroll — thin scrollbar on WebKit (Safari/Chrome) */
 .builder-canvas::-webkit-scrollbar {
   width: 6px;

@@ -35,13 +35,17 @@ export async function POST(req: Request) {
       const contractEnd = new Date();
       contractEnd.setMonth(contractEnd.getMonth() + 6);
 
-      await supabase.from('profiles').update({
+      const profileUpdates: Record<string, unknown> = {
         stripe_subscription_id: session.subscription as string,
         subscription_status: 'active',
         plan: plan || 'hp',
         contract_starts_at: contractStart.toISOString(),
         contract_ends_at: contractEnd.toISOString(),
-      }).eq('id', userId);
+      };
+      // Save customer ID if session has one (e.g. guest checkout)
+      if (session.customer) profileUpdates['stripe_customer_id'] = session.customer as string;
+
+      await supabase.from('profiles').update(profileUpdates).eq('id', userId);
 
       // Auto-create LARUbot account for bundle plans
       if ((plan === 'hp-bot' || plan === 'hp-bot-seo') && process.env.LARU_HP_API_SECRET) {

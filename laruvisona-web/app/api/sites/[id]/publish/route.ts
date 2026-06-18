@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { exportToHTML } from '@/lib/html-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
@@ -53,7 +54,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     seoSettings,
     site.settings_json as SiteSettings,
     site.name,
-    { name: site.name, industry: site.industry ?? undefined, siteId: site.id }
+    { name: site.name, industry: site.industry ?? undefined, siteId: site.id, slug: site.slug ?? undefined }
   );
 
   const { data: updated, error: updateError } = await supabase
@@ -65,6 +66,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .single();
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  // Bust ISR cache for this slug
+  if (updated?.slug) revalidatePath(`/hp/${updated.slug}`);
 
   // Save version snapshot (fire-and-forget)
   void supabase.from('site_versions').insert({

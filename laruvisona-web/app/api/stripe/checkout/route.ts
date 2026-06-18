@@ -49,8 +49,8 @@ export async function POST(req: Request) {
     plan,
   };
 
-  // HPプランのみ初月1円クーポンを適用
-  const couponId = plan === 'hp' ? process.env.STRIPE_FIRST_MONTH_COUPON_ID : undefined;
+  // 全プラン初月1円クーポンを適用
+  const couponId = process.env.STRIPE_FIRST_MONTH_COUPON_ID;
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       subscription_data: {
         metadata: {
           ...sessionMeta,
-          contract_months: plan === 'hp-bot-seo' ? '6' : '0',
+          contract_months: '6',
         },
       },
       success_url: `${origin}/laruHP/dashboard?payment=success`,
