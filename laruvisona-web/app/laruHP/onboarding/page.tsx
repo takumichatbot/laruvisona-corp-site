@@ -4,20 +4,36 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 const INDUSTRIES = [
-  { id: 'restaurant',   name: '飲食店・カフェ',     desc: 'レストラン、居酒屋、カフェ、ラーメン店など',         color: 'orange' },
-  { id: 'beauty',       name: '美容室・サロン',     desc: '美容室、ネイルサロン、エステ、スパなど',            color: 'pink' },
-  { id: 'clinic',       name: '整体・クリニック',   desc: '整体院、接骨院、歯科、医療クリニックなど',          color: 'teal' },
-  { id: 'legal',        name: '士業・コンサル',     desc: '弁護士、税理士、行政書士、コンサルタントなど',      color: 'indigo' },
-  { id: 'construction', name: '建設・工務店',       desc: 'リフォーム、建設、内装工事、外構など',              color: 'yellow' },
-  { id: 'realestate',   name: '不動産',             desc: '賃貸仲介、売買、管理、不動産投資など',              color: 'blue' },
-  { id: 'retail',       name: '小売・EC',           desc: '実店舗、オンラインショップ、専門店など',            color: 'purple' },
-  { id: 'fitness',      name: 'フィットネス・ジム', desc: 'パーソナルジム、ヨガスタジオ、スポーツクラブなど', color: 'green' },
-  { id: 'hotel',        name: 'ホテル・旅館',       desc: 'ホテル、旅館、民泊、グランピングなど',              color: 'amber' },
-  { id: 'education',    name: '教育・スクール',     desc: '塾、教室、スクール、研修機関など',                  color: 'cyan' },
-  { id: 'wedding',      name: '結婚式場・イベント', desc: 'ウェディング、イベントホール、パーティーなど',      color: 'rose' },
-  { id: 'pet',          name: 'ペットサロン',       desc: 'トリミング、ペットホテル、動物病院など',            color: 'lime' },
-  { id: 'other',        name: 'その他',             desc: '上記に当てはまらない業種',                          color: 'slate' },
+  { id: 'restaurant',   icon: '🍽️', name: '飲食店・カフェ',     desc: 'レストラン、居酒屋、カフェ、ラーメン店など',         color: 'orange', popular: true },
+  { id: 'beauty',       icon: '✂️', name: '美容室・サロン',     desc: '美容室、ネイルサロン、エステ、スパなど',            color: 'pink',   popular: true },
+  { id: 'clinic',       icon: '🏥', name: '整体・クリニック',   desc: '整体院、接骨院、歯科、医療クリニックなど',          color: 'teal',   popular: true },
+  { id: 'legal',        icon: '⚖️', name: '士業・コンサル',     desc: '弁護士、税理士、行政書士、コンサルタントなど',      color: 'indigo' },
+  { id: 'construction', icon: '🏗️', name: '建設・工務店',       desc: 'リフォーム、建設、内装工事、外構など',              color: 'yellow' },
+  { id: 'realestate',   icon: '🏠', name: '不動産',             desc: '賃貸仲介、売買、管理、不動産投資など',              color: 'blue' },
+  { id: 'retail',       icon: '🛍️', name: '小売・EC',           desc: '実店舗、オンラインショップ、専門店など',            color: 'purple' },
+  { id: 'fitness',      icon: '💪', name: 'フィットネス・ジム', desc: 'パーソナルジム、ヨガスタジオ、スポーツクラブなど', color: 'green' },
+  { id: 'hotel',        icon: '🏨', name: 'ホテル・旅館',       desc: 'ホテル、旅館、民泊、グランピングなど',              color: 'amber' },
+  { id: 'education',    icon: '📚', name: '教育・スクール',     desc: '塾、教室、スクール、研修機関など',                  color: 'cyan' },
+  { id: 'wedding',      icon: '💒', name: '結婚式場・イベント', desc: 'ウェディング、イベントホール、パーティーなど',      color: 'rose' },
+  { id: 'pet',          icon: '🐾', name: 'ペットサロン',       desc: 'トリミング、ペットホテル、動物病院など',            color: 'lime' },
+  { id: 'other',        icon: '✨', name: 'その他',             desc: '上記に当てはまらない業種',                          color: 'slate' },
 ];
+
+const INDUSTRY_COLOR_MAP: Record<string, string> = {
+  restaurant: 'warm-earth',
+  beauty: 'modern-pink',
+  clinic: 'fresh-green',
+  legal: 'elegant-dark',
+  construction: 'bold-orange',
+  realestate: 'professional-blue',
+  retail: 'bold-orange',
+  fitness: 'bold-orange',
+  hotel: 'elegant-dark',
+  education: 'professional-blue',
+  wedding: 'elegant-dark',
+  pet: 'fresh-green',
+  other: 'professional-blue',
+};
 
 const TEMPLATE_PRESETS = [
   {
@@ -103,8 +119,6 @@ const defaultForm: FormData = {
   industry: '', businessName: '', address: '', phone: '', email: '',
   website: '', description: '', catchphrase: '',
   services: [
-    { name: '', description: '', price: '' },
-    { name: '', description: '', price: '' },
     { name: '', description: '', price: '' },
   ],
   hours: defaultHours,
@@ -315,15 +329,29 @@ function OnboardingContent() {
   }, [form]);
 
   // URL scan state
-  const [scanUrl, setScanUrl] = useState('');
   const [scanning, setScanning] = useState(false);
   const [scanDone, setScanDone] = useState(false);
   const [scanError, setScanError] = useState('');
 
   useEffect(() => {
     const ind = searchParams.get('industry');
-    if (ind) setForm(f => ({ ...f, industry: ind }));
+    if (ind) {
+      setForm(f => ({
+        ...f,
+        industry: ind,
+        colorScheme: INDUSTRY_COLOR_MAP[ind] || f.colorScheme,
+      }));
+    }
   }, [searchParams]);
+
+  const handleIndustrySelect = (indId: string) => {
+    setForm(f => ({
+      ...f,
+      industry: indId,
+      colorScheme: INDUSTRY_COLOR_MAP[indId] || f.colorScheme,
+    }));
+    setTimeout(() => setStep(2), 350);
+  };
 
   // Cycle through generate messages
   useEffect(() => {
@@ -359,7 +387,7 @@ function OnboardingContent() {
   };
 
   const handleScanUrl = async () => {
-    const url = scanUrl.trim();
+    const url = form.website.trim();
     if (!url) return;
     setScanning(true);
     setScanError('');
@@ -527,25 +555,30 @@ function OnboardingContent() {
         {step === 1 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-black mb-2">業種を選んでください</h2>
+              <h2 className="text-3xl font-bold mb-2">業種を選んでください</h2>
               <p className="text-slate-400">業種に最適化されたテンプレートとSEO設定が自動で適用されます。</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {INDUSTRIES.map(ind => (
                 <button
                   key={ind.id}
-                  onClick={() => updateForm('industry', ind.id)}
-                  className={`p-4 rounded-2xl border text-left transition-all hover:-translate-y-0.5 ${
+                  onClick={() => handleIndustrySelect(ind.id)}
+                  className={`p-4 rounded-2xl border text-left transition-all hover:-translate-y-0.5 relative ${
                     form.industry === ind.id
                       ? 'bg-blue-500/20 border-blue-500/60 shadow-[0_0_20px_rgba(59,130,246,0.2)]'
                       : 'bg-white/5 border-white/10 hover:border-white/30'
                   }`}
                 >
+                  {ind.popular && (
+                    <span className="absolute top-2 right-2 text-[9px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded-full">人気</span>
+                  )}
+                  <div className="text-2xl mb-2">{ind.icon}</div>
                   <div className="font-bold text-sm mb-0.5">{ind.name}</div>
                   <div className="text-slate-500 text-xs leading-tight">{ind.desc}</div>
                 </button>
               ))}
             </div>
+            <p className="text-center text-slate-600 text-xs mt-6">選択すると自動で次のステップへ進みます</p>
           </div>
         )}
 
@@ -553,7 +586,7 @@ function OnboardingContent() {
         {step === 2 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-black mb-2">ビジネス情報を入力</h2>
+              <h2 className="text-3xl font-bold mb-2">ビジネス情報を入力</h2>
               <p className="text-slate-400">AIがこの情報をもとにコンテンツを自動生成します。</p>
             </div>
 
@@ -564,8 +597,8 @@ function OnboardingContent() {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 </div>
                 <div>
-                  <div className="font-bold text-sm text-white mb-0.5">既存サイトをAIスキャン</div>
-                  <div className="text-slate-400 text-xs">既存のホームページがある場合、URLを入力するとAIが情報を自動抽出してフォームに入力します。</div>
+                  <div className="font-bold text-sm text-white mb-0.5">既存サイトをAIスキャン（任意）</div>
+                  <div className="text-slate-400 text-xs">既存のホームページがある場合、URLを入力してスキャンすると店舗名・電話番号・住所などを自動入力します。</div>
                 </div>
               </div>
 
@@ -579,15 +612,15 @@ function OnboardingContent() {
                 <div className="flex gap-2">
                   <input
                     type="url"
-                    value={scanUrl}
-                    onChange={e => setScanUrl(e.target.value)}
+                    value={form.website}
+                    onChange={e => updateForm('website', e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleScanUrl()}
                     placeholder="https://your-shop.com"
                     className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500 transition-colors"
                   />
                   <button
                     onClick={handleScanUrl}
-                    disabled={scanning || !scanUrl.trim()}
+                    disabled={scanning || !form.website.trim()}
                     className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-bold transition-all whitespace-nowrap"
                   >
                     {scanning ? (
@@ -613,7 +646,7 @@ function OnboardingContent() {
                     className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2">電話番号 <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-bold mb-2">電話番号</label>
                   <input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)}
                     placeholder="例: 03-1234-5678"
                     className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
@@ -627,19 +660,11 @@ function OnboardingContent() {
                   className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-bold mb-2">メールアドレス</label>
-                  <input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)}
-                    placeholder="例: info@your-shop.com"
-                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">既存サイトURL（スキャン用）</label>
-                  <input type="url" value={form.website} onChange={e => updateForm('website', e.target.value)}
-                    placeholder="https://..."
-                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
-                </div>
+              <div>
+                <label className="block text-sm font-bold mb-2">メールアドレス</label>
+                <input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)}
+                  placeholder="例: info@your-shop.com"
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
               </div>
 
               <div>
@@ -665,7 +690,7 @@ function OnboardingContent() {
         {step === 3 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-black mb-2">デザインテンプレートを選択</h2>
+              <h2 className="text-3xl font-bold mb-2">デザインテンプレートを選択</h2>
               <p className="text-slate-400">サイト全体の雰囲気が決まります。後でエディタからいつでも変更できます。</p>
             </div>
 
@@ -772,7 +797,7 @@ function OnboardingContent() {
         {step === 4 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-black mb-2">コンテンツを入力</h2>
+              <h2 className="text-3xl font-bold mb-2">コンテンツを入力</h2>
               <p className="text-slate-400">空欄の場合はAIが自動生成します。後でエディタから編集もできます。</p>
             </div>
 
@@ -871,7 +896,7 @@ function OnboardingContent() {
             ) : (
               <div>
                 <div className="mb-8">
-                  <h2 className="text-3xl font-black mb-2">確認・生成</h2>
+                  <h2 className="text-3xl font-bold mb-2">確認・生成</h2>
                   <p className="text-slate-400">入力内容を確認してAI生成を開始してください。</p>
                 </div>
 
@@ -948,8 +973,9 @@ function OnboardingContent() {
                         <div className="font-bold text-sm text-purple-300 mb-1">AIが自動で生成するもの</div>
                         <div className="text-xs text-slate-400 space-y-0.5">
                           <div>・キャッチコピー・ヒーロー見出し（業種×地域最適化）</div>
-                          <div>・会社・店舗紹介文（150〜200文字）</div>
-                          <div>・よくある質問（FAQ）3項目</div>
+                          <div>・会社・店舗紹介文（180〜220文字）</div>
+                          <div>・3つの強み（アイコン付き）</div>
+                          <div>・よくある質問（FAQ）4項目</div>
                           <div>・お客様の声 3件（業種別リアル感想）</div>
                           <div>・SEOタイトル・メタディスクリプション</div>
                         </div>
