@@ -2347,6 +2347,7 @@ function BuilderContent() {
   const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [showPublishSuccess, setShowPublishSuccess] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -2864,6 +2865,7 @@ function BuilderContent() {
     if (data.success) {
       setPublished(true);
       setPublishedSlug(data.slug);
+      if (fromOnboarding) setShowPublishSuccess(true);
     }
     setPublishing(false);
   };
@@ -3007,6 +3009,43 @@ function BuilderContent() {
 
   return (
     <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100vh' }}>
+      {/* First publish success modal (onboarding flow) */}
+      {showPublishSuccess && publishedSlug && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-[#0f172a] border border-white/10 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
+            <div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-5 text-3xl">
+              🎉
+            </div>
+            <h2 className="text-2xl font-bold mb-2">サイトが公開されました！</h2>
+            <p className="text-slate-400 text-sm mb-5">
+              AIが生成したサイトを確認して、続きはダッシュボードで管理できます。
+            </p>
+            <a
+              href={`/hp/${publishedSlug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 text-sm text-slate-300 hover:text-white transition-all mb-5"
+            >
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              {publishedSlug}.laruHP.com で公開中
+            </a>
+            <div className="flex flex-col gap-2">
+              <a
+                href="/laruHP/dashboard"
+                className="block bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-colors text-sm"
+              >
+                ダッシュボードへ →
+              </a>
+              <button
+                onClick={() => setShowPublishSuccess(false)}
+                className="text-slate-500 hover:text-slate-300 text-sm py-2 transition-colors"
+              >
+                このまま編集を続ける
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-[#0f172a] border-b border-white/10 flex-shrink-0 z-30">
         <div className="flex items-center gap-2 min-w-0">

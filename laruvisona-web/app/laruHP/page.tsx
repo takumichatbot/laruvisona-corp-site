@@ -410,6 +410,181 @@ export default function LaruHPLandingPage() {
         </div>
       </section>
 
+      {/* Showcase — demo site examples */}
+      <section id="showcase" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <span className="text-emerald-500/70 font-medium text-xs tracking-[0.2em] uppercase">SHOWCASE</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">こんなサイトが作れます</h2>
+            <p className="text-slate-500">AIが3分で生成。あとはクリックして好みに調整するだけ。</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Beauty salon demo */}
+            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-pink-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(236,72,153,0.08)] bg-white/[0.02]">
+              <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-yellow-500/60 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-green-500/60 rounded-full" />
+                </div>
+                <div className="flex-1 bg-white/5 rounded text-[10px] text-slate-500 px-2 py-0.5 text-center">hair-salon-an.laruHP.com</div>
+              </div>
+              <div className="overflow-hidden" style={{ height: 220 }}>
+                {/* Simulated hero */}
+                <div className="bg-gradient-to-br from-rose-900 to-pink-950 px-5 py-6 relative" style={{ height: 110 }}>
+                  <div className="flex gap-1 mb-3">
+                    <div className="h-1.5 w-12 bg-white/20 rounded-full" />
+                    <div className="h-1.5 w-8 bg-white/10 rounded-full" />
+                    <div className="h-1.5 w-10 bg-white/10 rounded-full" />
+                  </div>
+                  <div className="h-4 w-40 bg-white/90 rounded mb-2" />
+                  <div className="h-2.5 w-56 bg-white/40 rounded mb-1.5" />
+                  <div className="h-2.5 w-44 bg-white/30 rounded mb-4" />
+                  <div className="inline-flex h-7 w-24 bg-rose-400 rounded-lg items-center justify-center">
+                    <div className="h-2 w-14 bg-white/80 rounded-full" />
+                  </div>
+                </div>
+                {/* Simulated 3-col */}
+                <div className="bg-white px-4 py-3 grid grid-cols-3 gap-3">
+                  {[0,1,2].map(i => (
+                    <div key={i} className="text-center">
+                      <div className="w-8 h-8 bg-rose-100 rounded-xl mx-auto mb-1.5" />
+                      <div className="h-2 w-12 bg-gray-200 rounded mx-auto mb-1" />
+                      <div className="h-1.5 w-16 bg-gray-100 rounded mx-auto" />
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-gray-50 px-4 py-2.5 flex gap-2">
+                  <div className="flex-1 h-14 bg-rose-50 rounded-lg border border-rose-100" />
+                  <div className="flex-1 h-14 bg-rose-50 rounded-lg border border-rose-100" />
+                </div>
+              </div>
+              <div className="p-4 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-white">美容室・サロン</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">Hair Salon AN（東京・渋谷区）</div>
+                  </div>
+                  <Link href="/laruHP/onboarding?industry=beauty" className="text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1.5 rounded-lg hover:bg-rose-500/20 transition-all">
+                    このテンプレで作る →
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Clinic demo */}
+            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-emerald-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(16,185,129,0.08)] bg-white/[0.02]">
+              <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-yellow-500/60 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-green-500/60 rounded-full" />
+                </div>
+                <div className="flex-1 bg-white/5 rounded text-[10px] text-slate-500 px-2 py-0.5 text-center">midori-sekkotsu.laruHP.com</div>
+              </div>
+              <div className="overflow-hidden" style={{ height: 220 }}>
+                <div className="bg-gradient-to-br from-emerald-900 to-teal-950 px-5 py-6" style={{ height: 110 }}>
+                  <div className="flex gap-1 mb-3">
+                    <div className="h-1.5 w-12 bg-white/20 rounded-full" />
+                    <div className="h-1.5 w-8 bg-white/10 rounded-full" />
+                    <div className="h-1.5 w-10 bg-white/10 rounded-full" />
+                  </div>
+                  <div className="h-4 w-48 bg-white/90 rounded mb-2" />
+                  <div className="h-2.5 w-56 bg-white/40 rounded mb-1.5" />
+                  <div className="h-2.5 w-40 bg-white/30 rounded mb-4" />
+                  <div className="inline-flex h-7 w-28 bg-emerald-400 rounded-lg items-center justify-center">
+                    <div className="h-2 w-18 bg-white/80 rounded-full" />
+                  </div>
+                </div>
+                <div className="bg-white px-4 py-3 grid grid-cols-3 gap-3">
+                  {[0,1,2].map(i => (
+                    <div key={i} className="text-center">
+                      <div className="w-8 h-8 bg-emerald-100 rounded-xl mx-auto mb-1.5" />
+                      <div className="h-2 w-14 bg-gray-200 rounded mx-auto mb-1" />
+                      <div className="h-1.5 w-16 bg-gray-100 rounded mx-auto" />
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-gray-50 px-4 py-2.5">
+                  <div className="h-3 w-32 bg-gray-200 rounded mb-2" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-8 bg-emerald-50 rounded border border-emerald-100" />
+                    <div className="h-8 bg-emerald-50 rounded border border-emerald-100" />
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-white">整体・クリニック</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">みどり接骨院（大阪・梅田）</div>
+                  </div>
+                  <Link href="/laruHP/onboarding?industry=clinic" className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all">
+                    このテンプレで作る →
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Restaurant demo */}
+            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-amber-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(245,158,11,0.08)] bg-white/[0.02]">
+              <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-yellow-500/60 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-green-500/60 rounded-full" />
+                </div>
+                <div className="flex-1 bg-white/5 rounded text-[10px] text-slate-500 px-2 py-0.5 text-center">bistro-nakano.laruHP.com</div>
+              </div>
+              <div className="overflow-hidden" style={{ height: 220 }}>
+                <div className="bg-gradient-to-br from-orange-900 to-amber-950 px-5 py-6" style={{ height: 110 }}>
+                  <div className="flex gap-1 mb-3">
+                    <div className="h-1.5 w-12 bg-white/20 rounded-full" />
+                    <div className="h-1.5 w-8 bg-white/10 rounded-full" />
+                    <div className="h-1.5 w-10 bg-white/10 rounded-full" />
+                  </div>
+                  <div className="h-4 w-44 bg-white/90 rounded mb-2" />
+                  <div className="h-2.5 w-52 bg-white/40 rounded mb-1.5" />
+                  <div className="h-2.5 w-36 bg-white/30 rounded mb-4" />
+                  <div className="inline-flex h-7 w-24 bg-amber-400 rounded-lg items-center justify-center">
+                    <div className="h-2 w-14 bg-white/80 rounded-full" />
+                  </div>
+                </div>
+                <div className="bg-white px-4 py-3">
+                  <div className="h-3 w-28 bg-gray-200 rounded mb-2" />
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[0,1,2].map(i => (
+                      <div key={i} className="h-16 bg-amber-50 rounded-lg border border-amber-100" />
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-orange-950/40 px-4 py-2">
+                  <div className="h-2 w-40 bg-white/20 rounded mb-1" />
+                  <div className="h-1.5 w-48 bg-white/10 rounded" />
+                </div>
+              </div>
+              <div className="p-4 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-white">飲食店・カフェ</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">Bistro Nakano（東京・中野区）</div>
+                  </div>
+                  <Link href="/laruHP/onboarding?industry=restaurant" className="text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-all">
+                    このテンプレで作る →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <Link href="/laruHP/onboarding" className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors border border-white/10 hover:border-white/20 px-5 py-2.5 rounded-xl">
+              全テンプレートを見る →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* LARUbot + LARUSEO Integration */}
       <section className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
         <div className="max-w-5xl mx-auto">
