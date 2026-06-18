@@ -313,9 +313,18 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
+  const [stepKey, setStepKey] = useState(0);
+  const [slideDir, setSlideDir] = useState<'forward' | 'back'>('forward');
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [generating, setGenerating] = useState(false);
   const [completedStepCount, setCompletedStepCount] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const goStep = (n: number) => {
+    setSlideDir(n > step ? 'forward' : 'back');
+    setStep(n);
+    setStepKey(k => k + 1);
+  };
 
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 
@@ -326,7 +335,7 @@ function OnboardingContent() {
       if (saved) {
         const parsed = JSON.parse(saved);
         setForm(f => ({ ...f, ...parsed }));
-        if (parsed.industry) setStep(2); // resume from step 2 if industry already chosen
+        if (parsed.industry) setStep(2); // resume from step 2 (no animation on restore)
       }
     } catch {}
   }, []);
@@ -348,8 +357,9 @@ function OnboardingContent() {
         industry: ind,
         colorScheme: INDUSTRY_COLOR_MAP[ind] || f.colorScheme,
       }));
-      setStep(2); // skip step 1 when coming from showcase/landing with ?industry=
+      goStep(2); // skip step 1 when coming from showcase/landing with ?industry=
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const handleIndustrySelect = (indId: string) => {
@@ -358,8 +368,20 @@ function OnboardingContent() {
       industry: indId,
       colorScheme: INDUSTRY_COLOR_MAP[indId] || f.colorScheme,
     }));
-    setTimeout(() => setStep(2), 350);
+    setTimeout(() => goStep(2), 350);
   };
+
+  // Advance with Enter key (skip textarea focus)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey) return;
+      if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
+      if (step < 5 && !generating && canNext()) goStep(Math.min(5, step + 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, generating, form]);
 
   // Animate step-by-step progress during generation
   useEffect(() => {
@@ -441,6 +463,8 @@ function OnboardingContent() {
   };
 
   const handleGenerate = async () => {
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 1200);
     setGenerating(true);
     setCompletedStepCount(0);
 
@@ -475,6 +499,7 @@ function OnboardingContent() {
   const selectTemplate = (preset: typeof TEMPLATE_PRESETS[0]) => {
     updateForm('colorScheme', preset.colorScheme);
     updateForm('style', preset.style);
+    setTimeout(() => goStep(4), 600);
   };
 
   const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
@@ -558,6 +583,12 @@ function OnboardingContent() {
           </div>
         </div>
 
+        {/* Animated step content wrapper */}
+        <div
+          key={stepKey}
+          style={{ animation: `${slideDir === 'forward' ? 'stepSlideInRight' : 'stepSlideInLeft'} 0.22s ease-out` }}
+        >
+
         {/* ─── Step 1: Industry ─────────────────────────────────── */}
         {step === 1 && (
           <div>
@@ -599,7 +630,7 @@ function OnboardingContent() {
                 <span className="text-sm text-white font-medium">{selectedIndustry.name}</span>
                 <span className="text-slate-500 text-sm">でサイトを作成中</span>
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => goStep(1)}
                   className="ml-auto text-blue-400 hover:text-blue-300 text-xs transition-colors"
                 >
                   変更
@@ -726,100 +757,23 @@ function OnboardingContent() {
               ))}
             </div>
 
-            <div className="mt-10">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-bold text-base text-white">集客を加速するオプション</h3>
-              </div>
-              <p className="text-slate-500 text-xs mb-4">HP作成後にプランを選ぶ際に追加できます。まずは内容を確認してください。</p>
-              <div className="space-y-3">
-
-                {/* LARUbot */}
-                <div className="rounded-2xl border border-indigo-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(10,10,20,0.95) 100%)' }}>
-                  <div className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center flex-shrink-0 text-xl">🤖</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-white text-sm">LARUbot</span>
-                          <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 px-2 py-0.5 rounded-full font-bold">HP+Botプラン ¥4,980/月</span>
-                        </div>
-                        <p className="text-slate-400 text-xs mt-0.5">AIチャットボット — 問い合わせを24時間自動対応</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-1.5">
-                      {[
-                        { icon: '💬', text: '「営業時間は？」「予約したい」にAIが即答' },
-                        { icon: '📊', text: '月の問い合わせをゼロにできる — 対応工数90%削減' },
-                        { icon: '🌙', text: '深夜・休日も無人対応。機会損失をなくす' },
-                      ].map((b, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
-                          <span className="text-sm">{b.icon}</span>
-                          <span>{b.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <a
-                        href="https://larubot.tokyo"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        className="text-[11px] text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors"
-                      >
-                        LARUbotの詳細を見る →
-                      </a>
-                      <span className="text-slate-600 text-[10px]">larubot.tokyo</span>
-                    </div>
-                  </div>
-                  <div className="border-t border-indigo-500/20 px-4 py-2.5 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">HP単体プランからでもあとで追加可能</span>
-                    <span className="text-[11px] text-indigo-400 font-bold">初月1円で試せる</span>
-                  </div>
-                </div>
-
-                {/* LARUSEO */}
-                <div className="rounded-2xl border border-emerald-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(10,10,20,0.95) 100%)' }}>
-                  <div className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 text-xl">📈</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-white text-sm">LARUSEO</span>
-                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full font-bold">Bot+SEOプラン ¥9,800/月</span>
-                        </div>
-                        <p className="text-slate-400 text-xs mt-0.5">AIブログ自動生成 — Googleで上位表示を狙う</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-1.5">
-                      {[
-                        { icon: '✍️', text: 'SEO最適化ブログをAIが毎週自動投稿。更新不要' },
-                        { icon: '🔍', text: '「地域名 + 業種」でGoogle上位を目指す' },
-                        { icon: '📣', text: '広告費ゼロで集客できる仕組みを自動構築' },
-                      ].map((b, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
-                          <span className="text-sm">{b.icon}</span>
-                          <span>{b.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="border-t border-emerald-500/20 px-4 py-2.5 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">LARUbotもセットで含まれます</span>
-                    <span className="text-[11px] text-emerald-400 font-bold">初月1円で試せる</span>
-                  </div>
-                </div>
-
-              </div>
-            </div>
           </div>
         )}
 
         {/* ─── Step 4: Content ─────────────────────────────────── */}
         {step === 4 && (
           <div>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2">コンテンツを入力</h2>
-              <p className="text-slate-400">空欄の場合はAIが自動生成します。後でエディタから編集もできます。</p>
+            <div className="flex items-start justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">コンテンツを入力</h2>
+                <p className="text-slate-400">空欄の場合はAIが自動生成します。後でエディタから編集もできます。</p>
+              </div>
+              <button
+                onClick={() => goStep(5)}
+                className="flex-shrink-0 mt-1 text-xs text-slate-500 hover:text-slate-300 border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-all"
+              >
+                スキップ → AIに任せる
+              </button>
             </div>
 
             {/* Services */}
@@ -951,7 +905,7 @@ function OnboardingContent() {
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-bold text-sm">基本情報</h3>
-                      <button onClick={() => setStep(2)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
+                      <button onClick={() => goStep(2)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
                     </div>
                     <div className="space-y-1.5 text-sm text-slate-300">
                       <div><span className="text-slate-500">業種: </span>{selectedIndustry?.name}</div>
@@ -964,7 +918,7 @@ function OnboardingContent() {
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-bold text-sm">デザインテンプレート</h3>
-                      <button onClick={() => setStep(3)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
+                      <button onClick={() => goStep(3)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
                     </div>
                     <div className="flex items-center gap-3">
                       {(() => {
@@ -993,7 +947,7 @@ function OnboardingContent() {
                   <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-bold text-sm">サービス内容</h3>
-                      <button onClick={() => setStep(4)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
+                      <button onClick={() => goStep(4)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
                     </div>
                     {form.services.filter(s => s.name).length > 0 ? (
                       <div className="space-y-1">
@@ -1030,12 +984,104 @@ function OnboardingContent() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleGenerate}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white py-5 rounded-2xl font-black text-lg transition-all shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:shadow-[0_0_60px_rgba(59,130,246,0.4)] hover:scale-[1.02]"
-                >
-                  AIでサイトを生成する →
-                </button>
+                {/* Upsell options */}
+                <div className="mb-6 space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-bold text-sm text-white">集客を加速するオプション（任意）</h3>
+                    <span className="text-[10px] text-slate-500">サイト完成後にいつでも追加できます</span>
+                  </div>
+
+                  {/* LARUbot */}
+                  <div className="rounded-2xl border border-indigo-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(10,10,20,0.95) 100%)' }}>
+                    <div className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center flex-shrink-0 text-xl">🤖</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-sm">LARUbot</span>
+                            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 px-2 py-0.5 rounded-full font-bold">HP+Botプラン ¥4,980/月</span>
+                          </div>
+                          <p className="text-slate-400 text-xs mt-0.5">AIチャットボット — 問い合わせを24時間自動対応</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 space-y-1.5">
+                        {[
+                          { icon: '💬', text: '「営業時間は？」「予約したい」にAIが即答' },
+                          { icon: '🌙', text: '深夜・休日も無人対応。機会損失をなくす' },
+                        ].map((b, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                            <span className="text-sm">{b.icon}</span>
+                            <span>{b.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border-t border-indigo-500/20 px-4 py-2.5 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-500">HP単体プランからでもあとで追加可能</span>
+                      <span className="text-[11px] text-indigo-400 font-bold">初月1円で試せる</span>
+                    </div>
+                  </div>
+
+                  {/* LARUSEO */}
+                  <div className="rounded-2xl border border-emerald-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(10,10,20,0.95) 100%)' }}>
+                    <div className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 text-xl">📈</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-sm">LARUSEO</span>
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full font-bold">Bot+SEOプラン ¥9,800/月</span>
+                          </div>
+                          <p className="text-slate-400 text-xs mt-0.5">AIブログ自動生成 — Googleで上位表示を狙う</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 space-y-1.5">
+                        {[
+                          { icon: '✍️', text: 'SEO最適化ブログをAIが毎週自動投稿。更新不要' },
+                          { icon: '🔍', text: '「地域名 + 業種」でGoogle上位を目指す' },
+                        ].map((b, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                            <span className="text-sm">{b.icon}</span>
+                            <span>{b.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border-t border-emerald-500/20 px-4 py-2.5 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-500">LARUbotもセットで含まれます</span>
+                      <span className="text-[11px] text-emerald-400 font-bold">初月1円で試せる</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Generate button with confetti */}
+                <div className="relative">
+                  {showConfetti && (
+                    <div className="absolute inset-0 pointer-events-none overflow-visible z-10">
+                      {Array.from({ length: 18 }, (_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-2 h-2 rounded-sm"
+                          style={{
+                            left: `${(i % 9) * 11 + 5}%`,
+                            top: '50%',
+                            background: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'][i % 6],
+                            '--a': `${i * 20 - 10}deg`,
+                            '--d': `${-60 - (i % 4) * 25}px`,
+                            animation: 'confettiBurst 0.9s ease-out forwards',
+                            animationDelay: `${(i % 5) * 0.04}s`,
+                          } as React.CSSProperties}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleGenerate}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white py-5 rounded-2xl font-bold text-lg transition-all shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:shadow-[0_0_60px_rgba(59,130,246,0.4)] hover:scale-[1.02]"
+                  >
+                    AIでサイトを生成する →
+                  </button>
+                </div>
                 <p className="text-center text-slate-600 text-xs mt-4">
                   生成後はビジュアルエディタで自由に編集できます
                 </p>
@@ -1044,17 +1090,19 @@ function OnboardingContent() {
           </div>
         )}
 
+        </div>{/* /animated step wrapper */}
+
         {/* Navigation */}
         {step < 5 && !generating && (
           <div className="flex justify-between mt-10">
             <button
-              onClick={() => setStep(s => Math.max(1, s - 1))}
+              onClick={() => goStep(Math.max(1, step - 1))}
               className={`px-6 py-3 rounded-xl border border-white/10 text-slate-300 hover:border-white/30 transition-all ${step === 1 ? 'invisible' : ''}`}
             >
               ← 戻る
             </button>
             <button
-              onClick={() => setStep(s => Math.min(5, s + 1))}
+              onClick={() => goStep(Math.min(5, step + 1))}
               disabled={!canNext()}
               className="px-8 py-3 bg-white text-black rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
