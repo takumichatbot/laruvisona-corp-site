@@ -131,13 +131,20 @@ const defaultForm: FormData = {
 const STEPS = ['業種選択', 'ビジネス情報', 'デザイン', 'コンテンツ', '確認・生成'];
 const STEP_TIMES = ['約30秒', '約1分', '約1分', '約2分', '約30秒'];
 
-const GENERATE_MESSAGES = [
-  'AIがビジネス情報を解析中...',
-  'キャッチコピーを生成中...',
-  '紹介文・よくある質問を作成中...',
-  'SEO設定を最適化中...',
-  'テンプレートにデータを適用中...',
-  'もう少しで完成です...',
+const GENERATE_STEPS = [
+  'ビジネス情報を解析',
+  'キャッチコピー・ヒーロー見出しを生成',
+  '3つの強み・紹介文を作成',
+  'FAQ・お客様の声を生成',
+  'SEO設定を最適化',
+  'テンプレートにデータを適用',
+];
+
+const HOURS_PRESETS = [
+  { label: '平日 9〜18時', fn: (h: typeof defaultForm.hours) => h.map((d, i) => ({ ...d, open: '09:00', close: '18:00', closed: i >= 5 })) },
+  { label: '毎日 10〜19時', fn: (h: typeof defaultForm.hours) => h.map(d => ({ ...d, open: '10:00', close: '19:00', closed: false })) },
+  { label: '年中無休 11〜22時', fn: (h: typeof defaultForm.hours) => h.map(d => ({ ...d, open: '11:00', close: '22:00', closed: false })) },
+  { label: '土日定休 9〜18時', fn: (h: typeof defaultForm.hours) => h.map((d, i) => ({ ...d, open: '09:00', close: '18:00', closed: i >= 5 })) },
 ];
 
 // Visual CSS mockup for each template
@@ -308,7 +315,7 @@ function OnboardingContent() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [generating, setGenerating] = useState(false);
-  const [generateMsgIdx, setGenerateMsgIdx] = useState(0);
+  const [completedStepCount, setCompletedStepCount] = useState(0);
 
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 
@@ -341,6 +348,7 @@ function OnboardingContent() {
         industry: ind,
         colorScheme: INDUSTRY_COLOR_MAP[ind] || f.colorScheme,
       }));
+      setStep(2); // skip step 1 when coming from showcase/landing with ?industry=
     }
   }, [searchParams]);
 
@@ -353,13 +361,12 @@ function OnboardingContent() {
     setTimeout(() => setStep(2), 350);
   };
 
-  // Cycle through generate messages
+  // Animate step-by-step progress during generation
   useEffect(() => {
-    if (!generating) return;
-    const interval = setInterval(() => {
-      setGenerateMsgIdx(i => (i + 1) % GENERATE_MESSAGES.length);
-    }, 1400);
-    return () => clearInterval(interval);
+    if (!generating) { setCompletedStepCount(0); return; }
+    const delays = [700, 1600, 2800, 4200, 5600, 7000];
+    const timers = delays.map((d, i) => setTimeout(() => setCompletedStepCount(i + 1), d));
+    return () => timers.forEach(clearTimeout);
   }, [generating]);
 
   const updateForm = (key: keyof FormData, value: unknown) => {
@@ -435,7 +442,7 @@ function OnboardingContent() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setGenerateMsgIdx(0);
+    setCompletedStepCount(0);
 
     let aiGenerated = null;
     try {
@@ -585,6 +592,20 @@ function OnboardingContent() {
         {/* ─── Step 2: Business Info + URL Scan ────────────────── */}
         {step === 2 && (
           <div>
+            {/* Industry breadcrumb */}
+            {selectedIndustry && (
+              <div className="flex items-center gap-2 mb-6 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5">
+                <span className="text-xl">{selectedIndustry.icon}</span>
+                <span className="text-sm text-white font-medium">{selectedIndustry.name}</span>
+                <span className="text-slate-500 text-sm">でサイトを作成中</span>
+                <button
+                  onClick={() => setStep(1)}
+                  className="ml-auto text-blue-400 hover:text-blue-300 text-xs transition-colors"
+                >
+                  変更
+                </button>
+              </div>
+            )}
             <div className="mb-8">
               <h2 className="text-3xl font-bold mb-2">ビジネス情報を入力</h2>
               <p className="text-slate-400">AIがこの情報をもとにコンテンツを自動生成します。</p>
@@ -834,7 +855,20 @@ function OnboardingContent() {
 
             {/* Business Hours */}
             <div>
-              <h3 className="font-bold mb-4">営業時間</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold">営業時間</h3>
+                <div className="flex gap-1.5 flex-wrap justify-end">
+                  {HOURS_PRESETS.map(p => (
+                    <button
+                      key={p.label}
+                      onClick={() => setForm(f => ({ ...f, hours: p.fn(f.hours) }))}
+                      className="text-[11px] px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-slate-400 hover:text-white transition-all"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                 {form.hours.map((hour, i) => (
                   <div key={i} className={`flex items-center gap-3 sm:gap-4 px-4 py-3 ${i < form.hours.length - 1 ? 'border-b border-white/5' : ''} ${hour.closed ? 'opacity-50' : ''}`}>
@@ -859,38 +893,50 @@ function OnboardingContent() {
         {step === 5 && (
           <div>
             {generating ? (
-              <div className="text-center py-20">
-                {/* Animated spinner */}
-                <div className="relative w-24 h-24 mx-auto mb-8">
-                  <div className="absolute inset-0 rounded-full border-2 border-blue-500/20" />
-                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
-                  <div className="absolute inset-3 rounded-full border-2 border-transparent border-t-purple-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-                      </svg>
+              <div className="py-16 max-w-sm mx-auto">
+                <div className="text-center mb-10">
+                  <div className="relative w-16 h-16 mx-auto mb-5">
+                    <div className="absolute inset-0 rounded-full border-2 border-blue-500/20" />
+                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
+                    <div className="absolute inset-2 rounded-full border-2 border-transparent border-t-purple-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+                    <div className="absolute inset-0 flex items-center justify-center text-xl">
+                      {selectedIndustry?.icon}
                     </div>
                   </div>
-                </div>
-                <h2 className="text-2xl font-black mb-3">AIがサイトを生成中</h2>
-                <p className="text-blue-400 font-medium mb-2 transition-all">{GENERATE_MESSAGES[generateMsgIdx]}</p>
-                <p className="text-slate-500 text-sm">{selectedIndustry?.name}に最適化されたサイトを構築しています</p>
-
-                {/* Progress bar */}
-                <div className="mt-8 w-full max-w-xs mx-auto">
-                  <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-400 rounded-full animate-[progress_4s_ease-in-out_forwards]" />
-                  </div>
+                  <h2 className="text-2xl font-bold mb-1">AIがサイトを生成中</h2>
+                  <p className="text-slate-500 text-sm">{selectedIndustry?.name}に最適化したコンテンツを作っています</p>
                 </div>
 
-                {/* Feature chips */}
-                <div className="flex flex-wrap justify-center gap-2 mt-8">
-                  {['コピーライティング', 'SEO最適化', 'FAQ生成', 'お客様の声', 'レイアウト設計'].map((f, i) => (
-                    <span key={f} className="text-xs px-3 py-1 rounded-full border border-white/10 text-slate-400" style={{ animationDelay: `${i * 0.3}s` }}>
-                      {f}
-                    </span>
-                  ))}
+                {/* Step-by-step checklist */}
+                <div className="space-y-3">
+                  {GENERATE_STEPS.map((label, i) => {
+                    const done = i < completedStepCount;
+                    const active = i === completedStepCount;
+                    return (
+                      <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-500 ${
+                        done ? 'bg-green-500/10 border border-green-500/20' :
+                        active ? 'bg-blue-500/10 border border-blue-500/30' :
+                        'bg-white/[0.03] border border-white/5 opacity-40'
+                      }`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                          done ? 'bg-green-500' : active ? 'bg-blue-500/30' : 'bg-white/10'
+                        }`}>
+                          {done ? (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          ) : active ? (
+                            <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                          ) : (
+                            <div className="w-2 h-2 rounded-full bg-white/20" />
+                          )}
+                        </div>
+                        <span className={`text-sm font-medium ${done ? 'text-green-400' : active ? 'text-white' : 'text-slate-600'}`}>
+                          {label}
+                        </span>
+                        {done && <span className="ml-auto text-green-500 text-xs">完了</span>}
+                        {active && <span className="ml-auto text-blue-400 text-xs animate-pulse">処理中...</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
