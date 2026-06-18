@@ -1199,7 +1199,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+      <div data-lenis-prevent-wheel className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
         {tab === 'block' && (
           <>
             {!block && (
@@ -3136,7 +3136,7 @@ function BuilderContent() {
       <div className="flex overflow-hidden" style={{ minHeight: 0 }}>
         {/* Left Panel - Block Palette */}
         {!preview && (
-          <div className="w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0 min-h-0">
+          <div data-lenis-prevent-wheel className="w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0 min-h-0">
             <div className="p-3">
               {BLOCK_PALETTE.map(group => (
                 <div key={group.group} className="mb-4">
