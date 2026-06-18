@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -109,31 +109,75 @@ function IcGlobe() {
   return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
 }
 
-// ── Mini bar chart ──────────────────────────────────────────────────────────
+// ── Mini area chart ─────────────────────────────────────────────────────────
 type DayView = { date: string; views: number };
 
 function MiniChart({ data }: { data: DayView[] }) {
-  const max = Math.max(...data.map(d => d.views), 1);
+  const uid = useId();
   const DOW = ['日', '月', '火', '水', '木', '金', '土'];
-  const showLabels = data.length <= 7;
+  const max = Math.max(...data.map(d => d.views), 1);
+  const W = 300; const H = 56;
+  const padX = 2; const padY = 5;
+
+  const pts = data.map((d, i) => ({
+    x: padX + (data.length > 1 ? i / (data.length - 1) : 0.5) * (W - 2 * padX),
+    y: padY + (1 - d.views / max) * (H - 2 * padY),
+    views: d.views,
+    date: d.date,
+  }));
+
+  const smoothLine = pts.length < 2 ? '' : pts.map((p, i) => {
+    if (i === 0) return `M${p.x},${p.y}`;
+    const prev = pts[i - 1];
+    const cx1 = prev.x + (p.x - prev.x) / 3;
+    const cx2 = p.x - (p.x - prev.x) / 3;
+    return `C${cx1},${prev.y} ${cx2},${p.y} ${p.x},${p.y}`;
+  }).join(' ');
+  const areaPath = smoothLine
+    ? `${smoothLine} L${pts[pts.length - 1].x},${H} L${pts[0].x},${H} Z`
+    : '';
+  const last = pts[pts.length - 1];
+  const gradId = `cg${uid.replace(/:/g, '')}`;
+
   return (
-    <div className="flex items-end gap-px h-10 w-full">
-      {data.map((d, i) => {
-        const pct = Math.round((d.views / max) * 100);
-        const dow = DOW[new Date(d.date + 'T12:00:00').getDay()];
-        return (
-          <div key={d.date} className="flex flex-col items-center gap-0.5 flex-1 h-full justify-end group relative">
-            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded pointer-events-none opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
-              {d.date.slice(5)} {d.views}PV
+    <div className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="56" className="block overflow-visible">
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map(f => (
+          <line key={f} x1={padX} x2={W - padX}
+            y1={padY + f * (H - 2 * padY)} y2={padY + f * (H - 2 * padY)}
+            stroke="white" strokeOpacity="0.05" strokeWidth="0.5" />
+        ))}
+        {areaPath && <path d={areaPath} fill={`url(#${gradId})`} />}
+        {smoothLine && <path d={smoothLine} fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" />}
+        {last && (
+          <>
+            <circle cx={last.x} cy={last.y} r="5" fill="#3b82f6" fillOpacity="0.2" />
+            <circle cx={last.x} cy={last.y} r="2.5" fill="#60a5fa" />
+          </>
+        )}
+      </svg>
+      {data.length <= 7 ? (
+        <div className="flex mt-0.5">
+          {data.map((d, i) => (
+            <div key={i} className="flex-1 text-center">
+              <span className="text-[8px] text-slate-600 leading-none">
+                {DOW[new Date(d.date + 'T12:00:00').getDay()]}
+              </span>
             </div>
-            <div
-              className={`w-full rounded-sm transition-all ${i === data.length - 1 ? 'bg-blue-400/60' : 'bg-white/20'}`}
-              style={{ height: pct ? `${Math.max(pct, 8)}%` : '2px', minHeight: '2px' }}
-            />
-            {showLabels && <span className="text-[8px] text-slate-600 leading-none">{dow}</span>}
-          </div>
-        );
-      })}
+          ))}
+        </div>
+      ) : (
+        <div className="flex justify-between mt-0.5">
+          <span className="text-[8px] text-slate-600">{data[0]?.date.slice(5)}</span>
+          <span className="text-[8px] text-slate-600">{data[data.length - 1]?.date.slice(5)}</span>
+        </div>
+      )}
     </div>
   );
 }
