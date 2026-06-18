@@ -3105,15 +3105,24 @@ function BuilderContent() {
           </button>
           {preview && (
             <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
-              {([['desktop', 'PC'], ['tablet', 'Tab'], ['mobile', 'SP']] as const).map(([device, label]) => (
-                <button
-                  key={device}
-                  onClick={() => setPreviewDevice(device)}
-                  className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${previewDevice === device ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}
-                >
-                  {label}
-                </button>
-              ))}
+              <button onClick={() => setPreviewDevice('desktop')} title="デスクトップ"
+                className={`px-2 py-1.5 rounded transition-all ${previewDevice === 'desktop' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+                </svg>
+              </button>
+              <button onClick={() => setPreviewDevice('tablet')} title="タブレット"
+                className={`px-2 py-1.5 rounded transition-all ${previewDevice === 'tablet' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+              </button>
+              <button onClick={() => setPreviewDevice('mobile')} title="スマートフォン"
+                className={`px-2 py-1.5 rounded transition-all ${previewDevice === 'mobile' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+              </button>
             </div>
           )}
           <button
@@ -3173,12 +3182,49 @@ function BuilderContent() {
           style={{ flex: '1 1 0', minWidth: 0, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
         >
           <div className={`${preview ? 'flex flex-col items-center py-8 px-6' : 'py-8 px-6'}`}>
+            {/* Desktop browser chrome */}
+            {preview && previewDevice === 'desktop' && (
+              <div className="w-full max-w-5xl bg-[#e2e2e2] border border-b-0 border-gray-300 rounded-t-xl px-3 py-2 flex items-center gap-3">
+                <div className="flex gap-1.5 shrink-0">
+                  <div className="w-3 h-3 bg-red-400 rounded-full" />
+                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
+                  <div className="w-3 h-3 bg-green-500 rounded-full" />
+                </div>
+                <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-gray-400 text-center max-w-xs mx-auto truncate">
+                  {site.siteName || 'yoursite.laruHP.com'}
+                </div>
+              </div>
+            )}
+            {/* Tablet browser chrome */}
+            {preview && previewDevice === 'tablet' && (
+              <div className="w-[768px] bg-[#e2e2e2] border border-b-0 border-gray-300 rounded-t-xl px-3 py-2 flex items-center gap-3">
+                <div className="flex gap-1.5 shrink-0">
+                  <div className="w-2.5 h-2.5 bg-red-400 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-yellow-400 rounded-full" />
+                  <div className="w-2.5 h-2.5 bg-green-500 rounded-full" />
+                </div>
+                <div className="flex-1 bg-white rounded-md px-3 py-0.5 text-xs text-gray-400 text-center truncate">
+                  {site.siteName || 'yoursite.laruHP.com'}
+                </div>
+              </div>
+            )}
+            {/* Mobile phone top (notch) */}
+            {preview && previewDevice === 'mobile' && (
+              <div className="w-[390px] bg-gray-900 rounded-t-[2.5rem] border-x-[4px] border-t-[4px] border-gray-700 px-6 pt-3 pb-2 flex items-center">
+                <span className="text-white/60 text-[10px] font-semibold flex-1">9:41</span>
+                <div className="w-20 h-5 bg-black rounded-full" />
+                <div className="flex-1 flex justify-end items-center gap-1">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="white" opacity="0.6"><path d="M1.5 8.5C5.5 4.5 18.5 4.5 22.5 8.5M5 12c2.5-2.5 12-2.5 14 0M8.5 15.5c1.5-1.5 7.5-1.5 7 0M12 19h.01"/></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" opacity="0.6"><rect x="2" y="7" width="16" height="11" rx="2"/><path d="M22 11v4"/><path d="M6 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </div>
+              </div>
+            )}
             <div className={`bg-white mx-auto transition-all duration-300 ${preview
               ? previewDevice === 'mobile'
-                ? 'w-[390px] rounded-2xl overflow-hidden border-4 border-gray-800 shadow-2xl'
+                ? 'w-[390px] overflow-hidden border-x-[4px] border-gray-700'
                 : previewDevice === 'tablet'
-                ? 'w-[768px] rounded-xl overflow-hidden border-2 border-gray-300 shadow-xl'
-                : 'w-full max-w-5xl rounded-none shadow-none'
+                ? 'w-[768px] overflow-hidden border border-t-0 border-gray-300 shadow-2xl'
+                : 'w-full max-w-5xl overflow-hidden border border-t-0 border-gray-300 rounded-b-xl shadow-2xl'
               : 'max-w-3xl rounded-2xl overflow-hidden shadow-[0_4px_40px_rgba(0,0,0,0.12)]'}`}>
               {currentPage.blocks.length === 0 && (
                 <div className="h-64 flex items-center justify-center text-gray-400 text-center">
@@ -3243,6 +3289,18 @@ function BuilderContent() {
                 </div>
               )}
             </div>
+            {/* Mobile phone bottom (home indicator) */}
+            {preview && previewDevice === 'mobile' && (
+              <div className="w-[390px] bg-gray-900 rounded-b-[2.5rem] border-x-[4px] border-b-[4px] border-gray-700 py-3 flex justify-center">
+                <div className="w-28 h-[3px] bg-gray-500 rounded-full" />
+              </div>
+            )}
+            {/* Device size label */}
+            {preview && (
+              <p className="text-slate-500 text-[11px] mt-4 text-center">
+                {previewDevice === 'mobile' ? '390px — スマートフォン' : previewDevice === 'tablet' ? '768px — タブレット' : '1280px — デスクトップ'}
+              </p>
+            )}
           </div>
         </div>
 
