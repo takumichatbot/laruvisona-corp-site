@@ -3161,6 +3161,7 @@ function BuilderContent() {
         {/* Canvas */}
         <div
           ref={canvasRef}
+          data-lenis-prevent-wheel
           className="builder-canvas bg-[#e8eaed]"
           style={{ flex: '1 1 0', minWidth: 0, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
         >
