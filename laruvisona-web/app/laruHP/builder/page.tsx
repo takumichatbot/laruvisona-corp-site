@@ -2968,7 +2968,7 @@ function BuilderContent() {
   }
 
   return (
-    <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100dvh' }}>
+    <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100vh' }}>
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-[#0f172a] border-b border-white/10 flex-shrink-0 z-30">
         <div className="flex items-center gap-2 min-w-0">
@@ -3149,7 +3149,7 @@ function BuilderContent() {
         {/* Canvas */}
         <div
           className="builder-canvas bg-[#e8eaed]"
-          style={{ flex: '1 1 0', minWidth: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
+          style={{ flex: '1 1 0', minWidth: 0, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
         >
           <div className={`${preview ? 'flex flex-col items-center py-8 px-6' : 'py-8 px-6'}`}>
             <div className={`bg-white mx-auto transition-all duration-300 ${preview
