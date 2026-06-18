@@ -39,6 +39,8 @@ export interface IndustryTemplate {
   bgColor: string;
   schemaType: string;
   seoTitleTemplate: string;
+  designStyle: string;
+  fontFamily: string;
   blocks: Block[];
 }
 
@@ -50,6 +52,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#78350f',
     schemaType: 'Restaurant',
     seoTitleTemplate: '{name} | {area}のカフェ・レストラン',
+    designStyle: 'rounded',
+    fontFamily: 'rounded',
     blocks: [
       b('hero', { heading: '{name}', subheading: '心を込めた料理でお迎えします', ctaText: 'ご予約はこちら', ctaLink: '#booking', bgColor: '#7c2d12', textColor: '#ffffff' }),
       b('heading', { text: '私たちについて', subtext: 'お店のこだわりをご紹介します', align: 'center' }),
@@ -81,6 +85,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#831843',
     schemaType: 'BeautySalon',
     seoTitleTemplate: '{name} | {area}の美容室・ヘアサロン',
+    designStyle: 'elegant',
+    fontFamily: 'mincho',
     blocks: [
       b('hero', { heading: '{name}', subheading: 'あなたの美しさを最大限に引き出します', ctaText: '今すぐ予約する', ctaLink: '#booking', bgColor: '#831843', textColor: '#ffffff' }),
       b('heading', { text: 'サロンについて', subtext: '', align: 'center' }),
@@ -117,6 +123,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#064e3b',
     schemaType: 'MedicalClinic',
     seoTitleTemplate: '{name} | {area}の整体院・接骨院',
+    designStyle: 'modern',
+    fontFamily: 'noto',
     blocks: [
       b('hero', { heading: '{name}', subheading: '根本から改善。あなたの体の悩みに寄り添います', ctaText: '初回無料相談', ctaLink: '#booking', bgColor: '#064e3b', textColor: '#ffffff' }),
       b('heading', { text: 'こんなお悩みありませんか？', subtext: '', align: 'center' }),
@@ -146,6 +154,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#111827',
     schemaType: 'LegalService',
     seoTitleTemplate: '{name} | {area}の{type}事務所',
+    designStyle: 'minimal',
+    fontFamily: 'biz',
     blocks: [
       b('hero', { heading: '{name}', subheading: '豊富な実績と専門知識で、お客様の課題を解決します', ctaText: '無料相談を予約する', ctaLink: '#booking', bgColor: '#111827', textColor: '#ffffff' }),
       b('heading', { text: '事務所について', subtext: '{description}', align: 'left' }),
@@ -172,6 +182,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#7c2d12',
     schemaType: 'HomeAndConstructionBusiness',
     seoTitleTemplate: '{name} | {area}の{type}・リフォーム',
+    designStyle: 'bold',
+    fontFamily: 'zen',
     blocks: [
       b('hero', { heading: '{name}', subheading: '地域密着30年。確かな技術でお客様の夢を形に', ctaText: '無料お見積りはこちら', ctaLink: '#contact', bgColor: '#7c2d12', textColor: '#ffffff' }),
       b('heading', { text: '私たちの強み', subtext: '{description}', align: 'center' }),
@@ -190,6 +202,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#1e3a8a',
     schemaType: 'RealEstateAgent',
     seoTitleTemplate: '{name} | {area}の不動産',
+    designStyle: 'sharp',
+    fontFamily: 'zen',
     blocks: [
       b('hero', { heading: '{name}', subheading: '理想の暮らしを、あなたと一緒に探します', ctaText: '物件を探す', ctaLink: '#contact', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('heading', { text: '私たちにお任せください', subtext: '{description}', align: 'center' }),
@@ -207,6 +221,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#7c2d12',
     schemaType: 'Store',
     seoTitleTemplate: '{name} | {area}の専門店',
+    designStyle: 'rounded',
+    fontFamily: 'noto',
     blocks: [
       b('hero', { heading: '{name}', subheading: 'こだわりの商品をお届けします', ctaText: '商品を見る', ctaLink: '#services', bgColor: '#7c2d12', textColor: '#ffffff' }),
       b('heading', { text: 'おすすめ商品', subtext: '{description}', align: 'center' }),
@@ -224,6 +240,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#7c2d12',
     schemaType: 'ExerciseGym',
     seoTitleTemplate: '{name} | {area}のジム・フィットネス',
+    designStyle: 'bold',
+    fontFamily: 'zen',
     blocks: [
       b('hero', { heading: '{name}', subheading: '理想の体を、今日から始めよう', ctaText: '無料体験を申し込む', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
       b('three-col', { col1Icon: '🏋️', col1Title: '最新設備', col1Text: '最新のトレーニングマシンを完備', col2Icon: '👨‍🏫', col2Title: 'プロトレーナー', col2Text: '経験豊富なパーソナルトレーナーが在籍', col3Icon: '🎯', col3Title: '結果にコミット', col3Text: '目標達成まで徹底サポート' }),
@@ -258,6 +276,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#111827',
     schemaType: 'Hotel',
     seoTitleTemplate: '{name} | {area}のホテル・旅館',
+    designStyle: 'elegant',
+    fontFamily: 'mincho',
     blocks: [
       b('hero', { heading: '{name}', subheading: '特別なひとときを、心を込めておもてなしします', ctaText: '空室・料金を確認する', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
       b('heading', { text: '施設のご案内', subtext: '{description}', align: 'center' }),
@@ -285,6 +305,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#1e3a8a',
     schemaType: 'EducationalOrganization',
     seoTitleTemplate: '{name} | {area}の塾・スクール',
+    designStyle: 'rounded',
+    fontFamily: 'noto',
     blocks: [
       b('hero', { heading: '{name}', subheading: 'お子様の可能性を最大限に伸ばします', ctaText: '無料体験授業を申し込む', ctaLink: '#booking', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('heading', { text: '選ばれる理由', subtext: '{description}', align: 'center' }),
@@ -320,6 +342,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#1c1917',
     schemaType: 'EventVenue',
     seoTitleTemplate: '{name} | {area}のウェディング・結婚式場',
+    designStyle: 'elegant',
+    fontFamily: 'mincho',
     blocks: [
       b('hero', { heading: '{name}', subheading: '二人の特別な日を、最高の思い出に', ctaText: '見学・相談を予約する', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
       b('countdown', {
@@ -370,6 +394,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#052e16',
     schemaType: 'LocalBusiness',
     seoTitleTemplate: '{name} | {area}のペットサロン・トリミング',
+    designStyle: 'rounded',
+    fontFamily: 'rounded',
     blocks: [
       b('hero', { heading: '{name}', subheading: '大切なペットを、丁寧に心を込めてケアします', ctaText: 'トリミングを予約する', ctaLink: '#booking', bgColor: '#052e16', textColor: '#ffffff' }),
       b('heading', { text: '私たちのこだわり', subtext: '{description}', align: 'center' }),
@@ -405,6 +431,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#0c4a6e',
     schemaType: 'Dentist',
     seoTitleTemplate: '{name} | {area}の歯科・歯医者',
+    designStyle: 'modern',
+    fontFamily: 'noto',
     blocks: [
       b('hero', { heading: '{name}', subheading: '痛みの少ない治療と丁寧な説明で、お口の健康をサポートします', ctaText: '初診のご予約', ctaLink: '#booking', bgColor: '#0c4a6e', textColor: '#ffffff' }),
       b('heading', { text: '当院の特徴', subtext: '患者様に選ばれる理由', align: 'center' }),
@@ -425,6 +453,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#111827',
     schemaType: 'LocalBusiness',
     seoTitleTemplate: '{name} | {area}のフォトスタジオ・カメラマン',
+    designStyle: 'minimal',
+    fontFamily: 'kaisei',
     blocks: [
       b('hero', { heading: '{name}', subheading: '大切な瞬間を、美しく永遠に残します', ctaText: '撮影を予約する', ctaLink: '#booking', bgColor: '#111827', textColor: '#ffffff' }),
       b('heading', { text: '撮影メニュー', subtext: '様々なシーンに対応したプロ撮影プラン', align: 'center' }),
@@ -445,6 +475,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     bgColor: '#1e3a5f',
     schemaType: 'AccountingService',
     seoTitleTemplate: '{name} | {area}の税理士・会計事務所',
+    designStyle: 'minimal',
+    fontFamily: 'biz',
     blocks: [
       b('hero', { heading: '{name}', subheading: '中小企業の経営をデータで支える、頼れるパートナー', ctaText: '無料相談を予約する', ctaLink: '#booking', bgColor: '#1e3a5f', textColor: '#ffffff' }),
       b('heading', { text: '選ばれる理由', subtext: '数字を通じて、経営者を支援します', align: 'center' }),

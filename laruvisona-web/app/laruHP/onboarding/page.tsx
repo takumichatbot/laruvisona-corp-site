@@ -41,170 +41,27 @@ const INDUSTRY_COLOR_MAP: Record<string, string> = {
   other: 'professional-blue',
 };
 
-const TEMPLATE_PRESETS = [
-  {
-    id: 'professional-blue',
-    name: 'プロブルー',
-    desc: '信頼感・実績を前面に',
-    colorScheme: 'professional-blue',
-    style: 'elegant',
-    hero: { bg: '#1e3a8a', accent: '#3b82f6' },
-    card: { bg: '#eff6ff', stripe: '#bfdbfe' },
-  },
-  {
-    id: 'warm-earth',
-    name: 'ナチュラル',
-    desc: '親しみやすく地域密着',
-    colorScheme: 'warm-earth',
-    style: 'warm',
-    hero: { bg: '#78350f', accent: '#d97706' },
-    card: { bg: '#fef9f0', stripe: '#fed7aa' },
-  },
-  {
-    id: 'elegant-dark',
-    name: 'エレガント',
-    desc: '上品で洗練された印象',
-    colorScheme: 'elegant-dark',
-    style: 'elegant',
-    hero: { bg: '#111827', accent: '#9ca3af' },
-    card: { bg: '#f9fafb', stripe: '#e5e7eb' },
-  },
-  {
-    id: 'fresh-green',
-    name: 'フレッシュ',
-    desc: '活力・清潔感のある印象',
-    colorScheme: 'fresh-green',
-    style: 'modern',
-    hero: { bg: '#064e3b', accent: '#10b981' },
-    card: { bg: '#f0fdf4', stripe: '#a7f3d0' },
-  },
-  {
-    id: 'modern-pink',
-    name: 'フェミニン',
-    desc: 'おしゃれで可愛らしい印象',
-    colorScheme: 'modern-pink',
-    style: 'warm',
-    hero: { bg: '#831843', accent: '#ec4899' },
-    card: { bg: '#fdf2f8', stripe: '#fbcfe8' },
-  },
-  {
-    id: 'bold-orange',
-    name: 'アクティブ',
-    desc: '活発でエネルギッシュな印象',
-    colorScheme: 'bold-orange',
-    style: 'bold',
-    hero: { bg: '#7c2d12', accent: '#f97316' },
-    card: { bg: '#fff7ed', stripe: '#fed7aa' },
-  },
-  {
-    id: 'midnight-gold',
-    name: 'ミッドナイト',
-    desc: '高級感あふれるダーク×ゴールド',
-    colorScheme: 'midnight-gold',
-    style: 'elegant',
-    hero: { bg: '#0d1b2a', accent: '#d4a017' },
-    card: { bg: '#fdf8ec', stripe: '#f5d98a' },
-  },
-  {
-    id: 'ocean-teal',
-    name: 'オーシャン',
-    desc: '爽やかで信頼感のある水色系',
-    colorScheme: 'ocean-teal',
-    style: 'modern',
-    hero: { bg: '#0d4e5c', accent: '#14b8a6' },
-    card: { bg: '#f0fdfa', stripe: '#99f6e4' },
-  },
-  {
-    id: 'lavender-night',
-    name: 'ラベンダー',
-    desc: 'やさしい紫。癒し・美容系に',
-    colorScheme: 'lavender-night',
-    style: 'elegant',
-    hero: { bg: '#1e1b4b', accent: '#8b5cf6' },
-    card: { bg: '#f5f3ff', stripe: '#ddd6fe' },
-  },
-  {
-    id: 'terracotta',
-    name: 'テラコッタ',
-    desc: '土感のある温かみ。飲食・雑貨に',
-    colorScheme: 'terracotta',
-    style: 'warm',
-    hero: { bg: '#8b3a2a', accent: '#d4856a' },
-    card: { bg: '#fdf5f2', stripe: '#f5c7b8' },
-  },
-  {
-    id: 'cyber-neon',
-    name: 'サイバー',
-    desc: 'ダーク×ネオン。IT・テック向け',
-    colorScheme: 'cyber-neon',
-    style: 'bold',
-    hero: { bg: '#050505', accent: '#00e676' },
-    card: { bg: '#f0fdf4', stripe: '#86efac' },
-  },
-  {
-    id: 'rose-gold',
-    name: 'ローズゴールド',
-    desc: '洗練されたブライダル・美容系',
-    colorScheme: 'rose-gold',
-    style: 'warm',
-    hero: { bg: '#6b2f41', accent: '#d4846a' },
-    card: { bg: '#fdf4f1', stripe: '#f8c4b4' },
-  },
-  {
-    id: 'monochrome',
-    name: 'モノクロ',
-    desc: 'シンプル＆ミニマル。全業種OK',
-    colorScheme: 'monochrome',
-    style: 'modern',
-    hero: { bg: '#111111', accent: '#e0e0e0' },
-    card: { bg: '#f9f9f9', stripe: '#d4d4d4' },
-  },
-  {
-    id: 'sky-clear',
-    name: 'スカイブルー',
-    desc: '明るくクリーン。医療・教育系',
-    colorScheme: 'sky-clear',
-    style: 'modern',
-    hero: { bg: '#1565c0', accent: '#90caf9' },
-    card: { bg: '#e3f2fd', stripe: '#bbdefb' },
-  },
-  {
-    id: 'sunset-dusk',
-    name: 'サンセット',
-    desc: 'クリエイティブ向け紫×オレンジ',
-    colorScheme: 'sunset-dusk',
-    style: 'bold',
-    hero: { bg: '#2d1b54', accent: '#f97316' },
-    card: { bg: '#fff7ed', stripe: '#fdba74' },
-  },
-  {
-    id: 'deep-crimson',
-    name: 'クリムゾン',
-    desc: '情熱的な赤。飲食・スポーツに',
-    colorScheme: 'deep-crimson',
-    style: 'bold',
-    hero: { bg: '#7f1d1d', accent: '#ef4444' },
-    card: { bg: '#fef2f2', stripe: '#fca5a5' },
-  },
-  {
-    id: 'sage-forest',
-    name: 'セージグリーン',
-    desc: 'ナチュラル×モダン。ヘルス系',
-    colorScheme: 'sage-forest',
-    style: 'modern',
-    hero: { bg: '#1a3528', accent: '#6db97c' },
-    card: { bg: '#f0fdf4', stripe: '#bbf7d0' },
-  },
-  {
-    id: 'navy-gold',
-    name: 'ネイビーゴールド',
-    desc: '高品格。士業・コンサル向け',
-    colorScheme: 'navy-gold',
-    style: 'elegant',
-    hero: { bg: '#0f172a', accent: '#eab308' },
-    card: { bg: '#fefce8', stripe: '#fde68a' },
-  },
-];
+// TEMPLATE_PRESETS removed — replaced with free color picker (primaryColor)
+
+
+const INDUSTRY_DESIGN_MAP: Record<string, { designStyle: string; fontFamily: string; primaryColor: string }> = {
+  restaurant:   { designStyle: 'rounded',  fontFamily: 'rounded', primaryColor: '#c05621' },
+  beauty:       { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#831843' },
+  clinic:       { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#065f46' },
+  legal:        { designStyle: 'minimal',  fontFamily: 'biz',     primaryColor: '#1e293b' },
+  construction: { designStyle: 'bold',     fontFamily: 'zen',     primaryColor: '#92400e' },
+  realestate:   { designStyle: 'sharp',    fontFamily: 'zen',     primaryColor: '#1e3a8a' },
+  retail:       { designStyle: 'rounded',  fontFamily: 'noto',    primaryColor: '#7c3aed' },
+  fitness:      { designStyle: 'bold',     fontFamily: 'zen',     primaryColor: '#dc2626' },
+  hotel:        { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#78350f' },
+  education:    { designStyle: 'rounded',  fontFamily: 'noto',    primaryColor: '#1d4ed8' },
+  wedding:      { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#9d174d' },
+  pet:          { designStyle: 'rounded',  fontFamily: 'rounded', primaryColor: '#166534' },
+  dental:       { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#0369a1' },
+  photo:        { designStyle: 'minimal',  fontFamily: 'kaisei',  primaryColor: '#374151' },
+  accounting:   { designStyle: 'minimal',  fontFamily: 'biz',     primaryColor: '#1e3a5f' },
+  other:        { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#1e3a8a' },
+};
 
 const DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
 
@@ -222,6 +79,8 @@ interface FormData {
   colorScheme: string;
   style: string;
   designStyle: string;
+  primaryColor: string;
+  fontFamily: string;
   larubot: boolean;
   laruseo: boolean;
 }
@@ -240,6 +99,8 @@ const defaultForm: FormData = {
   colorScheme: 'professional-blue',
   style: 'modern',
   designStyle: 'modern',
+  primaryColor: '#1e3a8a',
+  fontFamily: 'noto',
   larubot: true,
   laruseo: true,
 };
@@ -263,76 +124,9 @@ const HOURS_PRESETS = [
   { label: '土日定休 9〜18時', fn: (h: typeof defaultForm.hours) => h.map((d, i) => ({ ...d, open: '09:00', close: '18:00', closed: i >= 5 })) },
 ];
 
-// Visual CSS mockup for each template
-function TemplateMockup({ preset, selected, onClick }: {
-  preset: typeof TEMPLATE_PRESETS[0];
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-2xl overflow-hidden border-2 transition-all text-left hover:-translate-y-1 hover:shadow-2xl ${
-        selected
-          ? 'border-blue-500 shadow-[0_0_24px_rgba(59,130,246,0.4)]'
-          : 'border-white/10 hover:border-white/30'
-      }`}
-    >
-      {/* Hero mockup */}
-      <div style={{ background: preset.hero.bg }} className="px-3 pt-3 pb-5">
-        {/* Nav bar */}
-        <div className="flex items-center gap-1 mb-4">
-          <div className="w-3 h-2 rounded-sm bg-white/50" />
-          <div className="ml-auto flex gap-1.5">
-            {[1,2,3,4].map(i => <div key={i} className="w-5 h-1 rounded bg-white/25" />)}
-          </div>
-        </div>
-        {/* Hero content */}
-        <div className="text-center pb-1">
-          <div className="w-24 h-2 mx-auto mb-2 rounded-full bg-white/60" />
-          <div className="w-32 h-1.5 mx-auto mb-1 rounded-full bg-white/35" />
-          <div className="w-28 h-1 mx-auto mb-4 rounded-full bg-white/25" />
-          <div className="w-14 h-5 mx-auto rounded-lg flex items-center justify-center" style={{ background: preset.hero.accent }}>
-            <div className="w-10 h-1 rounded bg-white/80" />
-          </div>
-        </div>
-      </div>
-      {/* Content blocks */}
-      <div style={{ background: preset.card.bg }} className="px-3 py-3 space-y-2.5">
-        <div className="w-20 h-1.5 mx-auto rounded-full" style={{ background: preset.card.stripe }} />
-        <div className="grid grid-cols-3 gap-1.5">
-          {[1,2,3].map(i => (
-            <div key={i} className="rounded-lg p-1.5" style={{ background: preset.card.stripe, opacity: 0.6 }}>
-              <div className="w-full h-5 rounded mb-1 bg-white/50" />
-              <div className="w-3/4 h-1 rounded bg-white/40" />
-            </div>
-          ))}
-        </div>
-        <div className="space-y-1 pt-0.5">
-          <div className="h-1 rounded-full" style={{ background: preset.card.stripe, opacity: 0.5 }} />
-          <div className="h-1 w-5/6 rounded-full" style={{ background: preset.card.stripe, opacity: 0.4 }} />
-          <div className="h-1 w-4/5 rounded-full" style={{ background: preset.card.stripe, opacity: 0.3 }} />
-        </div>
-        <div className="w-12 h-4 mx-auto rounded-lg" style={{ background: preset.hero.accent, opacity: 0.7 }} />
-      </div>
-      {/* Label */}
-      <div className="bg-[#0f172a] px-3 py-2.5 flex items-center justify-between">
-        <div>
-          <div className="text-xs font-bold text-white">{preset.name}</div>
-          <div className="text-[10px] text-slate-400 mt-0.5">{preset.desc}</div>
-        </div>
-        {selected && (
-          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
-        )}
-      </div>
-    </button>
-  );
-}
 
 function LivePreview({ form }: { form: FormData }) {
-  const preset = TEMPLATE_PRESETS.find(t => t.colorScheme === form.colorScheme) || TEMPLATE_PRESETS[0];
+  const heroBg = form.primaryColor || '#1e3a8a';
   const industry = INDUSTRIES.find(i => i.id === form.industry);
   const filledServices = form.services.filter(s => s.name);
 
@@ -352,7 +146,7 @@ function LivePreview({ form }: { form: FormData }) {
       </div>
 
       {/* Navbar */}
-      <div className="flex items-center justify-between px-3 py-2" style={{ background: preset.hero.bg }}>
+      <div className="flex items-center justify-between px-3 py-2" style={{ background: heroBg }}>
         <span className="text-white/90 text-[10px] font-black truncate max-w-[100px]">
           {form.businessName || 'SHOP NAME'}
         </span>
@@ -364,10 +158,9 @@ function LivePreview({ form }: { form: FormData }) {
       </div>
 
       {/* Hero */}
-      <div className="px-4 py-6 text-center" style={{ background: preset.hero.bg }}>
+      <div className="px-4 py-6 text-center" style={{ background: heroBg }}>
         {industry && (
-          <div className="inline-block text-[8px] font-bold px-2 py-0.5 rounded-full mb-2 border"
-            style={{ background: preset.hero.accent + '25', color: preset.hero.accent, borderColor: preset.hero.accent + '50' }}>
+          <div className="inline-block text-[8px] font-bold px-2 py-0.5 rounded-full mb-2 border border-white/30 text-white/80 bg-white/10">
             {industry.name}
           </div>
         )}
@@ -380,7 +173,7 @@ function LivePreview({ form }: { form: FormData }) {
           </div>
         )}
         <div className="flex justify-center gap-2 mt-3">
-          <div className="px-3 py-1 rounded-full text-[9px] font-bold text-white" style={{ background: preset.hero.accent }}>
+          <div className="px-3 py-1 rounded-full text-[9px] font-bold text-white bg-white/25">
             お問い合わせ
           </div>
           <div className="px-3 py-1 rounded-full text-[9px] border border-white/20 text-white/60">
@@ -390,15 +183,15 @@ function LivePreview({ form }: { form: FormData }) {
       </div>
 
       {/* Services */}
-      <div className="px-3 py-3" style={{ background: preset.card.bg }}>
-        <div className="text-[9px] font-bold text-center mb-2" style={{ color: preset.hero.bg }}>
+      <div className="px-3 py-3 bg-white">
+        <div className="text-[9px] font-bold text-center mb-2 text-slate-700">
           {filledServices.length > 0 ? 'サービス・メニュー' : 'サービス（AI生成）'}
         </div>
         <div className="grid grid-cols-3 gap-1.5">
           {(filledServices.length > 0 ? filledServices : [{ name: 'サービス1', price: '' }, { name: 'サービス2', price: '' }, { name: 'サービス3', price: '' }]).slice(0, 3).map((s, i) => (
-            <div key={i} className="rounded-lg p-1.5 text-center" style={{ background: preset.card.stripe, opacity: filledServices.length > 0 ? 1 : 0.5 }}>
-              <div className="text-[8px] font-bold truncate" style={{ color: preset.hero.bg }}>{s.name}</div>
-              {s.price && <div className="text-[7px] mt-0.5" style={{ color: preset.hero.accent }}>{s.price}</div>}
+            <div key={i} className="rounded-lg p-1.5 text-center bg-slate-100" style={{ opacity: filledServices.length > 0 ? 1 : 0.5 }}>
+              <div className="text-[8px] font-bold truncate text-slate-700">{s.name}</div>
+              {s.price && <div className="text-[7px] mt-0.5" style={{ color: heroBg }}>{s.price}</div>}
             </div>
           ))}
         </div>
@@ -417,7 +210,7 @@ function LivePreview({ form }: { form: FormData }) {
       {/* Tags */}
       <div className="bg-[#0f172a] px-3 py-2 flex gap-1 flex-wrap">
         {form.industry && <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">{industry?.name}</span>}
-        <span className="text-[8px] bg-white/10 text-slate-400 px-1.5 py-0.5 rounded">{preset.name}</span>
+        <span className="text-[8px] bg-white/10 text-slate-400 px-1.5 py-0.5 rounded font-mono">{heroBg.toUpperCase()}</span>
         {form.larubot && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded">LARUbot</span>}
         {form.laruseo && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">LARUSEO</span>}
       </div>
@@ -479,10 +272,12 @@ function OnboardingContent() {
   }, [searchParams]);
 
   const handleIndustrySelect = (indId: string) => {
+    const dm = INDUSTRY_DESIGN_MAP[indId];
     setForm(f => ({
       ...f,
       industry: indId,
       colorScheme: INDUSTRY_COLOR_MAP[indId] || f.colorScheme,
+      ...(dm ? { primaryColor: dm.primaryColor, designStyle: dm.designStyle, fontFamily: dm.fontFamily } : {}),
     }));
     setTimeout(() => goStep(2), 350);
   };
@@ -608,17 +403,11 @@ function OnboardingContent() {
   const canNext = () => {
     if (step === 1) return !!form.industry;
     if (step === 2) return !!form.businessName;
-    if (step === 3) return !!form.colorScheme;
+    if (step === 3) return true;
     return true;
   };
 
-  const selectTemplate = (preset: typeof TEMPLATE_PRESETS[0]) => {
-    updateForm('colorScheme', preset.colorScheme);
-    updateForm('style', preset.style);
-    setTimeout(() => goStep(4), 600);
-  };
-
-  const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
+const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
   return (
     <div className="min-h-screen bg-[#030712] text-white">
@@ -870,50 +659,224 @@ function OnboardingContent() {
         {step === 3 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2">デザインテンプレートを選択</h2>
-              <p className="text-slate-400">サイト全体の雰囲気が決まります。後でエディタからいつでも変更できます。</p>
+              <h2 className="text-3xl font-bold mb-2">デザインを設定</h2>
+              <p className="text-slate-400">ブランドカラー・スタイル・フォントを選んでください。後でエディタからいつでも変更できます。</p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {TEMPLATE_PRESETS.map(preset => (
-                <TemplateMockup
-                  key={preset.id}
-                  preset={preset}
-                  selected={form.colorScheme === preset.colorScheme}
-                  onClick={() => selectTemplate(preset)}
-                />
-              ))}
+            {/* Color picker */}
+            <div className="mb-8 bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+              <h3 className="font-bold mb-1">ブランドカラー</h3>
+              <p className="text-slate-500 text-sm mb-5">サイトのメインカラーを自由に選べます。</p>
+              <div className="flex items-center gap-6 mb-5">
+                <div className="relative flex-shrink-0">
+                  <input
+                    type="color"
+                    value={form.primaryColor}
+                    onChange={e => updateForm('primaryColor', e.target.value)}
+                    className="w-20 h-20 rounded-2xl border-2 border-white/20 cursor-pointer p-1 bg-transparent"
+                    style={{ colorScheme: 'dark' }}
+                  />
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-white font-mono tracking-wider">{form.primaryColor.toUpperCase()}</div>
+                  <div className="text-slate-400 text-sm mt-0.5">メインカラー</div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-5 h-5 rounded-md border border-white/20" style={{ background: form.primaryColor }} />
+                    <span className="text-xs text-slate-500">ヒーロー・ボタン・アクセントに適用</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Font picker */}
+            <div className="mb-8">
+              <h3 className="font-bold mb-1">フォント</h3>
+              <p className="text-slate-500 text-sm mb-4">業種選択時に自動設定済みです。変更も可能です。</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {([
+                  { id: 'noto',    label: '標準ゴシック',  sub: '読みやすい万能フォント' },
+                  { id: 'zen',     label: '太ゴシック',    sub: '力強く存在感がある' },
+                  { id: 'mincho',  label: '明朝体',        sub: '上品・高級感・老舗感' },
+                  { id: 'rounded', label: '丸ゴシック',    sub: 'やわらかく親しみやすい' },
+                  { id: 'biz',     label: 'ビジネス',      sub: 'フォーマル・士業・金融' },
+                  { id: 'kaisei',  label: 'カイセイ',      sub: '文芸的・アート系' },
+                ] as const).map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => updateForm('fontFamily', f.id)}
+                    className={`rounded-2xl p-3 text-left transition-all border ${form.fontFamily === f.id ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}
+                  >
+                    {form.fontFamily === f.id && (
+                      <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center mb-2">
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                    )}
+                    <div className="font-bold text-sm text-white">{f.label}</div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">{f.sub}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Design style picker */}
-            <div className="mt-8">
+            <div className="mb-2">
               <h3 className="font-bold mb-1">デザインスタイル</h3>
-              <p className="text-slate-500 text-sm mb-4">ボタン・カード・余白の形を選択（後でエディタから変更可）</p>
+              <p className="text-slate-500 text-sm mb-4">セクション形状・アニメーション・エフェクトが変わります</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {/* modern */}
                 {([
-                  { id: 'modern',  label: 'モダン',   sub: 'ピル型・標準的',     preview: { btn: '9999px', card: '16px' } },
-                  { id: 'minimal', label: 'ミニマル', sub: 'フラット・余白少なめ', preview: { btn: '8px',    card: '8px'  } },
-                  { id: 'bold',    label: 'ボールド', sub: '大きく力強い',        preview: { btn: '8px',    card: '8px'  } },
-                  { id: 'elegant', label: 'エレガント', sub: '細身・上品な余白',  preview: { btn: '4px',    card: '4px'  } },
-                  { id: 'rounded', label: 'ラウンド', sub: '丸み・やさしい印象',  preview: { btn: '9999px', card: '24px' } },
-                  { id: 'sharp',   label: 'シャープ', sub: '角型・編集的',        preview: { btn: '0px',    card: '0px'  } },
+                  {
+                    id: 'modern', label: 'モダン', sub: 'グラデ・ホバーリフト',
+                    preview: (
+                      <svg viewBox="0 0 120 64" className="w-full h-16" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#3b82f6"/>
+                            <stop offset="100%" stopColor="#8b5cf6"/>
+                          </linearGradient>
+                        </defs>
+                        <rect width="120" height="36" fill="url(#mg)" rx="8"/>
+                        <text x="8" y="14" fontSize="7" fill="white" fontWeight="bold" opacity="0.6">COMPANY NAME</text>
+                        <text x="8" y="26" fontSize="9" fill="white" fontWeight="bold">見出しテキスト</text>
+                        <rect x="8" y="31" width="28" height="8" rx="9" fill="white" opacity="0.9"/>
+                        <text x="22" y="37" fontSize="5" fill="#3b82f6" fontWeight="bold" textAnchor="middle">ボタン</text>
+                        <rect x="4" y="42" width="52" height="18" rx="6" fill="#1e293b" stroke="#334155" strokeWidth="0.5"/>
+                        <rect x="8" y="46" width="20" height="3" rx="1.5" fill="#475569"/>
+                        <rect x="8" y="51" width="14" height="2" rx="1" fill="#334155"/>
+                        <rect x="58" y="42" width="58" height="18" rx="6" fill="#1e293b" stroke="#334155" strokeWidth="0.5" style={{filter:'drop-shadow(0 -2px 4px rgba(59,130,246,0.3))' }}/>
+                        <rect x="62" y="46" width="20" height="3" rx="1.5" fill="#475569"/>
+                        <rect x="62" y="51" width="14" height="2" rx="1" fill="#334155"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'minimal', label: 'ミニマル', sub: 'フラット・左ボーダー',
+                    preview: (
+                      <svg viewBox="0 0 120 64" className="w-full h-16" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="120" height="28" fill="#f8fafc"/>
+                        <line x1="0" y1="28" x2="120" y2="28" stroke="#e2e8f0" strokeWidth="0.5"/>
+                        <text x="8" y="11" fontSize="6" fill="#94a3b8" letterSpacing="2">MINIMAL STUDIO</text>
+                        <text x="8" y="22" fontSize="9" fill="#1e293b" fontWeight="bold">シンプルな美</text>
+                        <rect x="100" y="8" width="14" height="5" rx="2" fill="none" stroke="#1e293b" strokeWidth="0.8"/>
+                        <text x="107" y="12.5" fontSize="4" fill="#1e293b" textAnchor="middle">CTA</text>
+                        <rect x="4" y="32" width="3" height="14" rx="0" fill="#3b82f6"/>
+                        <rect x="12" y="34" width="32" height="3" rx="1" fill="#334155"/>
+                        <rect x="12" y="39" width="20" height="2" rx="1" fill="#94a3b8"/>
+                        <rect x="12" y="43" width="24" height="2" rx="1" fill="#94a3b8"/>
+                        <rect x="62" y="32" width="3" height="14" rx="0" fill="#3b82f6"/>
+                        <rect x="70" y="34" width="32" height="3" rx="1" fill="#334155"/>
+                        <rect x="70" y="39" width="20" height="2" rx="1" fill="#94a3b8"/>
+                        <rect x="70" y="43" width="24" height="2" rx="1" fill="#94a3b8"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'bold', label: 'ボールド', sub: '斜めセクション・3D',
+                    preview: (
+                      <svg viewBox="0 0 120 64" className="w-full h-16" xmlns="http://www.w3.org/2000/svg">
+                        <polygon points="0,0 120,0 120,32 0,42" fill="#1e293b"/>
+                        <polygon points="0,42 120,32 120,64 0,64" fill="#0f172a"/>
+                        <text x="6" y="14" fontSize="10" fill="white" fontWeight="900">BOLD</text>
+                        <text x="6" y="24" fontSize="5" fill="#94a3b8">力強いデザイン</text>
+                        <rect x="6" y="27" width="26" height="9" rx="2" fill="#3b82f6"/>
+                        <text x="19" y="33.5" fontSize="5" fill="white" fontWeight="bold" textAnchor="middle">ボタン</text>
+                        <rect x="70" y="8" width="44" height="22" rx="3" fill="#1e3a5f" style={{filter:'drop-shadow(2px 4px 0 #0a0a0a)'}}>
+                          <animateTransform attributeName="transform" type="rotate" from="0 92 19" to="0 92 19" dur="0s"/>
+                        </rect>
+                        <rect x="70" y="8" width="44" height="22" rx="3" fill="#1e3a5f" transform="skewY(-2)"/>
+                        <rect x="74" y="13" width="20" height="3" rx="1" fill="#3b82f6" opacity="0.7"/>
+                        <rect x="74" y="18" width="30" height="2" rx="1" fill="#475569"/>
+                        <rect x="74" y="22" width="18" height="2" rx="1" fill="#475569"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'elegant', label: 'エレガント', sub: 'ガラス・上品な余白',
+                    preview: (
+                      <svg viewBox="0 0 120 64" className="w-full h-16" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#831843"/>
+                            <stop offset="100%" stopColor="#4c0519"/>
+                          </linearGradient>
+                        </defs>
+                        <rect width="120" height="64" fill="url(#eg)"/>
+                        <line x1="50" y1="4" x2="50" y2="60" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+                        <text x="60" y="16" fontSize="5" fill="rgba(255,255,255,0.5)" textAnchor="middle" letterSpacing="3">ELEGANT</text>
+                        <text x="60" y="28" fontSize="9" fill="white" textAnchor="middle" fontStyle="italic">上質な美しさ</text>
+                        <line x1="40" y1="32" x2="80" y2="32" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5"/>
+                        <rect x="10" y="38" width="100" height="20" rx="4" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
+                        <rect x="14" y="42" width="40" height="3" rx="1.5" fill="rgba(255,255,255,0.4)"/>
+                        <rect x="14" y="47" width="25" height="2" rx="1" fill="rgba(255,255,255,0.2)"/>
+                        <rect x="74" y="41" width="28" height="8" rx="2" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="0.7"/>
+                        <text x="88" y="46.5" fontSize="5" fill="white" textAnchor="middle" opacity="0.8">予約する</text>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'rounded', label: 'ラウンド', sub: '波形・ふんわり',
+                    preview: (
+                      <svg viewBox="0 0 120 64" className="w-full h-16" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#7c3aed"/>
+                            <stop offset="100%" stopColor="#ec4899"/>
+                          </linearGradient>
+                        </defs>
+                        <rect width="120" height="42" fill="url(#rg)"/>
+                        <ellipse cx="60" cy="42" rx="80" ry="12" fill="#0f172a"/>
+                        <circle cx="95" cy="15" r="14" fill="rgba(255,255,255,0.08)"/>
+                        <circle cx="105" cy="8" r="8" fill="rgba(255,255,255,0.05)"/>
+                        <text x="10" y="18" fontSize="9" fill="white" fontWeight="bold">やさしい</text>
+                        <text x="10" y="27" fontSize="6" fill="rgba(255,255,255,0.7)">ふんわりデザイン</text>
+                        <rect x="10" y="30" width="30" height="9" rx="9" fill="white" opacity="0.95"/>
+                        <text x="25" y="36" fontSize="5" fill="#7c3aed" fontWeight="bold" textAnchor="middle">ボタン</text>
+                        <rect x="10" y="48" width="30" height="12" rx="8" fill="#1e1b4b" opacity="0.8"/>
+                        <rect x="50" y="48" width="30" height="12" rx="8" fill="#1e1b4b" opacity="0.8"/>
+                        <rect x="90" y="48" width="26" height="12" rx="8" fill="#1e1b4b" opacity="0.8"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'sharp', label: 'シャープ', sub: '角型・グリッチ',
+                    preview: (
+                      <svg viewBox="0 0 120 64" className="w-full h-16" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="120" height="64" fill="#030712"/>
+                        <polygon points="0,0 90,0 75,36 0,36" fill="#111827"/>
+                        <rect x="0" y="0" width="2" height="36" fill="#3b82f6"/>
+                        <rect x="0" y="36" width="75" height="1" fill="#3b82f6" opacity="0.6"/>
+                        <text x="8" y="14" fontSize="6" fill="#3b82f6" fontWeight="900" letterSpacing="1">// SHARP</text>
+                        <text x="8" y="25" fontSize="8" fill="white" fontWeight="900">鋭利なUI</text>
+                        <rect x="8" y="28" width="28" height="7" rx="0" fill="#3b82f6"/>
+                        <text x="22" y="33.5" fontSize="5" fill="white" fontWeight="bold" textAnchor="middle">ボタン</text>
+                        <rect x="80" y="4" width="36" height="28" rx="0" fill="#111827" stroke="#1f2937" strokeWidth="0.5"/>
+                        <rect x="80" y="4" width="36" height="2" fill="#3b82f6" opacity="0.5"/>
+                        <rect x="84" y="10" width="20" height="3" rx="0" fill="#374151"/>
+                        <rect x="84" y="15" width="26" height="2" rx="0" fill="#1f2937"/>
+                        <rect x="84" y="19" width="16" height="2" rx="0" fill="#1f2937"/>
+                        <rect x="84" y="24" width="20" height="5" rx="0" fill="#3b82f6" opacity="0.8"/>
+                        <text x="94" y="28" fontSize="4" fill="white" textAnchor="middle">CTA</text>
+                        <rect x="0" y="42" width="120" height="1" fill="#1f2937"/>
+                        <rect x="0" y="43" width="38" height="0.5" fill="#3b82f6" opacity="0.4"/>
+                        <rect x="4" y="46" width="50" height="3" rx="0" fill="#1f2937"/>
+                        <rect x="4" y="51" width="35" height="2" rx="0" fill="#111827"/>
+                        <rect x="4" y="55" width="42" height="2" rx="0" fill="#111827"/>
+                        <rect x="62" y="46" width="50" height="3" rx="0" fill="#1f2937"/>
+                        <rect x="62" y="51" width="35" height="2" rx="0" fill="#111827"/>
+                      </svg>
+                    ),
+                  },
                 ] as const).map(s => (
                   <button
                     key={s.id}
                     onClick={() => updateForm('designStyle', s.id)}
-                    className={`rounded-2xl p-4 text-left transition-all border ${form.designStyle === s.id ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}
+                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.designStyle === s.id ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-white/10 hover:border-white/25'}`}
                   >
-                    {/* Mini visual preview */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="h-6 px-3 bg-blue-500 text-white text-[9px] font-bold flex items-center" style={{ borderRadius: s.preview.btn }}>
-                        ボタン
-                      </div>
-                      <div className="flex-1 h-6 bg-white/10 border border-white/20 flex items-center px-2" style={{ borderRadius: s.preview.card }}>
-                        <div className="h-1.5 w-12 bg-white/30 rounded-full" />
-                      </div>
+                    <div className="bg-[#0a0f1e] p-2">{s.preview}</div>
+                    <div className={`px-3 py-2 ${form.designStyle === s.id ? 'bg-blue-500/15' : 'bg-white/[0.03]'}`}>
+                      <div className="font-bold text-sm text-white">{s.label}</div>
+                      <div className="text-slate-500 text-[11px] mt-0.5">{s.sub}</div>
                     </div>
-                    <div className="font-bold text-sm text-white">{s.label}</div>
-                    <div className="text-slate-500 text-[11px] mt-0.5">{s.sub}</div>
                   </button>
                 ))}
               </div>
@@ -1090,22 +1053,11 @@ function OnboardingContent() {
                       <button onClick={() => goStep(3)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
                     </div>
                     <div className="flex items-center gap-3">
-                      {(() => {
-                        const p = TEMPLATE_PRESETS.find(t => t.colorScheme === form.colorScheme);
-                        return p ? (
-                          <>
-                            <div className="w-12 h-8 rounded-lg overflow-hidden flex-shrink-0" style={{ background: p.hero.bg }}>
-                              <div className="h-full flex items-end p-1">
-                                <div className="w-full h-2 rounded" style={{ background: p.hero.accent, opacity: 0.6 }} />
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-bold text-white">{p.name}</div>
-                              <div className="text-slate-500 text-xs">{p.desc}</div>
-                            </div>
-                          </>
-                        ) : null;
-                      })()}
+                      <div className="w-12 h-8 rounded-lg flex-shrink-0 border border-white/10" style={{ background: form.primaryColor }} />
+                      <div>
+                        <div className="text-sm font-bold text-white font-mono">{form.primaryColor.toUpperCase()}</div>
+                        <div className="text-slate-500 text-xs">{form.designStyle} / {form.fontFamily}</div>
+                      </div>
                       <div className="ml-auto flex gap-1.5">
                         {form.larubot && <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full">LARUbot</span>}
                         {form.laruseo && <span className="bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full">LARUSEO</span>}

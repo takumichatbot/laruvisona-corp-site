@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
+import { exportToHTML } from '@/lib/html-export';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
@@ -3594,6 +3595,23 @@ function BuilderContent() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState(false);
+
+  // Generate real exported HTML for iframe-based preview
+  const previewHtml = useMemo(() => {
+    if (!preview) return '';
+    try {
+      return exportToHTML(
+        site.pages,
+        site.pages[0]?.seo || emptySeo,
+        { colorScheme: site.colorScheme, style: '', designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, gaTrackingId: site.gaTrackingId, fontFamily: site.fontFamily, customCss: site.customCss },
+        site.siteName,
+      );
+    } catch {
+      return '<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#999">プレビュー生成エラー</body></html>';
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preview, site]);
+
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -4001,6 +4019,17 @@ function BuilderContent() {
           });
         }
 
+        // Apply primaryColor to hero / cta / booking / nav blocks
+        if (d.primaryColor) {
+          blocks = blocks.map(block => {
+            if (block.type === 'hero') return { ...block, data: { ...block.data, bgColor: d.primaryColor } };
+            if (block.type === 'cta')  return { ...block, data: { ...block.data, bgColor: d.primaryColor } };
+            if (block.type === 'booking') return { ...block, data: { ...block.data, buttonColor: d.primaryColor } };
+            if (block.type === 'nav')  return { ...block, data: { ...block.data, ctaColor: d.primaryColor } };
+            return block;
+          });
+        }
+
         // Inject AI-generated FAQs into any faq block
         if (ai.faqs?.length) {
           blocks = blocks.map(block => {
@@ -4045,6 +4074,7 @@ function BuilderContent() {
           ...heroBlock.data,
           heading: ai.heroHeading || d.businessName || 'ここに見出しを入力',
           subheading: ai.heroSubheading || d.catchphrase || 'キャッチフレーズを入力してください',
+          ...(d.primaryColor && { bgColor: d.primaryColor }),
         };
         blocks = [heroBlock, defaultBlock('services'), defaultBlock('contact')];
         if (d.larubot) blocks.push(defaultBlock('larubot'));
@@ -4075,7 +4105,7 @@ function BuilderContent() {
         larubotPublicId: '',
         laruseoPublicId: '',
         customCss: '',
-        fontFamily: 'noto',
+        fontFamily: d.fontFamily || 'noto',
         globalFooter: defaultSiteData.globalFooter,
         customPalette: [...DEFAULT_PALETTE],
         lineNotifyToken: '',
@@ -5033,12 +5063,24 @@ function BuilderContent() {
                 </div>
               </div>
             )}
+            {/* ── Iframe-based preview (shows real exported HTML with all CSS effects) ── */}
+            {preview && previewHtml && (
+              <div className={`mx-auto overflow-hidden ${
+                previewDevice === 'mobile' ? 'w-[390px] border-x-[4px] border-gray-700' :
+                previewDevice === 'tablet' ? 'w-[768px] border border-t-0 border-gray-300 shadow-2xl' :
+                'w-full max-w-5xl border border-t-0 border-gray-300 rounded-b-xl shadow-2xl'
+              }`} style={{ height: previewDevice === 'mobile' ? '812px' : '80vh' }}>
+                <iframe
+                  srcDoc={previewHtml}
+                  title="サイトプレビュー"
+                  sandbox="allow-scripts allow-same-origin"
+                  className="w-full h-full border-0"
+                  style={{ display: 'block' }}
+                />
+              </div>
+            )}
             <div className={`bg-white mx-auto transition-all duration-300 ${preview
-              ? previewDevice === 'mobile'
-                ? 'w-[390px] overflow-hidden border-x-[4px] border-gray-700'
-                : previewDevice === 'tablet'
-                ? 'w-[768px] overflow-hidden border border-t-0 border-gray-300 shadow-2xl'
-                : 'w-full max-w-5xl overflow-hidden border border-t-0 border-gray-300 rounded-b-xl shadow-2xl'
+              ? 'hidden'
               : 'max-w-3xl rounded-2xl overflow-hidden shadow-[0_4px_40px_rgba(0,0,0,0.12)]'}`}>
               {currentPage.blocks.length === 0 && (
                 <div className="h-64 flex items-center justify-center text-gray-400 text-center">
