@@ -982,10 +982,12 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
   const [generating, setGenerating] = useState(false);
   const [prompt, setPrompt] = useState(defaultPrompt || '');
   const [open, setOpen] = useState(false);
+  const [genError, setGenError] = useState('');
 
   const generate = async () => {
     if (!prompt.trim()) return;
     setGenerating(true);
+    setGenError('');
     try {
       const res = await fetch('/api/ai/image', {
         method: 'POST',
@@ -993,13 +995,12 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
-      if (data.url) onGenerated(data.url);
-      else alert(data.error || '画像生成に失敗しました');
+      if (data.url) { onGenerated(data.url); setOpen(false); }
+      else setGenError(data.error || '画像生成に失敗しました');
     } catch {
-      alert('画像生成に失敗しました');
+      setGenError('画像生成に失敗しました');
     }
     setGenerating(false);
-    setOpen(false);
   };
 
   if (!open) {
@@ -1024,8 +1025,9 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
           className="flex-1 text-[10px] bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded px-2 py-1.5 font-bold transition-all">
           {generating ? '生成中...' : '生成'}
         </button>
-        <button onClick={() => setOpen(false)} className="text-[10px] text-slate-500 hover:text-slate-300 px-2">✕</button>
+        <button onClick={() => { setOpen(false); setGenError(''); }} className="text-[10px] text-slate-500 hover:text-slate-300 px-2">✕</button>
       </div>
+      {genError && <p className="text-red-400 text-[10px] mt-1">{genError}</p>}
     </div>
   );
 }
@@ -2343,6 +2345,8 @@ function BuilderContent() {
   const [restoringVersion, setRestoringVersion] = useState<string | null>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiLayouting, setAiLayouting] = useState(false);
+  const [builderToast, setBuilderToast] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
   const [onboardingData, setOnboardingData] = useState<Record<string, unknown> | null>(null);
   const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -2894,7 +2898,8 @@ function BuilderContent() {
   const handleAiLayout = async () => {
     const d = onboardingData || JSON.parse(localStorage.getItem('laruHP_data') || '{}');
     if (!d.businessName) {
-      alert('オンボーディングでビジネス情報を入力してからAIレイアウトを使用してください');
+      setBuilderToast('オンボーディングでビジネス情報を入力してからAIレイアウトを使用してください');
+      setTimeout(() => setBuilderToast(''), 4000);
       return;
     }
     setAiLayouting(true);
@@ -2933,7 +2938,8 @@ function BuilderContent() {
   const handleAiGenerate = async () => {
     const d = onboardingData || JSON.parse(localStorage.getItem('laruHP_data') || '{}');
     if (!d.businessName) {
-      alert('オンボーディングでビジネス情報を入力してからAI生成を使用してください');
+      setBuilderToast('オンボーディングでビジネス情報を入力してからAI生成を使用してください');
+      setTimeout(() => setBuilderToast(''), 4000);
       return;
     }
     setAiGenerating(true);
@@ -3009,6 +3015,14 @@ function BuilderContent() {
 
   return (
     <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100vh' }}>
+      {/* Builder toast notification */}
+      {builderToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-[#1e293b] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-sm text-slate-200">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400 flex-shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          {builderToast}
+        </div>
+      )}
+
       {/* First publish success modal (onboarding flow) */}
       {showPublishSuccess && publishedSlug && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -3515,7 +3529,7 @@ function BuilderContent() {
                     });
                     const d = await res.json();
                     if (d.url) window.location.href = d.url;
-                    else alert('決済ページの取得に失敗しました。もう一度お試しください。');
+                    else setCheckoutError('決済ページの取得に失敗しました。もう一度お試しください。');
                   }}
                   className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all text-left"
                 >
@@ -3533,8 +3547,11 @@ function BuilderContent() {
                 </button>
               ))}
             </div>
+            {checkoutError && (
+              <p className="mt-3 text-red-400 text-xs text-center">{checkoutError}</p>
+            )}
             <button
-              onClick={() => setShowPlanModal(false)}
+              onClick={() => { setShowPlanModal(false); setCheckoutError(''); }}
               className="mt-4 w-full text-slate-500 text-sm hover:text-slate-300 transition-colors"
             >
               キャンセル

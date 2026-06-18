@@ -909,9 +909,16 @@ function OnboardingContent() {
                     </div>
                     <div className="space-y-1.5 text-sm text-slate-300">
                       <div><span className="text-slate-500">業種: </span>{selectedIndustry?.name}</div>
-                      <div><span className="text-slate-500">店舗名: </span>{form.businessName || '未入力'}</div>
-                      <div><span className="text-slate-500">電話: </span>{form.phone || '未入力'}</div>
+                      <div>
+                        <span className="text-slate-500">店舗名: </span>
+                        {form.businessName || <span className="text-amber-400 text-xs">未入力（必須）</span>}
+                      </div>
+                      <div>
+                        <span className="text-slate-500">電話: </span>
+                        {form.phone || <span className="text-slate-600 text-xs">AIが補完</span>}
+                      </div>
                       {form.address && <div><span className="text-slate-500">住所: </span>{form.address}</div>}
+                      {form.email && <div><span className="text-slate-500">メール: </span>{form.email}</div>}
                     </div>
                   </div>
 

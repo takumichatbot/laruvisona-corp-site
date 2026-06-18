@@ -115,6 +115,14 @@ type DayView = { date: string; views: number };
 function MiniChart({ data }: { data: DayView[] }) {
   const uid = useId();
   const DOW = ['日', '月', '火', '水', '木', '金', '土'];
+  const allZero = data.every(d => d.views === 0);
+  if (allZero) {
+    return (
+      <div className="h-14 flex items-center justify-center text-slate-600 text-[10px]">
+        まだデータがありません
+      </div>
+    );
+  }
   const max = Math.max(...data.map(d => d.views), 1);
   const W = 300; const H = 56;
   const padX = 2; const padY = 5;
@@ -202,6 +210,10 @@ export default function DashboardPage() {
   const [contacts, setContacts] = useState<{ id: string; read: boolean }[]>([]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'7' | '30' | 'all'>('7');
   const [deleteToast, setDeleteToast] = useState<{ site: Site; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [domainErrors, setDomainErrors] = useState<Record<string, string>>({});
+  const [newSiteError, setNewSiteError] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -243,9 +255,14 @@ export default function DashboardPage() {
   }, []);
 
   const fetchAnalytics = useCallback(async (period: '7' | '30' | 'all') => {
-    const res = await fetch(`/api/sites/analytics?days=${period}`);
-    const data = await res.json();
-    setAnalytics(data.data || {});
+    setAnalyticsLoading(true);
+    try {
+      const res = await fetch(`/api/sites/analytics?days=${period}`);
+      const data = await res.json();
+      setAnalytics(data.data || {});
+    } finally {
+      setAnalyticsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -270,6 +287,7 @@ export default function DashboardPage() {
 
   const handleSaveDomain = async (siteId: string) => {
     setSavingDomain(siteId);
+    setDomainErrors(e => ({ ...e, [siteId]: '' }));
     const domain = domainInputs[siteId]?.trim() || '';
     const res = await fetch(`/api/sites/${siteId}/domain`, {
       method: 'PUT',
@@ -280,7 +298,7 @@ export default function DashboardPage() {
     if (data.ok) {
       setSites(prev => prev.map(s => s.id === siteId ? { ...s, custom_domain: data.customDomain } : s));
     } else {
-      alert(data.error || 'エラーが発生しました');
+      setDomainErrors(e => ({ ...e, [siteId]: data.error || 'ドメインの保存に失敗しました' }));
       setSites(prev => {
         const site = prev.find(s => s.id === siteId);
         if (site) setDomainInputs(d => ({ ...d, [siteId]: site.custom_domain || '' }));
@@ -367,6 +385,7 @@ export default function DashboardPage() {
   };
 
   const handleNewSite = async () => {
+    setNewSiteError('');
     try {
       const res = await fetch('/api/sites', {
         method: 'POST',
@@ -375,9 +394,9 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.site) router.push(`/laruHP/builder?siteId=${data.site.id}`);
-      else alert(data.error || 'サイトの作成に失敗しました');
+      else setNewSiteError(data.error || 'サイトの作成に失敗しました');
     } catch {
-      alert('サイトの作成に失敗しました。もう一度お試しください。');
+      setNewSiteError('サイトの作成に失敗しました。もう一度お試しください。');
     }
   };
 
@@ -544,6 +563,15 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── New site error ── */}
+        {newSiteError && (
+          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-4 text-sm text-red-400">
+            <IcAlert />
+            {newSiteError}
+            <button onClick={() => setNewSiteError('')} className="ml-auto text-red-400/60 hover:text-red-400 text-lg leading-none">×</button>
+          </div>
+        )}
+
         {/* ── Sites Header ── */}
         <div className="flex justify-between items-center mb-5">
           <div>
@@ -698,7 +726,7 @@ export default function DashboardPage() {
                     {site.published && analytics[site.id] && (
                       <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 pt-2 pb-1.5">
                         <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex gap-1">
+                          <div className="flex items-center gap-1">
                             {(['7', '30', 'all'] as const).map(p => (
                               <button
                                 key={p}
@@ -708,6 +736,9 @@ export default function DashboardPage() {
                                 {p === '7' ? '7日' : p === '30' ? '30日' : '全期間'}
                               </button>
                             ))}
+                            {analyticsLoading && (
+                              <svg className="animate-spin text-slate-600 ml-0.5" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                            )}
                           </div>
                           <span className="text-[9px] text-slate-600">
                             {analytics[site.id].reduce((s, d) => s + d.views, 0).toLocaleString()} PV
@@ -739,13 +770,16 @@ export default function DashboardPage() {
                         <div className="w-5 h-5 rounded bg-emerald-500/30 flex items-center justify-center text-emerald-300 text-[9px] font-bold flex-shrink-0">SEO</div>
                         <div className="flex-1 min-w-0">
                           <div className="text-emerald-300 text-[10px] font-semibold">LARUSEO未連携</div>
-                          <div className="text-emerald-400/70 text-[9px]">data-idを設定してください</div>
+                          <div className="text-emerald-400/70 text-[9px]">エディタで連携IDを設定してください</div>
                         </div>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-400 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
                       </Link>
                     )}
 
                     {/* Custom domain */}
+                    {domainErrors[site.id] && (
+                      <p className="text-red-400 text-[10px] -mb-1">{domainErrors[site.id]}</p>
+                    )}
                     <div className="flex gap-1.5">
                       <div className="flex-1 relative min-w-0">
                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">
@@ -810,6 +844,7 @@ export default function DashboardPage() {
                           onClick={() => handleDuplicate(site.id)}
                           disabled={duplicating === site.id}
                           title="複製"
+                          aria-label="サイトを複製"
                           className="flex items-center justify-center text-[11px] text-slate-500 hover:text-slate-300 border border-white/[0.07] hover:border-white/20 py-2 px-3 rounded-lg transition-all disabled:opacity-50"
                         >
                           {duplicating === site.id ? '...' : <IcDuplicate />}
@@ -817,6 +852,7 @@ export default function DashboardPage() {
                         <button
                           onClick={() => handleDelete(site.id)}
                           title="削除"
+                          aria-label="サイトを削除"
                           className="flex items-center justify-center text-[11px] text-slate-600 hover:text-red-400 border border-transparent hover:border-red-500/20 py-2 px-3 rounded-lg transition-all"
                         >
                           <IcTrash />
@@ -858,6 +894,7 @@ export default function DashboardPage() {
                   key={plan.id}
                   onClick={async () => {
                     setShowPlanModal(false);
+                    setCheckoutError('');
                     const res = await fetch('/api/stripe/checkout', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -865,7 +902,7 @@ export default function DashboardPage() {
                     });
                     const d = await res.json();
                     if (d.url) window.location.href = d.url;
-                    else alert('決済ページの取得に失敗しました。もう一度お試しください。');
+                    else setCheckoutError('決済ページの取得に失敗しました。もう一度お試しください。');
                   }}
                   className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all text-left"
                 >
@@ -883,8 +920,11 @@ export default function DashboardPage() {
                 </button>
               ))}
             </div>
+            {checkoutError && (
+              <p className="mt-3 text-red-400 text-xs text-center">{checkoutError}</p>
+            )}
             <button
-              onClick={() => setShowPlanModal(false)}
+              onClick={() => { setShowPlanModal(false); setCheckoutError(''); }}
               className="mt-4 w-full text-slate-500 text-sm hover:text-slate-300 transition-colors"
             >
               キャンセル
