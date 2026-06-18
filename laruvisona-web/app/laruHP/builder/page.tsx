@@ -2357,6 +2357,18 @@ function BuilderContent() {
   const undoStack = useRef<SiteData[]>([]);
   const redoStack = useRef<SiteData[]>([]);
   const siteRef = useRef<SiteData>(defaultSiteData);
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Lenis (global smooth scroll) intercepts wheel events at window level.
+  // Stop propagation on the canvas so native overflow-y scroll takes over.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const stop = (e: WheelEvent) => e.stopPropagation();
+    el.addEventListener('wheel', stop, { passive: false });
+    return () => el.removeEventListener('wheel', stop);
+  }, []);
+
 
   // Fetch user plan for feature gating
   useEffect(() => {
@@ -3148,6 +3160,7 @@ function BuilderContent() {
 
         {/* Canvas */}
         <div
+          ref={canvasRef}
           className="builder-canvas bg-[#e8eaed]"
           style={{ flex: '1 1 0', minWidth: 0, minHeight: 0, overflowY: 'auto', overscrollBehaviorY: 'contain', scrollBehavior: 'smooth', scrollbarWidth: 'thin', scrollbarColor: '#94a3b8 transparent' }}
         >
