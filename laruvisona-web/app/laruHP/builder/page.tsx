@@ -1334,6 +1334,28 @@ function UrlImportModal({ onImport, onClose }: {
   );
 }
 
+function MobileOverlay() {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  return (
+    <div className="md:hidden fixed inset-0 z-[999] bg-[#030712] flex flex-col items-center justify-center p-8 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-3xl mb-6">💻</div>
+      <h1 className="text-2xl font-bold text-white mb-3">PCからご利用ください</h1>
+      <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-xs">
+        ビルダーはデスクトップ・タブレット（横向き）での操作に最適化されています。スマホからはダッシュボードで確認・管理ができます。
+      </p>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <a href="/laruHP/dashboard" className="block bg-white text-black font-bold py-3 px-6 rounded-xl text-sm">
+          ダッシュボードへ →
+        </a>
+        <button onClick={() => setDismissed(true)} className="text-slate-500 hover:text-slate-300 text-sm transition-colors py-2">
+          このまま続ける（表示が崩れます）
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
   const [query, setQuery] = useState('');
   const [photos, setPhotos] = useState<{ id: string; url: string; thumb: string; alt: string; credit: string }[]>([]);
@@ -4557,6 +4579,8 @@ function BuilderContent() {
 
   return (
     <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100vh' }}>
+      {/* Mobile not supported overlay */}
+      <MobileOverlay />
       {/* Builder toast notification */}
       {builderToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-[#1e293b] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-sm text-slate-200">
