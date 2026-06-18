@@ -44,23 +44,23 @@ const INDUSTRY_COLOR_MAP: Record<string, string> = {
 // TEMPLATE_PRESETS removed — replaced with free color picker (primaryColor)
 
 
-const INDUSTRY_DESIGN_MAP: Record<string, { designStyle: string; fontFamily: string; primaryColor: string }> = {
-  restaurant:   { designStyle: 'rounded',  fontFamily: 'rounded', primaryColor: '#c05621' },
-  beauty:       { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#831843' },
-  clinic:       { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#065f46' },
-  legal:        { designStyle: 'minimal',  fontFamily: 'biz',     primaryColor: '#1e293b' },
-  construction: { designStyle: 'bold',     fontFamily: 'zen',     primaryColor: '#92400e' },
-  realestate:   { designStyle: 'sharp',    fontFamily: 'zen',     primaryColor: '#1e3a8a' },
-  retail:       { designStyle: 'rounded',  fontFamily: 'noto',    primaryColor: '#7c3aed' },
-  fitness:      { designStyle: 'bold',     fontFamily: 'zen',     primaryColor: '#dc2626' },
-  hotel:        { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#78350f' },
-  education:    { designStyle: 'rounded',  fontFamily: 'noto',    primaryColor: '#1d4ed8' },
-  wedding:      { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#9d174d' },
-  pet:          { designStyle: 'rounded',  fontFamily: 'rounded', primaryColor: '#166534' },
-  dental:       { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#0369a1' },
-  photo:        { designStyle: 'minimal',  fontFamily: 'kaisei',  primaryColor: '#374151' },
-  accounting:   { designStyle: 'minimal',  fontFamily: 'biz',     primaryColor: '#1e3a5f' },
-  other:        { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#1e3a8a' },
+const INDUSTRY_DESIGN_MAP: Record<string, { designStyle: string; fontFamily: string; primaryColor: string; accentColor: string }> = {
+  restaurant:   { designStyle: 'rounded',  fontFamily: 'rounded', primaryColor: '#c05621', accentColor: '#f59e0b' },
+  beauty:       { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#831843', accentColor: '#f9a8d4' },
+  clinic:       { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#065f46', accentColor: '#34d399' },
+  legal:        { designStyle: 'minimal',  fontFamily: 'biz',     primaryColor: '#1e293b', accentColor: '#3b82f6' },
+  construction: { designStyle: 'bold',     fontFamily: 'zen',     primaryColor: '#92400e', accentColor: '#fbbf24' },
+  realestate:   { designStyle: 'sharp',    fontFamily: 'zen',     primaryColor: '#1e3a8a', accentColor: '#60a5fa' },
+  retail:       { designStyle: 'rounded',  fontFamily: 'noto',    primaryColor: '#7c3aed', accentColor: '#f472b6' },
+  fitness:      { designStyle: 'bold',     fontFamily: 'zen',     primaryColor: '#dc2626', accentColor: '#fbbf24' },
+  hotel:        { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#78350f', accentColor: '#fcd34d' },
+  education:    { designStyle: 'rounded',  fontFamily: 'noto',    primaryColor: '#1d4ed8', accentColor: '#34d399' },
+  wedding:      { designStyle: 'elegant',  fontFamily: 'mincho',  primaryColor: '#9d174d', accentColor: '#fda4af' },
+  pet:          { designStyle: 'rounded',  fontFamily: 'rounded', primaryColor: '#166534', accentColor: '#86efac' },
+  dental:       { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#0369a1', accentColor: '#7dd3fc' },
+  photo:        { designStyle: 'minimal',  fontFamily: 'kaisei',  primaryColor: '#374151', accentColor: '#f59e0b' },
+  accounting:   { designStyle: 'minimal',  fontFamily: 'biz',     primaryColor: '#1e3a5f', accentColor: '#60a5fa' },
+  other:        { designStyle: 'modern',   fontFamily: 'noto',    primaryColor: '#1e3a8a', accentColor: '#f59e0b' },
 };
 
 const DAYS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
@@ -80,7 +80,11 @@ interface FormData {
   style: string;
   designStyle: string;
   primaryColor: string;
+  accentColor: string;
   fontFamily: string;
+  heroLayout: 'center' | 'left' | 'split';
+  headerStyle: 'transparent' | 'solid' | 'colored';
+  animLevel: 'none' | 'subtle' | 'full';
   larubot: boolean;
   laruseo: boolean;
 }
@@ -100,7 +104,11 @@ const defaultForm: FormData = {
   style: 'modern',
   designStyle: 'modern',
   primaryColor: '#1e3a8a',
+  accentColor: '#f59e0b',
   fontFamily: 'noto',
+  heroLayout: 'center',
+  headerStyle: 'transparent',
+  animLevel: 'full',
   larubot: true,
   laruseo: true,
 };
@@ -139,9 +147,13 @@ const FONT_LABEL: Record<string, string> = {
 const FONT_IMPORT = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Noto+Serif+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700&family=BIZ+UDPGothic:wght@400;700&family=Kaisei+Decol:wght@400;700&display=swap';
 
 function LivePreview({ form }: { form: FormData }) {
-  const color  = form.primaryColor || '#1e3a8a';
-  const ds     = form.designStyle  || 'modern';
-  const ff     = form.fontFamily   || 'noto';
+  const color      = form.primaryColor || '#1e3a8a';
+  const accent     = form.accentColor  || '#f59e0b';
+  const ds         = form.designStyle  || 'modern';
+  const ff         = form.fontFamily   || 'noto';
+  const heroLayout = form.heroLayout   || 'center';
+  const headerStyle = form.headerStyle || 'transparent';
+  const animLevel  = form.animLevel    || 'full';
   const industry    = INDUSTRIES.find(i => i.id === form.industry);
   const filledSvcs  = form.services.filter(s => s.name);
   const displaySvcs = filledSvcs.length > 0
@@ -281,15 +293,33 @@ function LivePreview({ form }: { form: FormData }) {
   };
 
   const cfg = cfgMap[ds] ?? cfgMap.modern;
-  const textColor  = cfg.dark ? 'white' : '#1e293b';
-  const subColor   = cfg.dark ? 'rgba(255,255,255,0.55)' : '#64748b';
+  const textColor   = cfg.dark ? 'white' : '#1e293b';
+  const subColor    = cfg.dark ? 'rgba(255,255,255,0.55)' : '#64748b';
   const catchphrase = form.catchphrase || (form.businessName ? `${form.businessName}へようこそ` : 'キャッチコピーがここに');
+
+  // headerStyle → navbar background
+  const navBg = headerStyle === 'solid'
+    ? (cfg.dark ? '#1e293b' : '#f1f5f9')
+    : headerStyle === 'colored'
+      ? color
+      : cfg.heroBg;
+  const navTextColor = headerStyle === 'solid' && !cfg.dark ? '#1e293b' : 'white';
+
+  // heroLayout → content alignment + split image
+  const heroAlign = heroLayout === 'center' ? 'center' : 'left';
+  const heroJustify = heroLayout === 'center' ? 'center' : 'flex-start';
 
   const SectionHeading = ({ children }: { children: string }) => (
     <div style={{ fontSize: '9px', fontWeight: 700, color: cfg.dark && cfg.featureBg.startsWith('#0') ? 'white' : '#1e293b', marginBottom: '8px', ...(cfg.accentLine ? { borderBottom: `1px solid ${color}`, paddingBottom: '3px', display: 'inline-block' } : {}) }}>
       {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}{children}
     </div>
   );
+
+  const animDot = animLevel === 'none'
+    ? { width: 6, height: 6, borderRadius: '50%', background: '#475569' }
+    : animLevel === 'subtle'
+      ? { width: 6, height: 6, borderRadius: '50%', background: accent, opacity: 0.6 }
+      : { width: 6, height: 6, borderRadius: '50%', background: accent };
 
   return (
     <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl text-left select-none" style={{ fontFamily }}>
@@ -307,58 +337,84 @@ function LivePreview({ form }: { form: FormData }) {
         <div className="flex-1 bg-white/10 rounded text-[9px] text-slate-400 px-2 py-0.5 font-mono truncate">
           {form.businessName ? `${form.businessName.slice(0, 12).replace(/\s/g, '-').toLowerCase()}.laruvisona.com` : 'your-shop.laruvisona.com'}
         </div>
-        <div className="w-2 h-2 rounded-full bg-green-400/60 flex-shrink-0" />
+        <div style={animDot} />
       </div>
 
-      {/* Navbar */}
-      <div className="flex items-center justify-between px-3 py-1.5" style={{ background: cfg.heroBg, ...(typeof cfg.heroBg === 'string' && cfg.heroBg.startsWith('linear') ? {} : {}) }}>
-        <span style={{ color: textColor, fontSize: '10px', fontWeight: 900 }} className="truncate max-w-[90px]">
+      {/* Navbar — driven by headerStyle */}
+      <div className="flex items-center justify-between px-3 py-1.5" style={{ background: navBg }}>
+        <span style={{ color: navTextColor, fontSize: '10px', fontWeight: 900 }} className="truncate max-w-[90px]">
           {form.businessName || 'SHOP NAME'}
         </span>
         <div className="flex gap-2 items-center">
           {['TOP', 'サービス', 'アクセス'].map(l => (
-            <span key={l} style={{ color: `${textColor}55`, fontSize: '7px' }}>{l}</span>
+            <span key={l} style={{ color: `${navTextColor}66`, fontSize: '7px' }}>{l}</span>
           ))}
           <div style={{ ...cfg.btnStyle, fontSize: '7px', padding: '2px 7px' }}>予約</div>
         </div>
       </div>
 
-      {/* Hero */}
-      <div className="px-4 py-5 relative" style={{ background: cfg.heroBg, ...cfg.heroExtra }}>
-        {industry && (
-          <div style={{ display: 'inline-block', fontSize: '7px', padding: '1px 6px', borderRadius: cfg.btnR, border: `1px solid ${cfg.dark ? 'rgba(255,255,255,0.3)' : color}`, color: cfg.dark ? 'rgba(255,255,255,0.8)' : color, marginBottom: '5px' }}>
-            {industry.name}
+      {/* Hero — driven by heroLayout */}
+      <div
+        className="px-4 py-5 relative"
+        style={{ background: cfg.heroBg, ...cfg.heroExtra, textAlign: heroAlign }}
+      >
+        {heroLayout === 'split' ? (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              {industry && (
+                <div style={{ display: 'inline-block', fontSize: '7px', padding: '1px 6px', borderRadius: cfg.btnR, border: `1px solid ${cfg.dark ? 'rgba(255,255,255,0.3)' : color}`, color: cfg.dark ? 'rgba(255,255,255,0.8)' : color, marginBottom: '4px' }}>
+                  {industry.name}
+                </div>
+              )}
+              <div style={{ color: textColor, fontWeight: 900, fontSize: '10px', lineHeight: 1.4, marginBottom: '4px' }}>
+                {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}
+                {catchphrase.slice(0, 14)}
+              </div>
+              <div style={{ color: subColor, fontSize: '7px', marginBottom: '8px' }}>サービスのご案内…</div>
+              <div style={{ ...cfg.btnStyle, display: 'inline-block', fontSize: '7px', padding: '3px 8px' }}>お問い合わせ</div>
+            </div>
+            <div style={{ width: 56, height: 52, borderRadius: cfg.cardR, background: cfg.dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+              🖼️
+            </div>
           </div>
+        ) : (
+          <>
+            {industry && (
+              <div style={{ display: 'inline-block', fontSize: '7px', padding: '1px 6px', borderRadius: cfg.btnR, border: `1px solid ${cfg.dark ? 'rgba(255,255,255,0.3)' : color}`, color: cfg.dark ? 'rgba(255,255,255,0.8)' : color, marginBottom: '5px' }}>
+                {industry.name}
+              </div>
+            )}
+            <div style={{ color: textColor, fontWeight: 900, fontSize: '11px', lineHeight: 1.4, marginBottom: '4px' }}>
+              {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}
+              {catchphrase.slice(0, 20)}
+            </div>
+            <div style={{ color: subColor, fontSize: '8px', lineHeight: 1.5, marginBottom: '10px' }}>
+              {(form.description || '最高品質のサービスをご提供します').slice(0, 35)}…
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: heroJustify }}>
+              <div style={{ ...cfg.btnStyle, fontSize: '8px', padding: '4px 10px' }}>お問い合わせ</div>
+              <div style={{ ...cfg.btn2Style, fontSize: '8px', padding: '4px 10px' }}>詳しく見る</div>
+            </div>
+          </>
         )}
-        <div style={{ color: textColor, fontWeight: 900, fontSize: '11px', lineHeight: 1.4, marginBottom: '4px' }}>
-          {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}
-          {catchphrase.slice(0, 20)}
-        </div>
-        <div style={{ color: subColor, fontSize: '8px', lineHeight: 1.5, marginBottom: '10px' }}>
-          {(form.description || '最高品質のサービスをご提供します').slice(0, 35)}…
-        </div>
-        <div className="flex gap-2">
-          <div style={{ ...cfg.btnStyle, fontSize: '8px', padding: '4px 10px' }}>お問い合わせ</div>
-          <div style={{ ...cfg.btn2Style, fontSize: '8px', padding: '4px 10px' }}>詳しく見る</div>
-        </div>
-        {/* Decorative blob for rounded style */}
         {ds === 'rounded' && (
           <div style={{ position: 'absolute', top: 4, right: 8, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
         )}
-        {/* Vertical accent line for elegant */}
         {ds === 'elegant' && (
           <div style={{ position: 'absolute', left: 8, top: 10, bottom: 10, width: '1px', background: 'rgba(255,255,255,0.2)' }} />
         )}
       </div>
       {cfg.heroBottom}
 
-      {/* Features */}
+      {/* Features — accent color on icon bg */}
       <div className="px-3 py-3" style={{ background: cfg.featureBg }}>
         <SectionHeading>3つの強み</SectionHeading>
         <div className="grid grid-cols-3 gap-1.5">
-          {(['✓ 実績', '✓ 安心', '✓ 品質'] as const).map((feat, i) => (
+          {(['実績', '安心', '品質'] as const).map((feat, i) => (
             <div key={i} style={{ ...cfg.featureCardStyle, padding: '6px 4px', fontSize: '8px', fontWeight: 600, color: cfg.dark && (cfg.featureBg.startsWith('#0') || cfg.featureBg.startsWith('#1') || cfg.featureBg.startsWith('linear')) ? 'white' : '#374151', textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', marginBottom: '2px' }}>{['⭐', '🛡️', '💎'][i]}</div>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', margin: '0 auto 3px' }}>
+                {['⭐', '🛡️', '💎'][i]}
+              </div>
               {feat}
             </div>
           ))}
@@ -372,7 +428,7 @@ function LivePreview({ form }: { form: FormData }) {
           {displaySvcs.map((s, i) => (
             <div key={i} style={{ ...cfg.cardStyle, padding: '6px 5px', opacity: filledSvcs.length > 0 ? 1 : 0.6 }}>
               <div style={{ fontSize: '8px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: ds === 'bold' || ds === 'sharp' ? '#e2e8f0' : '#374151' }}>{s.name}</div>
-              {s.price && <div style={{ fontSize: '7px', marginTop: '2px', color, fontWeight: 600 }}>{s.price}</div>}
+              {s.price && <div style={{ fontSize: '7px', marginTop: '2px', color: accent, fontWeight: 600 }}>{s.price}</div>}
             </div>
           ))}
         </div>
@@ -397,7 +453,7 @@ function LivePreview({ form }: { form: FormData }) {
           © {form.businessName || 'SHOP NAME'} {new Date().getFullYear()}
         </div>
         <div className="flex gap-1.5 flex-shrink-0 items-center">
-          <span style={{ fontSize: '7px', color: color, fontFamily: 'monospace' }}>{fontLabel}</span>
+          <span style={{ fontSize: '7px', color: accent, fontFamily: 'monospace' }}>{fontLabel}</span>
           {form.larubot && <div style={{ width: 16, height: 16, borderRadius: cfg.btnR, background: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6px', fontWeight: 900, color: 'white' }}>LB</div>}
         </div>
       </div>
@@ -407,6 +463,8 @@ function LivePreview({ form }: { form: FormData }) {
         {form.industry && <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">{industry?.name}</span>}
         <span className="text-[8px] bg-white/10 text-slate-400 px-1.5 py-0.5 rounded font-mono">{color.toUpperCase()}</span>
         <span className="text-[8px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">{ds}</span>
+        <span className="text-[8px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">{heroLayout}</span>
+        <span className="text-[8px] bg-teal-500/20 text-teal-400 px-1.5 py-0.5 rounded">{animLevel}</span>
         {form.larubot && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded">LARUbot</span>}
         {form.laruseo && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">LARUSEO</span>}
       </div>
@@ -473,7 +531,7 @@ function OnboardingContent() {
       ...f,
       industry: indId,
       colorScheme: INDUSTRY_COLOR_MAP[indId] || f.colorScheme,
-      ...(dm ? { primaryColor: dm.primaryColor, designStyle: dm.designStyle, fontFamily: dm.fontFamily } : {}),
+      ...(dm ? { primaryColor: dm.primaryColor, accentColor: dm.accentColor, designStyle: dm.designStyle, fontFamily: dm.fontFamily } : {}),
     }));
     setTimeout(() => goStep(2), 350);
   };
@@ -859,28 +917,51 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
               <p className="text-slate-400">ブランドカラー・スタイル・フォントを選んでください。後でエディタからいつでも変更できます。</p>
             </div>
 
-            {/* Color picker */}
+            {/* Color pickers */}
             <div className="mb-8 bg-white/[0.03] border border-white/10 rounded-2xl p-6">
               <h3 className="font-bold mb-1">ブランドカラー</h3>
-              <p className="text-slate-500 text-sm mb-5">サイトのメインカラーを自由に選べます。</p>
-              <div className="flex items-center gap-6 mb-5">
-                <div className="relative flex-shrink-0">
-                  <input
-                    type="color"
-                    value={form.primaryColor}
-                    onChange={e => updateForm('primaryColor', e.target.value)}
-                    className="w-20 h-20 rounded-2xl border-2 border-white/20 cursor-pointer p-1 bg-transparent"
-                    style={{ colorScheme: 'dark' }}
-                  />
-                </div>
+              <p className="text-slate-500 text-sm mb-5">メインカラーとアクセントカラーの2色でサイトの雰囲気が決まります。</p>
+              <div className="grid grid-cols-2 gap-5">
+                {/* Primary */}
                 <div>
-                  <div className="text-xl font-bold text-white font-mono tracking-wider">{form.primaryColor.toUpperCase()}</div>
-                  <div className="text-slate-400 text-sm mt-0.5">メインカラー</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-5 h-5 rounded-md border border-white/20" style={{ background: form.primaryColor }} />
-                    <span className="text-xs text-slate-500">ヒーロー・ボタン・アクセントに適用</span>
+                  <div className="text-xs text-slate-400 mb-2 font-medium">メインカラー</div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={form.primaryColor}
+                      onChange={e => updateForm('primaryColor', e.target.value)}
+                      className="w-14 h-14 rounded-xl border-2 border-white/20 cursor-pointer p-0.5 bg-transparent flex-shrink-0"
+                      style={{ colorScheme: 'dark' }}
+                    />
+                    <div>
+                      <div className="text-sm font-bold text-white font-mono">{form.primaryColor.toUpperCase()}</div>
+                      <div className="text-slate-500 text-xs mt-0.5">ヒーロー・ヘッダー</div>
+                    </div>
                   </div>
                 </div>
+                {/* Accent */}
+                <div>
+                  <div className="text-xs text-slate-400 mb-2 font-medium">アクセントカラー</div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={form.accentColor}
+                      onChange={e => updateForm('accentColor', e.target.value)}
+                      className="w-14 h-14 rounded-xl border-2 border-white/20 cursor-pointer p-0.5 bg-transparent flex-shrink-0"
+                      style={{ colorScheme: 'dark' }}
+                    />
+                    <div>
+                      <div className="text-sm font-bold text-white font-mono">{form.accentColor.toUpperCase()}</div>
+                      <div className="text-slate-500 text-xs mt-0.5">ボタン・強調</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Color combo preview */}
+              <div className="mt-4 h-8 rounded-xl overflow-hidden flex">
+                <div className="flex-1" style={{ background: form.primaryColor }} />
+                <div className="w-[30%]" style={{ background: form.accentColor }} />
+                <div className="w-[15%] bg-white/10" />
               </div>
             </div>
 
@@ -1078,6 +1159,165 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
               </div>
             </div>
 
+            {/* Hero layout picker */}
+            <div className="mb-8">
+              <h3 className="font-bold mb-1">ヒーローレイアウト</h3>
+              <p className="text-slate-500 text-sm mb-4">ファーストビューのコンテンツ配置を選択</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  {
+                    id: 'center' as const, label: '中央揃え', sub: '見出しをど真ん中に',
+                    preview: (
+                      <svg viewBox="0 0 96 52" className="w-full h-12" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="96" height="36" fill="#1e3a8a" rx="6"/>
+                        <rect x="22" y="8" width="52" height="5" rx="2.5" fill="white" opacity="0.9"/>
+                        <rect x="30" y="15" width="36" height="3" rx="1.5" fill="white" opacity="0.4"/>
+                        <rect x="28" y="22" width="18" height="6" rx="9" fill="white" opacity="0.85"/>
+                        <rect x="50" y="22" width="18" height="6" rx="9" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8"/>
+                        <rect x="4" y="40" width="40" height="9" rx="3" fill="#1e293b" stroke="#334155" strokeWidth="0.5"/>
+                        <rect x="52" y="40" width="40" height="9" rx="3" fill="#1e293b" stroke="#334155" strokeWidth="0.5"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'left' as const, label: '左揃え', sub: '見出しを左寄せに',
+                    preview: (
+                      <svg viewBox="0 0 96 52" className="w-full h-12" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="96" height="36" fill="#1e3a8a" rx="6"/>
+                        <rect x="8" y="8" width="46" height="5" rx="2" fill="white" opacity="0.9"/>
+                        <rect x="8" y="15" width="32" height="3" rx="1.5" fill="white" opacity="0.4"/>
+                        <rect x="8" y="22" width="16" height="6" rx="9" fill="white" opacity="0.85"/>
+                        <rect x="28" y="22" width="16" height="6" rx="9" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8"/>
+                        <rect x="4" y="40" width="40" height="9" rx="3" fill="#1e293b" stroke="#334155" strokeWidth="0.5"/>
+                        <rect x="52" y="40" width="40" height="9" rx="3" fill="#1e293b" stroke="#334155" strokeWidth="0.5"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'split' as const, label: '左右分割', sub: 'テキスト＋画像',
+                    preview: (
+                      <svg viewBox="0 0 96 52" className="w-full h-12" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="96" height="36" fill="#1e3a8a" rx="6"/>
+                        <rect x="6" y="7" width="38" height="5" rx="2" fill="white" opacity="0.9"/>
+                        <rect x="6" y="14" width="26" height="3" rx="1.5" fill="white" opacity="0.4"/>
+                        <rect x="6" y="22" width="20" height="6" rx="9" fill="white" opacity="0.85"/>
+                        <rect x="52" y="5" width="38" height="26" rx="4" fill="rgba(255,255,255,0.15)"/>
+                        <text x="71" y="22" fontSize="14" textAnchor="middle" fill="rgba(255,255,255,0.5)">🖼️</text>
+                        <rect x="4" y="40" width="40" height="9" rx="3" fill="#1e293b" stroke="#334155" strokeWidth="0.5"/>
+                        <rect x="52" y="40" width="40" height="9" rx="3" fill="#1e293b" stroke="#334155" strokeWidth="0.5"/>
+                      </svg>
+                    ),
+                  },
+                ] as const).map(l => (
+                  <button
+                    key={l.id}
+                    onClick={() => updateForm('heroLayout', l.id)}
+                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.heroLayout === l.id ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-white/10 hover:border-white/25'}`}
+                  >
+                    <div className="bg-[#0a0f1e] p-2">{l.preview}</div>
+                    <div className={`px-3 py-2 ${form.heroLayout === l.id ? 'bg-blue-500/15' : 'bg-white/[0.03]'}`}>
+                      <div className="font-bold text-sm text-white">{l.label}</div>
+                      <div className="text-slate-500 text-[11px] mt-0.5">{l.sub}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Header style picker */}
+            <div className="mb-8">
+              <h3 className="font-bold mb-1">ヘッダースタイル</h3>
+              <p className="text-slate-500 text-sm mb-4">ナビゲーションバーの表示スタイル</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  {
+                    id: 'transparent' as const, label: '透過', sub: 'ヒーローと一体化',
+                    preview: (
+                      <svg viewBox="0 0 96 40" className="w-full h-10" xmlns="http://www.w3.org/2000/svg">
+                        <defs><linearGradient id="hg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1e3a8a"/><stop offset="100%" stopColor="#1e3a8a" stopOpacity="0.7"/></linearGradient></defs>
+                        <rect width="96" height="40" fill="url(#hg1)" rx="6"/>
+                        <rect x="0" y="0" width="96" height="12" fill="rgba(255,255,255,0.05)" rx="6"/>
+                        <rect x="5" y="4" width="18" height="4" rx="2" fill="white" opacity="0.8"/>
+                        <rect x="55" y="4" width="8" height="4" rx="2" fill="white" opacity="0.3"/>
+                        <rect x="66" y="4" width="8" height="4" rx="2" fill="white" opacity="0.3"/>
+                        <rect x="77" y="3" width="14" height="5" rx="9" fill="white" opacity="0.7"/>
+                        <rect x="10" y="20" width="40" height="5" rx="2" fill="white" opacity="0.7"/>
+                        <rect x="10" y="28" width="24" height="3" rx="1.5" fill="white" opacity="0.3"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'solid' as const, label: 'ソリッド', sub: 'ダーク固定ナビ',
+                    preview: (
+                      <svg viewBox="0 0 96 40" className="w-full h-10" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="96" height="40" fill="#1e3a8a" rx="6"/>
+                        <rect x="0" y="0" width="96" height="12" fill="#0f172a" rx="6"/>
+                        <rect x="0" y="6" width="96" height="6" fill="#0f172a"/>
+                        <rect x="5" y="4" width="18" height="4" rx="2" fill="white" opacity="0.9"/>
+                        <rect x="55" y="4" width="8" height="4" rx="2" fill="white" opacity="0.4"/>
+                        <rect x="66" y="4" width="8" height="4" rx="2" fill="white" opacity="0.4"/>
+                        <rect x="77" y="3" width="14" height="5" rx="9" fill="white" opacity="0.8"/>
+                        <rect x="10" y="20" width="40" height="5" rx="2" fill="white" opacity="0.7"/>
+                        <rect x="10" y="28" width="24" height="3" rx="1.5" fill="white" opacity="0.3"/>
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: 'colored' as const, label: 'カラー', sub: 'メインカラーのナビ',
+                    preview: (
+                      <svg viewBox="0 0 96 40" className="w-full h-10" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="96" height="40" fill="#f8fafc" rx="6"/>
+                        <rect x="0" y="0" width="96" height="12" fill="#1e3a8a" rx="6"/>
+                        <rect x="0" y="6" width="96" height="6" fill="#1e3a8a"/>
+                        <rect x="5" y="4" width="18" height="4" rx="2" fill="white" opacity="0.9"/>
+                        <rect x="55" y="4" width="8" height="4" rx="2" fill="white" opacity="0.5"/>
+                        <rect x="66" y="4" width="8" height="4" rx="2" fill="white" opacity="0.5"/>
+                        <rect x="77" y="3" width="14" height="5" rx="9" fill="white" opacity="0.9"/>
+                        <rect x="10" y="18" width="40" height="5" rx="2" fill="#1e293b" opacity="0.7"/>
+                        <rect x="10" y="26" width="24" height="3" rx="1.5" fill="#94a3b8"/>
+                      </svg>
+                    ),
+                  },
+                ] as const).map(h => (
+                  <button
+                    key={h.id}
+                    onClick={() => updateForm('headerStyle', h.id)}
+                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.headerStyle === h.id ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-white/10 hover:border-white/25'}`}
+                  >
+                    <div className="bg-[#0a0f1e] p-2">{h.preview}</div>
+                    <div className={`px-3 py-2 ${form.headerStyle === h.id ? 'bg-blue-500/15' : 'bg-white/[0.03]'}`}>
+                      <div className="font-bold text-sm text-white">{h.label}</div>
+                      <div className="text-slate-500 text-[11px] mt-0.5">{h.sub}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Animation level */}
+            <div className="mb-8">
+              <h3 className="font-bold mb-1">アニメーション強度</h3>
+              <p className="text-slate-500 text-sm mb-4">スクロール時の動き・エフェクトの強さ</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { id: 'none'   as const, label: 'なし',   sub: 'シンプル・高速表示',   icon: '⬜', desc: '動きなし・即時表示' },
+                  { id: 'subtle' as const, label: 'ソフト', sub: 'ゆったりフェードイン',  icon: '🌫️', desc: 'フェードのみ' },
+                  { id: 'full'   as const, label: 'フル',   sub: 'スライド・3D・パルス', icon: '✨', desc: '全エフェクト有効' },
+                ] as const).map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => updateForm('animLevel', a.id)}
+                    className={`rounded-2xl p-4 text-left transition-all border-2 ${form.animLevel === a.id ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}
+                  >
+                    <div className="text-2xl mb-2">{a.icon}</div>
+                    <div className="font-bold text-sm text-white">{a.label}</div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">{a.sub}</div>
+                    <div className="text-[10px] text-slate-600 mt-1 font-mono">{a.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -1249,10 +1489,13 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                       <button onClick={() => goStep(3)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-8 rounded-lg flex-shrink-0 border border-white/10" style={{ background: form.primaryColor }} />
+                      <div className="flex gap-1 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-lg border border-white/10" style={{ background: form.primaryColor }} />
+                        <div className="w-4 h-8 rounded border border-white/10" style={{ background: form.accentColor }} />
+                      </div>
                       <div>
-                        <div className="text-sm font-bold text-white font-mono">{form.primaryColor.toUpperCase()}</div>
-                        <div className="text-slate-500 text-xs">{form.designStyle} / {form.fontFamily}</div>
+                        <div className="text-sm font-bold text-white font-mono">{form.primaryColor.toUpperCase()} <span className="text-slate-500">+</span> {form.accentColor.toUpperCase()}</div>
+                        <div className="text-slate-500 text-xs">{form.designStyle} / {form.fontFamily} / {form.heroLayout} / {form.animLevel}</div>
                       </div>
                       <div className="ml-auto flex gap-1.5">
                         {form.larubot && <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full">LARUbot</span>}
