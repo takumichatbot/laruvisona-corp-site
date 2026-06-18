@@ -125,13 +125,178 @@ const HOURS_PRESETS = [
 ];
 
 
+const FONT_MAP: Record<string, string> = {
+  noto:    '"Noto Sans JP", sans-serif',
+  zen:     '"Zen Kaku Gothic New", sans-serif',
+  mincho:  '"Noto Serif JP", serif',
+  rounded: '"M PLUS Rounded 1c", sans-serif',
+  biz:     '"BIZ UDPGothic", sans-serif',
+  kaisei:  '"Kaisei Decol", serif',
+};
+const FONT_LABEL: Record<string, string> = {
+  noto: 'Noto Sans JP', zen: 'Zen Gothic', mincho: '明朝体', rounded: '丸ゴシック', biz: 'BIZ Gothic', kaisei: 'Kaisei',
+};
+const FONT_IMPORT = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Noto+Serif+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700&family=BIZ+UDPGothic:wght@400;700&family=Kaisei+Decol:wght@400;700&display=swap';
+
 function LivePreview({ form }: { form: FormData }) {
-  const heroBg = form.primaryColor || '#1e3a8a';
-  const industry = INDUSTRIES.find(i => i.id === form.industry);
-  const filledServices = form.services.filter(s => s.name);
+  const color  = form.primaryColor || '#1e3a8a';
+  const ds     = form.designStyle  || 'modern';
+  const ff     = form.fontFamily   || 'noto';
+  const industry    = INDUSTRIES.find(i => i.id === form.industry);
+  const filledSvcs  = form.services.filter(s => s.name);
+  const displaySvcs = filledSvcs.length > 0
+    ? filledSvcs.slice(0, 3)
+    : [{ name: 'サービスA', price: '¥5,000' }, { name: 'サービスB', price: '¥8,000' }, { name: 'サービスC', price: '¥12,000' }];
+
+  const fontFamily  = FONT_MAP[ff]    ?? FONT_MAP.noto;
+  const fontLabel   = FONT_LABEL[ff]  ?? 'Noto Sans JP';
+
+  // ── per-style tokens ──────────────────────────────────────────────
+  type Cfg = {
+    dark: boolean;           // true = hero is dark bg → white text
+    heroBg: string;
+    heroExtra?: React.CSSProperties;
+    heroBottom?: React.ReactNode;  // wave/diagonal clip overlay
+    btnR: string;            // border-radius for primary button
+    btnStyle: React.CSSProperties;
+    btn2Style: React.CSSProperties;
+    cardR: string;
+    cardStyle: React.CSSProperties;
+    featureBg: string;
+    featureCardStyle: React.CSSProperties;
+    ctaBg: string;
+    ctaDark: boolean;
+    ctaBtnStyle: React.CSSProperties;
+    footerBg: string;
+    headingPrefix?: string;
+    accentLine?: boolean;
+  };
+
+  const cfgMap: Record<string, Cfg> = {
+    modern: {
+      dark: true,
+      heroBg: `linear-gradient(135deg, ${color} 0%, ${color}bb 100%)`,
+      btnR: '9999px',
+      btnStyle:  { borderRadius: '9999px', background: 'rgba(255,255,255,0.9)', color, fontWeight: 700 },
+      btn2Style: { borderRadius: '9999px', border: '1px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.8)' },
+      cardR: '10px',
+      cardStyle: { borderRadius: '10px', background: '#f8fafc', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' },
+      featureBg: '#f1f5f9',
+      featureCardStyle: { borderRadius: '10px', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+      ctaBg: color,
+      ctaDark: true,
+      ctaBtnStyle: { borderRadius: '9999px', background: 'white', color, fontWeight: 700 },
+      footerBg: '#1e293b',
+    },
+    minimal: {
+      dark: false,
+      heroBg: '#f8fafc',
+      heroExtra: { borderLeft: `3px solid ${color}`, paddingLeft: '12px' },
+      btnR: '4px',
+      btnStyle:  { borderRadius: '4px', border: `1px solid ${color}`, color, background: 'transparent', fontWeight: 600 },
+      btn2Style: { borderRadius: '4px', border: '1px solid #cbd5e1', color: '#64748b' },
+      cardR: '4px',
+      cardStyle: { borderRadius: '4px', background: '#f8fafc', borderLeft: `2px solid ${color}`, paddingLeft: '6px' },
+      featureBg: 'white',
+      featureCardStyle: { borderRadius: '2px', background: 'white', borderBottom: '1px solid #e2e8f0' },
+      ctaBg: '#f1f5f9',
+      ctaDark: false,
+      ctaBtnStyle: { borderRadius: '4px', border: `1px solid ${color}`, color, background: 'transparent', fontWeight: 600 },
+      footerBg: '#f8fafc',
+      accentLine: true,
+    },
+    bold: {
+      dark: true,
+      heroBg: color,
+      heroBottom: (
+        <div style={{ height: '16px', background: '#0f172a', clipPath: 'polygon(0 100%, 100% 0, 100% 100%)', marginTop: '-1px' }} />
+      ),
+      btnR: '3px',
+      btnStyle:  { borderRadius: '3px', background: 'white', color, fontWeight: 900, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+      btn2Style: { borderRadius: '3px', border: '2px solid rgba(255,255,255,0.5)', color: 'white' },
+      cardR: '3px',
+      cardStyle: { borderRadius: '3px', background: '#1e293b', transform: 'skewX(-0.5deg)', border: '1px solid #334155' },
+      featureBg: '#0f172a',
+      featureCardStyle: { borderRadius: '3px', background: '#1e293b', borderTop: `2px solid ${color}` },
+      ctaBg: '#0f172a',
+      ctaDark: true,
+      ctaBtnStyle: { borderRadius: '3px', background: color, color: 'white', fontWeight: 900, textTransform: 'uppercase' as const },
+      footerBg: '#020617',
+      headingPrefix: '// ',
+    },
+    elegant: {
+      dark: true,
+      heroBg: `linear-gradient(180deg, ${color} 0%, ${color}cc 100%)`,
+      heroExtra: { textAlign: 'center' as const },
+      btnR: '2px',
+      btnStyle:  { borderRadius: '2px', border: '1px solid rgba(255,255,255,0.7)', color: 'white', background: 'transparent', letterSpacing: '0.1em' },
+      btn2Style: { borderRadius: '2px', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.6)' },
+      cardR: '4px',
+      cardStyle: { borderRadius: '4px', background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.15)' },
+      featureBg: `${color}22`,
+      featureCardStyle: { borderRadius: '4px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' as const },
+      ctaBg: `${color}dd`,
+      ctaDark: true,
+      ctaBtnStyle: { borderRadius: '2px', border: '1px solid rgba(255,255,255,0.7)', color: 'white', background: 'transparent', letterSpacing: '0.1em' },
+      footerBg: `${color}22`,
+    },
+    rounded: {
+      dark: true,
+      heroBg: `linear-gradient(135deg, ${color} 0%, ${color}99 100%)`,
+      heroBottom: (
+        <div style={{ height: '20px', background: '#f0fdf4', borderRadius: '50% 50% 0 0 / 100% 100% 0 0', marginTop: '-10px', position: 'relative', zIndex: 1 }} />
+      ),
+      btnR: '9999px',
+      btnStyle:  { borderRadius: '9999px', background: 'white', color, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
+      btn2Style: { borderRadius: '9999px', border: '2px solid rgba(255,255,255,0.5)', color: 'white' },
+      cardR: '20px',
+      cardStyle: { borderRadius: '20px', background: 'white', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' },
+      featureBg: '#f0fdf4',
+      featureCardStyle: { borderRadius: '16px', background: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
+      ctaBg: `linear-gradient(135deg, ${color}cc 0%, ${color} 100%)`,
+      ctaDark: true,
+      ctaBtnStyle: { borderRadius: '9999px', background: 'white', color, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
+      footerBg: '#f0fdf4',
+    },
+    sharp: {
+      dark: true,
+      heroBg: '#030712',
+      heroExtra: { borderLeft: `3px solid ${color}` },
+      heroBottom: (
+        <div style={{ height: '12px', background: '#111827', clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)', marginTop: '-1px' }} />
+      ),
+      btnR: '0px',
+      btnStyle:  { borderRadius: '0', background: color, color: 'white', fontWeight: 900, letterSpacing: '0.08em', borderLeft: `3px solid white` },
+      btn2Style: { borderRadius: '0', border: `1px solid ${color}`, color },
+      cardR: '0px',
+      cardStyle: { borderRadius: '0', background: '#111827', borderTop: `2px solid ${color}`, border: '1px solid #1f2937' },
+      featureBg: '#030712',
+      featureCardStyle: { borderRadius: '0', background: '#111827', border: '1px solid #1f2937', borderLeft: `3px solid ${color}` },
+      ctaBg: '#111827',
+      ctaDark: true,
+      ctaBtnStyle: { borderRadius: '0', background: color, color: 'white', fontWeight: 900, borderLeft: `2px solid white` },
+      footerBg: '#020617',
+      headingPrefix: '// ',
+    },
+  };
+
+  const cfg = cfgMap[ds] ?? cfgMap.modern;
+  const textColor  = cfg.dark ? 'white' : '#1e293b';
+  const subColor   = cfg.dark ? 'rgba(255,255,255,0.55)' : '#64748b';
+  const catchphrase = form.catchphrase || (form.businessName ? `${form.businessName}へようこそ` : 'キャッチコピーがここに');
+
+  const SectionHeading = ({ children }: { children: string }) => (
+    <div style={{ fontSize: '9px', fontWeight: 700, color: cfg.dark && cfg.featureBg.startsWith('#0') ? 'white' : '#1e293b', marginBottom: '8px', ...(cfg.accentLine ? { borderBottom: `1px solid ${color}`, paddingBottom: '3px', display: 'inline-block' } : {}) }}>
+      {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}{children}
+    </div>
+  );
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl text-left select-none">
+    <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl text-left select-none" style={{ fontFamily }}>
+      {/* load Google Fonts */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <style>{`@import url('${FONT_IMPORT}');`}</style>
+
       {/* Browser chrome */}
       <div className="bg-[#1a2744] px-3 py-2 flex items-center gap-2 border-b border-white/10">
         <div className="flex gap-1">
@@ -146,71 +311,102 @@ function LivePreview({ form }: { form: FormData }) {
       </div>
 
       {/* Navbar */}
-      <div className="flex items-center justify-between px-3 py-2" style={{ background: heroBg }}>
-        <span className="text-white/90 text-[10px] font-black truncate max-w-[100px]">
+      <div className="flex items-center justify-between px-3 py-1.5" style={{ background: cfg.heroBg, ...(typeof cfg.heroBg === 'string' && cfg.heroBg.startsWith('linear') ? {} : {}) }}>
+        <span style={{ color: textColor, fontSize: '10px', fontWeight: 900 }} className="truncate max-w-[90px]">
           {form.businessName || 'SHOP NAME'}
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {['TOP', 'サービス', 'アクセス'].map(l => (
-            <span key={l} className="text-white/40 text-[8px]">{l}</span>
+            <span key={l} style={{ color: `${textColor}55`, fontSize: '7px' }}>{l}</span>
           ))}
+          <div style={{ ...cfg.btnStyle, fontSize: '7px', padding: '2px 7px' }}>予約</div>
         </div>
       </div>
 
       {/* Hero */}
-      <div className="px-4 py-6 text-center" style={{ background: heroBg }}>
+      <div className="px-4 py-5 relative" style={{ background: cfg.heroBg, ...cfg.heroExtra }}>
         {industry && (
-          <div className="inline-block text-[8px] font-bold px-2 py-0.5 rounded-full mb-2 border border-white/30 text-white/80 bg-white/10">
+          <div style={{ display: 'inline-block', fontSize: '7px', padding: '1px 6px', borderRadius: cfg.btnR, border: `1px solid ${cfg.dark ? 'rgba(255,255,255,0.3)' : color}`, color: cfg.dark ? 'rgba(255,255,255,0.8)' : color, marginBottom: '5px' }}>
             {industry.name}
           </div>
         )}
-        <div className="text-white font-black text-xs leading-snug mb-1.5 px-1">
-          {form.catchphrase || (form.businessName ? `${form.businessName}へようこそ` : 'キャッチコピーがここに入ります')}
+        <div style={{ color: textColor, fontWeight: 900, fontSize: '11px', lineHeight: 1.4, marginBottom: '4px' }}>
+          {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}
+          {catchphrase.slice(0, 20)}
         </div>
-        {(form.description || form.address) && (
-          <div className="text-white/50 text-[9px] mb-3 leading-relaxed px-2">
-            {(form.description || form.address || '').slice(0, 45)}{(form.description || '').length > 45 ? '...' : ''}
-          </div>
+        <div style={{ color: subColor, fontSize: '8px', lineHeight: 1.5, marginBottom: '10px' }}>
+          {(form.description || '最高品質のサービスをご提供します').slice(0, 35)}…
+        </div>
+        <div className="flex gap-2">
+          <div style={{ ...cfg.btnStyle, fontSize: '8px', padding: '4px 10px' }}>お問い合わせ</div>
+          <div style={{ ...cfg.btn2Style, fontSize: '8px', padding: '4px 10px' }}>詳しく見る</div>
+        </div>
+        {/* Decorative blob for rounded style */}
+        {ds === 'rounded' && (
+          <div style={{ position: 'absolute', top: 4, right: 8, width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
         )}
-        <div className="flex justify-center gap-2 mt-3">
-          <div className="px-3 py-1 rounded-full text-[9px] font-bold text-white bg-white/25">
-            お問い合わせ
-          </div>
-          <div className="px-3 py-1 rounded-full text-[9px] border border-white/20 text-white/60">
-            詳しく見る
-          </div>
-        </div>
+        {/* Vertical accent line for elegant */}
+        {ds === 'elegant' && (
+          <div style={{ position: 'absolute', left: 8, top: 10, bottom: 10, width: '1px', background: 'rgba(255,255,255,0.2)' }} />
+        )}
       </div>
+      {cfg.heroBottom}
 
-      {/* Services */}
-      <div className="px-3 py-3 bg-white">
-        <div className="text-[9px] font-bold text-center mb-2 text-slate-700">
-          {filledServices.length > 0 ? 'サービス・メニュー' : 'サービス（AI生成）'}
-        </div>
+      {/* Features */}
+      <div className="px-3 py-3" style={{ background: cfg.featureBg }}>
+        <SectionHeading>3つの強み</SectionHeading>
         <div className="grid grid-cols-3 gap-1.5">
-          {(filledServices.length > 0 ? filledServices : [{ name: 'サービス1', price: '' }, { name: 'サービス2', price: '' }, { name: 'サービス3', price: '' }]).slice(0, 3).map((s, i) => (
-            <div key={i} className="rounded-lg p-1.5 text-center bg-slate-100" style={{ opacity: filledServices.length > 0 ? 1 : 0.5 }}>
-              <div className="text-[8px] font-bold truncate text-slate-700">{s.name}</div>
-              {s.price && <div className="text-[7px] mt-0.5" style={{ color: heroBg }}>{s.price}</div>}
+          {(['✓ 実績', '✓ 安心', '✓ 品質'] as const).map((feat, i) => (
+            <div key={i} style={{ ...cfg.featureCardStyle, padding: '6px 4px', fontSize: '8px', fontWeight: 600, color: cfg.dark && (cfg.featureBg.startsWith('#0') || cfg.featureBg.startsWith('#1') || cfg.featureBg.startsWith('linear')) ? 'white' : '#374151', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', marginBottom: '2px' }}>{['⭐', '🛡️', '💎'][i]}</div>
+              {feat}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="px-3 py-2 bg-gray-100 flex items-center justify-between">
-        <div className="text-[8px] text-gray-400 truncate flex-1">
-          {form.phone || form.address ? `${form.phone || ''}${form.address ? '  ' + form.address.slice(0, 15) + '...' : ''}` : '電話・住所がここに表示されます'}
+      {/* Services */}
+      <div className="px-3 py-3" style={{ background: ds === 'bold' || ds === 'sharp' ? '#0f172a' : ds === 'elegant' ? `${color}11` : 'white' }}>
+        <SectionHeading>{filledSvcs.length > 0 ? 'サービス・料金' : 'サービス（AI生成）'}</SectionHeading>
+        <div className="grid grid-cols-3 gap-1.5">
+          {displaySvcs.map((s, i) => (
+            <div key={i} style={{ ...cfg.cardStyle, padding: '6px 5px', opacity: filledSvcs.length > 0 ? 1 : 0.6 }}>
+              <div style={{ fontSize: '8px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: ds === 'bold' || ds === 'sharp' ? '#e2e8f0' : '#374151' }}>{s.name}</div>
+              {s.price && <div style={{ fontSize: '7px', marginTop: '2px', color, fontWeight: 600 }}>{s.price}</div>}
+            </div>
+          ))}
         </div>
-        <div className="flex gap-1 flex-shrink-0">
-          {form.larubot && <div className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-black text-white" style={{ background: '#4f46e5' }}>LB</div>}
+      </div>
+
+      {/* CTA section */}
+      <div className="px-3 py-4 text-center" style={{ background: cfg.ctaBg }}>
+        <div style={{ fontSize: '9px', fontWeight: 700, color: cfg.ctaDark ? 'white' : '#1e293b', marginBottom: '2px' }}>
+          {form.businessName || '店舗名'}へのご予約・お問い合わせ
+        </div>
+        <div style={{ fontSize: '7px', color: cfg.ctaDark ? 'rgba(255,255,255,0.6)' : '#64748b', marginBottom: '7px' }}>
+          {form.phone || '無料相談受付中'}
+        </div>
+        <div style={{ ...cfg.ctaBtnStyle, display: 'inline-block', fontSize: '8px', padding: '5px 14px' }}>
+          今すぐ予約する →
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-3 py-2 flex items-center justify-between" style={{ background: cfg.footerBg }}>
+        <div style={{ fontSize: '8px', color: ds === 'minimal' ? '#94a3b8' : 'rgba(255,255,255,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+          © {form.businessName || 'SHOP NAME'} {new Date().getFullYear()}
+        </div>
+        <div className="flex gap-1.5 flex-shrink-0 items-center">
+          <span style={{ fontSize: '7px', color: color, fontFamily: 'monospace' }}>{fontLabel}</span>
+          {form.larubot && <div style={{ width: 16, height: 16, borderRadius: cfg.btnR, background: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6px', fontWeight: 900, color: 'white' }}>LB</div>}
         </div>
       </div>
 
       {/* Tags */}
       <div className="bg-[#0f172a] px-3 py-2 flex gap-1 flex-wrap">
         {form.industry && <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">{industry?.name}</span>}
-        <span className="text-[8px] bg-white/10 text-slate-400 px-1.5 py-0.5 rounded font-mono">{heroBg.toUpperCase()}</span>
+        <span className="text-[8px] bg-white/10 text-slate-400 px-1.5 py-0.5 rounded font-mono">{color.toUpperCase()}</span>
+        <span className="text-[8px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">{ds}</span>
         {form.larubot && <span className="text-[8px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded">LARUbot</span>}
         {form.laruseo && <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">LARUSEO</span>}
       </div>
