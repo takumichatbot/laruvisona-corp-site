@@ -2570,6 +2570,25 @@ function BuilderContent() {
             return block;
           });
         }
+
+        // Inject AI-generated three-col strengths
+        if (ai.threeColItems?.length) {
+          blocks = blocks.map(block => {
+            if (block.type === 'three-col') {
+              const [c1, c2, c3] = ai.threeColItems;
+              return {
+                ...block, data: {
+                  ...block.data,
+                  ...(ai.threeColHeading && { heading: ai.threeColHeading }),
+                  ...(c1 && { col1Icon: c1.icon, col1Title: c1.title, col1Text: c1.text }),
+                  ...(c2 && { col2Icon: c2.icon, col2Title: c2.title, col2Text: c2.text }),
+                  ...(c3 && { col3Icon: c3.icon, col3Title: c3.title, col3Text: c3.text }),
+                },
+              };
+            }
+            return block;
+          });
+        }
       } else {
         const heroBlock = defaultBlock('hero');
         heroBlock.data = {
