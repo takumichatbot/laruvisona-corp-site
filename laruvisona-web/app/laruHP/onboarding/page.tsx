@@ -342,7 +342,7 @@ function LivePreview({ form }: { form: FormData }) {
 
       {/* Navbar — driven by headerStyle */}
       <div className="flex items-center justify-between px-3 py-1.5" style={{ background: navBg }}>
-        <span style={{ color: navTextColor, fontSize: '10px', fontWeight: 900 }} className="truncate max-w-[90px]">
+        <span style={{ color: navTextColor, fontSize: '10px', fontWeight: 700 }} className="truncate max-w-[90px]">
           {form.businessName || 'SHOP NAME'}
         </span>
         <div className="flex gap-2 items-center">
@@ -366,7 +366,7 @@ function LivePreview({ form }: { form: FormData }) {
                   {industry.name}
                 </div>
               )}
-              <div style={{ color: textColor, fontWeight: 900, fontSize: '10px', lineHeight: 1.4, marginBottom: '4px' }}>
+              <div style={{ color: textColor, fontWeight: 700, fontSize: '10px', lineHeight: 1.4, marginBottom: '4px' }}>
                 {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}
                 {catchphrase.slice(0, 14)}
               </div>
@@ -384,7 +384,7 @@ function LivePreview({ form }: { form: FormData }) {
                 {industry.name}
               </div>
             )}
-            <div style={{ color: textColor, fontWeight: 900, fontSize: '11px', lineHeight: 1.4, marginBottom: '4px' }}>
+            <div style={{ color: textColor, fontWeight: 700, fontSize: '11px', lineHeight: 1.4, marginBottom: '4px' }}>
               {cfg.headingPrefix && <span style={{ color }}>{cfg.headingPrefix}</span>}
               {catchphrase.slice(0, 20)}
             </div>
