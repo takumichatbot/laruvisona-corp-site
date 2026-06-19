@@ -4,7 +4,7 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function renderBlockInner(block: Block): string {
+function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
   const str = (key: string) => escapeHtml(String(d[key] ?? ''));
   const raw = (key: string) => String(d[key] ?? '');
@@ -28,12 +28,27 @@ function renderBlockInner(block: Block): string {
     case 'hero': {
       const abVariant = raw('abVariant');
       const abAttr = abVariant ? ` data-ab="${abVariant}"` : '';
+      const layout = ctx?.heroLayout || 'center';
+      const heroInnerStyle = layout === 'center'
+        ? 'text-align:center;align-items:center'
+        : 'text-align:left;align-items:flex-start';
+      const imgCol = (layout === 'split' && raw('bgImage'))
+        ? `<div class="lhp-hero-split-img"><img src="${raw('bgImage')}" alt="${str('heading')}" loading="eager"></div>`
+        : layout === 'split'
+          ? `<div class="lhp-hero-split-img" style="background:rgba(255,255,255,0.12)"></div>`
+          : '';
+      const bgStyle = layout === 'split'
+        ? `background-color:${raw('bgColor') || '#1e293b'}`
+        : `background-color:${raw('bgColor')};${raw('bgImage') ? `background-image:url(${raw('bgImage')});background-size:cover;background-position:center;` : ''}`;
       return `
-<section data-lhp-anim class="lhp-hero"${abAttr} style="background-color:${raw('bgColor')};color:${raw('textColor')};${raw('bgImage') ? `background-image:url(${raw('bgImage')});background-size:cover;background-position:center;` : ''}">
-  <div class="lhp-hero-inner">
-    <h1>${str('heading')}</h1>
-    <p class="lhp-hero-sub">${str('subheading')}</p>
-    <a href="${raw('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
+<section data-lhp-anim class="lhp-hero lhp-hero-${layout}"${abAttr} style="${bgStyle};color:${raw('textColor')}">
+  <div class="lhp-hero-inner" style="${heroInnerStyle}">
+    <div class="lhp-hero-content">
+      <h1>${str('heading')}</h1>
+      <p class="lhp-hero-sub">${str('subheading')}</p>
+      <a href="${raw('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
+    </div>
+    ${imgCol}
   </div>
 </section>`;
     }
@@ -648,8 +663,8 @@ async function lhpBuy(btn, priceId) {
   }
 }
 
-function renderBlock(block: Block): string {
-  const html = renderBlockInner(block);
+function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
+  const html = renderBlockInner(block, ctx);
   if (!html) return '';
   const d = block.data;
 
@@ -1067,7 +1082,7 @@ window.addEventListener('popstate',function(){
 
   // Page sections
   const pagesHtml = pages.map((page, idx) => {
-    const blocksHtml = page.blocks.map(renderBlock).filter(Boolean).join('\n');
+    const blocksHtml = page.blocks.map(b => renderBlock(b, { heroLayout, accentColor })).filter(Boolean).join('\n');
     return multiPage
       ? `<div id="${page.id}" class="lhp-page"${idx > 0 ? ' hidden' : ''}>${blocksHtml}</div>`
       : blocksHtml;
@@ -1201,14 +1216,21 @@ window.addEventListener('popstate',function(){
   const fontCss = `body,input,textarea,select,button{font-family:${font.family},-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}`;
 
   const designStyle = settings.designStyle || 'modern';
+  const accentColor = settings.accentColor || '#f59e0b';
+  const heroLayout  = settings.heroLayout  || 'center';
+  const headerStyle = settings.headerStyle || 'transparent';
+  const animLevel   = settings.animLevel   || 'full';
 
   // Scroll animation + typewriter + counter script
   const animScript = `<script>
 (function(){
   /* ── scroll reveal ── */
+  var animLevel='${animLevel}';
   var els=document.querySelectorAll('[data-lhp-anim]');
-  if(els.length){
-    els.forEach(function(el){var dur=el.getAttribute('data-lhp-dur');if(dur)el.style.transitionDuration=dur+'ms';});
+  if(animLevel==='none'){
+    els.forEach(function(el){el.classList.add('lhp-visible');});
+  } else if(els.length){
+    els.forEach(function(el){var dur=el.getAttribute('data-lhp-dur');if(dur)el.style.transitionDuration=dur+'ms';${animLevel === 'subtle' ? "el.style.transform='none';" : ''}});
     var io=new IntersectionObserver(function(entries){
       entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lhp-visible');io.unobserve(e.target);}});
     },{threshold:0.08});
@@ -1290,15 +1312,18 @@ ${clarityScript}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=${font.url}&display=swap" rel="stylesheet">
-<style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern}}${CSS}</style>
+<style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern}--lhp-accent:${accentColor};}${CSS}</style>
 <style>${fontCss}
-[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:.6s}
+${animLevel === 'none' ? '[data-lhp-anim]{opacity:1!important;transform:none!important}' : `[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:${animLevel === 'subtle' ? '.4s' : '.6s'}}
 [data-lhp-anim="fade"]{transform:none}
 [data-lhp-anim="slide-up"]{transform:translateY(32px)}
 [data-lhp-anim="slide-left"]{transform:translateX(-32px)}
 [data-lhp-anim="slide-right"]{transform:translateX(32px)}
 [data-lhp-anim="zoom"]{transform:scale(0.92)}
-[data-lhp-anim].lhp-visible{opacity:1;transform:none}
+[data-lhp-anim].lhp-visible{opacity:1;transform:none}`}
+${headerStyle === 'solid' ? '.lhp-nav{background:#1e293b!important;border-bottom:1px solid rgba(255,255,255,0.1)!important}' : ''}
+${headerStyle === 'colored' ? `.lhp-nav{background:var(--lhp-primary)!important}` : ''}
+${heroLayout === 'split' ? `.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:40px}.lhp-hero-split .lhp-hero-content{flex:1}.lhp-hero-split-img{flex:0 0 42%;border-radius:16px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img{width:100%;height:100%;object-fit:cover}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column}.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:16/9}}` : ''}
 ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
 ${settings.customCss ? `<style>${settings.customCss}</style>` : ''}

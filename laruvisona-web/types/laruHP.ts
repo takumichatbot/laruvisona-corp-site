@@ -64,6 +64,10 @@ export interface SiteSettings {
   clarityId?: string;
   webhookUrl?: string;
   sitePassword?: string;
+  accentColor?: string;
+  heroLayout?: 'center' | 'left' | 'split';
+  headerStyle?: 'transparent' | 'solid' | 'colored';
+  animLevel?: 'none' | 'subtle' | 'full';
 }
 
 export interface Site {
