@@ -65,6 +65,10 @@ interface SiteData {
   laruseoPublicId: string;
   customCss: string;
   fontFamily: string;
+  accentColor: string;
+  heroLayout: 'center' | 'left' | 'split';
+  headerStyle: 'transparent' | 'solid' | 'colored';
+  animLevel: 'none' | 'subtle' | 'full';
   globalFooter: GlobalFooter;
   customPalette: string[];
   lineNotifyToken: string;
@@ -3572,6 +3576,10 @@ function BuilderContent() {
     laruseoPublicId: '',
     customCss: '',
     fontFamily: 'noto',
+    accentColor: '#f59e0b',
+    heroLayout: 'center',
+    headerStyle: 'transparent',
+    animLevel: 'full',
     customPalette: [...DEFAULT_PALETTE],
     lineNotifyToken: '',
     clarityId: '',
@@ -3603,7 +3611,7 @@ function BuilderContent() {
       return exportToHTML(
         site.pages,
         site.pages[0]?.seo || emptySeo,
-        { colorScheme: site.colorScheme, style: '', designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, gaTrackingId: site.gaTrackingId, fontFamily: site.fontFamily, customCss: site.customCss },
+        { colorScheme: site.colorScheme, style: '', designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, gaTrackingId: site.gaTrackingId, fontFamily: site.fontFamily, customCss: site.customCss, accentColor: site.accentColor, heroLayout: site.heroLayout, headerStyle: site.headerStyle, animLevel: site.animLevel },
         site.siteName,
       );
     } catch {
@@ -3733,7 +3741,7 @@ function BuilderContent() {
           name: s.siteName,
           blocks_json: { v: 2, pages: s.pages },
           seo_json: s.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: s.colorScheme, designStyle: s.designStyle, larubot: s.larubot, laruseo: s.laruseo, notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId, laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily, customPalette: s.customPalette, lineNotifyToken: s.lineNotifyToken, clarityId: s.clarityId, webhookUrl: s.webhookUrl, sitePassword: s.sitePassword },
+          settings_json: { colorScheme: s.colorScheme, designStyle: s.designStyle, larubot: s.larubot, laruseo: s.laruseo, notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId, laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily, accentColor: s.accentColor, heroLayout: s.heroLayout, headerStyle: s.headerStyle, animLevel: s.animLevel, customPalette: s.customPalette, lineNotifyToken: s.lineNotifyToken, clarityId: s.clarityId, webhookUrl: s.webhookUrl, sitePassword: s.sitePassword },
         }),
       });
       localStorage.setItem('laruHP_builder', JSON.stringify(s));
@@ -3966,6 +3974,10 @@ function BuilderContent() {
               laruseoPublicId: s.settings_json?.laruseoPublicId || '',
               customCss: s.settings_json?.customCss || '',
               fontFamily: s.settings_json?.fontFamily || 'noto',
+              accentColor: s.settings_json?.accentColor || '#f59e0b',
+              heroLayout: s.settings_json?.heroLayout || 'center',
+              headerStyle: s.settings_json?.headerStyle || 'transparent',
+              animLevel: s.settings_json?.animLevel || 'full',
               globalFooter: s.settings_json?.globalFooter || defaultSiteData.globalFooter,
               customPalette: s.settings_json?.customPalette || [...DEFAULT_PALETTE],
               lineNotifyToken: s.settings_json?.lineNotifyToken || '',
@@ -4106,6 +4118,10 @@ function BuilderContent() {
         laruseoPublicId: '',
         customCss: '',
         fontFamily: d.fontFamily || 'noto',
+        accentColor: d.accentColor || '#f59e0b',
+        heroLayout: d.heroLayout || 'center',
+        headerStyle: d.headerStyle || 'transparent',
+        animLevel: d.animLevel || 'full',
         globalFooter: defaultSiteData.globalFooter,
         customPalette: [...DEFAULT_PALETTE],
         lineNotifyToken: '',
@@ -4113,6 +4129,39 @@ function BuilderContent() {
         webhookUrl: '',
         sitePassword: '',
       });
+      // Auto-select hero image from Unsplash based on industry
+      if (d.industry) {
+        const industryQueryMap: Record<string, string> = {
+          restaurant: 'restaurant interior japan', beauty: 'beauty salon interior',
+          clinic: 'medical clinic professional', legal: 'law office professional',
+          construction: 'construction building modern', realestate: 'real estate modern house',
+          retail: 'retail store interior', fitness: 'gym fitness studio',
+          hotel: 'hotel lobby luxury', education: 'classroom school modern',
+          wedding: 'wedding ceremony elegant', pet: 'pet grooming salon',
+          dental: 'dental clinic modern', photo: 'photography studio',
+          accounting: 'office professional business', other: 'professional office',
+        };
+        const query = industryQueryMap[d.industry as string] || 'business professional';
+        fetch(`/api/images/unsplash?q=${encodeURIComponent(query)}`)
+          .then(r => r.json())
+          .then(({ photos }) => {
+            if (photos?.length) {
+              const img = photos[Math.floor(Math.random() * Math.min(5, photos.length))];
+              setSite(prev => ({
+                ...prev,
+                pages: prev.pages.map((page, pi) => pi === 0 ? {
+                  ...page,
+                  blocks: page.blocks.map(block =>
+                    block.type === 'hero' && !(block.data.bgImage as string)
+                      ? { ...block, data: { ...block.data, bgImage: img.url } }
+                      : block
+                  ),
+                } : page),
+              }));
+            }
+          })
+          .catch(() => {});
+      }
     } else {
       const savedStr = typeof window !== 'undefined' ? localStorage.getItem('laruHP_builder') : null;
       if (savedStr) {
@@ -4134,6 +4183,10 @@ function BuilderContent() {
             laruseoPublicId: parsed.laruseoPublicId || '',
             customCss: parsed.customCss || '',
             fontFamily: parsed.fontFamily || 'noto',
+            accentColor: parsed.accentColor || '#f59e0b',
+            heroLayout: parsed.heroLayout || 'center',
+            headerStyle: parsed.headerStyle || 'transparent',
+            animLevel: parsed.animLevel || 'full',
             globalFooter: parsed.globalFooter || defaultSiteData.globalFooter,
             customPalette: parsed.customPalette || [...DEFAULT_PALETTE],
             lineNotifyToken: parsed.lineNotifyToken || '',
@@ -4356,7 +4409,7 @@ function BuilderContent() {
       name: site.siteName,
       blocks_json: { v: 2, pages: site.pages },
       seo_json: site.pages[0]?.seo || emptySeo,
-      settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl },
+      settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, accentColor: site.accentColor, heroLayout: site.heroLayout, headerStyle: site.headerStyle, animLevel: site.animLevel, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl },
     };
     if (dbSiteId) {
       await fetch(`/api/sites/${dbSiteId}`, {
@@ -4392,7 +4445,7 @@ function BuilderContent() {
           name: site.siteName,
           blocks_json: { v: 2, pages: site.pages },
           seo_json: site.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl, sitePassword: site.sitePassword },
+          settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, accentColor: site.accentColor, heroLayout: site.heroLayout, headerStyle: site.headerStyle, animLevel: site.animLevel, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl, sitePassword: site.sitePassword },
           industry: onboardingData?.industry,
         }),
       });
