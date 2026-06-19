@@ -218,7 +218,7 @@ export default function Home() {
                   <div className="h-[1px] w-12 bg-blue-500"></div>
                   <span className="text-blue-500 font-bold text-xs tracking-[0.3em]">私たちについて</span>
                 </div>
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight tracking-tight">
+                <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight tracking-tight">
                   未来の景色を、<br />テクノロジーで描く。
                 </h2>
                 <p className="text-slate-400 leading-relaxed mb-6 text-base md:text-lg">
