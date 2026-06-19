@@ -230,7 +230,7 @@ export default function LaruHPLandingPage() {
             新登場 — AI搭載 HPビルダー 2026
           </div>
 
-          <h1 className="text-[2.8rem] sm:text-6xl md:text-[6.5rem] font-black tracking-tighter mb-6 leading-[1.05] md:leading-[1.02]">
+          <h1 className="text-[2.8rem] sm:text-6xl md:text-[6.5rem] font-bold tracking-tighter mb-6 leading-[1.05] md:leading-[1.02]">
             <span className="block text-white">最高のHPを、</span>
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400">
               最短5分で。
@@ -278,7 +278,7 @@ export default function LaruHPLandingPage() {
             { num: '100%', label: 'SEO自動化', sub: 'AI最適化', color: 'from-emerald-500/20 to-transparent' },
           ].map((stat, i) => (
             <div key={i} className={`relative bg-gradient-to-br ${stat.color} border border-white/10 rounded-2xl p-5 text-center backdrop-blur-sm hover:border-white/20 hover:-translate-y-1 transition-all duration-300 overflow-hidden`}>
-              <div className="text-2xl md:text-3xl font-black text-white">{stat.num}</div>
+              <div className="text-2xl md:text-3xl font-bold text-white">{stat.num}</div>
               <div className="text-xs text-white/70 font-medium mt-1">{stat.label}</div>
               <div className="text-[10px] text-slate-500 mt-0.5">{stat.sub}</div>
             </div>
@@ -287,12 +287,12 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="py-16 md:py-24 px-6 border-t border-white/5">
+      <section className="py-16 md:py-24 px-6 border-t border-white/5 bg-gradient-to-b from-[#0a1628]/60 to-transparent">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">使い方</span>
+            <span className="text-blue-400/90 font-medium text-xs tracking-[0.2em]">使い方</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">3ステップで完成</h2>
-            <p className="text-slate-500 text-sm">業種情報を入力するだけ。5分でプロ品質のHPが完成します</p>
+            <p className="text-slate-400 text-sm">業種情報を入力するだけ。5分でプロ品質のHPが完成します</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 relative">
             <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-[1px] bg-gradient-to-r from-blue-500/40 via-blue-500/20 to-blue-500/40" />
@@ -301,12 +301,12 @@ export default function LaruHPLandingPage() {
               { step: '02', title: 'AIが自動生成',  desc: '業種に最適化されたテンプレートにビジネス情報を組み込み、コンテンツを自動作成。',                                   tag: '約1分' },
               { step: '03', title: 'エディタで仕上げ', desc: 'ビジュアルエディタで微調整。画像変更・テキスト編集・ブロック追加削除が直感的に。',                             tag: '約2分' },
             ].map((step, i) => (
-              <div key={i} className="relative bg-white/[0.03] border border-white/[0.07] rounded-2xl p-8 hover:border-blue-500/20 hover:-translate-y-1 transition-all duration-300">
-                <div className="absolute top-4 right-4 bg-blue-500/10 text-blue-400/70 text-[10px] font-medium px-2 py-1 rounded-full">{step.tag}</div>
-                <div className={`text-5xl font-black mb-4 leading-none font-mono ${COLOR_NUM['blue']}`}>{step.step}</div>
-                <div className="text-blue-500/60 font-medium text-[10px] tracking-[0.2em] mb-2">ステップ {step.step}</div>
+              <div key={i} className="relative bg-white/[0.06] border border-white/[0.12] rounded-2xl p-8 hover:border-blue-400/30 hover:bg-white/[0.09] hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm">
+                <div className="absolute top-4 right-4 bg-blue-500/15 text-blue-300 text-[10px] font-medium px-2 py-1 rounded-full">{step.tag}</div>
+                <div className={`text-5xl font-bold mb-4 leading-none font-mono ${COLOR_NUM['blue']}`}>{step.step}</div>
+                <div className="text-blue-400/70 font-medium text-[10px] tracking-[0.2em] mb-2">ステップ {step.step}</div>
                 <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
+                <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
               </div>
             ))}
           </div>
@@ -883,55 +883,55 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-16 md:py-24 px-6 border-t border-white/5">
+      <section id="pricing" className="py-16 md:py-24 px-6 bg-slate-50 border-t border-gray-200">
         <div className="max-w-5xl mx-auto text-center">
-          <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">料金プラン</span>
-          <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">料金プラン</h2>
-          <p className="text-slate-500 mb-2">全プラン 初月1円・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
-          <p className="text-slate-600 text-xs mb-12">クレジットカード決済 / Stripe安全決済</p>
+          <span className="text-blue-600 font-medium text-xs tracking-[0.2em]">料金プラン</span>
+          <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">料金プラン</h2>
+          <p className="text-gray-500 mb-2">全プラン 初月1円・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
+          <p className="text-gray-400 text-xs mb-12">クレジットカード決済 / Stripe安全決済</p>
 
           <div className="grid md:grid-cols-3 gap-5 mb-8">
             {PLANS.map((plan) => (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-8 flex flex-col text-left transition-all duration-300 hover:-translate-y-1 ${
+                className={`relative rounded-3xl p-8 flex flex-col text-left transition-all duration-300 hover:-translate-y-1 shadow-sm ${
                   plan.highlight
-                    ? 'border border-blue-500/40 bg-blue-500/[0.04]'
-                    : 'border border-white/[0.07] bg-white/[0.03]'
+                    ? 'border-2 border-blue-500 bg-white shadow-[0_0_40px_rgba(59,130,246,0.12)]'
+                    : 'border border-gray-200 bg-white'
                 }`}
               >
                 {plan.badge && (
                   <div className={`absolute top-5 right-5 text-xs font-medium px-3 py-1 rounded-full ${
                     plan.badge === 'おすすめ'
-                      ? 'bg-blue-500 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-amber-500 text-black'
                   }`}>
                     {plan.badge}
                   </div>
                 )}
 
-                <div className="text-[10px] font-medium text-slate-600 tracking-widest mb-3">プラン {PLANS.indexOf(plan) + 1}</div>
-                <h3 className="text-lg font-semibold mb-1">{plan.name}</h3>
-                <p className="text-slate-600 text-xs mb-4">{plan.sub}</p>
+                <div className="text-[10px] font-medium text-gray-400 tracking-widest mb-3">プラン {PLANS.indexOf(plan) + 1}</div>
+                <h3 className="text-lg font-semibold mb-1 text-gray-900">{plan.name}</h3>
+                <p className="text-gray-500 text-xs mb-4">{plan.sub}</p>
 
                 <div className="mb-1">
-                  <span className="text-slate-500 text-base">¥</span>
-                  <span className="text-4xl font-black">{plan.price.toLocaleString()}</span>
+                  <span className="text-gray-400 text-base">¥</span>
+                  <span className="text-4xl font-bold text-gray-900">{plan.price.toLocaleString()}</span>
                 </div>
-                <div className="text-slate-500 text-xs mb-1">/ 月（税別）</div>
-                <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-3 py-1 rounded-full mb-6 self-start">
+                <div className="text-gray-400 text-xs mb-1">/ 月（税別）</div>
+                <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-3 py-1 rounded-full mb-6 self-start">
                   初月1円
                 </div>
 
                 <ul className="space-y-2.5 mb-8 flex-1">
                   {plan.features.map((f, i) => (
-                    <li key={i} className="text-sm text-slate-400 flex items-start gap-2.5">
-                      <span className="text-emerald-400/80 mt-0.5 flex-shrink-0">✓</span>
+                    <li key={i} className="text-sm text-gray-600 flex items-start gap-2.5">
+                      <span className="text-emerald-500 mt-0.5 flex-shrink-0">✓</span>
                       {f}
                     </li>
                   ))}
                   {plan.missing.map((f, i) => (
-                    <li key={i} className="text-sm text-slate-700 flex items-start gap-2.5">
+                    <li key={i} className="text-sm text-gray-300 flex items-start gap-2.5">
                       <span className="mt-0.5 flex-shrink-0">−</span>
                       {f}
                     </li>
@@ -942,8 +942,8 @@ export default function LaruHPLandingPage() {
                   href="/laruHP/onboarding"
                   className={`text-center font-semibold py-3.5 rounded-2xl text-sm transition-all hover:scale-105 ${
                     plan.highlight
-                      ? 'bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.1)]'
-                      : 'bg-white/[0.07] text-white hover:bg-white/[0.12] border border-white/10'
+                      ? 'bg-blue-600 text-white shadow-[0_4px_20px_rgba(59,130,246,0.3)] hover:bg-blue-500'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                   }`}
                 >
                   初月1円で始める →
@@ -952,18 +952,18 @@ export default function LaruHPLandingPage() {
             ))}
           </div>
 
-          <Link href="/laruHP/plans" className="inline-flex items-center gap-1.5 text-blue-400/70 hover:text-blue-300 text-sm font-normal transition-colors mb-12">
+          <Link href="/laruHP/plans" className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-500 text-sm font-normal transition-colors mb-12">
             プランを詳しく比較する →
           </Link>
 
           {/* Competitor comparison */}
           <div className="mt-4 overflow-x-auto rounded-2xl">
-            <div className="min-w-[480px] bg-white/[0.02] border border-white/[0.07] rounded-2xl overflow-hidden">
-              <div className="grid grid-cols-4 text-xs border-b border-white/[0.07]">
-                <div className="p-3 text-slate-600">サービス</div>
-                <div className="p-3 text-slate-600 text-center">月額</div>
-                <div className="p-3 text-slate-600 text-center">AI機能</div>
-                <div className="p-3 text-slate-600 text-center">SEO自動化</div>
+            <div className="min-w-[480px] bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+              <div className="grid grid-cols-4 text-xs border-b border-gray-100">
+                <div className="p-3 text-gray-400">サービス</div>
+                <div className="p-3 text-gray-400 text-center">月額</div>
+                <div className="p-3 text-gray-400 text-center">AI機能</div>
+                <div className="p-3 text-gray-400 text-center">SEO自動化</div>
               </div>
               {[
                 { name: 'LARU HP', price: '999円〜', ai: '◎ フル搭載', seo: '◎ 完全自動', highlight: true },
@@ -971,8 +971,8 @@ export default function LaruHPLandingPage() {
                 { name: 'STUDIO', price: '2,000円〜', ai: '− なし', seo: '△ 手動設定' },
                 { name: 'WordPress.com', price: '1,100円〜', ai: '− なし', seo: '△ プラグイン必要' },
               ].map((row, i) => (
-                <div key={i} className={`grid grid-cols-4 text-xs border-b border-white/5 last:border-0 ${row.highlight ? 'bg-blue-500/[0.06] text-slate-200' : 'text-slate-500'}`}>
-                  <div className={`p-3 ${row.highlight ? 'font-semibold' : 'font-normal'}`}>{row.name}</div>
+                <div key={i} className={`grid grid-cols-4 text-xs border-b border-gray-100 last:border-0 ${row.highlight ? 'bg-blue-50 text-blue-900' : 'text-gray-500'}`}>
+                  <div className={`p-3 ${row.highlight ? 'font-semibold text-blue-700' : 'font-normal'}`}>{row.name}</div>
                   <div className="p-3 text-center">{row.price}</div>
                   <div className="p-3 text-center">{row.ai}</div>
                   <div className="p-3 text-center">{row.seo}</div>
@@ -984,12 +984,12 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 md:py-24 px-6 border-t border-white/5">
+      <section className="py-16 md:py-24 px-6 bg-slate-50 border-t border-gray-200">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">お客様の声</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">導入オーナーの声</h2>
-            <p className="text-slate-500 text-sm">全国の小規模ビジネスオーナーにご利用いただいています</p>
+            <span className="text-blue-600 font-medium text-xs tracking-[0.2em]">お客様の声</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">導入オーナーの声</h2>
+            <p className="text-gray-500 text-sm">全国の小規模ビジネスオーナーにご利用いただいています</p>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {[
@@ -1009,20 +1009,20 @@ export default function LaruHPLandingPage() {
                 icon: '🍽️',
               },
             ].map((t, i) => (
-              <div key={i} className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 flex flex-col gap-4 hover:border-white/15 transition-all">
+              <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-4 hover:border-blue-200 hover:shadow-md transition-all shadow-sm">
                 <div className="flex gap-0.5">
                   {Array.from({ length: t.stars }, (_, j) => (
                     <span key={j} className="text-amber-400 text-sm">★</span>
                   ))}
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed flex-1">&ldquo;{t.text}&rdquo;</p>
-                <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06]">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center text-base flex-shrink-0">
+                <p className="text-gray-600 text-sm leading-relaxed flex-1">&ldquo;{t.text}&rdquo;</p>
+                <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center text-base flex-shrink-0">
                     {t.icon}
                   </div>
                   <div>
-                    <div className="text-white text-sm font-semibold">{t.name}</div>
-                    <div className="text-slate-500 text-xs">{t.role} · {t.location}</div>
+                    <div className="text-gray-900 text-sm font-semibold">{t.name}</div>
+                    <div className="text-gray-400 text-xs">{t.role} · {t.location}</div>
                   </div>
                 </div>
               </div>
@@ -1031,8 +1031,8 @@ export default function LaruHPLandingPage() {
           <div className="mt-8 flex justify-center gap-8 text-center">
             {[['2,400+', '導入サイト数'], ['4.9 / 5.0', '平均評価'], ['87%', '6ヶ月継続率']].map(([val, label]) => (
               <div key={label}>
-                <div className="text-2xl font-bold text-white">{val}</div>
-                <div className="text-slate-500 text-xs mt-0.5">{label}</div>
+                <div className="text-2xl font-bold text-gray-900">{val}</div>
+                <div className="text-gray-400 text-xs mt-0.5">{label}</div>
               </div>
             ))}
           </div>

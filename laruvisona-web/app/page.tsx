@@ -141,24 +141,33 @@ export default function Home() {
               <a href="#contact" className="hidden md:flex bg-white text-black px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all items-center gap-2">
                 お問い合わせ <i className="fas fa-arrow-right"></i>
               </a>
-              <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                className="md:hidden text-white w-12 h-12 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 z-[60]"
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="md:hidden text-white w-12 h-12 flex items-center justify-center bg-white/15 rounded-xl border border-white/30 z-[60] hover:bg-white/25 transition-all active:scale-95"
+                aria-label={isMenuOpen ? 'メニューを閉じる' : 'メニューを開く'}
               >
-                <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'} text-xl transition-all`}></i>
+                <i className={`fas fa-bars text-xl transition-all ${isMenuOpen ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}></i>
               </button>
             </div>
           </div>
         </header>
 
         {/* --- Mobile Menu --- */}
-        <div className={`fixed inset-0 bg-[#030712]/95 backdrop-blur-2xl z-[55] flex flex-col justify-center items-center transition-all duration-500 ease-in-out ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-          <div className="flex flex-col space-y-8 font-black text-4xl text-center tracking-tighter w-full px-6">
-            <a href="#about" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-500 transition-colors">会社概要</a>
-            <a href="#services" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-500 transition-colors">サービス</a>
-            <a href="#product" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-500 transition-colors">プロダクト</a>
-            <a href="#estimator" onClick={() => setIsMenuOpen(false)} className="text-blue-400 transition-colors">見積もり</a>
-            <a href="#contact" onClick={() => setIsMenuOpen(false)} className="text-pink-500 mt-4 transition-colors">お問い合わせ</a>
+        <div className={`fixed inset-0 bg-[#030712]/97 backdrop-blur-2xl z-[55] flex flex-col justify-center items-center transition-all duration-500 ease-in-out ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+          {/* Close button */}
+          <button
+            onClick={() => setIsMenuOpen(false)}
+            className="absolute top-5 right-5 w-14 h-14 flex items-center justify-center bg-white/10 border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all active:scale-95"
+            aria-label="メニューを閉じる"
+          >
+            <i className="fas fa-times text-2xl"></i>
+          </button>
+          <div className="flex flex-col space-y-6 font-bold text-3xl text-center tracking-tight w-full px-8">
+            <a href="#about" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">会社概要</a>
+            <a href="#services" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">サービス</a>
+            <a href="#product" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">プロダクト</a>
+            <a href="#estimator" onClick={() => setIsMenuOpen(false)} className="text-blue-400 hover:text-blue-300 transition-colors py-2">見積もり</a>
+            <a href="#contact" onClick={() => setIsMenuOpen(false)} className="bg-white text-black px-8 py-4 rounded-2xl font-bold text-xl mt-4 hover:bg-blue-50 transition-colors">お問い合わせ</a>
           </div>
         </div>
 
@@ -193,7 +202,7 @@ export default function Home() {
         <section className="py-10 border-y border-white/5 bg-white/5 backdrop-blur-md overflow-hidden relative">
           <div className="flex gap-16 w-max animate-[marquee_25s_linear_infinite]">
             {['PYTHON', 'REACT', 'NEXT.JS', 'GENERATIVE AI', 'AWS', 'POSTGRESQL', 'TYPESCRIPT', 'PYTHON', 'REACT', 'NEXT.JS', 'GENERATIVE AI', 'AWS'].map((tech, i) => (
-              <div key={i} className="text-2xl md:text-3xl font-black font-en text-transparent" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.3)' }}>
+              <div key={i} className="text-2xl md:text-3xl font-bold font-en text-transparent" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.3)' }}>
                 {tech}
               </div>
             ))}
@@ -209,7 +218,7 @@ export default function Home() {
                   <div className="h-[1px] w-12 bg-blue-500"></div>
                   <span className="text-blue-500 font-bold text-xs tracking-[0.3em]">私たちについて</span>
                 </div>
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 leading-tight tracking-tight">
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight tracking-tight">
                   未来の景色を、<br />テクノロジーで描く。
                 </h2>
                 <p className="text-slate-400 leading-relaxed mb-6 text-base md:text-lg">
@@ -257,7 +266,7 @@ export default function Home() {
                        { value: '∞', label: 'スケール' },
                      ].map(({ value, label }) => (
                        <div key={label} className="text-center p-4 bg-white/5 rounded-xl border border-white/5">
-                         <div className="text-2xl font-black text-white">{value}</div>
+                         <div className="text-2xl font-bold text-white">{value}</div>
                          <div className="text-slate-500 text-[10px] tracking-widest mt-1">{label}</div>
                        </div>
                      ))}
@@ -275,7 +284,7 @@ export default function Home() {
               <div className="h-[1px] w-12 bg-blue-500"></div>
               <span className="text-blue-500 font-bold text-xs tracking-[0.3em]">サービス内容</span>
             </div>
-            <h2 className="text-4xl md:text-6xl font-black text-white leading-[1.1] tracking-tight">
+            <h2 className="text-4xl md:text-6xl font-bold text-white leading-[1.1] tracking-tight">
               論理と、<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">感情。</span>
             </h2>
           </div>
@@ -338,7 +347,7 @@ export default function Home() {
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <div className="lg:w-1/2 gsap-fade-up text-center lg:text-left">
                 <div className="inline-block bg-white/10 text-white text-[10px] font-bold px-3 py-1 rounded-full mb-4 border border-white/10 tracking-widest">主力プロダクト</div>
-                <h2 className="text-5xl lg:text-7xl font-black mb-4 font-en tracking-tight text-white">LARUbot</h2>
+                <h2 className="text-5xl lg:text-7xl font-bold mb-4 font-en tracking-tight text-white">LARUbot</h2>
                 <p className="text-blue-400 text-xl font-bold mb-6">24時間働く、AI営業アシスタント</p>
                 <p className="text-slate-400 leading-relaxed mb-10 text-sm md:text-base">
                   問い合わせ対応の自動化から顧客管理(CRM)、チャット内決済までを一元化。<br />専門知識がなくても、誰でも簡単にAIをビジネスに導入できるSaaSプラットフォームです。
@@ -359,7 +368,7 @@ export default function Home() {
         <section id="voice" className="py-40 relative flex items-center justify-center min-h-[60vh] border-t border-white/5 z-10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-[#030712] to-[#030712] pointer-events-none"></div>
           <div className="container mx-auto px-6 relative z-10 text-center gsap-fade-up">
-            <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">声で操る、未来のUI。</h2>
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">声で操る、未来のUI。</h2>
             <p className="text-slate-400 mb-16 max-w-xl mx-auto text-base">
               下のコアをクリックし、「サービス」や「見積もり」と話しかけてみてください。<br/>（※マイクの許可が必要です）
             </p>
@@ -374,7 +383,7 @@ export default function Home() {
           <div className="container mx-auto px-6 max-w-6xl">
             <div className="text-center mb-16 gsap-fade-up">
               <span className="text-blue-500 font-bold text-xs tracking-[0.3em] mb-4 block">AI 開発費見積もり</span>
-              <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">開発費用シミュレーター</h2>
+              <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">開発費用シミュレーター</h2>
               <p className="text-slate-400 text-base md:text-lg">プロジェクトの要件を選択するだけで、概算費用をリアルタイム算出します。</p>
             </div>
             
@@ -394,7 +403,7 @@ export default function Home() {
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block"></span>
                   <span className="text-cyan-400 font-bold text-xs tracking-widest">新プロダクト</span>
                 </div>
-                <h2 className="text-5xl lg:text-7xl font-black mb-4 font-en tracking-tight text-white">
+                <h2 className="text-5xl lg:text-7xl font-bold mb-4 font-en tracking-tight text-white">
                   LARU<span className="text-cyan-400">HP</span>
                 </h2>
                 <p className="text-cyan-400 text-xl font-bold mb-6">AIで最高のHPを最短で</p>
@@ -475,7 +484,7 @@ export default function Home() {
         {/* --- Contact & Footer --- */}
         <section id="contact" className="py-32 relative bg-transparent z-10">
           <div className="container mx-auto px-6 max-w-4xl text-center gsap-fade-up">
-            <h2 className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tight">お問い合わせ</h2>
+            <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">お問い合わせ</h2>
             <p className="text-slate-400 mb-16 text-lg">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
             
             {/* 🌟 修正: 先ほど作ったContactコンポーネントに置き換え、メッセージを渡す */}
