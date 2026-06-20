@@ -115,7 +115,7 @@ export default function PlansPage() {
             <span className="text-sky-600 font-bold text-xs tracking-[0.2em] uppercase">PLAN COMPARISON</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mt-4 mb-4 text-gray-900">プラン比較</h1>
-          <p className="text-gray-500 text-base font-normal">全プラン 初月1円・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
+          <p className="text-gray-500 text-base font-normal">全プラン 初月無料・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
         </div>
       </section>
 
@@ -135,7 +135,7 @@ export default function PlansPage() {
               <div className="text-4xl font-bold leading-none mb-1 text-gray-900">999</div>
               <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
-                初月1円
+                初月無料
               </div>
               <CheckoutButton
                 plan="hp"
@@ -158,7 +158,7 @@ export default function PlansPage() {
               <div className="text-4xl font-bold leading-none mb-1 text-gray-900">4,980</div>
               <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
-                初月1円
+                初月無料
               </div>
               <CheckoutButton
                 plan="hp-bot"
@@ -181,7 +181,7 @@ export default function PlansPage() {
               <div className="text-4xl font-bold leading-none mb-1 text-gray-900">9,800</div>
               <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
-                初月1円
+                初月無料
               </div>
               <CheckoutButton
                 plan="hp-bot-seo"
@@ -208,7 +208,7 @@ export default function PlansPage() {
           </div>
 
           <p className="text-center text-gray-500 text-xs mt-6">
-            全プラン 初月1円 / 最低6ヶ月契約 / 7ヶ月目からいつでも解約可 / クレジットカード決済（Stripe）
+            全プラン 初月無料 / 最低6ヶ月契約 / 7ヶ月目からいつでも解約可 / クレジットカード決済（Stripe）
           </p>
 
           {/* Agency Plan */}
@@ -246,7 +246,7 @@ export default function PlansPage() {
                 >
                   このプランで始める →
                 </CheckoutButton>
-                <div className="text-gray-400 text-xs mt-2">初月1円 · 7ヶ月目から解約可</div>
+                <div className="text-gray-400 text-xs mt-2">初月無料 · 7ヶ月目から解約可</div>
               </div>
             </div>
           </div>
@@ -256,13 +256,13 @@ export default function PlansPage() {
       {/* CTA section */}
       <section className="py-16 md:py-24 px-6 border-t border-gray-200 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">まずは初月1円で試す</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">まずは初月無料で試す</h2>
           <p className="text-gray-500 text-sm mb-8">プランはあとからいつでも変更できます。まずは気軽にスタート。</p>
           <CheckoutButton
             plan="hp"
             className="inline-flex items-center gap-2 bg-sky-600 text-white font-bold text-base px-10 py-4 rounded-2xl hover:bg-sky-500 transition-all shadow-md"
           >
-            まずはHPプランで始める（初月1円） →
+            まずはHPプランで始める（初月無料） →
           </CheckoutButton>
           <div className="mt-8">
             <Link href="/laruHP#pricing" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">

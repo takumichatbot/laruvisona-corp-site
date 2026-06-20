@@ -418,7 +418,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                   <a href="/laruHP/auth/signup" className="bg-white text-black font-bold py-4 px-8 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)] inline-flex items-center justify-center gap-2">
-                    🎁 無料で始める（初月1円）
+                    🎁 無料で始める（初月無料）
                   </a>
                   <a href="/laruHP/builder" className="border border-white/20 text-slate-300 hover:text-white font-bold py-4 px-8 rounded-full hover:border-white/40 transition-all inline-flex items-center justify-center gap-2">
                     ▶ デモを体験

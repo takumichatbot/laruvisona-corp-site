@@ -596,7 +596,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-amber-600 text-sm">お支払いをキャンセルしました</p>
-              <p className="text-gray-600 text-xs mt-0.5">いつでも「初月1円で始める」からサブスクを開始できます。</p>
+              <p className="text-gray-600 text-xs mt-0.5">いつでも「初月無料で始める」からサブスクを開始できます。</p>
             </div>
             <button onClick={() => setPaymentBanner(null)} className="text-gray-400 hover:text-gray-900 flex-shrink-0 text-lg leading-none">×</button>
           </div>
@@ -649,7 +649,7 @@ export default function DashboardPage() {
                   onClick={handleCheckout}
                   className="bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all"
                 >
-                  初月1円で始める
+                  初月無料で始める
                 </button>
               )}
             </div>
@@ -822,7 +822,7 @@ export default function DashboardPage() {
               <IcSparkle />
               AIでサイトを作る（無料）
             </Link>
-            <p className="text-gray-400 text-[11px] mt-4">✓ 初月1円 &nbsp;✓ 最低6ヶ月契約 &nbsp;✓ 公開まで最短5分</p>
+            <p className="text-gray-400 text-[11px] mt-4">✓ 初月無料 &nbsp;✓ 最低6ヶ月契約 &nbsp;✓ 公開まで最短5分</p>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1153,7 +1153,7 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
           <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
             <h2 className="text-gray-900 font-bold text-lg mb-1">プランを選択して公開</h2>
-            <p className="text-gray-600 text-sm mb-5">初月1円でお試しいただけます</p>
+            <p className="text-gray-600 text-sm mb-5">初月無料でお試しいただけます</p>
             <div className="space-y-3">
               {([
                 { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
@@ -1186,7 +1186,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
                     <div className="text-gray-900 font-bold text-base">{plan.price}<span className="text-gray-500 text-[11px] font-normal">{plan.sub}</span></div>
-                    <div className="text-sky-600 text-[10px]">初月1円</div>
+                    <div className="text-sky-600 text-[10px]">初月無料</div>
                   </div>
                 </button>
               ))}

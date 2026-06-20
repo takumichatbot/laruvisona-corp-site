@@ -5637,7 +5637,7 @@ function BuilderContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
             <h2 className="text-white font-bold text-lg mb-1">プランを選択して公開</h2>
-            <p className="text-slate-400 text-sm mb-5">初月1円でお試しいただけます</p>
+            <p className="text-slate-400 text-sm mb-5">初月無料でお試しいただけます</p>
             <div className="space-y-3">
               {([
                 { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
@@ -5668,7 +5668,7 @@ function BuilderContent() {
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
                     <div className="text-white font-black text-base">{plan.price}<span className="text-slate-400 text-[11px] font-normal">{plan.sub}</span></div>
-                    <div className="text-blue-400 text-[10px]">初月1円</div>
+                    <div className="text-blue-400 text-[10px]">初月無料</div>
                   </div>
                 </button>
               ))}

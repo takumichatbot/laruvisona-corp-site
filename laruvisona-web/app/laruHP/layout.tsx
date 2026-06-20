@@ -4,11 +4,11 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'LARU HP | AIでホームページを最短完成 | 月額999円〜',
-  description: '業種別AIテンプレートで5分でHP完成。SEO自動最適化・LARUbot連携・ビジュアルエディタ搭載。個人は月額999円から、代理店向けエージェンシープラン¥19,800/月も。初月1円。',
+  description: '業種別AIテンプレートで5分でHP完成。SEO自動最適化・LARUbot連携・ビジュアルエディタ搭載。個人は月額999円から、代理店向けエージェンシープラン¥19,800/月も。初月無料。',
   keywords: 'ホームページ作成,HP制作,AI,月額,格安,SEO,LARUbot,ホームページビルダー,代理店,エージェンシー',
   openGraph: {
     title: 'LARU HP — AIで最高のHPを最短で',
-    description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月1円）。代理店向けエージェンシープランも提供中。',
+    description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月無料）。代理店向けエージェンシープランも提供中。',
     type: 'website',
     url: 'https://laruvisona.jp/laruHP',
     siteName: 'LARU HP',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'LARU HP — AIで最高のHPを最短で',
-    description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月1円）。',
+    description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月無料）。',
     images: ['/laruHP/opengraph-image'],
   },
   alternates: {
@@ -44,7 +44,7 @@ const jsonLd = {
       { '@type': 'Offer', name: 'エージェンシー', price: '19800', priceCurrency: 'JPY', description: 'クライアント数無制限・全機能込み代理店プラン' },
     ],
   },
-  description: 'AIで業種別ホームページを自動生成するSaaSサービス。個人は月額999円から、代理店向けエージェンシープランは¥19,800/月。初月1円。',
+  description: 'AIで業種別ホームページを自動生成するSaaSサービス。個人は月額999円から、代理店向けエージェンシープランは¥19,800/月。初月無料。',
   url: 'https://laruvisona.jp/laruHP',
   publisher: {
     '@type': 'Organization',

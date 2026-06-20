@@ -104,8 +104,8 @@ const PLANS = [
 
 const FAQ_ITEMS = [
   {
-    q: '初月1円とはどういう意味ですか？',
-    a: '最初の月のご利用料金が1円（税別）となります。2ヶ月目からは通常の月額999円（税別）となります。最低ご利用期間は6ヶ月となりますので、7ヶ月目からは月単位でいつでも解約可能です。',
+    q: '初月無料とはどういう意味ですか？',
+    a: '最初の月のご利用料金が0円（無料）となります。2ヶ月目からは通常の月額999円（税別）となります。最低ご利用期間は6ヶ月となりますので、7ヶ月目からは月単位でいつでも解約可能です。',
   },
   {
     q: 'サーバー費用は別途かかりますか？',
@@ -176,7 +176,7 @@ export default function LaruHPLandingPage() {
               ログイン
             </Link>
             <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
-              初月1円で始める →
+              初月無料で始める →
             </Link>
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-gray-700 w-10 h-10 flex items-center justify-center bg-sky-50 rounded-xl border border-sky-200">
               {isMenuOpen ? (
@@ -205,7 +205,7 @@ export default function LaruHPLandingPage() {
                 ログイン
               </Link>
               <Link href="/laruHP/onboarding" onClick={() => setIsMenuOpen(false)} className="flex-1 text-center bg-sky-600 text-white py-3 rounded-xl text-sm font-semibold">
-                初月1円で始める
+                初月無料で始める
               </Link>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function LaruHPLandingPage() {
             <Link href="/laruHP/onboarding"
               className="relative bg-sky-600 text-white px-9 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_4px_20px_rgba(2,132,199,0.3)] flex items-center gap-3 w-full sm:w-auto justify-center overflow-hidden group">
               <span className="absolute inset-0 bg-gradient-to-r from-sky-500 to-sky-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <span className="relative">無料で始める（初月1円）</span>
+              <span className="relative">無料で始める（初月無料）</span>
               <span className="relative text-white font-bold">→</span>
             </Link>
             <Link href="/laruHP/builder"
@@ -254,7 +254,7 @@ export default function LaruHPLandingPage() {
               <span className="text-sky-600">▶</span> デモを体験
             </Link>
           </div>
-          <p className="text-gray-500 text-xs">初月1円 → 月額999円（税別）/ 最低6ヶ月 / クレジットカード決済</p>
+          <p className="text-gray-500 text-xs">初月無料 → 月額999円（税別）/ 最低6ヶ月 / クレジットカード決済</p>
           <p className="text-gray-500 text-xs mt-2">
             既にアカウントをお持ちの方は{' '}
             <Link href="/laruHP/auth/login" className="text-blue-500 hover:text-blue-400 underline underline-offset-2">ログイン</Link>
@@ -274,7 +274,7 @@ export default function LaruHPLandingPage() {
           {[
             { num: '5分', label: 'でサイト完成', sub: 'AI自動生成' },
             { num: '12+', label: '業種テンプレート', sub: '随時追加中' },
-            { num: '¥999〜', label: '/月（初月1円）', sub: '税別' },
+            { num: '¥999〜', label: '/月（初月無料）', sub: '税別' },
             { num: '100%', label: 'SEO自動化', sub: 'AI最適化' },
           ].map((stat, i) => (
             <div key={i} className="relative bg-white border border-sky-100 rounded-2xl p-5 text-center shadow-sm hover:border-sky-200 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
@@ -974,7 +974,7 @@ export default function LaruHPLandingPage() {
         <div className="max-w-5xl mx-auto text-center">
           <span className="text-blue-600 font-medium text-xs tracking-[0.2em]">料金プラン</span>
           <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">料金プラン</h2>
-          <p className="text-gray-500 mb-2">全プラン 初月1円・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
+          <p className="text-gray-500 mb-2">全プラン 初月無料・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
           <p className="text-gray-400 text-xs mb-12">クレジットカード決済 / Stripe安全決済</p>
 
           <div className="grid md:grid-cols-3 gap-5 mb-8">
@@ -1007,7 +1007,7 @@ export default function LaruHPLandingPage() {
                 </div>
                 <div className="text-gray-400 text-xs mb-1">/ 月（税別）</div>
                 <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-3 py-1 rounded-full mb-6 self-start">
-                  初月1円
+                  初月無料
                 </div>
 
                 <ul className="space-y-2.5 mb-8 flex-1">
@@ -1033,7 +1033,7 @@ export default function LaruHPLandingPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                   }`}
                 >
-                  初月1円で始める →
+                  初月無料で始める →
                 </Link>
               </div>
             ))}
@@ -1103,7 +1103,7 @@ export default function LaruHPLandingPage() {
         <div className="max-w-3xl mx-auto relative">
           <div className="inline-flex items-center gap-2 bg-sky-100 border border-sky-300 px-4 py-2 rounded-full text-sky-700 text-xs font-medium mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse inline-block" />
-            初月1円キャンペーン実施中
+            初月無料キャンペーン実施中
           </div>
           <h2 className="text-4xl md:text-6xl font-bold mb-4 leading-tight text-gray-900">
             あなたのビジネスを、<br />
@@ -1113,7 +1113,7 @@ export default function LaruHPLandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/laruHP/onboarding"
               className="bg-sky-600 text-white px-10 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_4px_20px_rgba(2,132,199,0.25)] inline-flex items-center gap-3 justify-center hover:bg-sky-500">
-              無料で始める（初月1円） <span className="text-white">→</span>
+              無料で始める（初月無料） <span className="text-white">→</span>
             </Link>
             <Link href="/laruHP/builder"
               className="border border-sky-200 text-gray-600 hover:text-gray-900 px-10 py-4 rounded-2xl font-medium text-base hover:border-sky-400 transition-all inline-flex items-center gap-2 justify-center">
@@ -1122,7 +1122,7 @@ export default function LaruHPLandingPage() {
           </div>
           <div className="mt-10 flex flex-wrap justify-center gap-5 text-xs text-gray-500">
             <span>✓ クレジットカード決済</span>
-            <span>✓ 初月1円</span>
+            <span>✓ 初月無料</span>
             <span>✓ 最短5分で完成</span>
             <span>✓ SSL・サーバー込み</span>
             <span>✓ 7ヶ月目から解約可</span>

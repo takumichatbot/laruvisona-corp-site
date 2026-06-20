@@ -694,7 +694,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
           </Link>
           <div className="flex flex-col items-end">
             <div className="text-gray-500 text-sm">サイト作成ウィザード</div>
-            <div className="text-gray-500 text-[11px]">初月1円 · 最低6ヶ月契約</div>
+            <div className="text-gray-500 text-[11px]">初月無料 · 最低6ヶ月契約</div>
           </div>
         </div>
       </header>
@@ -1630,7 +1630,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                     </div>
                     <div className="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between bg-gray-50">
                       <span className="text-[11px] text-gray-500">HP単体プランからでもあとで追加可能</span>
-                      <span className="text-[11px] text-indigo-600 font-bold">初月1円で試せる</span>
+                      <span className="text-[11px] text-indigo-600 font-bold">初月無料で試せる</span>
                     </div>
                   </div>
 
@@ -1661,7 +1661,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                     </div>
                     <div className="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between bg-gray-50">
                       <span className="text-[11px] text-gray-500">LARUbotもセットで含まれます</span>
-                      <span className="text-[11px] text-emerald-600 font-bold">初月1円で試せる</span>
+                      <span className="text-[11px] text-emerald-600 font-bold">初月無料で試せる</span>
                     </div>
                   </div>
                 </div>

@@ -10,7 +10,7 @@ export default function TokushoPage() {
     { label: '電話番号', value: '【電話番号を記入】（※メールでのお問い合わせを優先しております）' },
     { label: 'メールアドレス', value: 'laruvisona@gmail.com' },
     { label: 'サービス名', value: 'LARU HP（ホームページ作成SaaS）' },
-    { label: '販売価格', value: '初月1円（税別）、2ヶ月目以降 月額999円（税別）\n※消費税は別途申し受けます' },
+    { label: '販売価格', value: '初月0円（無料）、2ヶ月目以降 月額999円（税別）\n※消費税は別途申し受けます' },
     { label: '支払方法', value: 'クレジットカード（Visa・Mastercard・American Express・JCB）\nStripe, Inc. による安全な決済処理' },
     { label: '支払時期', value: 'ご契約開始時に初月分を決済。以降は毎月同日に自動更新' },
     { label: 'サービス提供時期', value: '決済完了後、即時ご利用いただけます' },

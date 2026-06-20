@@ -84,7 +84,7 @@ export default function Image() {
             background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)',
             borderRadius: 100, padding: '10px 24px', alignSelf: 'flex-start',
           }}>
-            <span style={{ fontSize: 18, color: '#38bdf8', fontWeight: 700 }}>初月1円</span>
+            <span style={{ fontSize: 18, color: '#38bdf8', fontWeight: 700 }}>初月無料</span>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16 }}>·</span>
             <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>laruvisona.jp/laruHP</span>
           </div>

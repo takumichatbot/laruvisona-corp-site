@@ -87,7 +87,7 @@ export default function SignupPage() {
 
         <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
           <div className="inline-block bg-sky-50 text-sky-600 text-xs font-bold px-3 py-1 rounded-full mb-4 border border-sky-200">
-            初月1円キャンペーン中
+            初月無料キャンペーン中
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">無料で始める</h1>
           <p className="text-gray-600 text-sm mb-8">アカウント作成後、サイト情報を入力してAI生成を開始します</p>
@@ -167,7 +167,7 @@ export default function SignupPage() {
 
           <div className="mt-6 bg-sky-50 border border-sky-200 rounded-xl p-4 text-xs text-gray-600">
             <p className="font-bold text-sky-600 mb-1">料金について</p>
-            <p>アカウント作成は無料です。サイト公開時にStripeで決済設定（初月1円→月額999円）が必要です。最低契約期間6ヶ月。</p>
+            <p>アカウント作成は無料です。サイト公開時にStripeで決済設定（初月無料→月額999円）が必要です。最低契約期間6ヶ月。</p>
           </div>
         </div>
 

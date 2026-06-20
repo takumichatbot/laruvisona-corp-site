@@ -50,9 +50,8 @@ export async function POST(req: Request) {
     plan,
   };
 
-  // 全プラン初月1円クーポンを適用
+  // 全プラン初月無料クーポンを適用
   const couponId = process.env.STRIPE_FIRST_MONTH_COUPON_ID;
-  console.log('[stripe/checkout] couponId:', couponId, 'plan:', plan, 'priceId:', priceId);
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -72,7 +71,6 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/laruHP/plans?payment=canceled`,
       locale: 'ja',
     });
-    console.log('[stripe/checkout] session discounts:', JSON.stringify(session.total_details));
     return NextResponse.json({ url: session.url });
   } catch (err: unknown) {
     const stripeErr = err as { message?: string; code?: string };
