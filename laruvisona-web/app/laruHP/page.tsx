@@ -899,7 +899,7 @@ export default function LaruHPLandingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <span className="text-purple-600 font-medium text-xs tracking-[0.2em]">代理店・制作会社向け</span>
-              <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-4 text-gray-900">Web制作会社・フリーランス向け</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mt-3 mb-4 text-gray-900 md:whitespace-nowrap">Web制作会社・フリーランス向け</h2>
               <p className="text-gray-500 text-base leading-relaxed mb-6">
                 複数クライアントのサイトを1アカウントで一元管理。エージェンシーモードで全クライアントの状況をひと目で把握。
               </p>
