@@ -11,6 +11,7 @@ const PLAN_PRICE: Record<string, number> = {
   'hp': 999,
   'hp-bot': 4980,
   'hp-bot-seo': 9800,
+  'agency': 19800,
 };
 
 export async function GET() {
@@ -33,7 +34,7 @@ export async function GET() {
     service.from('profiles').select('plan').eq('subscription_status', 'active'),
   ]);
 
-  const planBreakdown: Record<string, number> = { hp: 0, 'hp-bot': 0, 'hp-bot-seo': 0 };
+  const planBreakdown: Record<string, number> = { hp: 0, 'hp-bot': 0, 'hp-bot-seo': 0, agency: 0 };
   let mrr = 0;
   for (const p of activeProfiles || []) {
     const plan = (p.plan as string) || 'hp';

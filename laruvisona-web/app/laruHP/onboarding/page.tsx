@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 
 const INDUSTRIES = [
   { id: 'restaurant',   icon: '🍽️', name: '飲食店・カフェ',     desc: 'レストラン、居酒屋、カフェ、ラーメン店など',         color: 'orange', popular: true },
@@ -87,6 +88,9 @@ interface FormData {
   animLevel: 'none' | 'subtle' | 'full';
   larubot: boolean;
   laruseo: boolean;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
 }
 
 const defaultHours = DAYS.map(day => ({
@@ -111,6 +115,9 @@ const defaultForm: FormData = {
   animLevel: 'full',
   larubot: true,
   laruseo: true,
+  clientName: '',
+  clientEmail: '',
+  clientPhone: '',
 };
 
 const STEPS = ['業種選択', 'ビジネス情報', 'デザイン', 'コンテンツ', '確認・生成'];
@@ -482,6 +489,19 @@ function OnboardingContent() {
   const [generating, setGenerating] = useState(false);
   const [completedStepCount, setCompletedStepCount] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isAgency, setIsAgency] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      if (isAdmin) { setIsAgency(true); return; }
+      const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user.id).single();
+      if (profile?.plan === 'agency') setIsAgency(true);
+    })();
+  }, []);
 
   const goStep = (n: number) => {
     setSlideDir(n > step ? 'forward' : 'back');
@@ -905,6 +925,40 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors resize-none" />
                 <p className="text-gray-500 text-xs mt-1">空欄の場合はAIが自動生成します</p>
               </div>
+
+              {isAgency && (
+                <div className="bg-violet-50 border border-violet-200 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-lg">🏢</span>
+                    <div>
+                      <div className="text-sm font-bold text-violet-900">クライアント情報（エージェンシー）</div>
+                      <div className="text-xs text-violet-600">このサイトを所有するクライアントの情報を入力してください</div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-violet-800">クライアント名</label>
+                      <input type="text" value={form.clientName} onChange={e => updateForm('clientName', e.target.value)}
+                        placeholder="例: 株式会社〇〇 / 田中太郎様"
+                        className="w-full bg-white border border-violet-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 transition-colors" />
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold mb-1.5 text-violet-800">クライアントメール</label>
+                        <input type="email" value={form.clientEmail} onChange={e => updateForm('clientEmail', e.target.value)}
+                          placeholder="client@example.com"
+                          className="w-full bg-white border border-violet-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 transition-colors" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold mb-1.5 text-violet-800">クライアント電話</label>
+                        <input type="tel" value={form.clientPhone} onChange={e => updateForm('clientPhone', e.target.value)}
+                          placeholder="090-1234-5678"
+                          className="w-full bg-white border border-violet-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 transition-colors" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
