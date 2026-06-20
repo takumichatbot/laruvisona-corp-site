@@ -319,7 +319,7 @@ export default function LaruHPLandingPage() {
           <div className="text-center mb-16">
             <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">機能一覧</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">すべてが揃っている</h2>
-            <p className="text-gray-500">プロのエージェンシーが使う機能を、月額<span className="text-gray-700">999円</span>で。</p>
+            <p className="text-gray-500">プロのエージェンシーが使う機能を、個人は月額<span className="text-gray-700">999円</span>から。</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f, i) => (
@@ -917,7 +917,15 @@ export default function LaruHPLandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/laruHP/onboarding"
+              <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-6">
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-purple-600 text-xs">¥</span>
+                  <span className="text-3xl font-bold text-gray-900">19,800</span>
+                  <span className="text-gray-500 text-sm">/ 月（税別）</span>
+                </div>
+                <div className="text-purple-600 text-xs font-medium">クライアント数無制限 · 全機能込み</div>
+              </div>
+              <Link href="/laruHP/plans#agency"
                 className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-all">
                 エージェンシープランで始める →
               </Link>
@@ -1058,62 +1066,6 @@ export default function LaruHPLandingPage() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-16 md:py-24 px-6 bg-slate-50 border-t border-gray-200">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <span className="text-blue-600 font-medium text-xs tracking-[0.2em]">お客様の声</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">導入オーナーの声</h2>
-            <p className="text-gray-500 text-sm">全国の小規模ビジネスオーナーにご利用いただいています</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-5">
-            {[
-              {
-                name: '田中 恵美', role: '美容室オーナー', location: '東京都渋谷区', stars: 5,
-                text: '以前はWeb制作会社に頼んで30万円かかっていました。LARUHPなら月999円で同じクオリティのサイトが持てて、内容も自分で更新できます。集客のお問い合わせが月に15件以上増えました。',
-                icon: '✂️',
-              },
-              {
-                name: '鈴木 健一', role: '整体院院長', location: '大阪府梅田', stars: 5,
-                text: 'AIが業種に合わせたコピーを自動生成してくれるのが驚きでした。「地域名 + 整体」の検索で3ページ目から1ページ目に上がり、新規患者が月10名以上増えています。',
-                icon: '🏥',
-              },
-              {
-                name: '佐藤 陽子', role: '飲食店オーナー', location: '福岡県博多区', stars: 5,
-                text: 'スマホだけで操作できて、写真の差し替えもメニューの更新も5分でできます。LARUbotを追加してから電話対応が半分に減って、調理に集中できるようになりました。',
-                icon: '🍽️',
-              },
-            ].map((t, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-4 hover:border-blue-200 hover:shadow-md transition-all shadow-sm">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: t.stars }, (_, j) => (
-                    <span key={j} className="text-amber-400 text-sm">★</span>
-                  ))}
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed flex-1">&ldquo;{t.text}&rdquo;</p>
-                <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center text-base flex-shrink-0">
-                    {t.icon}
-                  </div>
-                  <div>
-                    <div className="text-gray-900 text-sm font-semibold">{t.name}</div>
-                    <div className="text-gray-400 text-xs">{t.role} · {t.location}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-8 flex justify-center gap-8 text-center">
-            {[['2,400+', '導入サイト数'], ['4.9 / 5.0', '平均評価'], ['87%', '6ヶ月継続率']].map(([val, label]) => (
-              <div key={label}>
-                <div className="text-2xl font-bold text-gray-900">{val}</div>
-                <div className="text-gray-400 text-xs mt-0.5">{label}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

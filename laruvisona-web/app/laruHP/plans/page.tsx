@@ -210,6 +210,46 @@ export default function PlansPage() {
           <p className="text-center text-gray-500 text-xs mt-6">
             全プラン 初月1円 / 最低6ヶ月契約 / 7ヶ月目からいつでも解約可 / クレジットカード決済（Stripe）
           </p>
+
+          {/* Agency Plan */}
+          <div id="agency" className="mt-14 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-8 scroll-mt-24">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex-1">
+                <span className="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full mb-3 tracking-widest uppercase">Agency Plan</span>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">エージェンシープラン</h3>
+                <p className="text-gray-500 text-sm mb-4">Web制作会社・フリーランス向け。複数クライアントのサイトを1アカウントで一元管理。</p>
+                <ul className="space-y-2">
+                  {[
+                    'クライアント数無制限',
+                    '全機能（HP + LARUbot + LARUSEO）込み',
+                    'クライアント別ダッシュボード・管理画面',
+                    'PV・問い合わせを全サイトまとめて確認',
+                    'クライアント連絡先・メモの一元管理',
+                  ].map(item => (
+                    <li key={item} className="flex items-center gap-2 text-gray-600 text-sm">
+                      <span className="text-emerald-500 font-bold text-base flex-shrink-0">✓</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="md:text-right flex-shrink-0">
+                <div className="flex items-baseline gap-1 md:justify-end mb-1">
+                  <span className="text-purple-600 text-sm">¥</span>
+                  <span className="text-5xl font-bold text-gray-900">19,800</span>
+                  <span className="text-gray-500 text-sm">/ 月（税別）</span>
+                </div>
+                <div className="text-purple-600 text-xs font-medium mb-5">クライアント数無制限</div>
+                <CheckoutButton
+                  plan="agency"
+                  className="block w-full md:w-auto bg-purple-600 text-white font-bold py-3 px-8 rounded-xl text-sm hover:bg-purple-500 transition-all shadow-sm"
+                >
+                  このプランで始める →
+                </CheckoutButton>
+                <div className="text-gray-400 text-xs mt-2">初月1円 · 7ヶ月目から解約可</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
