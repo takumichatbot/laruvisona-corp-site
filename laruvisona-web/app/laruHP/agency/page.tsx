@@ -67,6 +67,7 @@ export default function AgencyPage() {
   const [larubotClientEmail, setLarubotClientEmail] = useState('');
   const [larubotLoading, setLarubotLoading] = useState(false);
   const [larubotError, setLarubotError] = useState('');
+  const [copiedEmbedId, setCopiedEmbedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -236,6 +237,19 @@ export default function AgencyPage() {
                         <span className="text-indigo-400 font-medium">
                           🤖 LARUbot {site.settings_json.larubotPlan ? `(${LARUBOT_PLANS.find(p => p.id === site.settings_json?.larubotPlan)?.label ?? site.settings_json.larubotPlan})` : ''}
                         </span>
+                      )}
+                      {site.settings_json?.larubotPublicId && (
+                        <button
+                          onClick={() => {
+                            const code = `<script src="https://larubot.tokyo/static/embed.js" data-public-id="${site.settings_json!.larubotPublicId}" defer><\/script>`;
+                            navigator.clipboard.writeText(code);
+                            setCopiedEmbedId(site.id);
+                            setTimeout(() => setCopiedEmbedId(null), 2000);
+                          }}
+                          className="text-emerald-400 hover:text-emerald-300 text-[10px] underline underline-offset-2 transition-colors"
+                        >
+                          {copiedEmbedId === site.id ? '✓ コピー済み' : '埋め込みコードをコピー'}
+                        </button>
                       )}
                     </div>
 

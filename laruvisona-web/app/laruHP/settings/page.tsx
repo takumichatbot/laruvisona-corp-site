@@ -17,6 +17,8 @@ export default function SettingsPage() {
 
   const [plan, setPlan] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalMsg, setPortalMsg] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -28,6 +30,21 @@ export default function SettingsPage() {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const openBillingPortal = async () => {
+    setPortalLoading(true);
+    setPortalMsg('');
+    const res = await fetch('/api/stripe/portal', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.url) {
+      window.location.href = data.url;
+    } else if (res.status === 403 && data.message) {
+      setPortalMsg(data.message);
+    } else {
+      setPortalMsg('サブスクリプション情報が見つかりません。');
+    }
+    setPortalLoading(false);
+  };
 
   const [email, setEmail] = useState('');
   const [emailMsg, setEmailMsg] = useState('');
@@ -104,21 +121,31 @@ export default function SettingsPage() {
             <h2 className="font-bold text-sm mb-1 text-gray-900">現在のプラン</h2>
             <p className="text-gray-500 text-xs mb-4">ご契約中のプランと料金です。</p>
             {plan ? (
-              <div className="flex items-center justify-between gap-4">
-                <div className={`inline-flex items-center gap-2 border rounded-lg px-3 py-2 text-sm font-bold ${PLAN_LABELS[plan]?.color ?? 'text-gray-600 bg-gray-50 border-gray-200'}`}>
-                  {PLAN_LABELS[plan]?.name ?? plan}
-                  <span className="font-normal text-xs opacity-70">{PLAN_LABELS[plan]?.price}</span>
-                </div>
-                <div className="flex gap-2">
-                  {plan === 'agency' && (
-                    <Link href="/laruHP/agency" className="text-xs text-violet-600 hover:text-violet-500 border border-violet-200 rounded-lg px-3 py-2 transition-colors">
-                      代理店管理
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className={`inline-flex items-center gap-2 border rounded-lg px-3 py-2 text-sm font-bold ${PLAN_LABELS[plan]?.color ?? 'text-gray-600 bg-gray-50 border-gray-200'}`}>
+                    {PLAN_LABELS[plan]?.name ?? plan}
+                    <span className="font-normal text-xs opacity-70">{PLAN_LABELS[plan]?.price}</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {plan === 'agency' && (
+                      <Link href="/laruHP/agency" className="text-xs text-violet-600 hover:text-violet-500 border border-violet-200 rounded-lg px-3 py-2 transition-colors">
+                        代理店管理
+                      </Link>
+                    )}
+                    <Link href="/laruHP/plans" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 rounded-lg px-3 py-2 transition-colors">
+                      プラン変更
                     </Link>
-                  )}
-                  <Link href="/laruHP/plans" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 rounded-lg px-3 py-2 transition-colors">
-                    プラン変更
-                  </Link>
+                    <button
+                      onClick={openBillingPortal}
+                      disabled={portalLoading}
+                      className="text-xs text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
+                    >
+                      {portalLoading ? '読み込み中...' : 'サブスクリプション管理'}
+                    </button>
+                  </div>
                 </div>
+                {portalMsg && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{portalMsg}</p>}
               </div>
             ) : (
               <div className="text-sm text-gray-500">

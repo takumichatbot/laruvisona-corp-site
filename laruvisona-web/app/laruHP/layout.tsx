@@ -12,13 +12,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://laruvisona.jp/laruHP',
     siteName: 'LARU HP',
-    images: [{ url: 'https://laruvisona.jp/og-laruHP.png', width: 1200, height: 630, alt: 'LARU HP — AIホームページビルダー' }],
+    images: [{ url: '/laruHP/opengraph-image', width: 1200, height: 630, alt: 'LARU HP — AIホームページビルダー' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'LARU HP — AIで最高のHPを最短で',
     description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月1円）。',
-    images: ['https://laruvisona.jp/og-laruHP.png'],
+    images: ['/laruHP/opengraph-image'],
   },
   alternates: {
     canonical: 'https://laruvisona.jp/laruHP',
