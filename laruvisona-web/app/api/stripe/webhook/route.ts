@@ -61,6 +61,7 @@ export async function POST(req: Request) {
             siteName = site?.name || '';
           }
 
+          const larubotPlan = plan === 'agency' ? 'hp-bot' : plan;
           const larubot_base = process.env.LARUBOT_API_URL || 'https://larubot.tokyo';
           await fetch(`${larubot_base}/api/hp/register`, {
             method: 'POST',
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
               email: user?.email,
-              plan,
+              plan: larubotPlan,
               site_name: siteName,
               user_id: userId,
               site_id: siteId || '',
