@@ -130,17 +130,17 @@ const FAQ_ITEMS = [
 ];
 
 const COLOR_MAP: Record<string, string> = {
-  blue: 'border-blue-500/20 bg-blue-500/[0.06]',
-  purple: 'border-purple-500/20 bg-purple-500/[0.06]',
-  green: 'border-green-500/20 bg-green-500/[0.06]',
-  indigo: 'border-indigo-500/20 bg-indigo-500/[0.06]',
-  emerald: 'border-emerald-500/20 bg-emerald-500/[0.06]',
-  cyan: 'border-cyan-500/20 bg-cyan-500/[0.06]',
+  blue: 'border-blue-200 bg-blue-50',
+  purple: 'border-purple-200 bg-purple-50',
+  green: 'border-green-200 bg-green-50',
+  indigo: 'border-indigo-200 bg-indigo-50',
+  emerald: 'border-emerald-200 bg-emerald-50',
+  cyan: 'border-cyan-200 bg-cyan-50',
 };
 
 const COLOR_NUM: Record<string, string> = {
-  blue: 'text-blue-500/40', purple: 'text-purple-500/40', green: 'text-green-500/40',
-  indigo: 'text-indigo-500/40', emerald: 'text-emerald-500/40', cyan: 'text-cyan-500/40',
+  blue: 'text-blue-400', purple: 'text-purple-400', green: 'text-green-400',
+  indigo: 'text-indigo-400', emerald: 'text-emerald-400', cyan: 'text-cyan-400',
 };
 
 export default function LaruHPLandingPage() {
@@ -156,55 +156,55 @@ export default function LaruHPLandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-sky-50 text-gray-900 overflow-x-hidden">
 
       {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-[#030712]/80 backdrop-blur-xl border-b border-white/5">
+      <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-black text-sm">L</div>
-            <span className="font-semibold tracking-tight text-base">LARU<span className="text-blue-400 font-light">HP</span></span>
+            <div className="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-black text-sm border border-gray-200">L</div>
+            <span className="text-gray-900 font-semibold tracking-tight text-base">LARU<span className="text-sky-600 font-light">HP</span></span>
           </Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm text-slate-400">
-            <a href="#features" className="hover:text-white transition-colors">機能</a>
-            <a href="#templates" className="hover:text-white transition-colors">テンプレート</a>
-            <a href="#pricing" className="hover:text-white transition-colors">料金</a>
-            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+          <nav className="hidden md:flex items-center gap-7 text-sm text-gray-500">
+            <a href="#features" className="hover:text-gray-900 transition-colors">機能</a>
+            <a href="#templates" className="hover:text-gray-900 transition-colors">テンプレート</a>
+            <a href="#pricing" className="hover:text-gray-900 transition-colors">料金</a>
+            <a href="#faq" className="hover:text-gray-900 transition-colors">FAQ</a>
           </nav>
           <div className="flex items-center gap-2.5">
-            <Link href="/laruHP/auth/login" className="hidden md:block text-slate-400 hover:text-white border border-white/10 hover:border-white/30 px-4 py-2 rounded-xl text-sm transition-all">
+            <Link href="/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-sky-300 px-4 py-2 rounded-xl text-sm transition-all">
               ログイン
             </Link>
-            <Link href="/laruHP/onboarding" className="bg-white text-black px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-blue-50 transition-all whitespace-nowrap">
+            <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
               初月1円で始める →
             </Link>
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-white w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-gray-700 w-10 h-10 flex items-center justify-center bg-sky-50 rounded-xl border border-sky-200">
               {isMenuOpen ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <line x1="2" y1="2" x2="14" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="14" y1="2" x2="2" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               ) : (
                 <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
-                  <line x1="0" y1="1" x2="18" y2="1" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="0" y1="6" x2="18" y2="6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="0" y1="11" x2="14" y2="11" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="0" y1="1" x2="18" y2="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="0" y1="6" x2="18" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="0" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               )}
             </button>
           </div>
         </div>
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-[#030712]/98 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex flex-col gap-1">
-            <a href="#features" onClick={() => setIsMenuOpen(false)} className="text-slate-300 hover:text-white py-3 border-b border-white/5">機能</a>
-            <a href="#templates" onClick={() => setIsMenuOpen(false)} className="text-slate-300 hover:text-white py-3 border-b border-white/5">テンプレート</a>
-            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="text-slate-300 hover:text-white py-3 border-b border-white/5">料金</a>
-            <a href="#faq" onClick={() => setIsMenuOpen(false)} className="text-slate-300 hover:text-white py-3 border-b border-white/5">FAQ</a>
+          <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-sky-100 shadow-lg px-6 py-4 flex flex-col gap-1">
+            <a href="#features" onClick={() => setIsMenuOpen(false)} className="text-gray-600 hover:text-sky-700 py-3 border-b border-gray-100">機能</a>
+            <a href="#templates" onClick={() => setIsMenuOpen(false)} className="text-gray-600 hover:text-sky-700 py-3 border-b border-gray-100">テンプレート</a>
+            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="text-gray-600 hover:text-sky-700 py-3 border-b border-gray-100">料金</a>
+            <a href="#faq" onClick={() => setIsMenuOpen(false)} className="text-gray-600 hover:text-sky-700 py-3 border-b border-gray-100">FAQ</a>
             <div className="flex gap-3 pt-4">
-              <Link href="/laruHP/auth/login" onClick={() => setIsMenuOpen(false)} className="flex-1 text-center border border-white/20 text-white py-3 rounded-xl text-sm font-medium">
+              <Link href="/laruHP/auth/login" onClick={() => setIsMenuOpen(false)} className="flex-1 text-center border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-medium">
                 ログイン
               </Link>
-              <Link href="/laruHP/onboarding" onClick={() => setIsMenuOpen(false)} className="flex-1 text-center bg-white text-black py-3 rounded-xl text-sm font-semibold">
+              <Link href="/laruHP/onboarding" onClick={() => setIsMenuOpen(false)} className="flex-1 text-center bg-sky-600 text-white py-3 rounded-xl text-sm font-semibold">
                 初月1円で始める
               </Link>
             </div>
@@ -215,54 +215,54 @@ export default function LaruHPLandingPage() {
       {/* Hero */}
       <section className="pt-28 md:pt-36 pb-16 md:pb-28 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.12),transparent_65%)]" />
-          <div className="absolute top-20 left-1/4 w-72 h-72 rounded-full bg-blue-600/5 blur-3xl" />
-          <div className="absolute top-32 right-1/4 w-56 h-56 rounded-full bg-cyan-500/5 blur-3xl" />
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '80px 80px' }} />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.15),transparent_65%)]" />
+          <div className="absolute top-20 left-1/4 w-72 h-72 rounded-full bg-sky-400/10 blur-3xl" />
+          <div className="absolute top-32 right-1/4 w-56 h-56 rounded-full bg-sky-300/10 blur-3xl" />
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#0284c7 1px,transparent 1px),linear-gradient(90deg,#0284c7 1px,transparent 1px)', backgroundSize: '80px 80px' }} />
         </div>
 
         <div className="max-w-5xl mx-auto relative">
-          <div className="inline-flex items-center gap-2.5 bg-blue-500/10 border border-blue-500/25 px-5 py-2.5 rounded-full text-blue-400 text-xs font-medium tracking-widest mb-10 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+          <div className="inline-flex items-center gap-2.5 bg-sky-100 border border-sky-300 px-5 py-2.5 rounded-full text-sky-700 text-xs font-medium tracking-widest mb-10 shadow-[0_0_30px_rgba(14,165,233,0.1)]">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-500/75 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-600" />
             </span>
             新登場 — AI搭載 HPビルダー 2026
           </div>
 
           <h1 className="text-[2.8rem] sm:text-6xl md:text-[6.5rem] font-bold tracking-tighter mb-6 leading-[1.05] md:leading-[1.02]">
-            <span className="block text-white">最高のHPを、</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400">
+            <span className="block text-gray-900">最高のHPを、</span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500">
               最短5分で。
             </span>
           </h1>
 
-          <p className="text-slate-400 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal">
-            業種情報を入力するだけ。AIが<strong className="text-white font-semibold">5分以内</strong>にプロ品質のホームページを自動生成。<br className="hidden md:block" />
-            SEO・LARUbot連携・ビジュアル編集がすべて月額<strong className="text-white font-semibold">999円</strong>。
+          <p className="text-gray-600 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal">
+            業種情報を入力するだけ。AIが<strong className="text-sky-700 font-semibold">5分以内</strong>にプロ品質のホームページを自動生成。<br className="hidden md:block" />
+            SEO・LARUbot連携・ビジュアル編集がすべて月額<strong className="text-sky-700 font-semibold">999円</strong>。
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
             <Link href="/laruHP/onboarding"
-              className="relative bg-white text-black px-9 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_0_50px_rgba(255,255,255,0.15)] flex items-center gap-3 w-full sm:w-auto justify-center overflow-hidden group">
-              <span className="absolute inset-0 bg-gradient-to-r from-blue-100 to-cyan-100 opacity-0 group-hover:opacity-100 transition-opacity" />
+              className="relative bg-sky-600 text-white px-9 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_4px_20px_rgba(2,132,199,0.3)] flex items-center gap-3 w-full sm:w-auto justify-center overflow-hidden group">
+              <span className="absolute inset-0 bg-gradient-to-r from-sky-500 to-sky-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               <span className="relative">無料で始める（初月1円）</span>
-              <span className="relative text-blue-600 font-bold">→</span>
+              <span className="relative text-white font-bold">→</span>
             </Link>
             <Link href="/laruHP/builder"
-              className="text-slate-300 hover:text-white px-9 py-4 rounded-2xl font-medium text-base border border-white/10 hover:border-white/30 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center backdrop-blur-sm">
-              <span className="text-blue-400">▶</span> デモを体験
+              className="text-gray-600 hover:text-gray-900 px-9 py-4 rounded-2xl font-medium text-base border border-gray-200 hover:border-sky-300 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center backdrop-blur-sm">
+              <span className="text-sky-600">▶</span> デモを体験
             </Link>
           </div>
-          <p className="text-slate-600 text-xs">初月1円 → 月額999円（税別）/ 最低6ヶ月 / クレジットカード決済</p>
-          <p className="text-slate-600 text-xs mt-2">
+          <p className="text-gray-500 text-xs">初月1円 → 月額999円（税別）/ 最低6ヶ月 / クレジットカード決済</p>
+          <p className="text-gray-500 text-xs mt-2">
             既にアカウントをお持ちの方は{' '}
             <Link href="/laruHP/auth/login" className="text-blue-500 hover:text-blue-400 underline underline-offset-2">ログイン</Link>
           </p>
 
           <div className="hidden md:flex justify-center gap-3 mt-8 flex-wrap">
             {['AI コンテンツ生成', 'SEO 自動最適化', 'LARUbot 連携', 'モバイル完全対応', 'SSL 込み'].map((tag, i) => (
-              <span key={i} className="bg-white/5 border border-white/10 text-slate-500 text-xs px-3 py-1.5 rounded-full hover:border-white/20 hover:text-slate-300 transition-all">
+              <span key={i} className="bg-white border border-sky-100 text-gray-500 text-xs px-3 py-1.5 rounded-full hover:border-sky-200 hover:text-gray-700 transition-all">
                 {tag}
               </span>
             ))}
@@ -272,41 +272,41 @@ export default function LaruHPLandingPage() {
         {/* Stats bar */}
         <div className="max-w-3xl mx-auto mt-10 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {[
-            { num: '5分', label: 'でサイト完成', sub: 'AI自動生成', color: 'from-blue-500/20 to-transparent' },
-            { num: '12+', label: '業種テンプレート', sub: '随時追加中', color: 'from-purple-500/20 to-transparent' },
-            { num: '¥999〜', label: '/月（初月1円）', sub: '税別', color: 'from-cyan-500/20 to-transparent' },
-            { num: '100%', label: 'SEO自動化', sub: 'AI最適化', color: 'from-emerald-500/20 to-transparent' },
+            { num: '5分', label: 'でサイト完成', sub: 'AI自動生成' },
+            { num: '12+', label: '業種テンプレート', sub: '随時追加中' },
+            { num: '¥999〜', label: '/月（初月1円）', sub: '税別' },
+            { num: '100%', label: 'SEO自動化', sub: 'AI最適化' },
           ].map((stat, i) => (
-            <div key={i} className={`relative bg-gradient-to-br ${stat.color} border border-white/10 rounded-2xl p-5 text-center backdrop-blur-sm hover:border-white/20 hover:-translate-y-1 transition-all duration-300 overflow-hidden`}>
-              <div className="text-2xl md:text-3xl font-bold text-white">{stat.num}</div>
-              <div className="text-xs text-white/70 font-medium mt-1">{stat.label}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">{stat.sub}</div>
+            <div key={i} className="relative bg-white border border-sky-100 rounded-2xl p-5 text-center shadow-sm hover:border-sky-200 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+              <div className="text-2xl md:text-3xl font-bold text-sky-700">{stat.num}</div>
+              <div className="text-xs text-gray-600 font-medium mt-1">{stat.label}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">{stat.sub}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* How it works */}
-      <section className="py-16 md:py-24 px-6 border-t border-white/5 bg-gradient-to-b from-[#0a1628]/60 to-transparent">
+      <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-blue-400/90 font-medium text-xs tracking-[0.2em]">使い方</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">3ステップで完成</h2>
-            <p className="text-slate-400 text-sm">業種情報を入力するだけ。5分でプロ品質のHPが完成します</p>
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">使い方</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">3ステップで完成</h2>
+            <p className="text-gray-500 text-sm">業種情報を入力するだけ。5分でプロ品質のHPが完成します</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 relative">
-            <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-[1px] bg-gradient-to-r from-blue-500/40 via-blue-500/20 to-blue-500/40" />
+            <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-[1px] bg-gradient-to-r from-sky-300/40 via-sky-300/20 to-sky-300/40" />
             {[
               { step: '01', title: '情報を入力',    desc: '業種・店舗名・住所・サービス内容などを入力。AIが残りを全部やってくれます。',                                       tag: '約2分' },
               { step: '02', title: 'AIが自動生成',  desc: '業種に最適化されたテンプレートにビジネス情報を組み込み、コンテンツを自動作成。',                                   tag: '約1分' },
               { step: '03', title: 'エディタで仕上げ', desc: 'ビジュアルエディタで微調整。画像変更・テキスト編集・ブロック追加削除が直感的に。',                             tag: '約2分' },
             ].map((step, i) => (
-              <div key={i} className="relative bg-white/[0.06] border border-white/[0.12] rounded-2xl p-8 hover:border-blue-400/30 hover:bg-white/[0.09] hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm">
-                <div className="absolute top-4 right-4 bg-blue-500/15 text-blue-300 text-[10px] font-medium px-2 py-1 rounded-full">{step.tag}</div>
-                <div className={`text-5xl font-bold mb-4 leading-none font-mono ${COLOR_NUM['blue']}`}>{step.step}</div>
-                <div className="text-blue-400/70 font-medium text-[10px] tracking-[0.2em] mb-2">ステップ {step.step}</div>
-                <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
+              <div key={i} className="relative bg-sky-50 border border-sky-100 rounded-2xl p-8 hover:border-sky-300 hover:bg-white hover:-translate-y-1 transition-all duration-300 shadow-sm">
+                <div className="absolute top-4 right-4 bg-sky-100 text-sky-600 text-[10px] font-medium px-2 py-1 rounded-full">{step.tag}</div>
+                <div className="text-5xl font-bold mb-4 leading-none font-mono text-sky-300">{step.step}</div>
+                <div className="text-sky-500 font-medium text-[10px] tracking-[0.2em] mb-2">ステップ {step.step}</div>
+                <h3 className="text-lg font-semibold mb-2 text-gray-900">{step.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">{step.desc}</p>
               </div>
             ))}
           </div>
@@ -314,42 +314,42 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
+      <section id="features" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">機能一覧</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">すべてが揃っている</h2>
-            <p className="text-slate-500">プロのエージェンシーが使う機能を、月額<span className="text-slate-300">999円</span>で。</p>
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">機能一覧</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">すべてが揃っている</h2>
+            <p className="text-gray-500">プロのエージェンシーが使う機能を、月額<span className="text-gray-700">999円</span>で。</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f, i) => (
               <div key={i} className={`border rounded-2xl p-6 hover:-translate-y-0.5 transition-all duration-300 ${COLOR_MAP[f.color]}`}>
                 <div className={`text-xs font-medium font-mono mb-3 ${COLOR_NUM[f.color]}`}>{f.num}</div>
-                <h3 className="text-base font-semibold mb-2 text-white/90">{f.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
+                <h3 className="text-base font-semibold mb-2 text-gray-900">{f.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
 
           {/* Editor preview mock */}
-          <div className="mt-16 bg-white/[0.03] border border-white/[0.07] rounded-3xl overflow-hidden">
-            <div className="bg-white/5 border-b border-white/10 px-4 py-3 flex items-center gap-3">
+          <div className="mt-16 bg-sky-50 border border-sky-100 rounded-3xl overflow-hidden">
+            <div className="bg-sky-100 border-b border-sky-200 px-4 py-3 flex items-center gap-3">
               <div className="flex gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500/50" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
                 <div className="w-3 h-3 rounded-full bg-green-500/50" />
               </div>
-              <div className="flex-1 bg-white/10 rounded-lg px-3 py-1 text-xs text-slate-400 font-mono truncate">your-shop.laruvisona.com</div>
+              <div className="flex-1 bg-white rounded-lg px-3 py-1 text-xs text-gray-400 font-mono truncate border border-gray-200">your-shop.laruvisona.com</div>
               <div className="flex gap-2 flex-shrink-0">
-                <button className="hidden sm:block text-xs bg-white/10 px-3 py-1 rounded-lg text-slate-400">プレビュー</button>
+                <button className="hidden sm:block text-xs bg-white border border-sky-200 px-3 py-1 rounded-lg text-gray-500">プレビュー</button>
                 <button className="text-xs bg-blue-500 px-3 py-1 rounded-lg text-white font-medium whitespace-nowrap">公開する</button>
               </div>
             </div>
             <div className="flex min-h-[300px]">
-              <div className="hidden md:flex w-44 bg-white/[0.02] border-r border-white/10 p-3 flex-col gap-1 text-xs text-slate-400 flex-shrink-0">
-                <div className="text-[10px] font-medium text-slate-500 mb-2 uppercase tracking-wider">ブロックを追加</div>
+              <div className="hidden md:flex w-44 bg-white border-r border-sky-100 p-3 flex-col gap-1 text-xs text-gray-500 flex-shrink-0">
+                <div className="text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">ブロックを追加</div>
                 {['ヒーロー', 'テキスト', '画像', 'サービス', 'お問合せ', 'マップ', 'FAQ', '営業時間', 'お客様の声', '区切り線', '2カラム', '3カラム'].map((b, i) => (
-                  <div key={i} className="px-2 py-1.5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors text-slate-500">{b}</div>
+                  <div key={i} className="px-2 py-1.5 hover:bg-sky-100 rounded-lg cursor-pointer transition-colors text-gray-500">{b}</div>
                 ))}
               </div>
               <div className="flex-1 bg-white p-4 flex flex-col gap-3 min-w-0">
@@ -373,23 +373,23 @@ export default function LaruHPLandingPage() {
                   ))}
                 </div>
               </div>
-              <div className="hidden md:block w-44 bg-white/[0.02] border-l border-white/10 p-3 text-xs text-slate-500 flex-shrink-0">
-                <div className="text-[10px] font-medium text-slate-500 mb-2 uppercase tracking-wider">ブロック設定</div>
+              <div className="hidden md:block w-44 bg-white border-l border-sky-100 p-3 text-xs text-gray-500 flex-shrink-0">
+                <div className="text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">ブロック設定</div>
                 <div className="space-y-3">
                   <div>
-                    <div className="text-[10px] text-slate-600 mb-1">見出し</div>
-                    <div className="bg-white/10 rounded px-2 py-1 text-slate-400">当院について</div>
+                    <div className="text-[10px] text-gray-500 mb-1">見出し</div>
+                    <div className="bg-gray-100 rounded px-2 py-1 text-gray-500">当院について</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-slate-600 mb-1">配置</div>
+                    <div className="text-[10px] text-gray-500 mb-1">配置</div>
                     <div className="flex gap-1">
-                      {['◀', '▌', '▶'].map((a, i) => <button key={i} className={`flex-1 py-1 rounded text-[10px] ${i===1 ? 'bg-blue-500 text-white' : 'bg-white/10 text-slate-500'}`}>{a}</button>)}
+                      {['◀', '▌', '▶'].map((a, i) => <button key={i} className={`flex-1 py-1 rounded text-[10px] ${i===1 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>{a}</button>)}
                     </div>
                   </div>
-                  <div className="border-t border-white/10 pt-3">
-                    <div className="text-[10px] font-medium text-slate-500 mb-2 uppercase tracking-wider">SEO設定</div>
-                    <div className="bg-white/10 rounded px-2 py-1 mb-1 text-slate-400">SEOスコア: 87/100</div>
-                    <div className="text-[10px] text-emerald-400">LARUbot オン</div>
+                  <div className="border-t border-sky-100 pt-3">
+                    <div className="text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">SEO設定</div>
+                    <div className="bg-gray-100 rounded px-2 py-1 mb-1 text-gray-500">SEOスコア: 87/100</div>
+                    <div className="text-[10px] text-emerald-600">LARUbot オン</div>
                   </div>
                 </div>
               </div>
@@ -399,42 +399,42 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Templates */}
-      <section id="templates" className="py-16 md:py-24 px-6 border-t border-white/5">
+      <section id="templates" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-sky-50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">テンプレート</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">業種別テンプレート</h2>
-            <p className="text-slate-500">各業種のベストプラクティスを詰め込んだプロテンプレート。SEO設定・構造化データ付き。</p>
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">テンプレート</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">業種別テンプレート</h2>
+            <p className="text-gray-500">各業種のベストプラクティスを詰め込んだプロテンプレート。SEO設定・構造化データ付き。</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {INDUSTRIES.map((ind, i) => (
               <Link
                 key={i}
                 href={`/laruHP/onboarding?industry=${ind.id}`}
-                className={`rounded-2xl p-5 text-center border transition-all cursor-pointer group ${activeIndustry === i ? 'bg-blue-500/15 border-blue-500/40 scale-105 shadow-[0_0_20px_rgba(59,130,246,0.15)]' : 'bg-white/[0.03] border-white/[0.07] hover:border-blue-500/20 hover:bg-white/[0.06]'}`}
+                className={`rounded-2xl p-5 text-center border transition-all cursor-pointer group ${activeIndustry === i ? 'bg-sky-100 border-sky-400 scale-105 shadow-[0_0_20px_rgba(14,165,233,0.15)]' : 'bg-white border border-gray-200 hover:border-sky-300 hover:bg-sky-50'}`}
               >
-                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${ind.color} flex items-center justify-center mx-auto mb-3 text-sm font-semibold text-white/60 group-hover:scale-105 transition-transform`}>
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${ind.color} flex items-center justify-center mx-auto mb-3 text-sm font-semibold text-white group-hover:scale-105 transition-transform`}>
                   {ind.name[0]}
                 </div>
-                <div className="text-xs font-normal text-slate-400 leading-tight">{ind.name}</div>
+                <div className="text-xs font-normal text-gray-600 leading-tight">{ind.name}</div>
               </Link>
             ))}
           </div>
-          <p className="text-center text-slate-600 text-xs mt-8">クリックするとそのテンプレートでオンボーディングを開始</p>
+          <p className="text-center text-gray-400 text-xs mt-8">クリックするとそのテンプレートでオンボーディングを開始</p>
         </div>
       </section>
 
       {/* Showcase — demo site examples */}
-      <section id="showcase" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
+      <section id="showcase" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <span className="text-emerald-500/70 font-medium text-xs tracking-[0.2em]">デモ・実例</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">こんなサイトが作れます</h2>
-            <p className="text-slate-500">AIが3分で生成。あとはクリックして好みに調整するだけ。</p>
+            <span className="text-emerald-600 font-medium text-xs tracking-[0.2em]">デモ・実例</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">こんなサイトが作れます</h2>
+            <p className="text-gray-500">AIが3分で生成。あとはクリックして好みに調整するだけ。</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Beauty salon demo */}
-            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-pink-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(236,72,153,0.08)] bg-white/[0.02]">
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-pink-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(236,72,153,0.08)] bg-white">
               <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
@@ -473,13 +473,13 @@ export default function LaruHPLandingPage() {
                   <div className="flex-1 h-14 bg-rose-50 rounded-lg border border-rose-100" />
                 </div>
               </div>
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
-                    <div className="text-sm font-semibold text-white">美容室・サロン</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">Hair Salon AN（東京・渋谷区）</div>
+                    <div className="text-sm font-semibold text-gray-900">美容室・サロン</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">Hair Salon AN（東京・渋谷区）</div>
                   </div>
-                  <Link href="/laruHP/onboarding?industry=beauty" className="text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1.5 rounded-lg hover:bg-rose-500/20 transition-all whitespace-nowrap flex-shrink-0">
+                  <Link href="/laruHP/onboarding?industry=beauty" className="text-[11px] bg-rose-500/10 text-rose-500 border border-rose-500/20 px-3 py-1.5 rounded-lg hover:bg-rose-500/20 transition-all whitespace-nowrap flex-shrink-0">
                     このテンプレで作る →
                   </Link>
                 </div>
@@ -487,7 +487,7 @@ export default function LaruHPLandingPage() {
             </div>
 
             {/* Clinic demo */}
-            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-emerald-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(16,185,129,0.08)] bg-white/[0.02]">
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-emerald-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(16,185,129,0.08)] bg-white">
               <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
@@ -527,13 +527,13 @@ export default function LaruHPLandingPage() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
-                    <div className="text-sm font-semibold text-white">整体・クリニック</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">みどり接骨院（大阪・梅田）</div>
+                    <div className="text-sm font-semibold text-gray-900">整体・クリニック</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">みどり接骨院（大阪・梅田）</div>
                   </div>
-                  <Link href="/laruHP/onboarding?industry=clinic" className="text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all whitespace-nowrap flex-shrink-0">
+                  <Link href="/laruHP/onboarding?industry=clinic" className="text-[11px] bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all whitespace-nowrap flex-shrink-0">
                     このテンプレで作る →
                   </Link>
                 </div>
@@ -541,7 +541,7 @@ export default function LaruHPLandingPage() {
             </div>
 
             {/* Restaurant demo */}
-            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-amber-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(245,158,11,0.08)] bg-white/[0.02]">
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-amber-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(245,158,11,0.08)] bg-white">
               <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
@@ -577,13 +577,13 @@ export default function LaruHPLandingPage() {
                   <div className="h-1.5 w-48 bg-white/10 rounded" />
                 </div>
               </div>
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
-                    <div className="text-sm font-semibold text-white">飲食店・カフェ</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">Bistro Nakano（東京・中野区）</div>
+                    <div className="text-sm font-semibold text-gray-900">飲食店・カフェ</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">Bistro Nakano（東京・中野区）</div>
                   </div>
-                  <Link href="/laruHP/onboarding?industry=restaurant" className="text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-all whitespace-nowrap flex-shrink-0">
+                  <Link href="/laruHP/onboarding?industry=restaurant" className="text-[11px] bg-amber-500/10 text-amber-600 border border-amber-500/20 px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-all whitespace-nowrap flex-shrink-0">
                     このテンプレで作る →
                   </Link>
                 </div>
@@ -594,7 +594,7 @@ export default function LaruHPLandingPage() {
           {/* Second row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Law firm demo */}
-            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-slate-400/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(148,163,184,0.08)] bg-white/[0.02]">
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-slate-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(148,163,184,0.08)] bg-white">
               <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
@@ -639,13 +639,13 @@ export default function LaruHPLandingPage() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
-                    <div className="text-sm font-semibold text-white">法律事務所・士業</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">山本法律事務所（東京・丸の内）</div>
+                    <div className="text-sm font-semibold text-gray-900">法律事務所・士業</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">山本法律事務所（東京・丸の内）</div>
                   </div>
-                  <Link href="/laruHP/onboarding?industry=legal" className="text-[11px] bg-slate-500/10 text-slate-300 border border-slate-500/20 px-3 py-1.5 rounded-lg hover:bg-slate-500/20 transition-all whitespace-nowrap flex-shrink-0">
+                  <Link href="/laruHP/onboarding?industry=legal" className="text-[11px] bg-slate-500/10 text-slate-600 border border-slate-500/20 px-3 py-1.5 rounded-lg hover:bg-slate-500/20 transition-all whitespace-nowrap flex-shrink-0">
                     このテンプレで作る →
                   </Link>
                 </div>
@@ -653,7 +653,7 @@ export default function LaruHPLandingPage() {
             </div>
 
             {/* Fitness gym demo */}
-            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-red-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(239,68,68,0.08)] bg-white/[0.02]">
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-red-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(239,68,68,0.08)] bg-white">
               <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
@@ -694,13 +694,13 @@ export default function LaruHPLandingPage() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
-                    <div className="text-sm font-semibold text-white">フィットネス・ジム</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">IRON BODY GYM（大阪・難波）</div>
+                    <div className="text-sm font-semibold text-gray-900">フィットネス・ジム</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">IRON BODY GYM（大阪・難波）</div>
                   </div>
-                  <Link href="/laruHP/onboarding?industry=fitness" className="text-[11px] bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all whitespace-nowrap flex-shrink-0">
+                  <Link href="/laruHP/onboarding?industry=fitness" className="text-[11px] bg-red-500/10 text-red-600 border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all whitespace-nowrap flex-shrink-0">
                     このテンプレで作る →
                   </Link>
                 </div>
@@ -708,7 +708,7 @@ export default function LaruHPLandingPage() {
             </div>
 
             {/* Hotel/bridal demo */}
-            <div className="group rounded-2xl overflow-hidden border border-white/10 hover:border-sky-500/30 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(14,165,233,0.08)] bg-white/[0.02]">
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-sky-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(14,165,233,0.08)] bg-white">
               <div className="bg-[#1a1a2e] px-3 py-2 flex items-center gap-2 border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 bg-red-500/60 rounded-full" />
@@ -747,13 +747,13 @@ export default function LaruHPLandingPage() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-gray-100">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
-                    <div className="text-sm font-semibold text-white">ホテル・旅館・民泊</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">SEABREEZE HOTEL（沖縄・那覇）</div>
+                    <div className="text-sm font-semibold text-gray-900">ホテル・旅館・民泊</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">SEABREEZE HOTEL（沖縄・那覇）</div>
                   </div>
-                  <Link href="/laruHP/onboarding?industry=hotel" className="text-[11px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-3 py-1.5 rounded-lg hover:bg-sky-500/20 transition-all whitespace-nowrap flex-shrink-0">
+                  <Link href="/laruHP/onboarding?industry=hotel" className="text-[11px] bg-sky-500/10 text-sky-600 border border-sky-500/20 px-3 py-1.5 rounded-lg hover:bg-sky-500/20 transition-all whitespace-nowrap flex-shrink-0">
                     このテンプレで作る →
                   </Link>
                 </div>
@@ -762,7 +762,7 @@ export default function LaruHPLandingPage() {
           </div>
 
           <div className="text-center mt-10">
-            <Link href="/laruHP/onboarding" className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors border border-white/10 hover:border-white/20 px-5 py-2.5 rounded-xl">
+            <Link href="/laruHP/onboarding" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm transition-colors border border-gray-200 hover:border-sky-300 px-5 py-2.5 rounded-xl">
               全テンプレートを見る →
             </Link>
           </div>
@@ -770,44 +770,44 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* LARUbot + LARUSEO Integration */}
-      <section className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
+      <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-sky-50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">連携機能</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3">強力な連携機能</h2>
-            <p className="text-slate-500">AIチャットボット・SEOツールとシームレスに連携。集客を自動化します。</p>
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">連携機能</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">強力な連携機能</h2>
+            <p className="text-gray-500">AIチャットボット・SEOツールとシームレスに連携。集客を自動化します。</p>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-3xl p-8 hover:border-indigo-500/35 transition-all">
-              <div className="inline-block bg-indigo-500/15 text-indigo-400 text-xs font-medium px-3 py-1 rounded-full mb-4">LARUbot 連携</div>
-              <h3 className="text-xl font-semibold mb-3">AIチャットボットを即導入</h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+            <div className="bg-indigo-50 border border-indigo-200 rounded-3xl p-8 hover:border-indigo-300 transition-all">
+              <div className="inline-block bg-indigo-100 text-indigo-600 text-xs font-medium px-3 py-1 rounded-full mb-4">LARUbot 連携</div>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900">AIチャットボットを即導入</h3>
+              <p className="text-gray-600 text-sm leading-relaxed mb-6">
                 LARUVisonaのAIチャットボット「LARUbot」をワンクリックで埋め込み。24時間365日、問い合わせ対応・予約受付・FAQ対応を自動化します。
               </p>
-              <div className="bg-white/[0.04] rounded-2xl p-4 text-sm text-slate-400 font-mono space-y-1.5">
-                <div className="text-slate-500">① エディタ → 連携設定</div>
-                <div className="text-slate-500">② LARUbotアカウントを接続</div>
-                <div className="text-slate-400">③ ウィジェットをオン → 完了</div>
+              <div className="bg-white rounded-2xl p-4 text-sm text-gray-600 font-mono space-y-1.5">
+                <div className="text-gray-600">① エディタ → 連携設定</div>
+                <div className="text-gray-600">② LARUbotアカウントを接続</div>
+                <div className="text-gray-600">③ ウィジェットをオン → 完了</div>
               </div>
-              <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-indigo-400/80 hover:text-indigo-300 text-sm mt-4 transition-colors">
+              <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 text-sm mt-4 transition-colors">
                 LARUbot公式サイト →
               </a>
             </div>
-            <div className="bg-emerald-900/10 border border-emerald-500/20 rounded-3xl p-8 hover:border-emerald-500/35 transition-all">
-              <div className="inline-block bg-emerald-500/15 text-emerald-400 text-xs font-medium px-3 py-1 rounded-full mb-4">LARUSEO 連携</div>
-              <h3 className="text-xl font-semibold mb-3">SEO分析をリアルタイムで</h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-6">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-8 hover:border-emerald-300 transition-all">
+              <div className="inline-block bg-emerald-100 text-emerald-600 text-xs font-medium px-3 py-1 rounded-full mb-4">LARUSEO 連携</div>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900">SEO分析をリアルタイムで</h3>
+              <p className="text-gray-600 text-sm leading-relaxed mb-6">
                 SEO分析ツール「LARUSEO」と連携してSEOスコアをリアルタイム表示。キーワード分析・競合比較・改善提案をエディタ内で確認できます。
               </p>
-              <div className="bg-white/[0.04] rounded-2xl p-4 space-y-2">
+              <div className="bg-white rounded-2xl p-4 space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">SEOスコア</span>
-                  <span className="text-emerald-400 font-semibold">87 / 100</span>
+                  <span className="text-gray-500">SEOスコア</span>
+                  <span className="text-emerald-600 font-semibold">87 / 100</span>
                 </div>
-                <div className="w-full bg-white/10 rounded-full h-1.5">
-                  <div className="bg-emerald-400/70 h-1.5 rounded-full" style={{ width: '87%' }} />
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                  <div className="bg-emerald-500/70 h-1.5 rounded-full" style={{ width: '87%' }} />
                 </div>
-                <div className="text-xs text-slate-600">メタタグ ✓ 構造化データ ✓ 画像alt ✓ ページ速度 ✓</div>
+                <div className="text-xs text-gray-500">メタタグ ✓ 構造化データ ✓ 画像alt ✓ ページ速度 ✓</div>
               </div>
             </div>
           </div>
@@ -815,13 +815,13 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Agency section */}
-      <section className="py-16 md:py-24 px-6 border-t border-white/5">
+      <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <span className="text-purple-400/70 font-medium text-xs tracking-[0.2em]">代理店・制作会社向け</span>
-              <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-4">Web制作会社・フリーランス向け</h2>
-              <p className="text-slate-400 text-base leading-relaxed mb-6">
+              <span className="text-purple-600 font-medium text-xs tracking-[0.2em]">代理店・制作会社向け</span>
+              <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-4 text-gray-900">Web制作会社・フリーランス向け</h2>
+              <p className="text-gray-500 text-base leading-relaxed mb-6">
                 複数クライアントのサイトを1アカウントで一元管理。エージェンシーモードで全クライアントの状況をひと目で把握。
               </p>
               <ul className="space-y-3 mb-8">
@@ -832,7 +832,7 @@ export default function LaruHPLandingPage() {
                   { icon: '🔗', text: '独自ドメイン設定をクライアントごとに設定' },
                   { icon: '⚡', text: 'AIで素早くドラフト作成 → 修正・公開' },
                 ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-400 text-sm">
+                  <li key={i} className="flex items-center gap-3 text-gray-600 text-sm">
                     <span className="text-lg flex-shrink-0">{item.icon}</span>
                     {item.text}
                   </li>
@@ -843,14 +843,14 @@ export default function LaruHPLandingPage() {
                 エージェンシープランで始める →
               </Link>
             </div>
-            <div className="bg-[#1e293b] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-white/5 border-b border-white/10 px-4 py-3 flex items-center gap-2">
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-md">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500/50" />
                 </div>
-                <span className="text-slate-500 text-xs">エージェンシー管理画面</span>
+                <span className="text-gray-500 text-xs">エージェンシー管理画面</span>
               </div>
               <div className="p-4 space-y-3">
                 {[
@@ -858,23 +858,23 @@ export default function LaruHPLandingPage() {
                   { name: '田中整体院', domain: 'tanaka-sekkotsu.com', pv: '3,891', status: '公開中', contacts: 7, color: 'green' },
                   { name: 'カフェ・ノア', domain: '（設定中）', pv: '0', status: '下書き', contacts: 0, color: 'slate' },
                 ].map((site, i) => (
-                  <div key={i} className="bg-white/5 border border-white/[0.07] rounded-xl p-3 flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${site.color === 'green' ? 'bg-green-400' : 'bg-slate-600'}`} />
+                  <div key={i} className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${site.color === 'green' ? 'bg-green-400' : 'bg-gray-300'}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm font-semibold">{site.name}</div>
-                      <div className="text-slate-600 text-[11px]">{site.domain}</div>
+                      <div className="text-gray-900 text-sm font-semibold">{site.name}</div>
+                      <div className="text-gray-400 text-[11px]">{site.domain}</div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-slate-400 text-xs">{site.pv} PV</div>
-                      {site.contacts > 0 && <div className="text-blue-400 text-[11px]">✉ {site.contacts}件</div>}
+                      <div className="text-gray-500 text-xs">{site.pv} PV</div>
+                      {site.contacts > 0 && <div className="text-blue-600 text-[11px]">✉ {site.contacts}件</div>}
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${site.color === 'green' ? 'bg-green-900/30 text-green-400 border-green-500/30' : 'bg-white/5 text-slate-500 border-white/10'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${site.color === 'green' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                       {site.status}
                     </span>
                   </div>
                 ))}
                 <div className="text-center">
-                  <button className="text-xs text-slate-600 hover:text-slate-400 py-1">+ 新規クライアントサイト</button>
+                  <button className="text-xs text-gray-400 hover:text-gray-600 py-1">+ 新規クライアントサイト</button>
                 </div>
               </div>
             </div>
@@ -1040,21 +1040,21 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-16 md:py-24 px-6 border-t border-white/5 bg-white/[0.015]">
+      <section id="faq" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-blue-500/70 font-medium text-xs tracking-[0.2em]">よくある質問</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3">よくある質問</h2>
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">よくある質問</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 text-gray-900">よくある質問</h2>
           </div>
           <div className="space-y-2">
             {FAQ_ITEMS.map((item, i) => (
-              <div key={i} className="bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden hover:border-white/15 transition-all">
+              <div key={i} className="bg-sky-50 border border-sky-100 rounded-2xl overflow-hidden hover:border-sky-300 transition-all">
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full text-left p-5 flex justify-between items-start gap-4">
-                  <span className="font-medium text-sm leading-relaxed text-slate-200">{item.q}</span>
-                  <span className="text-slate-500 text-lg mt-0.5 flex-shrink-0">{openFaq === i ? '−' : '+'}</span>
+                  <span className="font-medium text-sm leading-relaxed text-gray-800">{item.q}</span>
+                  <span className="text-gray-400 text-lg mt-0.5 flex-shrink-0">{openFaq === i ? '−' : '+'}</span>
                 </button>
                 {openFaq === i && (
-                  <div className="px-5 pb-5 text-slate-500 text-sm leading-relaxed border-t border-white/5 pt-4">
+                  <div className="px-5 pb-5 text-gray-600 text-sm leading-relaxed border-t border-sky-100 pt-4">
                     {item.a}
                   </div>
                 )}
@@ -1065,31 +1065,31 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 md:py-32 px-6 border-t border-white/5 text-center relative overflow-hidden">
+      <section className="py-20 md:py-32 px-6 border-t border-sky-100 bg-sky-50 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[radial-gradient(ellipse,rgba(59,130,246,0.06),transparent_70%)]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[radial-gradient(ellipse,rgba(14,165,233,0.08),transparent_70%)]" />
         </div>
         <div className="max-w-3xl mx-auto relative">
-          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full text-blue-400/80 text-xs font-medium mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+          <div className="inline-flex items-center gap-2 bg-sky-100 border border-sky-300 px-4 py-2 rounded-full text-sky-700 text-xs font-medium mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse inline-block" />
             初月1円キャンペーン実施中
           </div>
-          <h2 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
+          <h2 className="text-4xl md:text-6xl font-bold mb-4 leading-tight text-gray-900">
             あなたのビジネスを、<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">今日から変える。</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-cyan-400">今日から変える。</span>
           </h2>
-          <p className="text-slate-500 text-base mb-10 max-w-xl mx-auto">業種情報を入力するだけ。5分後にはプロ品質のHPが完成しています。</p>
+          <p className="text-gray-600 text-base mb-10 max-w-xl mx-auto">業種情報を入力するだけ。5分後にはプロ品質のHPが完成しています。</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/laruHP/onboarding"
-              className="bg-white text-black px-10 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_0_50px_rgba(255,255,255,0.12)] inline-flex items-center gap-3 justify-center">
-              無料で始める（初月1円） <span className="text-blue-600">→</span>
+              className="bg-sky-600 text-white px-10 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_4px_20px_rgba(2,132,199,0.25)] inline-flex items-center gap-3 justify-center hover:bg-sky-500">
+              無料で始める（初月1円） <span className="text-white">→</span>
             </Link>
             <Link href="/laruHP/builder"
-              className="border border-white/15 text-slate-300 hover:text-white px-10 py-4 rounded-2xl font-medium text-base hover:border-white/30 transition-all inline-flex items-center gap-2 justify-center">
-              ▶ まずデモを見る
+              className="border border-sky-200 text-gray-600 hover:text-gray-900 px-10 py-4 rounded-2xl font-medium text-base hover:border-sky-400 transition-all inline-flex items-center gap-2 justify-center">
+              <span className="text-sky-600">▶</span> まずデモを見る
             </Link>
           </div>
-          <div className="mt-10 flex flex-wrap justify-center gap-5 text-xs text-slate-600">
+          <div className="mt-10 flex flex-wrap justify-center gap-5 text-xs text-gray-500">
             <span>✓ クレジットカード決済</span>
             <span>✓ 初月1円</span>
             <span>✓ 最短5分で完成</span>
@@ -1100,49 +1100,49 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12 text-slate-600 text-sm">
+      <footer className="border-t border-sky-100 bg-white py-12 text-gray-500 text-sm">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
             <div className="flex-shrink-0">
-              <div className="text-white font-semibold text-base mb-2">LARU<span className="text-slate-600 font-light">HP</span></div>
-              <p className="text-slate-500 text-xs max-w-xs leading-relaxed">AIで最高のホームページを最短で。株式会社LARUVisonaが提供するHP作成SaaSサービスです。</p>
+              <div className="text-gray-900 font-semibold text-base mb-2">LARU<span className="text-gray-400 font-light">HP</span></div>
+              <p className="text-gray-500 text-xs max-w-xs leading-relaxed">AIで最高のホームページを最短で。株式会社LARUVisonaが提供するHP作成SaaSサービスです。</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-6 text-xs w-full md:w-auto">
               <div>
-                <div className="text-slate-500 font-medium mb-2">サービス</div>
+                <div className="text-gray-600 font-medium mb-2">サービス</div>
                 <div className="space-y-1.5">
-                  <div><a href="#features" className="hover:text-slate-300 transition-colors">機能一覧</a></div>
-                  <div><a href="#templates" className="hover:text-slate-300 transition-colors">テンプレート</a></div>
-                  <div><a href="#pricing" className="hover:text-slate-300 transition-colors">料金</a></div>
+                  <div><a href="#features" className="hover:text-gray-800 transition-colors">機能一覧</a></div>
+                  <div><a href="#templates" className="hover:text-gray-800 transition-colors">テンプレート</a></div>
+                  <div><a href="#pricing" className="hover:text-gray-800 transition-colors">料金</a></div>
                 </div>
               </div>
               <div>
-                <div className="text-slate-500 font-medium mb-2">LARUVisona</div>
+                <div className="text-gray-600 font-medium mb-2">LARUVisona</div>
                 <div className="space-y-1.5">
-                  <div><Link href="/" className="hover:text-slate-300 transition-colors">会社サイト</Link></div>
-                  <div><a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">LARUbot</a></div>
-                  <div><Link href="/#contact" className="hover:text-slate-300 transition-colors">お問い合わせ</Link></div>
+                  <div><Link href="/" className="hover:text-gray-800 transition-colors">会社サイト</Link></div>
+                  <div><a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="hover:text-gray-800 transition-colors">LARUbot</a></div>
+                  <div><Link href="/#contact" className="hover:text-gray-800 transition-colors">お問い合わせ</Link></div>
                 </div>
               </div>
               <div>
-                <div className="text-slate-500 font-medium mb-2">アカウント</div>
+                <div className="text-gray-600 font-medium mb-2">アカウント</div>
                 <div className="space-y-1.5">
-                  <div><Link href="/laruHP/auth/login" className="hover:text-slate-300 transition-colors">ログイン</Link></div>
-                  <div><Link href="/laruHP/auth/signup" className="hover:text-slate-300 transition-colors">新規登録</Link></div>
-                  <div><Link href="/laruHP/dashboard" className="hover:text-slate-300 transition-colors">ダッシュボード</Link></div>
+                  <div><Link href="/laruHP/auth/login" className="hover:text-gray-800 transition-colors">ログイン</Link></div>
+                  <div><Link href="/laruHP/auth/signup" className="hover:text-gray-800 transition-colors">新規登録</Link></div>
+                  <div><Link href="/laruHP/dashboard" className="hover:text-gray-800 transition-colors">ダッシュボード</Link></div>
                 </div>
               </div>
               <div>
-                <div className="text-slate-500 font-medium mb-2">法的情報</div>
+                <div className="text-gray-600 font-medium mb-2">法的情報</div>
                 <div className="space-y-1.5">
-                  <div><Link href="/laruHP/terms" className="hover:text-slate-300 transition-colors">利用規約</Link></div>
-                  <div><Link href="/laruHP/privacy" className="hover:text-slate-300 transition-colors">プライバシー</Link></div>
-                  <div><Link href="/laruHP/tokusho" className="hover:text-slate-300 transition-colors">特定商取引法</Link></div>
+                  <div><Link href="/laruHP/terms" className="hover:text-gray-800 transition-colors">利用規約</Link></div>
+                  <div><Link href="/laruHP/privacy" className="hover:text-gray-800 transition-colors">プライバシー</Link></div>
+                  <div><Link href="/laruHP/tokusho" className="hover:text-gray-800 transition-colors">特定商取引法</Link></div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="border-t border-white/5 pt-6 text-center text-xs">
+          <div className="border-t border-sky-100 pt-6 text-center text-xs text-gray-400">
             © 2026 株式会社LARUVisona. All Rights Reserved.
           </div>
         </div>
