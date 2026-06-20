@@ -20,10 +20,10 @@ interface Contact {
 interface Site { id: string; name: string }
 
 const COLUMNS: { id: CRMStatus; label: string; color: string; bg: string }[] = [
-  { id: '未対応', label: '未対応', color: 'text-slate-300', bg: 'bg-slate-800/60' },
-  { id: '対応中', label: '対応中', color: 'text-amber-300', bg: 'bg-amber-900/30' },
-  { id: '成約', label: '成約 🎉', color: 'text-green-300', bg: 'bg-green-900/30' },
-  { id: 'NG', label: 'NG', color: 'text-red-400', bg: 'bg-red-900/20' },
+  { id: '未対応', label: '未対応', color: 'text-gray-700 bg-gray-50 border border-gray-200', bg: 'bg-gray-50' },
+  { id: '対応中', label: '対応中', color: 'text-amber-700 bg-amber-50 border border-amber-200', bg: 'bg-amber-50/40' },
+  { id: '成約', label: '成約 🎉', color: 'text-green-700 bg-green-50 border border-green-200', bg: 'bg-green-50/40' },
+  { id: 'NG', label: 'NG', color: 'text-red-700 bg-red-50 border border-red-200', bg: 'bg-red-50/30' },
 ];
 
 function timeAgo(dateStr: string) {
@@ -78,55 +78,55 @@ export default function CRMPage() {
   }, { '未対応': [], '対応中': [], '成約': [], 'NG': [] });
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white">
-      <div className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-sky-50 text-gray-900">
+      <div className="border-b border-gray-200 bg-white backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/laruHP/dashboard" className="text-slate-400 hover:text-white text-sm">← ダッシュボード</Link>
-          <h1 className="font-bold text-white">CRM パイプライン</h1>
+          <Link href="/laruHP/dashboard" className="text-gray-600 hover:text-gray-900 text-sm">← ダッシュボード</Link>
+          <h1 className="font-bold text-gray-900">CRM パイプライン</h1>
           <div className="ml-auto flex items-center gap-3">
             <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)}
-              className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
+              className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-sky-500">
               <option value="">すべてのサイト</option>
               {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <span className="text-slate-500 text-sm">{filtered.length} 件</span>
+            <span className="text-gray-500 text-sm">{filtered.length} 件</span>
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64 text-slate-500">読み込み中...</div>
+        <div className="flex items-center justify-center h-64 text-gray-500">読み込み中...</div>
       ) : (
         <div className="max-w-screen-xl mx-auto px-4 py-6 overflow-x-auto">
           <div className="flex gap-4 min-w-max">
             {COLUMNS.map(col => (
-              <div key={col.id} className={`w-72 rounded-xl ${col.bg} border border-white/10 flex flex-col`}>
-                <div className={`flex items-center justify-between px-4 py-3 border-b border-white/10`}>
-                  <span className={`font-bold text-sm ${col.color}`}>{col.label}</span>
-                  <span className="text-slate-500 text-xs bg-white/10 px-2 py-0.5 rounded-full">{grouped[col.id].length}</span>
+              <div key={col.id} className={`w-72 rounded-xl ${col.bg} border border-gray-200 flex flex-col`}>
+                <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white rounded-t-xl`}>
+                  <span className={`font-bold text-sm px-2 py-0.5 rounded-full ${col.color}`}>{col.label}</span>
+                  <span className="text-gray-500 text-xs bg-gray-100 px-2 py-0.5 rounded-full">{grouped[col.id].length}</span>
                 </div>
                 <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-[calc(100vh-180px)]">
                   {grouped[col.id].length === 0 && (
-                    <div className="text-slate-600 text-xs text-center py-8">なし</div>
+                    <div className="text-gray-400 text-xs text-center py-8">なし</div>
                   )}
                   {grouped[col.id].map(c => (
                     <div
                       key={c.id}
                       onClick={() => setSelected(c)}
-                      className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 cursor-pointer transition-all"
+                      className="bg-white hover:bg-sky-50 border border-gray-200 rounded-xl p-3 cursor-pointer transition-all shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <span className="font-semibold text-sm text-white truncate">{c.name}</span>
-                        <span className="text-[10px] text-slate-500 whitespace-nowrap">{timeAgo(c.created_at)}</span>
+                        <span className="font-semibold text-sm text-gray-900 truncate">{c.name}</span>
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">{timeAgo(c.created_at)}</span>
                       </div>
-                      <div className="text-xs text-slate-400 truncate">{c.email}</div>
-                      {c.message && <div className="text-[11px] text-slate-500 mt-1.5 line-clamp-2">{c.message}</div>}
+                      <div className="text-xs text-gray-600 truncate">{c.email}</div>
+                      {c.message && <div className="text-[11px] text-gray-500 mt-1.5 line-clamp-2">{c.message}</div>}
                       <div className="mt-2 flex gap-1 flex-wrap">
                         {COLUMNS.filter(s => s.id !== col.id).map(s => (
                           <button
                             key={s.id}
                             onClick={e => { e.stopPropagation(); updateStatus(c.id, s.id); }}
-                            className={`text-[10px] px-2 py-0.5 rounded-full border border-white/10 hover:bg-white/20 ${s.color} transition-all`}
+                            className={`text-[10px] px-2 py-0.5 rounded-full border border-gray-200 hover:bg-sky-50 text-gray-600 transition-all`}
                           >
                             → {s.label}
                           </button>
@@ -143,26 +143,26 @@ export default function CRMPage() {
 
       {/* Detail modal */}
       {selected && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-white">{selected.name}</h2>
-              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-white text-xl">×</button>
+              <h2 className="font-bold text-gray-900">{selected.name}</h2>
+              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-900 text-xl">×</button>
             </div>
             <div className="space-y-2 text-sm mb-4">
-              <div className="flex gap-2"><span className="text-slate-500 w-20">メール</span><a href={`mailto:${selected.email}`} className="text-blue-400 hover:underline">{selected.email}</a></div>
-              {selected.phone && <div className="flex gap-2"><span className="text-slate-500 w-20">電話</span><span>{selected.phone}</span></div>}
-              {selected.message && <div className="flex gap-2"><span className="text-slate-500 w-20">内容</span><span className="text-slate-300 flex-1">{selected.message}</span></div>}
-              <div className="flex gap-2"><span className="text-slate-500 w-20">日時</span><span className="text-slate-400 text-xs">{new Date(selected.created_at).toLocaleString('ja-JP')}</span></div>
+              <div className="flex gap-2"><span className="text-gray-500 w-20">メール</span><a href={`mailto:${selected.email}`} className="text-sky-600 hover:text-sky-500 hover:underline">{selected.email}</a></div>
+              {selected.phone && <div className="flex gap-2"><span className="text-gray-500 w-20">電話</span><span className="text-gray-900">{selected.phone}</span></div>}
+              {selected.message && <div className="flex gap-2"><span className="text-gray-500 w-20">内容</span><span className="text-gray-600 flex-1">{selected.message}</span></div>}
+              <div className="flex gap-2"><span className="text-gray-500 w-20">日時</span><span className="text-gray-500 text-xs">{new Date(selected.created_at).toLocaleString('ja-JP')}</span></div>
             </div>
-            <div className="border-t border-white/10 pt-4">
-              <div className="text-slate-500 text-xs mb-2">ステータス変更</div>
+            <div className="border-t border-gray-200 pt-4">
+              <div className="text-gray-500 text-xs mb-2">ステータス変更</div>
               <div className="flex gap-2 flex-wrap">
                 {COLUMNS.map(col => (
                   <button
                     key={col.id}
                     onClick={() => updateStatus(selected.id, col.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${getStatus(selected) === col.id ? `${col.bg} ${col.color} border-white/30` : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${getStatus(selected) === col.id ? `${col.color} border-gray-300` : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-sky-50'}`}
                   >
                     {col.label}
                   </button>
@@ -171,7 +171,7 @@ export default function CRMPage() {
             </div>
             <div className="mt-4">
               <a href={`mailto:${selected.email}?subject=お問い合わせへのご返信`}
-                className="w-full block text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
+                className="w-full block text-center bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
                 メールで返信する →
               </a>
             </div>

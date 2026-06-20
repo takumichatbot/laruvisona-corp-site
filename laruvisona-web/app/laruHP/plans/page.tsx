@@ -27,9 +27,9 @@ const FEATURE_ROWS: FeatureRow[] = [
 
 function Cell({ value }: { value: Availability }) {
   if (value === 'yes') {
-    return <div className="flex justify-center"><span className="text-emerald-400 font-bold text-base">✓</span></div>;
+    return <div className="flex justify-center"><span className="text-emerald-500 font-bold text-base">✓</span></div>;
   }
-  return <div className="flex justify-center"><span className="text-slate-600 text-base">−</span></div>;
+  return <div className="flex justify-center"><span className="text-gray-300 text-base">−</span></div>;
 }
 
 function CheckoutButton({
@@ -82,20 +82,20 @@ function CheckoutButton({
 
 export default function PlansPage() {
   return (
-    <div className="min-h-screen bg-[#030712] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-sky-50 text-gray-900 overflow-x-hidden">
 
       {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-[#030712]/80 backdrop-blur-xl border-b border-white/5">
+      <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-black text-sm">L</div>
-            <span className="font-bold tracking-tight text-lg">LARU<span className="text-blue-400 font-light">HP</span></span>
+            <div className="w-8 h-8 bg-sky-600 text-white rounded-lg flex items-center justify-center font-bold text-sm">L</div>
+            <span className="text-gray-900 font-semibold tracking-tight text-lg">LARU<span className="text-sky-500 font-light">HP</span></span>
           </Link>
           <div className="flex items-center gap-2.5">
-            <Link href="/laruHP/auth/login" className="hidden md:block text-slate-400 hover:text-white border border-white/10 hover:border-white/30 px-4 py-2 rounded-xl text-sm transition-all">
+            <Link href="/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">
               ログイン
             </Link>
-            <Link href="/laruHP/onboarding" className="bg-white text-black px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all whitespace-nowrap">
+            <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
               無料で始める →
             </Link>
           </div>
@@ -105,17 +105,17 @@ export default function PlansPage() {
       {/* Hero */}
       <section className="pt-36 pb-16 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.10),transparent_65%)]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.10),transparent_65%)]" />
         </div>
         <div className="max-w-3xl mx-auto relative">
-          <Link href="/laruHP#pricing" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-sm mb-8 transition-colors">
+          <Link href="/laruHP#pricing" className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-600 text-sm mb-8 transition-colors">
             ← 料金ページに戻る
           </Link>
           <div className="block">
-            <span className="text-blue-500 font-bold text-xs tracking-[0.2em] uppercase">PLAN COMPARISON</span>
+            <span className="text-sky-600 font-bold text-xs tracking-[0.2em] uppercase">PLAN COMPARISON</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mt-4 mb-4">プラン比較</h1>
-          <p className="text-slate-500 text-base font-normal">全プラン 初月1円・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
+          <h1 className="text-4xl md:text-5xl font-bold mt-4 mb-4 text-gray-900">プラン比較</h1>
+          <p className="text-gray-500 text-base font-normal">全プラン 初月1円・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
         </div>
       </section>
 
@@ -128,64 +128,64 @@ export default function PlansPage() {
             <div className="p-4" />
 
             {/* HP単体 */}
-            <div className="p-5 text-center border-t border-l border-r border-white/10 bg-white/5 rounded-tl-2xl rounded-tr-none">
-              <div className="text-xs font-medium text-slate-500 tracking-widest uppercase mb-2">hp</div>
-              <div className="text-lg font-semibold mb-1">HP単体</div>
-              <div className="text-slate-500 text-xs mb-3">¥</div>
-              <div className="text-4xl font-black leading-none mb-1">999</div>
-              <div className="text-slate-400 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
+            <div className="p-5 text-center border-t border-l border-r border-gray-200 bg-white rounded-tl-2xl rounded-tr-none">
+              <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp</div>
+              <div className="text-lg font-semibold mb-1 text-gray-900">HP単体</div>
+              <div className="text-gray-500 text-xs mb-3">¥</div>
+              <div className="text-4xl font-bold leading-none mb-1 text-gray-900">999</div>
+              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
               <CheckoutButton
                 plan="hp"
-                className="block w-full bg-white/10 border border-white/10 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
+                className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-50 transition-all"
               >
                 このプランで始める →
               </CheckoutButton>
             </div>
 
             {/* HP + LARUbot */}
-            <div className="p-5 text-center border-t border-l border-r border-blue-500/50 bg-blue-500/5 relative">
+            <div className="p-5 text-center border-2 border-sky-500 bg-white shadow-[0_0_40px_rgba(14,165,233,0.12)] relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <span className="bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
+                <span className="bg-sky-600 text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                   おすすめ
                 </span>
               </div>
-              <div className="text-xs font-medium text-blue-500/60 tracking-widest uppercase mb-2">hp-bot</div>
-              <div className="text-lg font-semibold mb-1">HP + LARUbot</div>
-              <div className="text-slate-500 text-xs mb-3">¥</div>
-              <div className="text-4xl font-black leading-none mb-1">4,980</div>
-              <div className="text-slate-400 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
+              <div className="text-xs font-medium text-sky-600 tracking-widest uppercase mb-2">hp-bot</div>
+              <div className="text-lg font-semibold mb-1 text-gray-900">HP + LARUbot</div>
+              <div className="text-gray-500 text-xs mb-3">¥</div>
+              <div className="text-4xl font-bold leading-none mb-1 text-gray-900">4,980</div>
+              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
               <CheckoutButton
                 plan="hp-bot"
-                className="block w-full bg-white text-black font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-50 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                className="block w-full bg-sky-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-500 transition-all shadow-sm"
               >
                 このプランで始める →
               </CheckoutButton>
             </div>
 
             {/* HP + Bot + SEO */}
-            <div className="p-5 text-center border-t border-l border-r border-white/10 bg-white/5 rounded-tr-2xl rounded-tl-none relative">
+            <div className="p-5 text-center border border-gray-200 bg-white rounded-tr-2xl rounded-tl-none relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <span className="bg-amber-500 text-black text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                   半年間限定
                 </span>
               </div>
-              <div className="text-xs font-medium text-slate-500 tracking-widest uppercase mb-2">hp-bot-seo</div>
-              <div className="text-lg font-semibold mb-1">HP + Bot + SEO</div>
-              <div className="text-slate-500 text-xs mb-3">¥</div>
-              <div className="text-4xl font-black leading-none mb-1">9,800</div>
-              <div className="text-slate-400 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
+              <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp-bot-seo</div>
+              <div className="text-lg font-semibold mb-1 text-gray-900">HP + Bot + SEO</div>
+              <div className="text-gray-500 text-xs mb-3">¥</div>
+              <div className="text-4xl font-bold leading-none mb-1 text-gray-900">9,800</div>
+              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
                 初月1円
               </div>
               <CheckoutButton
                 plan="hp-bot-seo"
-                className="block w-full bg-white/10 border border-white/10 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-white/20 transition-all"
+                className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-50 transition-all"
               >
                 このプランで始める →
               </CheckoutButton>
@@ -193,39 +193,39 @@ export default function PlansPage() {
           </div>
 
           {/* Feature rows */}
-          <div className="border border-white/10 rounded-bl-2xl rounded-br-2xl overflow-hidden">
+          <div className="border border-gray-200 rounded-bl-2xl rounded-br-2xl overflow-hidden">
             {FEATURE_ROWS.map((row, i) => (
               <div
                 key={i}
-                className={`grid grid-cols-4 border-b border-white/5 last:border-0 ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'}`}
+                className={`grid grid-cols-4 border-b border-gray-200 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
               >
-                <div className="p-4 text-sm text-slate-400 font-medium">{row.label}</div>
-                <div className="p-4 border-l border-white/5"><Cell value={row.hp} /></div>
-                <div className="p-4 border-l border-blue-500/10 bg-blue-500/[0.03]"><Cell value={row.hpBot} /></div>
-                <div className="p-4 border-l border-white/5"><Cell value={row.hpBotSeo} /></div>
+                <div className="p-4 text-sm text-gray-600 font-medium">{row.label}</div>
+                <div className="p-4 border-l border-gray-200"><Cell value={row.hp} /></div>
+                <div className="p-4 border-l border-sky-100 bg-sky-50/30"><Cell value={row.hpBot} /></div>
+                <div className="p-4 border-l border-gray-200"><Cell value={row.hpBotSeo} /></div>
               </div>
             ))}
           </div>
 
-          <p className="text-center text-slate-600 text-xs mt-6">
+          <p className="text-center text-gray-500 text-xs mt-6">
             全プラン 初月1円 / 最低6ヶ月契約 / 7ヶ月目からいつでも解約可 / クレジットカード決済（Stripe）
           </p>
         </div>
       </section>
 
       {/* CTA section */}
-      <section className="py-16 md:py-24 px-6 border-t border-white/5 text-center">
+      <section className="py-16 md:py-24 px-6 border-t border-gray-200 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">まずは初月1円で試す</h2>
-          <p className="text-slate-500 text-sm mb-8">プランはあとからいつでも変更できます。まずは気軽にスタート。</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">まずは初月1円で試す</h2>
+          <p className="text-gray-500 text-sm mb-8">プランはあとからいつでも変更できます。まずは気軽にスタート。</p>
           <CheckoutButton
             plan="hp"
-            className="inline-flex items-center gap-2 bg-white text-black font-bold text-base px-10 py-4 rounded-2xl hover:scale-105 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.15)]"
+            className="inline-flex items-center gap-2 bg-sky-600 text-white font-bold text-base px-10 py-4 rounded-2xl hover:bg-sky-500 transition-all shadow-md"
           >
             まずはHPプランで始める（初月1円） →
           </CheckoutButton>
           <div className="mt-8">
-            <Link href="/laruHP#pricing" className="text-slate-500 hover:text-slate-300 text-sm transition-colors">
+            <Link href="/laruHP#pricing" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">
               ← 料金ページに戻る
             </Link>
           </div>
@@ -233,7 +233,7 @@ export default function PlansPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-8 text-slate-600 text-sm">
+      <footer className="border-t border-gray-200 py-8 text-gray-500 text-sm">
         <div className="max-w-6xl mx-auto px-6 text-center text-xs">
           © 2026 株式会社LARUVisona. All Rights Reserved.
         </div>

@@ -664,17 +664,17 @@ function OnboardingContent() {
 const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white">
+    <div className="min-h-screen bg-sky-50 text-gray-900">
       {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-[#030712]/80 backdrop-blur-xl border-b border-white/5">
+      <header className="fixed top-0 w-full z-50 bg-white border-b border-sky-100 shadow-sm backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-black text-sm">L</div>
-            <span className="font-bold tracking-tight">LARU<span className="text-blue-400 font-light">HP</span></span>
+            <div className="w-8 h-8 bg-sky-600 text-white rounded-lg flex items-center justify-center font-bold text-sm">L</div>
+            <span className="font-bold tracking-tight text-gray-900">LARU<span className="text-sky-500 font-light">HP</span></span>
           </Link>
           <div className="flex flex-col items-end">
-            <div className="text-slate-500 text-sm">サイト作成ウィザード</div>
-            <div className="text-slate-600 text-[11px]">初月1円 · 最低6ヶ月契約</div>
+            <div className="text-gray-500 text-sm">サイト作成ウィザード</div>
+            <div className="text-gray-500 text-[11px]">初月1円 · 最低6ヶ月契約</div>
           </div>
         </div>
       </header>
@@ -684,7 +684,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         <div className="lg:hidden flex justify-end mb-4">
           <button
             onClick={() => setShowMobilePreview(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-slate-300 hover:bg-white/10 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-600 hover:border-sky-300 transition-all"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             プレビュー
@@ -694,13 +694,13 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {/* Mobile preview modal */}
         {showMobilePreview && (
           <div className="lg:hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end p-4">
-            <div className="w-full max-w-sm mx-auto bg-[#0f172a] rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                <div className="flex items-center gap-2 text-sm font-bold">
+            <div className="w-full max-w-sm mx-auto bg-white rounded-2xl overflow-hidden shadow-xl">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                   リアルタイムプレビュー
                 </div>
-                <button onClick={() => setShowMobilePreview(false)} className="text-slate-400 hover:text-white text-xl leading-none">✕</button>
+                <button onClick={() => setShowMobilePreview(false)} className="text-gray-400 hover:text-gray-900 text-xl leading-none">✕</button>
               </div>
               <div className="p-4">
                 <LivePreview form={form} />
@@ -717,39 +717,39 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
             {STEPS.map((_s, i) => (
               <div key={i} className="flex items-center">
                 <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${
-                  i + 1 < step ? 'bg-blue-500 text-white' :
-                  i + 1 === step ? 'bg-white text-black' :
-                  'bg-white/10 text-slate-500'
+                  i + 1 < step ? 'bg-sky-500 text-white' :
+                  i + 1 === step ? 'bg-sky-600 text-white' :
+                  'bg-gray-200 text-gray-400'
                 }`}>
                   {i + 1 < step ? (
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   ) : i + 1}
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`hidden sm:block h-[1px] w-12 lg:w-20 mx-1 transition-all ${i + 1 < step ? 'bg-blue-500' : 'bg-white/10'}`} />
+                  <div className={`hidden sm:block h-[1px] w-12 lg:w-20 mx-1 transition-all ${i + 1 < step ? 'bg-sky-500' : 'bg-gray-200'}`} />
                 )}
               </div>
             ))}
           </div>
-          <div className="hidden sm:flex justify-between text-[10px] text-slate-500 mt-1">
+          <div className="hidden sm:flex justify-between text-[10px] text-gray-500 mt-1">
             {STEPS.map((s, i) => (
-              <span key={i} className={i + 1 === step ? 'text-white font-bold' : ''}>{s}</span>
+              <span key={i} className={i + 1 === step ? 'text-gray-900 font-bold' : ''}>{s}</span>
             ))}
           </div>
           <div className="sm:hidden mt-3">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-slate-400">STEP {step} / {STEPS.length}</span>
-              <span className="text-xs text-white font-bold">{STEPS[step - 1]}</span>
+              <span className="text-xs text-gray-500">STEP {step} / {STEPS.length}</span>
+              <span className="text-xs text-gray-900 font-bold">{STEPS[step - 1]}</span>
             </div>
-            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-sky-500 to-sky-400 rounded-full transition-all duration-500"
                 style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
               />
             </div>
           </div>
-          <div className="text-center text-[11px] text-slate-500 mt-2">
-            このステップの目安: <span className="text-slate-400 font-semibold">{STEP_TIMES[step - 1]}</span>
+          <div className="text-center text-[11px] text-gray-500 mt-2">
+            このステップの目安: <span className="text-gray-600 font-semibold">{STEP_TIMES[step - 1]}</span>
             {step > 1 && <span className="ml-3">合計残り約{['4分30秒', '4分', '3分', '2分', '30秒'][step - 1]}</span>}
           </div>
         </div>
@@ -764,8 +764,8 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {step === 1 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2">業種を選んでください</h2>
-              <p className="text-slate-400">業種に最適化されたテンプレートとSEO設定が自動で適用されます。</p>
+              <h2 className="text-3xl font-bold mb-2 text-gray-900">業種を選んでください</h2>
+              <p className="text-gray-600">業種に最適化されたテンプレートとSEO設定が自動で適用されます。</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {INDUSTRIES.map(ind => (
@@ -774,20 +774,20 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   onClick={() => handleIndustrySelect(ind.id)}
                   className={`p-4 rounded-2xl border text-left transition-all hover:-translate-y-0.5 relative ${
                     form.industry === ind.id
-                      ? 'bg-blue-500/20 border-blue-500/60 shadow-[0_0_20px_rgba(59,130,246,0.2)]'
-                      : 'bg-white/5 border-white/10 hover:border-white/30'
+                      ? 'bg-sky-50 border-2 border-sky-500 shadow-sm'
+                      : 'bg-white border border-gray-200 hover:border-sky-300'
                   }`}
                 >
                   {ind.popular && (
-                    <span className="absolute top-2 right-2 text-[9px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded-full">人気</span>
+                    <span className="absolute top-2 right-2 text-[9px] bg-sky-50 text-sky-600 border border-sky-200 px-1.5 py-0.5 rounded-full">人気</span>
                   )}
                   <div className="text-2xl mb-2">{ind.icon}</div>
-                  <div className="font-bold text-sm mb-0.5">{ind.name}</div>
-                  <div className="text-slate-500 text-xs leading-tight">{ind.desc}</div>
+                  <div className="font-bold text-sm mb-0.5 text-gray-900">{ind.name}</div>
+                  <div className="text-gray-500 text-xs leading-tight">{ind.desc}</div>
                 </button>
               ))}
             </div>
-            <p className="text-center text-slate-600 text-xs mt-6">選択すると自動で次のステップへ進みます</p>
+            <p className="text-center text-gray-500 text-xs mt-6">選択すると自動で次のステップへ進みます</p>
           </div>
         )}
 
@@ -796,40 +796,40 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
           <div>
             {/* Industry breadcrumb */}
             {selectedIndustry && (
-              <div className="flex items-center gap-2 mb-6 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5">
+              <div className="flex items-center gap-2 mb-6 bg-white border border-gray-200 rounded-xl px-4 py-2.5">
                 <span className="text-xl">{selectedIndustry.icon}</span>
-                <span className="text-sm text-white font-medium">{selectedIndustry.name}</span>
-                <span className="text-slate-500 text-sm">でサイトを作成中</span>
+                <span className="text-sm text-gray-900 font-medium">{selectedIndustry.name}</span>
+                <span className="text-gray-500 text-sm">でサイトを作成中</span>
                 <button
                   onClick={() => goStep(1)}
-                  className="ml-auto text-blue-400 hover:text-blue-300 text-xs transition-colors"
+                  className="ml-auto text-sky-600 hover:text-sky-500 text-xs transition-colors"
                 >
                   変更
                 </button>
               </div>
             )}
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2">ビジネス情報を入力</h2>
-              <p className="text-slate-400">AIがこの情報をもとにコンテンツを自動生成します。</p>
+              <h2 className="text-3xl font-bold mb-2 text-gray-900">ビジネス情報を入力</h2>
+              <p className="text-gray-600">AIがこの情報をもとにコンテンツを自動生成します。</p>
             </div>
 
             {/* URL Scan Card */}
-            <div className="mb-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-2xl p-5">
+            <div className="mb-8 bg-white border border-sky-100 rounded-2xl p-5 shadow-sm">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 </div>
                 <div>
-                  <div className="font-bold text-sm text-white mb-0.5">既存サイトをAIスキャン（任意）</div>
-                  <div className="text-slate-400 text-xs">既存のホームページがある場合、URLを入力してスキャンすると店舗名・電話番号・住所などを自動入力します。</div>
+                  <div className="font-bold text-sm text-gray-900 mb-0.5">既存サイトをAIスキャン（任意）</div>
+                  <div className="text-gray-600 text-xs">既存のホームページがある場合、URLを入力してスキャンすると店舗名・電話番号・住所などを自動入力します。</div>
                 </div>
               </div>
 
               {scanDone ? (
-                <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-400 flex-shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <span className="text-green-400 text-sm font-bold">スキャン完了。フォームに自動入力しました。</span>
-                  <button onClick={() => setScanDone(false)} className="ml-auto text-slate-500 hover:text-slate-300 text-xs">再スキャン</button>
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600 flex-shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span className="text-emerald-700 text-sm font-bold">スキャン完了。フォームに自動入力しました。</span>
+                  <button onClick={() => setScanDone(false)} className="ml-auto text-gray-500 hover:text-gray-700 text-xs">再スキャン</button>
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -839,12 +839,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                     onChange={e => updateForm('website', e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleScanUrl()}
                     placeholder="https://your-shop.com"
-                    className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                    className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                   <button
                     onClick={handleScanUrl}
                     disabled={scanning || !form.website.trim()}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-bold transition-all whitespace-nowrap"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-sm font-bold transition-all whitespace-nowrap"
                   >
                     {scanning ? (
                       <>
@@ -856,54 +856,54 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                 </div>
               )}
               {scanError && (
-                <p className="text-red-400 text-xs mt-2">{scanError}</p>
+                <p className="text-red-600 text-xs mt-2">{scanError}</p>
               )}
             </div>
 
             <div className="space-y-5">
               <div className="grid sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-bold mb-2">店舗・会社名 <span className="text-red-400">*</span></label>
+                  <label className="block text-sm font-bold mb-2 text-gray-900">店舗・会社名 <span className="text-red-500">*</span></label>
                   <input type="text" value={form.businessName} onChange={e => updateForm('businessName', e.target.value)}
                     placeholder="例: 鈴木整体院"
-                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2">電話番号</label>
+                  <label className="block text-sm font-bold mb-2 text-gray-900">電話番号</label>
                   <input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)}
                     placeholder="例: 03-1234-5678"
-                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">住所</label>
+                <label className="block text-sm font-bold mb-2 text-gray-900">住所</label>
                 <input type="text" value={form.address} onChange={e => updateForm('address', e.target.value)}
                   placeholder="例: 東京都渋谷区渋谷1-1-1 〇〇ビル2F"
-                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">メールアドレス</label>
+                <label className="block text-sm font-bold mb-2 text-gray-900">メールアドレス</label>
                 <input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)}
                   placeholder="例: info@your-shop.com"
-                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">キャッチフレーズ（任意）</label>
+                <label className="block text-sm font-bold mb-2 text-gray-900">キャッチフレーズ（任意）</label>
                 <input type="text" value={form.catchphrase} onChange={e => updateForm('catchphrase', e.target.value)}
                   placeholder="例: 地域No.1の施術技術で、あなたの痛みを根本から解決"
-                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors" />
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">お店・会社の紹介文（任意）</label>
+                <label className="block text-sm font-bold mb-2 text-gray-900">お店・会社の紹介文（任意）</label>
                 <textarea value={form.description} onChange={e => updateForm('description', e.target.value)}
                   rows={3}
                   placeholder="例: 2010年に創業した整体院です。延べ10,000人以上の施術実績があり..."
-                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors resize-none" />
-                <p className="text-slate-600 text-xs mt-1">空欄の場合はAIが自動生成します</p>
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors resize-none" />
+                <p className="text-gray-500 text-xs mt-1">空欄の場合はAIが自動生成します</p>
               </div>
             </div>
           </div>
@@ -913,46 +913,44 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {step === 3 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2">デザインを設定</h2>
-              <p className="text-slate-400">ブランドカラー・スタイル・フォントを選んでください。後でエディタからいつでも変更できます。</p>
+              <h2 className="text-3xl font-bold mb-2 text-gray-900">デザインを設定</h2>
+              <p className="text-gray-600">ブランドカラー・スタイル・フォントを選んでください。後でエディタからいつでも変更できます。</p>
             </div>
 
             {/* Color pickers */}
-            <div className="mb-8 bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-              <h3 className="font-bold mb-1">ブランドカラー</h3>
-              <p className="text-slate-500 text-sm mb-5">メインカラーとアクセントカラーの2色でサイトの雰囲気が決まります。</p>
+            <div className="mb-8 bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+              <h3 className="font-bold mb-1 text-gray-900">ブランドカラー</h3>
+              <p className="text-gray-500 text-sm mb-5">メインカラーとアクセントカラーの2色でサイトの雰囲気が決まります。</p>
               <div className="grid grid-cols-2 gap-5">
                 {/* Primary */}
                 <div>
-                  <div className="text-xs text-slate-400 mb-2 font-medium">メインカラー</div>
+                  <div className="text-xs text-gray-500 mb-2 font-medium">メインカラー</div>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={form.primaryColor}
                       onChange={e => updateForm('primaryColor', e.target.value)}
-                      className="w-14 h-14 rounded-xl border-2 border-white/20 cursor-pointer p-0.5 bg-transparent flex-shrink-0"
-                      style={{ colorScheme: 'dark' }}
+                      className="w-14 h-14 rounded-xl border-2 border-gray-200 cursor-pointer p-0.5 bg-transparent flex-shrink-0"
                     />
                     <div>
-                      <div className="text-sm font-bold text-white font-mono">{form.primaryColor.toUpperCase()}</div>
-                      <div className="text-slate-500 text-xs mt-0.5">ヒーロー・ヘッダー</div>
+                      <div className="text-sm font-bold text-gray-900 font-mono">{form.primaryColor.toUpperCase()}</div>
+                      <div className="text-gray-500 text-xs mt-0.5">ヒーロー・ヘッダー</div>
                     </div>
                   </div>
                 </div>
                 {/* Accent */}
                 <div>
-                  <div className="text-xs text-slate-400 mb-2 font-medium">アクセントカラー</div>
+                  <div className="text-xs text-gray-500 mb-2 font-medium">アクセントカラー</div>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={form.accentColor}
                       onChange={e => updateForm('accentColor', e.target.value)}
-                      className="w-14 h-14 rounded-xl border-2 border-white/20 cursor-pointer p-0.5 bg-transparent flex-shrink-0"
-                      style={{ colorScheme: 'dark' }}
+                      className="w-14 h-14 rounded-xl border-2 border-gray-200 cursor-pointer p-0.5 bg-transparent flex-shrink-0"
                     />
                     <div>
-                      <div className="text-sm font-bold text-white font-mono">{form.accentColor.toUpperCase()}</div>
-                      <div className="text-slate-500 text-xs mt-0.5">ボタン・強調</div>
+                      <div className="text-sm font-bold text-gray-900 font-mono">{form.accentColor.toUpperCase()}</div>
+                      <div className="text-gray-500 text-xs mt-0.5">ボタン・強調</div>
                     </div>
                   </div>
                 </div>
@@ -961,14 +959,14 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
               <div className="mt-4 h-8 rounded-xl overflow-hidden flex">
                 <div className="flex-1" style={{ background: form.primaryColor }} />
                 <div className="w-[30%]" style={{ background: form.accentColor }} />
-                <div className="w-[15%] bg-white/10" />
+                <div className="w-[15%] bg-gray-100" />
               </div>
             </div>
 
             {/* Font picker */}
             <div className="mb-8">
-              <h3 className="font-bold mb-1">フォント</h3>
-              <p className="text-slate-500 text-sm mb-4">業種選択時に自動設定済みです。変更も可能です。</p>
+              <h3 className="font-bold mb-1 text-gray-900">フォント</h3>
+              <p className="text-gray-500 text-sm mb-4">業種選択時に自動設定済みです。変更も可能です。</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {([
                   { id: 'noto',    label: '標準ゴシック',  sub: '読みやすい万能フォント' },
@@ -981,15 +979,15 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   <button
                     key={f.id}
                     onClick={() => updateForm('fontFamily', f.id)}
-                    className={`rounded-2xl p-3 text-left transition-all border ${form.fontFamily === f.id ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}
+                    className={`rounded-2xl p-3 text-left transition-all border ${form.fontFamily === f.id ? 'border-sky-500 bg-sky-50' : 'border-gray-200 bg-white hover:border-sky-300'}`}
                   >
                     {form.fontFamily === f.id && (
-                      <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center mb-2">
+                      <div className="w-4 h-4 rounded-full bg-sky-600 flex items-center justify-center mb-2">
                         <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       </div>
                     )}
-                    <div className="font-bold text-sm text-white">{f.label}</div>
-                    <div className="text-slate-500 text-[11px] mt-0.5">{f.sub}</div>
+                    <div className="font-bold text-sm text-gray-900">{f.label}</div>
+                    <div className="text-gray-500 text-[11px] mt-0.5">{f.sub}</div>
                   </button>
                 ))}
               </div>
@@ -997,8 +995,8 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
             {/* Design style picker */}
             <div className="mb-2">
-              <h3 className="font-bold mb-1">デザインスタイル</h3>
-              <p className="text-slate-500 text-sm mb-4">セクション形状・アニメーション・エフェクトが変わります</p>
+              <h3 className="font-bold mb-1 text-gray-900">デザインスタイル</h3>
+              <p className="text-gray-500 text-sm mb-4">セクション形状・アニメーション・エフェクトが変わります</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {/* modern */}
                 {([
@@ -1147,12 +1145,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   <button
                     key={s.id}
                     onClick={() => updateForm('designStyle', s.id)}
-                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.designStyle === s.id ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-white/10 hover:border-white/25'}`}
+                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.designStyle === s.id ? 'border-sky-500 ring-2 ring-sky-500/30' : 'border-gray-200 hover:border-sky-300'}`}
                   >
                     <div className="bg-[#0a0f1e] p-2">{s.preview}</div>
-                    <div className={`px-3 py-2 ${form.designStyle === s.id ? 'bg-blue-500/15' : 'bg-white/[0.03]'}`}>
-                      <div className="font-bold text-sm text-white">{s.label}</div>
-                      <div className="text-slate-500 text-[11px] mt-0.5">{s.sub}</div>
+                    <div className={`px-3 py-2 ${form.designStyle === s.id ? 'bg-sky-50' : 'bg-white'}`}>
+                      <div className="font-bold text-sm text-gray-900">{s.label}</div>
+                      <div className="text-gray-500 text-[11px] mt-0.5">{s.sub}</div>
                     </div>
                   </button>
                 ))}
@@ -1161,8 +1159,8 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
             {/* Hero layout picker */}
             <div className="mb-8">
-              <h3 className="font-bold mb-1">ヒーローレイアウト</h3>
-              <p className="text-slate-500 text-sm mb-4">ファーストビューのコンテンツ配置を選択</p>
+              <h3 className="font-bold mb-1 text-gray-900">ヒーローレイアウト</h3>
+              <p className="text-gray-500 text-sm mb-4">ファーストビューのコンテンツ配置を選択</p>
               <div className="grid grid-cols-3 gap-3">
                 {([
                   {
@@ -1212,12 +1210,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   <button
                     key={l.id}
                     onClick={() => updateForm('heroLayout', l.id)}
-                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.heroLayout === l.id ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-white/10 hover:border-white/25'}`}
+                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.heroLayout === l.id ? 'border-sky-500 ring-2 ring-sky-500/30' : 'border-gray-200 hover:border-sky-300'}`}
                   >
                     <div className="bg-[#0a0f1e] p-2">{l.preview}</div>
-                    <div className={`px-3 py-2 ${form.heroLayout === l.id ? 'bg-blue-500/15' : 'bg-white/[0.03]'}`}>
-                      <div className="font-bold text-sm text-white">{l.label}</div>
-                      <div className="text-slate-500 text-[11px] mt-0.5">{l.sub}</div>
+                    <div className={`px-3 py-2 ${form.heroLayout === l.id ? 'bg-sky-50' : 'bg-white'}`}>
+                      <div className="font-bold text-sm text-gray-900">{l.label}</div>
+                      <div className="text-gray-500 text-[11px] mt-0.5">{l.sub}</div>
                     </div>
                   </button>
                 ))}
@@ -1226,8 +1224,8 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
             {/* Header style picker */}
             <div className="mb-8">
-              <h3 className="font-bold mb-1">ヘッダースタイル</h3>
-              <p className="text-slate-500 text-sm mb-4">ナビゲーションバーの表示スタイル</p>
+              <h3 className="font-bold mb-1 text-gray-900">ヘッダースタイル</h3>
+              <p className="text-gray-500 text-sm mb-4">ナビゲーションバーの表示スタイル</p>
               <div className="grid grid-cols-3 gap-3">
                 {([
                   {
@@ -1282,12 +1280,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   <button
                     key={h.id}
                     onClick={() => updateForm('headerStyle', h.id)}
-                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.headerStyle === h.id ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-white/10 hover:border-white/25'}`}
+                    className={`rounded-2xl overflow-hidden text-left transition-all border-2 ${form.headerStyle === h.id ? 'border-sky-500 ring-2 ring-sky-500/30' : 'border-gray-200 hover:border-sky-300'}`}
                   >
                     <div className="bg-[#0a0f1e] p-2">{h.preview}</div>
-                    <div className={`px-3 py-2 ${form.headerStyle === h.id ? 'bg-blue-500/15' : 'bg-white/[0.03]'}`}>
-                      <div className="font-bold text-sm text-white">{h.label}</div>
-                      <div className="text-slate-500 text-[11px] mt-0.5">{h.sub}</div>
+                    <div className={`px-3 py-2 ${form.headerStyle === h.id ? 'bg-sky-50' : 'bg-white'}`}>
+                      <div className="font-bold text-sm text-gray-900">{h.label}</div>
+                      <div className="text-gray-500 text-[11px] mt-0.5">{h.sub}</div>
                     </div>
                   </button>
                 ))}
@@ -1296,8 +1294,8 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
             {/* Animation level */}
             <div className="mb-8">
-              <h3 className="font-bold mb-1">アニメーション強度</h3>
-              <p className="text-slate-500 text-sm mb-4">スクロール時の動き・エフェクトの強さ</p>
+              <h3 className="font-bold mb-1 text-gray-900">アニメーション強度</h3>
+              <p className="text-gray-500 text-sm mb-4">スクロール時の動き・エフェクトの強さ</p>
               <div className="grid grid-cols-3 gap-3">
                 {([
                   { id: 'none'   as const, label: 'なし',   sub: 'シンプル・高速表示',   icon: '⬜', desc: '動きなし・即時表示' },
@@ -1307,12 +1305,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   <button
                     key={a.id}
                     onClick={() => updateForm('animLevel', a.id)}
-                    className={`rounded-2xl p-4 text-left transition-all border-2 ${form.animLevel === a.id ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}
+                    className={`rounded-2xl p-4 text-left transition-all border-2 ${form.animLevel === a.id ? 'border-sky-500 bg-sky-50' : 'border-gray-200 bg-white hover:border-sky-300'}`}
                   >
                     <div className="text-2xl mb-2">{a.icon}</div>
-                    <div className="font-bold text-sm text-white">{a.label}</div>
-                    <div className="text-slate-500 text-[11px] mt-0.5">{a.sub}</div>
-                    <div className="text-[10px] text-slate-600 mt-1 font-mono">{a.desc}</div>
+                    <div className="font-bold text-sm text-gray-900">{a.label}</div>
+                    <div className="text-gray-500 text-[11px] mt-0.5">{a.sub}</div>
+                    <div className="text-[10px] text-gray-400 mt-1 font-mono">{a.desc}</div>
                   </button>
                 ))}
               </div>
@@ -1326,12 +1324,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
           <div>
             <div className="flex items-start justify-between mb-8">
               <div>
-                <h2 className="text-3xl font-bold mb-2">コンテンツを入力</h2>
-                <p className="text-slate-400">空欄の場合はAIが自動生成します。後でエディタから編集もできます。</p>
+                <h2 className="text-3xl font-bold mb-2 text-gray-900">コンテンツを入力</h2>
+                <p className="text-gray-600">空欄の場合はAIが自動生成します。後でエディタから編集もできます。</p>
               </div>
               <button
                 onClick={() => goStep(5)}
-                className="flex-shrink-0 mt-1 text-xs text-slate-500 hover:text-slate-300 border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-all"
+                className="flex-shrink-0 mt-1 text-xs text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-all bg-white"
               >
                 スキップ → AIに任せる
               </button>
@@ -1340,28 +1338,28 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
             {/* Services */}
             <div className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold">サービス・料金メニュー</h3>
-                <button onClick={addService} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors">+ 追加</button>
+                <h3 className="font-bold text-gray-900">サービス・料金メニュー</h3>
+                <button onClick={addService} className="text-xs bg-white hover:bg-sky-50 border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-colors text-gray-600">+ 追加</button>
               </div>
               <div className="space-y-3">
                 {form.services.map((svc, i) => (
-                  <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <div key={i} className="bg-white border border-gray-200 shadow-sm rounded-2xl p-4">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm font-bold text-slate-400">サービス {i + 1}</span>
+                      <span className="text-sm font-bold text-gray-500">サービス {i + 1}</span>
                       {form.services.length > 1 && (
-                        <button onClick={() => removeService(i)} className="text-slate-500 hover:text-red-400 text-xs transition-colors">削除</button>
+                        <button onClick={() => removeService(i)} className="text-gray-400 hover:text-red-500 text-xs transition-colors">削除</button>
                       )}
                     </div>
                     <div className="grid sm:grid-cols-3 gap-3">
                       <input type="text" placeholder="サービス名" value={svc.name}
                         onChange={e => updateService(i, 'name', e.target.value)}
-                        className="bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+                        className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
                       <input type="text" placeholder="説明（任意）" value={svc.description}
                         onChange={e => updateService(i, 'description', e.target.value)}
-                        className="bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+                        className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
                       <input type="text" placeholder="料金（例: 3,000円）" value={svc.price}
                         onChange={e => updateService(i, 'price', e.target.value)}
-                        className="bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+                        className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
                     </div>
                   </div>
                 ))}
@@ -1371,31 +1369,31 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
             {/* Business Hours */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold">営業時間</h3>
+                <h3 className="font-bold text-gray-900">営業時間</h3>
                 <div className="flex gap-1.5 flex-wrap justify-end">
                   {HOURS_PRESETS.map(p => (
                     <button
                       key={p.label}
                       onClick={() => setForm(f => ({ ...f, hours: p.fn(f.hours) }))}
-                      className="text-[11px] px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-slate-400 hover:text-white transition-all"
+                      className="text-[11px] px-2.5 py-1 bg-white hover:bg-sky-50 border border-gray-200 hover:border-sky-300 rounded-lg text-gray-500 hover:text-gray-900 transition-all"
                     >
                       {p.label}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
                 {form.hours.map((hour, i) => (
-                  <div key={i} className={`flex items-center gap-3 sm:gap-4 px-4 py-3 ${i < form.hours.length - 1 ? 'border-b border-white/5' : ''} ${hour.closed ? 'opacity-50' : ''}`}>
-                    <span className="w-14 text-sm text-slate-400 flex-shrink-0">{hour.day}</span>
+                  <div key={i} className={`flex items-center gap-3 sm:gap-4 px-4 py-3 ${i < form.hours.length - 1 ? 'border-b border-gray-100' : ''} ${hour.closed ? 'opacity-50' : ''}`}>
+                    <span className="w-14 text-sm text-gray-500 flex-shrink-0">{hour.day}</span>
                     <input type="time" value={hour.open} onChange={e => updateHour(i, 'open', e.target.value)} disabled={hour.closed}
-                      className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-blue-500 disabled:opacity-30 w-24" />
-                    <span className="text-slate-500 text-sm">〜</span>
+                      className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-900 text-sm focus:outline-none focus:border-sky-500 disabled:opacity-30 w-24" />
+                    <span className="text-gray-400 text-sm">〜</span>
                     <input type="time" value={hour.close} onChange={e => updateHour(i, 'close', e.target.value)} disabled={hour.closed}
-                      className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-blue-500 disabled:opacity-30 w-24" />
+                      className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-900 text-sm focus:outline-none focus:border-sky-500 disabled:opacity-30 w-24" />
                     <label className="flex items-center gap-2 ml-auto cursor-pointer">
                       <input type="checkbox" checked={hour.closed} onChange={e => updateHour(i, 'closed', e.target.checked)} className="w-4 h-4 accent-red-500" />
-                      <span className="text-sm text-slate-400 whitespace-nowrap">定休日</span>
+                      <span className="text-sm text-gray-500 whitespace-nowrap">定休日</span>
                     </label>
                   </div>
                 ))}
@@ -1411,15 +1409,15 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
               <div className="py-16 max-w-sm mx-auto">
                 <div className="text-center mb-10">
                   <div className="relative w-16 h-16 mx-auto mb-5">
-                    <div className="absolute inset-0 rounded-full border-2 border-blue-500/20" />
-                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
-                    <div className="absolute inset-2 rounded-full border-2 border-transparent border-t-purple-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+                    <div className="absolute inset-0 rounded-full border-2 border-sky-200" />
+                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-600 animate-spin" />
+                    <div className="absolute inset-2 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
                     <div className="absolute inset-0 flex items-center justify-center text-xl">
                       {selectedIndustry?.icon}
                     </div>
                   </div>
-                  <h2 className="text-2xl font-bold mb-1">AIがサイトを生成中</h2>
-                  <p className="text-slate-500 text-sm">{selectedIndustry?.name}に最適化したコンテンツを作っています</p>
+                  <h2 className="text-2xl font-bold mb-1 text-gray-900">AIがサイトを生成中</h2>
+                  <p className="text-gray-500 text-sm">{selectedIndustry?.name}に最適化したコンテンツを作っています</p>
                 </div>
 
                 {/* Step-by-step checklist */}
@@ -1429,26 +1427,26 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                     const active = i === completedStepCount;
                     return (
                       <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-500 ${
-                        done ? 'bg-green-500/10 border border-green-500/20' :
-                        active ? 'bg-blue-500/10 border border-blue-500/30' :
-                        'bg-white/[0.03] border border-white/5 opacity-40'
+                        done ? 'bg-emerald-50 border border-emerald-200' :
+                        active ? 'bg-sky-50 border border-sky-200' :
+                        'bg-white border border-gray-200 opacity-40'
                       }`}>
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                          done ? 'bg-green-500' : active ? 'bg-blue-500/30' : 'bg-white/10'
+                          done ? 'bg-emerald-500' : active ? 'bg-sky-200' : 'bg-gray-200'
                         }`}>
                           {done ? (
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           ) : active ? (
-                            <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                            <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                           ) : (
-                            <div className="w-2 h-2 rounded-full bg-white/20" />
+                            <div className="w-2 h-2 rounded-full bg-gray-300" />
                           )}
                         </div>
-                        <span className={`text-sm font-medium ${done ? 'text-green-400' : active ? 'text-white' : 'text-slate-600'}`}>
+                        <span className={`text-sm font-medium ${done ? 'text-emerald-700' : active ? 'text-gray-900' : 'text-gray-400'}`}>
                           {label}
                         </span>
-                        {done && <span className="ml-auto text-green-500 text-xs">完了</span>}
-                        {active && <span className="ml-auto text-blue-400 text-xs animate-pulse">処理中...</span>}
+                        {done && <span className="ml-auto text-emerald-600 text-xs">完了</span>}
+                        {active && <span className="ml-auto text-sky-600 text-xs animate-pulse">処理中...</span>}
                       </div>
                     );
                   })}
@@ -1457,81 +1455,81 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
             ) : (
               <div>
                 <div className="mb-8">
-                  <h2 className="text-3xl font-bold mb-2">確認・生成</h2>
-                  <p className="text-slate-400">入力内容を確認してAI生成を開始してください。</p>
+                  <h2 className="text-3xl font-bold mb-2 text-gray-900">確認・生成</h2>
+                  <p className="text-gray-600">入力内容を確認してAI生成を開始してください。</p>
                 </div>
 
                 <div className="space-y-4 mb-10">
                   {/* Summary cards */}
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5">
                     <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-bold text-sm">基本情報</h3>
-                      <button onClick={() => goStep(2)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
+                      <h3 className="font-bold text-sm text-gray-900">基本情報</h3>
+                      <button onClick={() => goStep(2)} className="text-sky-600 text-xs hover:text-sky-500">編集</button>
                     </div>
-                    <div className="space-y-1.5 text-sm text-slate-300">
-                      <div><span className="text-slate-500">業種: </span>{selectedIndustry?.name}</div>
+                    <div className="space-y-1.5 text-sm text-gray-700">
+                      <div><span className="text-gray-500">業種: </span>{selectedIndustry?.name}</div>
                       <div>
-                        <span className="text-slate-500">店舗名: </span>
-                        {form.businessName || <span className="text-amber-400 text-xs">未入力（必須）</span>}
+                        <span className="text-gray-500">店舗名: </span>
+                        {form.businessName || <span className="text-amber-500 text-xs">未入力（必須）</span>}
                       </div>
                       <div>
-                        <span className="text-slate-500">電話: </span>
-                        {form.phone || <span className="text-slate-600 text-xs">AIが補完</span>}
+                        <span className="text-gray-500">電話: </span>
+                        {form.phone || <span className="text-gray-400 text-xs">AIが補完</span>}
                       </div>
-                      {form.address && <div><span className="text-slate-500">住所: </span>{form.address}</div>}
-                      {form.email && <div><span className="text-slate-500">メール: </span>{form.email}</div>}
+                      {form.address && <div><span className="text-gray-500">住所: </span>{form.address}</div>}
+                      {form.email && <div><span className="text-gray-500">メール: </span>{form.email}</div>}
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5">
                     <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-bold text-sm">デザインテンプレート</h3>
-                      <button onClick={() => goStep(3)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
+                      <h3 className="font-bold text-sm text-gray-900">デザインテンプレート</h3>
+                      <button onClick={() => goStep(3)} className="text-sky-600 text-xs hover:text-sky-500">編集</button>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex gap-1 flex-shrink-0">
-                        <div className="w-8 h-8 rounded-lg border border-white/10" style={{ background: form.primaryColor }} />
-                        <div className="w-4 h-8 rounded border border-white/10" style={{ background: form.accentColor }} />
+                        <div className="w-8 h-8 rounded-lg border border-gray-200" style={{ background: form.primaryColor }} />
+                        <div className="w-4 h-8 rounded border border-gray-200" style={{ background: form.accentColor }} />
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-white font-mono">{form.primaryColor.toUpperCase()} <span className="text-slate-500">+</span> {form.accentColor.toUpperCase()}</div>
-                        <div className="text-slate-500 text-xs">{form.designStyle} / {form.fontFamily} / {form.heroLayout} / {form.animLevel}</div>
+                        <div className="text-sm font-bold text-gray-900 font-mono">{form.primaryColor.toUpperCase()} <span className="text-gray-400">+</span> {form.accentColor.toUpperCase()}</div>
+                        <div className="text-gray-500 text-xs">{form.designStyle} / {form.fontFamily} / {form.heroLayout} / {form.animLevel}</div>
                       </div>
                       <div className="ml-auto flex gap-1.5">
-                        {form.larubot && <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full">LARUbot</span>}
-                        {form.laruseo && <span className="bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full">LARUSEO</span>}
+                        {form.larubot && <span className="bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full border border-indigo-200">LARUbot</span>}
+                        {form.laruseo && <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full border border-emerald-200">LARUSEO</span>}
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5">
                     <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-bold text-sm">サービス内容</h3>
-                      <button onClick={() => goStep(4)} className="text-blue-400 text-xs hover:text-blue-300">編集</button>
+                      <h3 className="font-bold text-sm text-gray-900">サービス内容</h3>
+                      <button onClick={() => goStep(4)} className="text-sky-600 text-xs hover:text-sky-500">編集</button>
                     </div>
                     {form.services.filter(s => s.name).length > 0 ? (
                       <div className="space-y-1">
                         {form.services.filter(s => s.name).map((s, i) => (
-                          <div key={i} className="text-sm text-slate-300 flex items-center gap-2">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-emerald-400 flex-shrink-0"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          <div key={i} className="text-sm text-gray-700 flex items-center gap-2">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-emerald-500 flex-shrink-0"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             {s.name}{s.price && ` — ${s.price}`}
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-slate-500 text-sm">AIが業種に合わせて自動生成します</p>
+                      <p className="text-gray-500 text-sm">AIが業種に合わせて自動生成します</p>
                     )}
                   </div>
 
                   {/* AI features notice */}
-                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-4">
+                  <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                      <div className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-purple-300 mb-1">AIが自動で生成するもの</div>
-                        <div className="text-xs text-slate-400 space-y-0.5">
+                        <div className="font-bold text-sm text-sky-700 mb-1">AIが自動で生成するもの</div>
+                        <div className="text-xs text-gray-600 space-y-0.5">
                           <div>・キャッチコピー・ヒーロー見出し（業種×地域最適化）</div>
                           <div>・会社・店舗紹介文（180〜220文字）</div>
                           <div>・3つの強み（アイコン付き）</div>
@@ -1547,21 +1545,21 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                 {/* Upsell options */}
                 <div className="mb-6 space-y-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-bold text-sm text-white">集客を加速するオプション（任意）</h3>
-                    <span className="text-[10px] text-slate-500">サイト完成後にいつでも追加できます</span>
+                    <h3 className="font-bold text-sm text-gray-900">集客を加速するオプション（任意）</h3>
+                    <span className="text-[10px] text-gray-500">サイト完成後にいつでも追加できます</span>
                   </div>
 
                   {/* LARUbot */}
-                  <div className="rounded-2xl border border-indigo-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(10,10,20,0.95) 100%)' }}>
+                  <div className="rounded-2xl border border-indigo-200 overflow-hidden bg-white shadow-sm">
                     <div className="p-4">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center flex-shrink-0 text-xl">🤖</div>
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center flex-shrink-0 text-xl">🤖</div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-white text-sm">LARUbot</span>
-                            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 px-2 py-0.5 rounded-full font-bold">HP+Botプラン ¥4,980/月</span>
+                            <span className="font-bold text-gray-900 text-sm">LARUbot</span>
+                            <span className="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-0.5 rounded-full font-bold">HP+Botプラン ¥4,980/月</span>
                           </div>
-                          <p className="text-slate-400 text-xs mt-0.5">AIチャットボット — 問い合わせを24時間自動対応</p>
+                          <p className="text-gray-600 text-xs mt-0.5">AIチャットボット — 問い合わせを24時間自動対応</p>
                         </div>
                       </div>
                       <div className="mt-3 space-y-1.5">
@@ -1569,30 +1567,30 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                           { icon: '💬', text: '「営業時間は？」「予約したい」にAIが即答' },
                           { icon: '🌙', text: '深夜・休日も無人対応。機会損失をなくす' },
                         ].map((b, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                          <div key={i} className="flex items-center gap-2 text-xs text-gray-700">
                             <span className="text-sm">{b.icon}</span>
                             <span>{b.text}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="border-t border-indigo-500/20 px-4 py-2.5 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500">HP単体プランからでもあとで追加可能</span>
-                      <span className="text-[11px] text-indigo-400 font-bold">初月1円で試せる</span>
+                    <div className="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between bg-gray-50">
+                      <span className="text-[11px] text-gray-500">HP単体プランからでもあとで追加可能</span>
+                      <span className="text-[11px] text-indigo-600 font-bold">初月1円で試せる</span>
                     </div>
                   </div>
 
                   {/* LARUSEO */}
-                  <div className="rounded-2xl border border-emerald-500/25 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(10,10,20,0.95) 100%)' }}>
+                  <div className="rounded-2xl border border-emerald-200 overflow-hidden bg-white shadow-sm">
                     <div className="p-4">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 text-xl">📈</div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center flex-shrink-0 text-xl">📈</div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-white text-sm">LARUSEO</span>
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-full font-bold">Bot+SEOプラン ¥9,800/月</span>
+                            <span className="font-bold text-gray-900 text-sm">LARUSEO</span>
+                            <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">Bot+SEOプラン ¥9,800/月</span>
                           </div>
-                          <p className="text-slate-400 text-xs mt-0.5">AIブログ自動生成 — Googleで上位表示を狙う</p>
+                          <p className="text-gray-600 text-xs mt-0.5">AIブログ自動生成 — Googleで上位表示を狙う</p>
                         </div>
                       </div>
                       <div className="mt-3 space-y-1.5">
@@ -1600,16 +1598,16 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                           { icon: '✍️', text: 'SEO最適化ブログをAIが毎週自動投稿。更新不要' },
                           { icon: '🔍', text: '「地域名 + 業種」でGoogle上位を目指す' },
                         ].map((b, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                          <div key={i} className="flex items-center gap-2 text-xs text-gray-700">
                             <span className="text-sm">{b.icon}</span>
                             <span>{b.text}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="border-t border-emerald-500/20 px-4 py-2.5 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500">LARUbotもセットで含まれます</span>
-                      <span className="text-[11px] text-emerald-400 font-bold">初月1円で試せる</span>
+                    <div className="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between bg-gray-50">
+                      <span className="text-[11px] text-gray-500">LARUbotもセットで含まれます</span>
+                      <span className="text-[11px] text-emerald-600 font-bold">初月1円で試せる</span>
                     </div>
                   </div>
                 </div>
@@ -1637,12 +1635,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   )}
                   <button
                     onClick={handleGenerate}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white py-5 rounded-2xl font-bold text-lg transition-all shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:shadow-[0_0_60px_rgba(59,130,246,0.4)] hover:scale-[1.02]"
+                    className="w-full bg-sky-600 hover:bg-sky-500 text-white py-5 rounded-2xl font-bold text-lg transition-all shadow-sm hover:shadow-md hover:scale-[1.02]"
                   >
                     AIでサイトを生成する →
                   </button>
                 </div>
-                <p className="text-center text-slate-600 text-xs mt-4">
+                <p className="text-center text-gray-500 text-xs mt-4">
                   生成後はビジュアルエディタで自由に編集できます
                 </p>
               </div>
@@ -1656,13 +1654,13 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {step < 5 && !generating && (
           <div className="flex justify-between mt-10">
             {step === 1 ? (
-              <Link href="/laruHP" className="px-6 py-3 rounded-xl border border-white/10 text-slate-500 hover:text-slate-300 hover:border-white/30 transition-all text-sm">
+              <Link href="/laruHP" className="px-6 py-3 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-sky-300 bg-white transition-all text-sm">
                 ← トップへ戻る
               </Link>
             ) : (
               <button
                 onClick={() => goStep(step - 1)}
-                className="px-6 py-3 rounded-xl border border-white/10 text-slate-300 hover:border-white/30 transition-all"
+                className="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:border-sky-300 bg-white transition-all"
               >
                 ← 戻る
               </button>
@@ -1670,7 +1668,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
             <button
               onClick={() => goStep(Math.min(5, step + 1))}
               disabled={!canNext()}
-              className="px-8 py-3 bg-white text-black rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="px-8 py-3 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-500 hover:scale-105 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               次へ →
             </button>
@@ -1680,12 +1678,12 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
         {/* Right: Live Preview (desktop) */}
         <div className="hidden lg:block sticky top-28">
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-3 font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs text-sky-600 mb-3 font-semibold uppercase tracking-widest">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             リアルタイムプレビュー
           </div>
           <LivePreview form={form} />
-          <p className="text-center text-[10px] text-slate-600 mt-3">入力内容がリアルタイムに反映されます</p>
+          <p className="text-center text-[10px] text-gray-500 mt-3">入力内容がリアルタイムに反映されます</p>
         </div>
       </div>{/* /grid */}
       </div>{/* /max-w-6xl */}
@@ -1700,10 +1698,10 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 export default function OnboardingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="w-10 h-10 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-          <div className="text-slate-400">読み込み中...</div>
+      <div className="min-h-screen bg-sky-50 flex items-center justify-center">
+        <div className="text-gray-900 text-center">
+          <div className="w-10 h-10 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin mx-auto mb-4" />
+          <div className="text-gray-500">読み込み中...</div>
         </div>
       </div>
     }>

@@ -61,39 +61,39 @@ export default function SignupPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           </div>
-          <h1 className="text-2xl font-black text-white mb-4">確認メールを送信しました</h1>
-          <p className="text-slate-400 mb-6">
-            <strong className="text-white">{email}</strong> に確認メールを送信しました。<br />
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">確認メールを送信しました</h1>
+          <p className="text-gray-600 mb-6">
+            <strong className="text-gray-900">{email}</strong> に確認メールを送信しました。<br />
             メール内のリンクをクリックしてアカウントを有効化してください。
           </p>
-          <Link href="/laruHP" className="text-blue-400 hover:text-blue-300 text-sm">← LARU HPトップへ</Link>
+          <Link href="/laruHP" className="text-sky-600 hover:text-sky-500 text-sm">← LARU HPトップへ</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#030712] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-black text-lg">L</div>
-          <span className="text-white font-black text-2xl">LARU<span className="text-blue-400 font-light">HP</span></span>
+          <div className="w-10 h-10 bg-sky-600 text-white rounded-xl flex items-center justify-center font-bold text-lg">L</div>
+          <span className="text-gray-900 font-semibold text-2xl">LARU<span className="text-sky-500 font-light">HP</span></span>
         </Link>
 
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
-          <div className="inline-block bg-blue-500/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full mb-4">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
+          <div className="inline-block bg-sky-50 text-sky-600 text-xs font-bold px-3 py-1 rounded-full mb-4 border border-sky-200">
             初月1円キャンペーン中
           </div>
-          <h1 className="text-2xl font-black text-white mb-2">無料で始める</h1>
-          <p className="text-slate-400 text-sm mb-8">アカウント作成後、サイト情報を入力してAI生成を開始します</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">無料で始める</h1>
+          <p className="text-gray-600 text-sm mb-8">アカウント作成後、サイト情報を入力してAI生成を開始します</p>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
               {error}
             </div>
           )}
@@ -101,7 +101,7 @@ export default function SignupPage() {
           <button
             type="button"
             onClick={handleGoogleSignup}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 py-3.5 rounded-xl font-bold text-sm transition-all mb-5"
+            className="w-full flex items-center justify-center gap-3 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 py-3.5 rounded-xl font-bold text-sm transition-all mb-5"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -113,36 +113,36 @@ export default function SignupPage() {
           </button>
 
           <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-slate-600 text-xs">またはメールで登録</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-gray-400 text-xs">またはメールで登録</span>
+            <div className="flex-1 h-px bg-gray-200" />
           </div>
 
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2">店舗・会社名</label>
+              <label className="block text-sm font-bold text-gray-900 mb-2">店舗・会社名</label>
               <input
                 type="text"
                 required
                 value={businessName}
                 onChange={e => setBusinessName(e.target.value)}
                 placeholder="例: 鈴木整体院"
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2">メールアドレス</label>
+              <label className="block text-sm font-bold text-gray-900 mb-2">メールアドレス</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-300 mb-2">パスワード（8文字以上）</label>
+              <label className="block text-sm font-bold text-gray-900 mb-2">パスワード（8文字以上）</label>
               <input
                 type="password"
                 required
@@ -150,30 +150,30 @@ export default function SignupPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
               />
             </div>
-            <p className="text-slate-600 text-xs">
-              登録することで<a href="#" className="text-blue-500">利用規約</a>・<a href="#" className="text-blue-500">プライバシーポリシー</a>に同意したものとみなします
+            <p className="text-gray-500 text-xs">
+              登録することで<a href="#" className="text-sky-600 hover:text-sky-500">利用規約</a>・<a href="#" className="text-sky-600 hover:text-sky-500">プライバシーポリシー</a>に同意したものとみなします
             </p>
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black py-4 rounded-xl font-black text-base hover:bg-blue-50 transition-all disabled:opacity-50"
+              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50"
             >
               {loading ? '処理中...' : 'アカウントを作成する →'}
             </button>
           </form>
 
-          <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-xs text-slate-400">
-            <p className="font-bold text-blue-400 mb-1">料金について</p>
+          <div className="mt-6 bg-sky-50 border border-sky-200 rounded-xl p-4 text-xs text-gray-600">
+            <p className="font-bold text-sky-600 mb-1">料金について</p>
             <p>アカウント作成は無料です。サイト公開時にStripeで決済設定（初月1円→月額999円）が必要です。最低契約期間6ヶ月。</p>
           </div>
         </div>
 
-        <p className="text-center text-slate-500 text-sm mt-6">
+        <p className="text-center text-gray-500 text-sm mt-6">
           既にアカウントをお持ちの方は{' '}
-          <Link href="/laruHP/auth/login" className="text-blue-400 hover:text-blue-300">ログイン</Link>
+          <Link href="/laruHP/auth/login" className="text-sky-600 hover:text-sky-500">ログイン</Link>
         </p>
       </div>
     </div>

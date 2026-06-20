@@ -43,62 +43,62 @@ function UpdatePasswordContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030712] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-black text-lg">L</div>
-          <span className="text-white font-black text-2xl">LARU<span className="text-blue-400 font-light">HP</span></span>
+          <div className="w-10 h-10 bg-sky-600 text-white rounded-xl flex items-center justify-center font-bold text-lg">L</div>
+          <span className="text-gray-900 font-semibold text-2xl">LARU<span className="text-sky-500 font-light">HP</span></span>
         </Link>
 
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
-          <h1 className="text-2xl font-black text-white mb-2">新しいパスワードを設定</h1>
-          <p className="text-slate-400 text-sm mb-8">8文字以上のパスワードを設定してください</p>
+        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">新しいパスワードを設定</h1>
+          <p className="text-gray-600 text-sm mb-8">8文字以上のパスワードを設定してください</p>
 
           {done ? (
             <div className="text-center py-4">
               <div className="text-5xl mb-4">✅</div>
-              <p className="text-green-400 font-bold">パスワードを更新しました</p>
-              <p className="text-slate-400 text-sm mt-2">ダッシュボードに移動します...</p>
+              <p className="text-emerald-700 font-bold">パスワードを更新しました</p>
+              <p className="text-gray-600 text-sm mt-2">ダッシュボードに移動します...</p>
             </div>
           ) : !ready ? (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-gray-500">
               <div className="text-3xl mb-3 animate-spin">⏳</div>
               リンクを確認中...
             </div>
           ) : (
             <>
               {error && (
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
                   {error}
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">新しいパスワード</label>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">新しいパスワード</label>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="8文字以上"
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">パスワード（確認）</label>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">パスワード（確認）</label>
                   <input
                     type="password"
                     required
                     value={confirm}
                     onChange={e => setConfirm(e.target.value)}
                     placeholder="もう一度入力"
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-white text-black py-4 rounded-xl font-black text-base hover:bg-blue-50 transition-all disabled:opacity-50"
+                  className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50"
                 >
                   {loading ? '更新中...' : 'パスワードを更新'}
                 </button>
@@ -114,8 +114,8 @@ function UpdatePasswordContent() {
 export default function UpdatePasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
-        <div className="text-white text-sm">読み込み中...</div>
+      <div className="min-h-screen bg-sky-50 flex items-center justify-center">
+        <div className="text-gray-600 text-sm">読み込み中...</div>
       </div>
     }>
       <UpdatePasswordContent />
