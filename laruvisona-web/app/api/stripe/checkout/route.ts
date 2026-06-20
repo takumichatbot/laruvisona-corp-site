@@ -72,6 +72,7 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/laruHP/plans?payment=canceled`,
       locale: 'ja',
     });
+    console.log('[stripe/checkout] session discounts:', JSON.stringify(session.total_details));
     return NextResponse.json({ url: session.url });
   } catch (err: unknown) {
     const stripeErr = err as { message?: string; code?: string };
