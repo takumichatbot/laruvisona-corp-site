@@ -476,7 +476,8 @@ export default function DashboardPage() {
 
   const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && userEmail === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
   const effectiveStatus: string = isAdmin ? 'active' : (profile?.subscription_status || 'inactive');
-  const effectivePlan = isAdmin ? 'hp-bot-seo' : (profile?.plan || null);
+  const rawPlan = profile?.plan || null;
+  const effectivePlan = isAdmin ? 'hp-bot-seo' : (rawPlan === 'agency' ? 'hp-bot-seo' : rawPlan);
   const status = STATUS_MAP[effectiveStatus];
 
   return (
@@ -1158,6 +1159,7 @@ export default function DashboardPage() {
                 { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
                 { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP作成 + AIチャットボット搭載' },
                 { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800', sub: '/月', badge: '半年間限定', desc: 'HP + チャットボット + AIブログSEO' },
+                { id: 'agency', label: 'エージェンシー', price: '¥19,800', sub: '/月', badge: '代理店向け', desc: 'クライアント数無制限・全機能込み' },
               ] as const).map(plan => (
                 <button
                   key={plan.id}

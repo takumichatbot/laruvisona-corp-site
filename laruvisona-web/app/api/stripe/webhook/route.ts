@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       await supabase.from('profiles').update(profileUpdates).eq('id', userId);
 
       // Auto-create LARUbot account for bundle plans
-      if ((plan === 'hp-bot' || plan === 'hp-bot-seo') && process.env.LARU_HP_API_SECRET) {
+      if ((plan === 'hp-bot' || plan === 'hp-bot-seo' || plan === 'agency') && process.env.LARU_HP_API_SECRET) {
         try {
           const { data: { user } } = await supabase.auth.admin.getUserById(userId);
           let siteName = '';

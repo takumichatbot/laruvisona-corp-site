@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 interface Site {
@@ -37,6 +38,7 @@ function timeAgo(dateStr: string) {
 
 export default function AgencyPage() {
   const supabase = createClient();
+  const router = useRouter();
   const [sites, setSites] = useState<Site[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,17 @@ export default function AgencyPage() {
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { router.replace('/laruHP/auth/login?redirectTo=/laruHP/agency'); return; }
+
+    const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    if (!isAdmin) {
+      const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user.id).single();
+      if (profile?.plan !== 'agency') {
+        router.replace('/laruHP/plans#agency');
+        return;
+      }
+    }
+
     const [{ data: sData }, { data: cData }] = await Promise.all([
       supabase.from('sites').select('id, name, slug, published, view_count, updated_at, created_at, data').eq('user_id', user.id),
       supabase.from('contacts').select('id, site_id, read, created_at').in('site_id',
@@ -59,7 +71,7 @@ export default function AgencyPage() {
     setSites(sData ?? []);
     setContacts(cData ?? []);
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, router]);
 
   useEffect(() => { load(); }, [load]);
 
