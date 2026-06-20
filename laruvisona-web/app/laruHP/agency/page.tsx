@@ -4,6 +4,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+type LarubotPlan = 'lite' | 'starter' | 'pro' | 'laru-cloud';
+
+const LARUBOT_PLANS: { id: LarubotPlan; label: string; desc: string; color: string }[] = [
+  { id: 'lite',       label: 'Lite',       desc: '基本チャット・シンプルなFAQ対応',       color: 'text-slate-300 bg-slate-700 border-slate-600' },
+  { id: 'starter',    label: 'Starter',    desc: 'カスタム対応・基本分析・週次レポート',   color: 'text-blue-300 bg-blue-900/40 border-blue-700' },
+  { id: 'pro',        label: 'Pro',        desc: '高度な分析・優先サポート・多言語対応',   color: 'text-purple-300 bg-purple-900/40 border-purple-700' },
+  { id: 'laru-cloud', label: 'LARU Cloud', desc: '完全カスタム・専任担当・SLA保証',        color: 'text-amber-300 bg-amber-900/40 border-amber-700' },
+];
+
 interface Site {
   id: string;
   name: string;
@@ -17,6 +26,11 @@ interface Site {
     clientEmail?: string;
     clientPhone?: string;
     clientNote?: string;
+  } | null;
+  settings_json: {
+    larubot?: boolean;
+    larubotPublicId?: string;
+    larubotPlan?: LarubotPlan;
   } | null;
 }
 
@@ -48,6 +62,10 @@ export default function AgencyPage() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ clientName: '', clientEmail: '', clientPhone: '', clientNote: '' });
   const [saving, setSaving] = useState(false);
+  const [larubotTarget, setLarubotTarget] = useState<Site | null>(null);
+  const [larubotPlan, setLarubotPlan] = useState<LarubotPlan>('lite');
+  const [larubotLoading, setLarubotLoading] = useState(false);
+  const [larubotError, setLarubotError] = useState('');
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -63,7 +81,7 @@ export default function AgencyPage() {
     }
 
     const [{ data: sData }, { data: cData }] = await Promise.all([
-      supabase.from('sites').select('id, name, slug, published, view_count, updated_at, created_at, data').eq('user_id', user.id),
+      supabase.from('sites').select('id, name, slug, published, view_count, updated_at, created_at, data, settings_json').eq('user_id', user.id),
       supabase.from('contacts').select('id, site_id, read, created_at').in('site_id',
         (await supabase.from('sites').select('id').eq('user_id', user.id)).data?.map(s => s.id) ?? []
       ),
@@ -84,6 +102,31 @@ export default function AgencyPage() {
     setSelected(s => s ? { ...s, data: newData } : s);
     setSaving(false);
     setEditMode(false);
+  };
+
+  const setupLarubot = async () => {
+    if (!larubotTarget) return;
+    setLarubotLoading(true);
+    setLarubotError('');
+    try {
+      const res = await fetch('/api/larubot/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ site_id: larubotTarget.id, plan: larubotPlan }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setLarubotError(data.error || 'エラーが発生しました'); return; }
+      // Optimistically update local state
+      setSites(prev => prev.map(s => s.id === larubotTarget.id
+        ? { ...s, settings_json: { ...(s.settings_json ?? {}), larubotPlan, larubot: true } }
+        : s
+      ));
+      setLarubotTarget(null);
+    } catch {
+      setLarubotError('接続エラーが発生しました');
+    } finally {
+      setLarubotLoading(false);
+    }
   };
 
   const contactsForSite = (siteId: string) => contacts.filter(c => c.site_id === siteId);
@@ -188,6 +231,11 @@ export default function AgencyPage() {
                       <span className={unread > 0 ? 'text-blue-400 font-semibold' : ''}>
                         ✉️ {siteContacts.length}{unread > 0 ? ` (未読${unread})` : ''}
                       </span>
+                      {site.settings_json?.larubot && (
+                        <span className="text-indigo-400 font-medium">
+                          🤖 LARUbot {site.settings_json.larubotPlan ? `(${LARUBOT_PLANS.find(p => p.id === site.settings_json?.larubotPlan)?.label ?? site.settings_json.larubotPlan})` : ''}
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-slate-600 text-[11px] mt-1.5">更新 {timeAgo(site.updated_at)}</div>
@@ -214,6 +262,11 @@ export default function AgencyPage() {
                         <span className="bg-blue-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{unread}</span>
                       )}
                     </Link>
+                    <button
+                      onClick={() => { setLarubotTarget(site); setLarubotPlan(site.settings_json?.larubotPlan ?? 'lite'); setLarubotError(''); }}
+                      className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${site.settings_json?.larubot ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-700 hover:bg-indigo-900/60' : 'bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white'}`}>
+                      🤖 {site.settings_json?.larubot ? 'LARUbot変更' : 'LARUbot設定'}
+                    </button>
                     <button onClick={() => { setSelected(site); setEditForm({ clientName: site.data?.clientName ?? '', clientEmail: site.data?.clientEmail ?? '', clientPhone: site.data?.clientPhone ?? '', clientNote: site.data?.clientNote ?? '' }); setEditMode(false); }}
                       className="text-xs px-3 py-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all ml-auto">
                       詳細 →
@@ -225,6 +278,52 @@ export default function AgencyPage() {
           </div>
         )}
       </div>
+
+      {/* LARUbot plan modal */}
+      {larubotTarget && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setLarubotTarget(null)}>
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold text-white">LARUbot プラン設定</h2>
+              <button onClick={() => setLarubotTarget(null)} className="text-slate-400 hover:text-white text-xl">×</button>
+            </div>
+            <p className="text-slate-400 text-xs mb-5">
+              {larubotTarget.data?.clientName || larubotTarget.name} に適用するLARUbotのプランを選択してください。
+            </p>
+            <div className="space-y-2 mb-5">
+              {LARUBOT_PLANS.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setLarubotPlan(p.id)}
+                  className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3 transition-all text-left ${larubotPlan === p.id ? p.color + ' border-opacity-100' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                >
+                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${larubotPlan === p.id ? 'border-current' : 'border-slate-600'}`}>
+                    {larubotPlan === p.id && <div className="w-2 h-2 rounded-full bg-current" />}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm text-white">{p.label}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{p.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {larubotError && <p className="text-red-400 text-xs mb-3">{larubotError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={setupLarubot}
+                disabled={larubotLoading}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+              >
+                {larubotLoading ? '設定中...' : '設定する'}
+              </button>
+              <button onClick={() => setLarubotTarget(null)}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-sm transition-all">
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Detail / edit modal */}
       {selected && (
