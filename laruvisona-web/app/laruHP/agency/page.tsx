@@ -64,6 +64,7 @@ export default function AgencyPage() {
   const [saving, setSaving] = useState(false);
   const [larubotTarget, setLarubotTarget] = useState<Site | null>(null);
   const [larubotPlan, setLarubotPlan] = useState<LarubotPlan>('lite');
+  const [larubotClientEmail, setLarubotClientEmail] = useState('');
   const [larubotLoading, setLarubotLoading] = useState(false);
   const [larubotError, setLarubotError] = useState('');
 
@@ -112,7 +113,7 @@ export default function AgencyPage() {
       const res = await fetch('/api/larubot/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site_id: larubotTarget.id, plan: larubotPlan }),
+        body: JSON.stringify({ site_id: larubotTarget.id, plan: larubotPlan, client_email: larubotClientEmail.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) { setLarubotError(data.error || 'エラーが発生しました'); return; }
@@ -263,7 +264,7 @@ export default function AgencyPage() {
                       )}
                     </Link>
                     <button
-                      onClick={() => { setLarubotTarget(site); setLarubotPlan(site.settings_json?.larubotPlan ?? 'lite'); setLarubotError(''); }}
+                      onClick={() => { setLarubotTarget(site); setLarubotPlan(site.settings_json?.larubotPlan ?? 'lite'); setLarubotClientEmail(site.data?.clientEmail ?? ''); setLarubotError(''); }}
                       className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${site.settings_json?.larubot ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-700 hover:bg-indigo-900/60' : 'bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white'}`}>
                       🤖 {site.settings_json?.larubot ? 'LARUbot変更' : 'LARUbot設定'}
                     </button>
@@ -306,6 +307,17 @@ export default function AgencyPage() {
                   </div>
                 </button>
               ))}
+            </div>
+            <div className="mb-4">
+              <label className="text-slate-400 text-xs block mb-1.5">クライアントのメールアドレス <span className="text-slate-500">（ログイン招待メールを送信）</span></label>
+              <input
+                type="email"
+                value={larubotClientEmail}
+                onChange={e => setLarubotClientEmail(e.target.value)}
+                placeholder="client@example.com"
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
+              />
+              <p className="text-slate-500 text-[11px] mt-1">入力するとクライアントにパスワード設定メールが届きます</p>
             </div>
             {larubotError && <p className="text-red-400 text-xs mb-3">{larubotError}</p>}
             <div className="flex gap-2">

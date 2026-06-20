@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const { site_id, plan } = await req.json().catch(() => ({}));
+  const { site_id, plan, client_email } = await req.json().catch(() => ({}));
   if (!site_id) return NextResponse.json({ error: 'site_id required' }, { status: 400 });
   if (!VALID_PLANS.includes(plan)) {
     return NextResponse.json({ error: 'invalid plan' }, { status: 400 });
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         'x-laru-secret': process.env.LARU_HP_API_SECRET,
       },
       body: JSON.stringify({
-        email: user.email,
+        email: client_email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client_email) ? client_email : user.email,
         plan,
         site_name: site.name,
         user_id: user.id,
