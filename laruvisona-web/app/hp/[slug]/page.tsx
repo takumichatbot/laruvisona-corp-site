@@ -57,7 +57,7 @@ export default async function PublishedSitePage({ params }: Props) {
 
   const { data: site } = await supabase
     .from('sites')
-    .select('published_html, name')
+    .select('published_html, name, settings_json')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -69,11 +69,23 @@ export default async function PublishedSitePage({ params }: Props) {
   // Fire-and-forget view count increment
   void supabase.rpc('increment_view_count', { site_slug: slug });
 
+  const settings = (site.settings_json ?? {}) as { larubotPublicId?: string; laruseoPublicId?: string };
+  const larubotPublicId = settings.larubotPublicId;
+  const laruseoPublicId = settings.laruseoPublicId;
+
   return (
-    <div
-      dangerouslySetInnerHTML={{ __html: site.published_html }}
-      style={{ minHeight: '100vh' }}
-    />
+    <>
+      <div
+        dangerouslySetInnerHTML={{ __html: site.published_html }}
+        style={{ minHeight: '100vh' }}
+      />
+      {larubotPublicId && (
+        <script src="https://larubot.tokyo/static/embed.js" data-public-id={larubotPublicId} defer />
+      )}
+      {laruseoPublicId && (
+        <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
+      )}
+    </>
   );
 }
 
