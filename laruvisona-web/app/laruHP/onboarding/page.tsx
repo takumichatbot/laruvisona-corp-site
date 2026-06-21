@@ -492,6 +492,12 @@ function OnboardingContent() {
   const [isAgency, setIsAgency] = useState(false);
 
   useEffect(() => {
+    // Persist referral code from URL into sessionStorage so signup can pick it up
+    const ref = searchParams.get('ref');
+    if (ref) {
+      try { sessionStorage.setItem('laruHP_ref', ref); } catch {}
+    }
+
     const supabase = createClient();
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();

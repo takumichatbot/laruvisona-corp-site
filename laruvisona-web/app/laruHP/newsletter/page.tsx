@@ -12,6 +12,15 @@ interface Subscriber {
   unsubscribed_at: string | null;
 }
 
+interface Campaign {
+  id: string;
+  subject: string;
+  sent_count: number;
+  open_count: number;
+  click_count: number;
+  created_at: string;
+}
+
 interface Site {
   id: string;
   name: string;
@@ -29,20 +38,28 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ja-JP');
 }
 
+function pct(n: number, total: number) {
+  if (!total) return '—';
+  return `${Math.round((n / total) * 100)}%`;
+}
+
 export default function NewsletterPage() {
   const router = useRouter();
   const supabase = createClient();
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [subLoading, setSubLoading] = useState(false);
+  const [campLoading, setCampLoading] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string | null>(null);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'unsubscribed'>('active');
+  const [tab, setTab] = useState<'subscribers' | 'campaigns'>('subscribers');
 
   useEffect(() => {
     (async () => {
@@ -65,9 +82,20 @@ export default function NewsletterPage() {
     setSubLoading(false);
   }, []);
 
+  const loadCampaigns = useCallback(async (siteId: string) => {
+    setCampLoading(true);
+    const res = await fetch(`/api/newsletter/campaigns?siteId=${siteId}`);
+    const data = await res.json();
+    setCampaigns(data.campaigns || []);
+    setCampLoading(false);
+  }, []);
+
   useEffect(() => {
-    if (selectedSiteId) loadSubscribers(selectedSiteId);
-  }, [selectedSiteId, loadSubscribers]);
+    if (selectedSiteId) {
+      loadSubscribers(selectedSiteId);
+      loadCampaigns(selectedSiteId);
+    }
+  }, [selectedSiteId, loadSubscribers, loadCampaigns]);
 
   const handleUnsubscribe = async (email: string) => {
     if (!selectedSiteId) return;
@@ -105,6 +133,8 @@ export default function NewsletterPage() {
       setSendResult(`${data.sent}件に送信しました`);
       setSubject('');
       setBody('');
+      setShowSendModal(false);
+      loadCampaigns(selectedSiteId);
     } else {
       setSendResult(`エラー: ${data.error}`);
     }
@@ -166,69 +196,144 @@ export default function NewsletterPage() {
               </div>
             </div>
 
-            {/* Filter tabs */}
-            <div className="flex gap-1 mb-4 border-b border-gray-200 pb-0">
-              {([
-                { key: 'active', label: `有効 (${subscribers.filter(s => !s.unsubscribed_at).length})` },
-                { key: 'unsubscribed', label: `解除済み (${subscribers.filter(s => !!s.unsubscribed_at).length})` },
-                { key: 'all', label: `全て (${subscribers.length})` },
-              ] as const).map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setFilterActive(tab.key)}
-                  className={`text-xs px-3 py-2 border-b-2 transition-all ${filterActive === tab.key ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            {/* Tabs */}
+            <div className="flex gap-1 mb-4 border-b border-gray-200">
+              <button
+                onClick={() => setTab('subscribers')}
+                className={`text-xs px-3 py-2 border-b-2 transition-all ${tab === 'subscribers' ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
+              >
+                購読者リスト
+              </button>
+              <button
+                onClick={() => setTab('campaigns')}
+                className={`text-xs px-3 py-2 border-b-2 transition-all ${tab === 'campaigns' ? 'border-sky-500 text-sky-600' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
+              >
+                送信履歴 {campaigns.length > 0 && <span className="ml-1 text-[10px] bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded-full">{campaigns.length}</span>}
+              </button>
             </div>
 
-            {/* Subscribers table */}
-            {subLoading ? (
-              <div className="text-gray-500 text-sm py-8 text-center">読み込み中...</div>
-            ) : filtered.length === 0 ? (
-              <div className="py-16 text-center border border-gray-200 border-dashed rounded-xl bg-white">
-                <p className="text-gray-500 text-sm">登録者がいません</p>
-                <p className="text-gray-400 text-xs mt-1">ニュースレター登録ブロックをサイトに追加して公開してください</p>
-              </div>
-            ) : (
-              <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      {['メールアドレス', 'お名前', '登録日', 'ステータス', '操作'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-[11px] text-gray-400 font-semibold">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map(sub => (
-                      <tr key={sub.id} className="border-b border-gray-100 hover:bg-sky-50 transition-colors">
-                        <td className="px-4 py-3 text-xs text-gray-900 font-mono">{sub.email}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{sub.name || '—'}</td>
-                        <td className="px-4 py-3 text-[11px] text-gray-500">{timeAgo(sub.subscribed_at)}</td>
-                        <td className="px-4 py-3">
-                          {sub.unsubscribed_at ? (
-                            <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">解除済み</span>
-                          ) : (
-                            <span className="text-[10px] text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">有効</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {!sub.unsubscribed_at && (
-                            <button
-                              onClick={() => handleUnsubscribe(sub.email)}
-                              className="text-[10px] text-red-400 hover:text-red-600 transition-colors"
-                            >
-                              解除
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {tab === 'subscribers' && (
+              <>
+                {/* Filter tabs */}
+                <div className="flex gap-1 mb-4">
+                  {([
+                    { key: 'active', label: `有効 (${subscribers.filter(s => !s.unsubscribed_at).length})` },
+                    { key: 'unsubscribed', label: `解除済み (${subscribers.filter(s => !!s.unsubscribed_at).length})` },
+                    { key: 'all', label: `全て (${subscribers.length})` },
+                  ] as const).map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => setFilterActive(t.key)}
+                      className={`text-xs px-3 py-1.5 rounded-full transition-all ${filterActive === t.key ? 'bg-sky-100 text-sky-600 font-semibold' : 'text-gray-500 hover:text-gray-900'}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Subscribers table */}
+                {subLoading ? (
+                  <div className="text-gray-500 text-sm py-8 text-center">読み込み中...</div>
+                ) : filtered.length === 0 ? (
+                  <div className="py-16 text-center border border-gray-200 border-dashed rounded-xl bg-white">
+                    <p className="text-gray-500 text-sm">登録者がいません</p>
+                    <p className="text-gray-400 text-xs mt-1">ニュースレター登録ブロックをサイトに追加して公開してください</p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50">
+                          {['メールアドレス', 'お名前', '登録日', 'ステータス', '操作'].map(h => (
+                            <th key={h} className="px-4 py-3 text-left text-[11px] text-gray-400 font-semibold">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map(sub => (
+                          <tr key={sub.id} className="border-b border-gray-100 hover:bg-sky-50 transition-colors">
+                            <td className="px-4 py-3 text-xs text-gray-900 font-mono">{sub.email}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600">{sub.name || '—'}</td>
+                            <td className="px-4 py-3 text-[11px] text-gray-500">{timeAgo(sub.subscribed_at)}</td>
+                            <td className="px-4 py-3">
+                              {sub.unsubscribed_at ? (
+                                <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">解除済み</span>
+                              ) : (
+                                <span className="text-[10px] text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">有効</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {!sub.unsubscribed_at && (
+                                <button
+                                  onClick={() => handleUnsubscribe(sub.email)}
+                                  className="text-[10px] text-red-400 hover:text-red-600 transition-colors"
+                                >
+                                  解除
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+
+            {tab === 'campaigns' && (
+              campLoading ? (
+                <div className="text-gray-500 text-sm py-8 text-center">読み込み中...</div>
+              ) : campaigns.length === 0 ? (
+                <div className="py-16 text-center border border-gray-200 border-dashed rounded-xl bg-white">
+                  <p className="text-gray-500 text-sm">まだメールを送信していません</p>
+                  <p className="text-gray-400 text-xs mt-1">送信後に開封率・クリック率がここに表示されます</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {campaigns.map(c => {
+                    const openRate = c.sent_count > 0 ? Math.round((c.open_count / c.sent_count) * 100) : 0;
+                    const clickRate = c.sent_count > 0 ? Math.round((c.click_count / c.sent_count) * 100) : 0;
+                    return (
+                      <div key={c.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{c.subject}</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(c.created_at)}</p>
+                          </div>
+                          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
+                            {c.sent_count}件送信
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-3">
+                          <div className="bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 text-center">
+                            <p className="text-lg font-bold text-sky-600">{pct(c.open_count, c.sent_count)}</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">開封率</p>
+                            <p className="text-[10px] text-gray-400">{c.open_count} 件</p>
+                          </div>
+                          <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-2 text-center">
+                            <p className="text-lg font-bold text-violet-600">{pct(c.click_count, c.sent_count)}</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">クリック率</p>
+                            <p className="text-[10px] text-gray-400">{c.click_count} 件</p>
+                          </div>
+                          <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-center">
+                            <div className="relative h-5 flex items-center justify-center">
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className="bg-green-500 h-1.5 rounded-full transition-all"
+                                  style={{ width: `${Math.min(openRate, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-1">到達率</p>
+                            <p className="text-[10px] text-gray-400">{c.sent_count} 件</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </>
         )}

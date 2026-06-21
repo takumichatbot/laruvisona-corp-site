@@ -128,8 +128,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   }
 
-  // Save to DB (fire-and-forget — don't block the response)
-  void supabase.from('contacts').insert({
+  // Save to DB — await so we can update with webhook result later
+  const { data: contactRow } = await supabase.from('contacts').insert({
     site_id: siteId,
     type: type || 'contact',
     name,
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
     phone: phone || null,
     message: message || null,
     extra_fields: extraFields || null,
-  });
+  }).select('id').single();
 
   // Get owner email from auth.users
   const { data: userData } = await supabase.auth.admin.getUserById(site.user_id);
@@ -229,14 +229,27 @@ export async function POST(req: Request) {
         body: new URLSearchParams({ message: lineMessage }),
       }).catch(() => {}),
     ] : []),
-    ...(webhookUrl ? [
-      fetch(webhookUrl, {
+  ]);
+
+  // Fire webhook and record delivery result in contact's extra_fields
+  if (webhookUrl && contactRow?.id) {
+    const webhookAt = new Date().toISOString();
+    try {
+      const whRes = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: type || 'contact', siteName: site.name, name, email, phone: phone || null, message: message || null, extraFields: extraFields || null }),
-      }).catch(() => {}),
-    ] : []),
-  ]);
+      });
+      const whStatus = whRes.ok ? 'success' : 'failed';
+      await supabase.from('contacts').update({
+        extra_fields: { ...(extraFields || {}), webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },
+      }).eq('id', contactRow.id);
+    } catch {
+      await supabase.from('contacts').update({
+        extra_fields: { ...(extraFields || {}), webhook_status: 'failed', webhook_at: webhookAt, webhook_code: 'error' },
+      }).eq('id', contactRow.id);
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

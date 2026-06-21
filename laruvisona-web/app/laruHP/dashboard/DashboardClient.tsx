@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useId } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import SearchConsoleWidget from './SearchConsoleWidget';
 
 interface SiteSettings {
   larubot?: boolean;
@@ -115,6 +116,18 @@ function IcBell() {
 
 // ── Mini area chart ─────────────────────────────────────────────────────────
 type DayView = { date: string; views: number };
+
+function downloadCsv(siteName: string, data: DayView[]) {
+  const rows = [['日付', 'PV数'], ...data.map(d => [d.date, String(d.views)])];
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${siteName}_analytics.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function MiniChart({ data }: { data: DayView[] }) {
   const uid = useId();
@@ -246,6 +259,7 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/laruHP/auth/login'); return; }
       setUserEmail(user.email || '');
+      setUserId(user.id);
 
       const [sitesRes, profileRes, analyticsRes, contactsRes] = await Promise.all([
         fetch('/api/sites'),
@@ -291,7 +305,19 @@ export default function DashboardPage() {
       return;
     }
     if (data.success) {
-      setSites(prev => prev.map(s => s.id === siteId ? { ...s, published: true, slug: data.slug || s.slug } : s));
+      setSites(prev => {
+        const updated = prev.map(s => s.id === siteId ? { ...s, published: true, slug: data.slug || s.slug } : s);
+        const site = updated.find(s => s.id === siteId);
+        if (site?.settings_json?.larubot && !site.settings_json?.larubotPublicId) {
+          setPublishToast({ message: 'LARUbot の Public ID が未設定です。ビルダーで設定してください。', type: 'warn' });
+        } else if (site?.settings_json?.larubot && site.settings_json?.larubotPublicId) {
+          setPublishToast({ message: 'サイトを公開しました。LARUbot も有効です！', type: 'success' });
+        } else {
+          setPublishToast({ message: 'サイトを公開しました', type: 'success' });
+        }
+        setTimeout(() => setPublishToast(null), 5000);
+        return updated;
+      });
     }
     setPublishing(null);
   };
@@ -379,8 +405,8 @@ export default function DashboardPage() {
   };
 
   const handleSaveSlug = async (siteId: string) => {
-    if (!/^[a-z0-9-]{3,60}$/.test(slugInput)) {
-      setSlugError('3〜60文字の半角英数字・ハイフンのみ');
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slugInput) || slugInput.length < 3 || slugInput.length > 60 || /--/.test(slugInput)) {
+      setSlugError('3〜60文字・英数字とハイフン（先頭末尾・連続ハイフン不可）');
       return;
     }
     setSavingSlug(true);
@@ -428,6 +454,16 @@ export default function DashboardPage() {
 
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState('');
+  const [startGuideDismissed, setStartGuideDismissed] = useState(false);
+  const [userId, setUserId] = useState('');
+  const [refCopied, setRefCopied] = useState(false);
+  const [memberPanels, setMemberPanels] = useState<Record<string, boolean>>({});
+  const [memberInputs, setMemberInputs] = useState<Record<string, string>>({});
+  const [memberLists, setMemberLists] = useState<Record<string, { id: string; invited_email: string; role: string; status: string }[]>>({});
+  const [memberLoading, setMemberLoading] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<Record<string, string>>({});
+  const [publishToast, setPublishToast] = useState<{ message: string; type: 'success' | 'warn' } | null>(null);
+  const [abWinnerLoading, setAbWinnerLoading] = useState<string | null>(null);
   const handleUpgrade = async (plan: string) => {
     setUpgradeLoading(plan);
     setUpgradeError('');
@@ -451,6 +487,24 @@ export default function DashboardPage() {
       else setUpgradeError('エラーが発生しました');
     }
     setUpgradeLoading(null);
+  };
+
+  const handleAbWinner = async (siteId: string, winner: 'a' | 'b') => {
+    setAbWinnerLoading(siteId);
+    const res = await fetch(`/api/sites/${siteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings_patch: { abStats: null, abWinner: winner } }),
+    });
+    if (res.ok) {
+      setSites(prev => prev.map(s => s.id === siteId
+        ? { ...s, settings_json: { ...(s.settings_json || {}), abStats: undefined } }
+        : s
+      ));
+      setPublishToast({ message: `バリアント ${winner.toUpperCase()} を勝者として確定しました。ビルダーで内容を確認してください。`, type: 'success' });
+      setTimeout(() => setPublishToast(null), 6000);
+    }
+    setAbWinnerLoading(null);
   };
 
   const handleLogout = async () => {
@@ -482,6 +536,14 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
+
+      {/* ── Publish toast ── */}
+      {publishToast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 border rounded-xl px-4 py-3 shadow-2xl ${publishToast.type === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-white border-gray-200 text-gray-700'}`}>
+          <span className="text-sm">{publishToast.type === 'warn' ? '⚠ ' : '✓ '}{publishToast.message}</span>
+          <button onClick={() => setPublishToast(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+        </div>
+      )}
 
       {/* ── Delete undo toast ── */}
       {deleteToast && (
@@ -656,6 +718,84 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ── Search Console Widget ── */}
+        <SearchConsoleWidget />
+
+        {/* ── Referral ── */}
+        {effectiveStatus === 'active' && userId && (() => {
+          const refCode = userId.slice(0, 8);
+          const refUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://laruvisona.jp'}/laruHP/r/${refCode}`;
+          return (
+            <div className="bg-gradient-to-r from-indigo-50 to-sky-50 border border-indigo-200 rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-gray-900 mb-0.5">友達に紹介する</div>
+                <p className="text-xs text-gray-500">紹介リンクを共有するだけ。紹介した方が契約したらお知らせします。</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+                <input
+                  readOnly
+                  value={refUrl}
+                  className="flex-1 sm:w-60 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 outline-none select-all"
+                  onClick={e => (e.target as HTMLInputElement).select()}
+                />
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(refUrl);
+                    setRefCopied(true);
+                    setTimeout(() => setRefCopied(false), 2000);
+                  }}
+                  className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
+                >
+                  {refCopied ? <IcCheck /> : <IcCopy />}
+                  {refCopied ? 'コピー済み' : 'コピー'}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── Getting Started ── */}
+        {!loading && !startGuideDismissed && (() => {
+          const steps = [
+            { label: 'サイトを作成', done: sites.length > 0, href: sites.length === 0 ? undefined : `/laruHP/builder?siteId=${sites[0]?.id}` },
+            { label: 'サイトを公開', done: sites.some(s => s.published), href: '/laruHP/dashboard' },
+            { label: 'プランを契約', done: effectiveStatus === 'active', href: '/laruHP/plans' },
+            { label: '独自ドメインを設定', done: sites.some(s => s.custom_domain), href: '/laruHP/dashboard' },
+            { label: '問い合わせを受け取る', done: contacts.length > 0, href: '/laruHP/contacts' },
+          ];
+          const doneCount = steps.filter(s => s.done).length;
+          if (doneCount === steps.length) return null;
+          const pct = Math.round((doneCount / steps.length) * 100);
+          return (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">はじめてガイド</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">{doneCount}/{steps.length} 完了</p>
+                </div>
+                <button onClick={() => setStartGuideDismissed(true)} className="text-gray-300 hover:text-gray-500 text-lg leading-none transition-colors">×</button>
+              </div>
+              <div className="w-full h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
+                <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="grid sm:grid-cols-5 gap-2">
+                {steps.map((step, i) => (
+                  <div key={i} className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 border transition-colors ${step.done ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${step.done ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                      {step.done ? '✓' : i + 1}
+                    </span>
+                    {!step.done && step.href ? (
+                      <Link href={step.href} className="hover:text-sky-600 transition-colors">{step.label}</Link>
+                    ) : (
+                      <span>{step.label}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Plan upgrade nudge ── */}
         {upgradeError && <p className="text-red-600 text-xs mb-3">{upgradeError}</p>}
         {effectiveStatus === 'active' && effectivePlan === 'hp' && (
@@ -767,6 +907,13 @@ export default function DashboardPage() {
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               ブログ
+            </Link>
+            <Link
+              href="/laruHP/larubot-logs"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-indigo-300 hover:text-indigo-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+              会話ログ
             </Link>
             <Link
               href="/laruHP/agency"
@@ -925,9 +1072,18 @@ export default function DashboardPage() {
                                 <svg className="animate-spin text-gray-400 ml-0.5" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
                               )}
                             </div>
-                            <span className="text-[9px] text-gray-400">
-                              {siteData.reduce((s: number, d: DayView) => s + d.views, 0).toLocaleString()} PV
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] text-gray-400">
+                                {siteData.reduce((s: number, d: DayView) => s + d.views, 0).toLocaleString()} PV
+                              </span>
+                              <button
+                                onClick={() => downloadCsv(site.name, siteData)}
+                                title="CSVでダウンロード"
+                                className="text-[9px] text-sky-500 hover:text-sky-700 border border-sky-200 hover:border-sky-400 px-1.5 py-0.5 rounded transition-all"
+                              >
+                                CSV
+                              </button>
+                            </div>
                           </div>
                           <MiniChart data={siteData} />
                         </div>
@@ -965,25 +1121,43 @@ export default function DashboardPage() {
                       const total = (abStats.a || 0) + (abStats.b || 0);
                       const pctA = total > 0 ? Math.round((abStats.a || 0) / total * 100) : 50;
                       const pctB = 100 - pctA;
+                      const winnerHint = pctA > pctB ? 'A' : pctB > pctA ? 'B' : null;
                       return (
                         <div className="bg-white border border-gray-200 rounded-lg p-2.5">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] font-semibold text-gray-500">A/Bテスト結果</span>
-                            <span className="text-[9px] text-gray-400">{total}人のサンプル</span>
+                            <span className="text-[9px] text-gray-400">{total}件のサンプル</span>
                           </div>
                           <div className="flex gap-1.5 mb-1.5">
                             <div className="flex-1 bg-sky-100 rounded h-5 relative overflow-hidden">
                               <div className="absolute inset-y-0 left-0 bg-sky-300 rounded" style={{ width: `${pctA}%` }} />
-                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-sky-700">A: {pctA}%</span>
+                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-sky-700">A: {pctA}%{winnerHint === 'A' && ' 👑'}</span>
                             </div>
                             <div className="flex-1 bg-purple-100 rounded h-5 relative overflow-hidden">
                               <div className="absolute inset-y-0 left-0 bg-purple-300 rounded" style={{ width: `${pctB}%` }} />
-                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-purple-700">B: {pctB}%</span>
+                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-purple-700">B: {pctB}%{winnerHint === 'B' && ' 👑'}</span>
                             </div>
                           </div>
-                          <div className="flex justify-between text-[9px] text-gray-400">
+                          <div className="flex justify-between text-[9px] text-gray-400 mb-2">
                             <span>{abStats.a || 0}PV</span>
                             <span>{abStats.b || 0}PV</span>
+                          </div>
+                          <div className="border-t border-gray-100 pt-2 flex items-center gap-1.5">
+                            <span className="text-[9px] text-gray-400 flex-1">勝者を確定する</span>
+                            <button
+                              onClick={() => handleAbWinner(site.id, 'a')}
+                              disabled={abWinnerLoading === site.id}
+                              className="text-[9px] px-2 py-0.5 rounded bg-sky-100 text-sky-700 hover:bg-sky-200 font-bold disabled:opacity-50 transition-all"
+                            >
+                              A を選ぶ
+                            </button>
+                            <button
+                              onClick={() => handleAbWinner(site.id, 'b')}
+                              disabled={abWinnerLoading === site.id}
+                              className="text-[9px] px-2 py-0.5 rounded bg-purple-100 text-purple-700 hover:bg-purple-200 font-bold disabled:opacity-50 transition-all"
+                            >
+                              B を選ぶ
+                            </button>
                           </div>
                         </div>
                       );
@@ -1072,6 +1246,99 @@ export default function DashboardPage() {
                       </div>
                     )}
 
+                    {/* Member management */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={async () => {
+                          const open = !memberPanels[site.id];
+                          setMemberPanels(p => ({ ...p, [site.id]: open }));
+                          if (open && !memberLists[site.id]) {
+                            const res = await fetch(`/api/sites/${site.id}/members`);
+                            const d = await res.json();
+                            setMemberLists(p => ({ ...p, [site.id]: d.members || [] }));
+                          }
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                          メンバー管理
+                        </div>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-gray-400 transition-transform ${memberPanels[site.id] ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      {memberPanels[site.id] && (
+                        <div className="px-3 py-2.5 border-t border-gray-100 space-y-2">
+                          {/* Member list */}
+                          {(memberLists[site.id] || []).map(m => (
+                            <div key={m.id} className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <div className="w-5 h-5 rounded-full bg-sky-100 flex items-center justify-center text-[9px] font-bold text-sky-600 flex-shrink-0">
+                                  {m.invited_email.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-[10px] text-gray-700 truncate">{m.invited_email}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${m.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                                  {m.status === 'active' ? '参加済み' : '招待中'}
+                                </span>
+                                <button
+                                  onClick={async () => {
+                                    await fetch(`/api/sites/${site.id}/members`, {
+                                      method: 'DELETE',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ email: m.invited_email }),
+                                    });
+                                    setMemberLists(p => ({ ...p, [site.id]: (p[site.id] || []).filter(x => x.id !== m.id) }));
+                                  }}
+                                  className="text-[9px] text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                  削除
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                          {/* Invite input */}
+                          <div className="flex gap-1.5 pt-1">
+                            <input
+                              type="email"
+                              placeholder="メールアドレスで招待"
+                              value={memberInputs[site.id] || ''}
+                              onChange={e => setMemberInputs(p => ({ ...p, [site.id]: e.target.value }))}
+                              className="flex-1 min-w-0 bg-white border border-gray-200 rounded-md px-2 py-1.5 text-[10px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500"
+                            />
+                            <button
+                              onClick={async () => {
+                                const email = memberInputs[site.id]?.trim();
+                                if (!email) return;
+                                setMemberLoading(site.id);
+                                setInviteSuccess(p => ({ ...p, [site.id]: '' }));
+                                const res = await fetch(`/api/sites/${site.id}/members`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ email }),
+                                });
+                                if (res.ok) {
+                                  setMemberInputs(p => ({ ...p, [site.id]: '' }));
+                                  setInviteSuccess(p => ({ ...p, [site.id]: '招待メールを送信しました' }));
+                                  const r2 = await fetch(`/api/sites/${site.id}/members`);
+                                  const d = await r2.json();
+                                  setMemberLists(p => ({ ...p, [site.id]: d.members || [] }));
+                                }
+                                setMemberLoading(null);
+                              }}
+                              disabled={memberLoading === site.id}
+                              className="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2.5 py-1.5 rounded-md transition-all disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+                            >
+                              {memberLoading === site.id ? '...' : '招待'}
+                            </button>
+                          </div>
+                          {inviteSuccess[site.id] && (
+                            <p className="text-[10px] text-green-600">{inviteSuccess[site.id]}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Actions */}
                     <div className="flex flex-col gap-1.5 mt-auto">
                       <Link
@@ -1157,6 +1424,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {([
                 { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
+                { id: 'lite', label: 'HP + LARUbot Lite', price: '¥2,480', sub: '/月', badge: null, desc: 'HP + AIチャットボット（機能制限あり）' },
                 { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP作成 + AIチャットボット搭載' },
                 { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800', sub: '/月', badge: '半年間限定', desc: 'HP + チャットボット + AIブログSEO' },
                 { id: 'agency', label: 'エージェンシー', price: '¥19,800', sub: '/月', badge: '代理店向け', desc: 'クライアント数無制限・全機能込み' },

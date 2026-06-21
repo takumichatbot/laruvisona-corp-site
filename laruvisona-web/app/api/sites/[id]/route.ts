@@ -41,17 +41,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({ site: data });
 }
 
-// PATCH /api/sites/[id] — slug-only update
+// PATCH /api/sites/[id] — partial update: slug or settings_patch
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const { slug } = await req.json();
+  const body = await req.json();
 
-  if (!slug || !/^[a-z0-9-]{3,60}$/.test(slug)) {
-    return NextResponse.json({ error: 'slugは3〜60文字の半角英数字・ハイフンのみです' }, { status: 400 });
+  // settings_patch: merge into existing settings_json
+  if (body.settings_patch !== undefined) {
+    const { data: current } = await supabase.from('sites').select('settings_json').eq('id', id).eq('user_id', user.id).single();
+    if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const merged = { ...(current.settings_json as Record<string, unknown> || {}), ...body.settings_patch };
+    const { data, error } = await supabase.from('sites').update({ settings_json: merged }).eq('id', id).eq('user_id', user.id).select().single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ site: data });
+  }
+
+  const { slug } = body;
+  if (!slug || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug) || slug.length < 3 || slug.length > 60 || /--/.test(slug)) {
+    return NextResponse.json({ error: 'slugは3〜60文字・英数字とハイフン（先頭末尾・連続ハイフン不可）' }, { status: 400 });
   }
 
   const { data: existing } = await supabase.from('sites').select('id').eq('slug', slug).neq('id', id).limit(1);

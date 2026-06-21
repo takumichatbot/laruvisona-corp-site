@@ -34,11 +34,14 @@ export default function SignupPage() {
     setLoading(true);
     setError('');
 
+    let referredBy = '';
+    try { referredBy = sessionStorage.getItem('laruHP_ref') || ''; } catch {}
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { business_name: businessName },
+        data: { business_name: businessName, ...(referredBy ? { referred_by: referredBy } : {}) },
         emailRedirectTo: `${location.origin}/api/auth/callback?next=/laruHP/onboarding`,
       },
     });

@@ -1539,7 +1539,7 @@ function PaletteSwatches({ palette, onPick }: { palette: string[]; onPick: (c: s
   );
 }
 
-function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, designStyle, onDesignStyleChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus, onOpenImageLib, globalFooter, onGlobalFooterChange, customPalette, onCustomPaletteChange, lineNotifyToken, onLineNotifyTokenChange, clarityId, onClarityIdChange, webhookUrl, onWebhookUrlChange, sitePassword, onSitePasswordChange }: {
+function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, designStyle, onDesignStyleChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus, onOpenImageLib, globalFooter, onGlobalFooterChange, customPalette, onCustomPaletteChange, lineNotifyToken, onLineNotifyTokenChange, clarityId, onClarityIdChange, webhookUrl, onWebhookUrlChange, sitePassword, onSitePasswordChange, siteId }: {
   block: Block | null;
   onDataChange: (id: string, data: Record<string, unknown>) => void;
   seo: SEOSettings;
@@ -1580,11 +1580,14 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   onWebhookUrlChange: (v: string) => void;
   sitePassword: string;
   onSitePasswordChange: (v: string) => void;
+  siteId: string | null;
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
   const [uploadingImg, setUploadingImg] = useState<string | null>(null);
   const [aiCopyLoading, setAiCopyLoading] = useState(false);
   const [aiCopyResult, setAiCopyResult] = useState<Record<string, string> | null>(null);
+  const [webhookLogs, setWebhookLogs] = useState<{ id: string; name: string; email: string; type: string; webhook_status: string; webhook_at: string; webhook_code: string }[] | null>(null);
+  const [webhookLogsLoading, setWebhookLogsLoading] = useState(false);
   const d = block?.data || {};
 
   const AI_COPY_BLOCKS = ['hero', 'heading', 'paragraph', 'cta', 'services'];
@@ -3375,6 +3378,38 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] mb-1"
               />
               <div className="text-slate-500 text-[10px]">フォーム送信時に任意の URL へ JSON でデータを POST します。Zapier・Make などに対応。</div>
+              {webhookUrl && siteId && (
+                <div className="mt-2">
+                  <button
+                    onClick={async () => {
+                      if (webhookLogsLoading) return;
+                      setWebhookLogsLoading(true);
+                      const res = await fetch(`/api/sites/${siteId}/webhook-logs`);
+                      const data = await res.json();
+                      setWebhookLogs(data.logs || []);
+                      setWebhookLogsLoading(false);
+                    }}
+                    className="text-[10px] text-sky-400 hover:text-sky-300 underline"
+                  >
+                    {webhookLogsLoading ? '読み込み中...' : '受信ログを確認 →'}
+                  </button>
+                  {webhookLogs !== null && (
+                    <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                      {webhookLogs.length === 0 ? (
+                        <div className="text-[10px] text-slate-500">まだ受信ログがありません</div>
+                      ) : webhookLogs.map(log => (
+                        <div key={log.id} className="flex items-center gap-2 text-[10px] bg-white/5 rounded px-2 py-1">
+                          <span className={`font-bold ${log.webhook_status === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                            {log.webhook_status === 'success' ? '✓' : '✗'} {log.webhook_code}
+                          </span>
+                          <span className="text-slate-300 truncate flex-1">{log.name} / {log.email}</span>
+                          <span className="text-slate-500 shrink-0">{new Date(log.webhook_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Microsoft Clarity */}
@@ -3652,6 +3687,7 @@ function BuilderContent() {
   const [userPlan, setUserPlan] = useState<string | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('inactive');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [brandLogoUrl, setBrandLogoUrl] = useState<string>('');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [showMobileBlocks, setShowMobileBlocks] = useState(false);
   const [showImageLib, setShowImageLib] = useState(false);
@@ -3710,10 +3746,11 @@ function BuilderContent() {
         setSubscriptionStatus('active');
         return;
       }
-      supabase.from('profiles').select('plan, subscription_status').eq('id', user.id).single().then(({ data }: { data: { plan: string | null; subscription_status: string } | null }) => {
+      supabase.from('profiles').select('plan, subscription_status, brand_logo_url').eq('id', user.id).single().then(({ data }: { data: { plan: string | null; subscription_status: string; brand_logo_url?: string | null } | null }) => {
         if (data) {
           setUserPlan(data.plan);
           setSubscriptionStatus(data.subscription_status || 'inactive');
+          if (data.brand_logo_url) setBrandLogoUrl(data.brand_logo_url);
         }
       });
     });
@@ -4746,8 +4783,14 @@ function BuilderContent() {
             title="ダッシュボードへ戻る"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-0.5 transition-transform"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-            <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black text-xs">L</div>
-            <span className="hidden sm:block font-bold">LARU<span className="text-blue-400 font-light">HP</span></span>
+            {brandLogoUrl ? (
+              <img src={brandLogoUrl} alt="logo" className="h-7 w-auto max-w-[120px] object-contain rounded" />
+            ) : (
+              <>
+                <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black text-xs">L</div>
+                <span className="hidden sm:block font-bold">LARU<span className="text-blue-400 font-light">HP</span></span>
+              </>
+            )}
           </button>
           <span className="text-slate-700">/</span>
           <div className="flex items-center gap-1 group/sitename">
@@ -5328,6 +5371,7 @@ function BuilderContent() {
             onWebhookUrlChange={v => setSite(prev => ({ ...prev, webhookUrl: v }))}
             sitePassword={site.sitePassword}
             onSitePasswordChange={v => setSite(prev => ({ ...prev, sitePassword: v }))}
+            siteId={siteId}
           />
         )}
       </div>
@@ -5641,6 +5685,7 @@ function BuilderContent() {
             <div className="space-y-3">
               {([
                 { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
+                { id: 'lite', label: 'HP + LARUbot Lite', price: '¥2,480', sub: '/月', badge: null, desc: 'HP + AIチャットボット（機能制限あり）' },
                 { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP作成 + AIチャットボット搭載' },
                 { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800', sub: '/月', badge: '半年間限定', desc: 'HP + チャットボット + AIブログSEO' },
               ] as const).map(plan => (

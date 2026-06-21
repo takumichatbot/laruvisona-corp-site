@@ -2,32 +2,36 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-type Availability = 'yes' | 'no';
+type Availability = 'yes' | 'no' | 'limited';
 
 interface FeatureRow {
   label: string;
   hp: Availability;
+  lite: Availability;
   hpBot: Availability;
   hpBotSeo: Availability;
 }
 
 const FEATURE_ROWS: FeatureRow[] = [
-  { label: 'HP作成・公開',            hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'AIコンテンツ生成',        hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'ビジュアルエディタ',      hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'SEO自動最適化',           hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'LARUbot AIチャットボット', hp: 'no',  hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'LARUSEO AIブログ',        hp: 'no',  hpBot: 'no',  hpBotSeo: 'yes' },
-  { label: '独自ドメイン対応',        hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'SSL・サーバー費用込み',   hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'Google Analytics連携',    hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'お問い合わせフォーム',    hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'サポート',                hp: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'HP作成・公開',            hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'AIコンテンツ生成',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'ビジュアルエディタ',      hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'SEO自動最適化',           hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'LARUbot AIチャットボット', hp: 'no',  lite: 'limited', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'LARUSEO AIブログ',        hp: 'no',  lite: 'no',  hpBot: 'no',  hpBotSeo: 'yes' },
+  { label: '独自ドメイン対応',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'SSL・サーバー費用込み',   hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'Google Analytics連携',    hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'お問い合わせフォーム',    hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'サポート',                hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
 ];
 
 function Cell({ value }: { value: Availability }) {
   if (value === 'yes') {
     return <div className="flex justify-center"><span className="text-emerald-500 font-bold text-base">✓</span></div>;
+  }
+  if (value === 'limited') {
+    return <div className="flex justify-center"><span className="text-amber-500 font-bold text-xs">制限あり</span></div>;
   }
   return <div className="flex justify-center"><span className="text-gray-300 text-base">−</span></div>;
 }
@@ -124,70 +128,88 @@ export default function PlansPage() {
         <div className="max-w-4xl mx-auto">
 
           {/* Plan header row */}
-          <div className="grid grid-cols-4 gap-0 mb-0">
+          <div className="grid grid-cols-5 gap-0 mb-0">
             <div className="p-4" />
 
             {/* HP単体 */}
-            <div className="p-5 text-center border-t border-l border-r border-gray-200 bg-white rounded-tl-2xl rounded-tr-none">
+            <div className="p-4 text-center border-t border-l border-r border-gray-200 bg-white rounded-tl-2xl rounded-tr-none">
               <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp</div>
-              <div className="text-lg font-semibold mb-1 text-gray-900">HP単体</div>
-              <div className="text-gray-500 text-xs mb-3">¥</div>
-              <div className="text-4xl font-bold leading-none mb-1 text-gray-900">999</div>
+              <div className="text-base font-semibold mb-1 text-gray-900">HP単体</div>
+              <div className="text-gray-500 text-xs mb-1">¥</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">999</div>
               <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
                 初月無料
               </div>
               <CheckoutButton
                 plan="hp"
-                className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-50 transition-all"
+                className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2 rounded-xl text-xs hover:bg-sky-50 transition-all"
               >
-                このプランで始める →
+                始める →
+              </CheckoutButton>
+            </div>
+
+            {/* HP + LARUbot Lite */}
+            <div className="p-4 text-center border-t border-l border-r border-gray-200 bg-white relative">
+              <div className="text-xs font-medium text-indigo-500 tracking-widest uppercase mb-2">lite</div>
+              <div className="text-base font-semibold mb-1 text-gray-900">HP + Bot Lite</div>
+              <div className="text-gray-500 text-xs mb-1">¥</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">2,480</div>
+              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
+                初月無料
+              </div>
+              <CheckoutButton
+                plan="lite"
+                className="block w-full bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold py-2 rounded-xl text-xs hover:bg-indigo-100 transition-all"
+              >
+                始める →
               </CheckoutButton>
             </div>
 
             {/* HP + LARUbot */}
-            <div className="p-5 text-center border-2 border-sky-500 bg-white shadow-[0_0_40px_rgba(14,165,233,0.12)] relative">
+            <div className="p-4 text-center border-2 border-sky-500 bg-white shadow-[0_0_40px_rgba(14,165,233,0.12)] relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <span className="bg-sky-600 text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                   おすすめ
                 </span>
               </div>
               <div className="text-xs font-medium text-sky-600 tracking-widest uppercase mb-2">hp-bot</div>
-              <div className="text-lg font-semibold mb-1 text-gray-900">HP + LARUbot</div>
-              <div className="text-gray-500 text-xs mb-3">¥</div>
-              <div className="text-4xl font-bold leading-none mb-1 text-gray-900">4,980</div>
+              <div className="text-base font-semibold mb-1 text-gray-900">HP + LARUbot</div>
+              <div className="text-gray-500 text-xs mb-1">¥</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">4,980</div>
               <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
                 初月無料
               </div>
               <CheckoutButton
                 plan="hp-bot"
-                className="block w-full bg-sky-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-500 transition-all shadow-sm"
+                className="block w-full bg-sky-600 text-white font-semibold py-2 rounded-xl text-xs hover:bg-sky-500 transition-all shadow-sm"
               >
-                このプランで始める →
+                始める →
               </CheckoutButton>
             </div>
 
             {/* HP + Bot + SEO */}
-            <div className="p-5 text-center border border-gray-200 bg-white rounded-tr-2xl rounded-tl-none relative">
+            <div className="p-4 text-center border border-gray-200 bg-white rounded-tr-2xl rounded-tl-none relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <span className="bg-amber-500 text-black text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
                   半年間限定
                 </span>
               </div>
               <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp-bot-seo</div>
-              <div className="text-lg font-semibold mb-1 text-gray-900">HP + Bot + SEO</div>
-              <div className="text-gray-500 text-xs mb-3">¥</div>
-              <div className="text-4xl font-bold leading-none mb-1 text-gray-900">9,800</div>
+              <div className="text-base font-semibold mb-1 text-gray-900">HP + Bot + SEO</div>
+              <div className="text-gray-500 text-xs mb-1">¥</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">9,800</div>
               <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
-              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2.5 py-0.5 rounded-full mb-4">
+              <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
                 初月無料
               </div>
               <CheckoutButton
                 plan="hp-bot-seo"
-                className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-50 transition-all"
+                className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2 rounded-xl text-xs hover:bg-sky-50 transition-all"
               >
-                このプランで始める →
+                始める →
               </CheckoutButton>
             </div>
           </div>
@@ -197,12 +219,13 @@ export default function PlansPage() {
             {FEATURE_ROWS.map((row, i) => (
               <div
                 key={i}
-                className={`grid grid-cols-4 border-b border-gray-200 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                className={`grid grid-cols-5 border-b border-gray-200 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
               >
-                <div className="p-4 text-sm text-gray-600 font-medium">{row.label}</div>
-                <div className="p-4 border-l border-gray-200"><Cell value={row.hp} /></div>
-                <div className="p-4 border-l border-sky-100 bg-sky-50/30"><Cell value={row.hpBot} /></div>
-                <div className="p-4 border-l border-gray-200"><Cell value={row.hpBotSeo} /></div>
+                <div className="p-3 text-sm text-gray-600 font-medium">{row.label}</div>
+                <div className="p-3 border-l border-gray-200"><Cell value={row.hp} /></div>
+                <div className="p-3 border-l border-indigo-100 bg-indigo-50/20"><Cell value={row.lite} /></div>
+                <div className="p-3 border-l border-sky-100 bg-sky-50/30"><Cell value={row.hpBot} /></div>
+                <div className="p-3 border-l border-gray-200"><Cell value={row.hpBotSeo} /></div>
               </div>
             ))}
           </div>

@@ -10,7 +10,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const daysParam = searchParams.get('days') || '7';
-  const daysCount = daysParam === 'all' ? null : Math.min(parseInt(daysParam) || 7, 90);
+  const daysCount = daysParam === 'all' ? 180 : Math.min(parseInt(daysParam) || 7, 90);
 
   // Build date range
   const days: string[] = [];

@@ -15,8 +15,17 @@ export async function GET() {
 
   const service = await createServiceClient();
 
-  const [authUsers, profilesRes, sitesRes] = await Promise.all([
-    service.auth.admin.listUsers({ perPage: 1000 }),
+  // Paginate through all users (max 1000/page)
+  let allAuthUsers: Awaited<ReturnType<typeof service.auth.admin.listUsers>>['data']['users'] = [];
+  let page = 1;
+  while (true) {
+    const { data } = await service.auth.admin.listUsers({ perPage: 1000, page });
+    allAuthUsers = [...allAuthUsers, ...(data?.users ?? [])];
+    if ((data?.users ?? []).length < 1000) break;
+    page++;
+  }
+
+  const [profilesRes, sitesRes] = await Promise.all([
     service.from('profiles').select('*'),
     service.from('sites').select('user_id'),
   ]);
@@ -27,7 +36,7 @@ export async function GET() {
     siteCountMap.set(s.user_id, (siteCountMap.get(s.user_id) ?? 0) + 1);
   }
 
-  const users = (authUsers.data?.users ?? []).map(u => ({
+  const users = allAuthUsers.map(u => ({
     id: u.id,
     email: u.email,
     created_at: u.created_at,

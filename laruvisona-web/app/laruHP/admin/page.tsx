@@ -13,10 +13,22 @@ interface AdminUser {
   last_sign_in_at: string | null;
   business_name: string | null;
   subscription_status: string;
+  plan: string | null;
+  stripe_subscription_id: string | null;
   is_suspended: boolean;
   admin_notes: string | null;
   site_count: number;
   features: UserFeatures;
+}
+
+interface ChurnRiskUser {
+  id: string;
+  plan: string | null;
+  score: number;
+  hasPublished: boolean;
+  hasRecentContact: boolean;
+  daysSinceActive: number;
+  siteCount: number;
 }
 
 interface Stats {
@@ -26,7 +38,8 @@ interface Stats {
   totalSites: number;
   publishedSites: number;
   mrr: number;
-  planBreakdown: { hp: number; 'hp-bot': number; 'hp-bot-seo': number };
+  planBreakdown: { hp: number; lite: number; 'hp-bot': number; 'hp-bot-seo': number; agency: number };
+  churnRisk: ChurnRiskUser[];
 }
 
 const SUB_BADGE: Record<string, string> = {
@@ -66,6 +79,9 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [filterSub, setFilterSub] = useState('all');
   const [saving, setSaving] = useState<string | null>(null);
+  const [planChanging, setPlanChanging] = useState<string | null>(null);
+  const [planSelects, setPlanSelects] = useState<Record<string, string>>({});
+  const [canceling, setCanceling] = useState<string | null>(null);
   const [notesUser, setNotesUser] = useState<string | null>(null);
   const [notesText, setNotesText] = useState('');
   const router = useRouter();
@@ -119,6 +135,31 @@ export default function AdminPage() {
     setNotesUser(null);
   };
 
+  const changePlan = async (userId: string) => {
+    const plan = planSelects[userId];
+    if (!plan) return;
+    setPlanChanging(userId);
+    await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan }),
+    });
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan } : u));
+    setPlanChanging(null);
+  };
+
+  const forceCancel = async (userId: string, email: string) => {
+    if (!confirm(`${email} のサブスクリプションを強制解約しますか？\nこの操作は取り消せません。`)) return;
+    setCanceling(userId);
+    await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ force_cancel: true }),
+    });
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, subscription_status: 'canceled', plan: null, stripe_subscription_id: null } : u));
+    setCanceling(null);
+  };
+
   const filtered = users.filter(u => {
     const matchSearch = !search ||
       (u.email || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -170,11 +211,13 @@ export default function AdminPage() {
               ))}
             </div>
             {stats.planBreakdown && (
-              <div className="grid grid-cols-3 gap-3 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
                 {[
                   { label: 'HP (¥999)', value: stats.planBreakdown.hp || 0, color: 'text-slate-300' },
-                  { label: 'HP + Bot (¥4,980)', value: stats.planBreakdown['hp-bot'] || 0, color: 'text-indigo-300' },
-                  { label: 'HP + Bot + SEO (¥9,800)', value: stats.planBreakdown['hp-bot-seo'] || 0, color: 'text-emerald-300' },
+                  { label: 'Lite (¥2,480)', value: stats.planBreakdown['lite'] || 0, color: 'text-purple-300' },
+                  { label: 'HP+Bot (¥4,980)', value: stats.planBreakdown['hp-bot'] || 0, color: 'text-indigo-300' },
+                  { label: 'HP+Bot+SEO (¥9,800)', value: stats.planBreakdown['hp-bot-seo'] || 0, color: 'text-emerald-300' },
+                  { label: 'Agency (¥19,800)', value: stats.planBreakdown['agency'] || 0, color: 'text-amber-300' },
                 ].map((p, i) => (
                   <div key={i} className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-3 flex items-center justify-between">
                     <span className="text-slate-500 text-xs">{p.label}</span>
@@ -184,6 +227,48 @@ export default function AdminPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* Churn Risk */}
+        {stats?.churnRisk && stats.churnRisk.length > 0 && (
+          <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-red-400 font-bold text-sm">解約リスクユーザー</span>
+              <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">{stats.churnRisk.length}件</span>
+            </div>
+            <div className="space-y-2">
+              {stats.churnRisk.map(r => {
+                const u = users.find(u => u.id === r.id);
+                return (
+                  <div key={r.id} className="bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-white truncate">{u?.email || r.id}</div>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {!r.hasPublished && <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">未公開</span>}
+                        {r.daysSinceActive > 14 && <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">{r.daysSinceActive}日間未操作</span>}
+                        {!r.hasRecentContact && <span className="text-[10px] bg-slate-500/20 text-slate-400 border border-slate-500/30 px-2 py-0.5 rounded-full">30日間問い合わせなし</span>}
+                        {r.siteCount === 0 && <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">サイト未作成</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-xs text-slate-500">リスクスコア</div>
+                        <div className={`text-lg font-black ${r.score >= 80 ? 'text-red-400' : r.score >= 60 ? 'text-amber-400' : 'text-yellow-400'}`}>{r.score}</div>
+                      </div>
+                      {u && (
+                        <button
+                          onClick={() => { setNotesUser(u.id); setNotesText(u.admin_notes || ''); }}
+                          className="text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/30 px-2.5 py-1.5 rounded-lg transition-all"
+                        >
+                          メモ
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {/* Filters */}
@@ -271,20 +356,53 @@ export default function AdminPage() {
                   </div>
 
                   {/* アクション */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => { setNotesUser(user.id); setNotesText(user.admin_notes || ''); }}
-                      className="text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/30 px-3 py-2 rounded-xl transition-all"
-                    >
-                      メモ
-                    </button>
-                    <button
-                      onClick={() => toggleSuspend(user)}
-                      disabled={saving === user.id}
-                      className={`text-xs px-3 py-2 rounded-xl border transition-all disabled:opacity-50 ${user.is_suspended ? 'border-green-500/30 text-green-400 hover:bg-green-500/10' : 'border-red-500/20 text-red-400/70 hover:text-red-400 hover:border-red-500/40'}`}
-                    >
-                      {saving === user.id ? '...' : user.is_suspended ? '✓ 停止解除' : '停止'}
-                    </button>
+                  <div className="flex flex-col gap-2">
+                    {/* プラン変更 */}
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={planSelects[user.id] ?? user.plan ?? 'hp'}
+                        onChange={e => setPlanSelects(p => ({ ...p, [user.id]: e.target.value }))}
+                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500/50"
+                      >
+                        <option value="hp">HP (¥999)</option>
+                        <option value="lite">Lite (¥2,480)</option>
+                        <option value="hp-bot">HP+Bot (¥4,980)</option>
+                        <option value="hp-bot-seo">HP+Bot+SEO (¥9,800)</option>
+                        <option value="agency">Agency (¥19,800)</option>
+                      </select>
+                      <button
+                        onClick={() => changePlan(user.id)}
+                        disabled={planChanging === user.id || !planSelects[user.id] || planSelects[user.id] === user.plan}
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 transition-all disabled:opacity-40"
+                      >
+                        {planChanging === user.id ? '...' : '変更'}
+                      </button>
+                    </div>
+                    {/* メモ・停止・解約 */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => { setNotesUser(user.id); setNotesText(user.admin_notes || ''); }}
+                        className="text-xs text-slate-400 hover:text-white border border-white/10 hover:border-white/30 px-2.5 py-1.5 rounded-lg transition-all"
+                      >
+                        メモ
+                      </button>
+                      <button
+                        onClick={() => toggleSuspend(user)}
+                        disabled={saving === user.id}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${user.is_suspended ? 'border-green-500/30 text-green-400 hover:bg-green-500/10' : 'border-amber-500/20 text-amber-400/70 hover:text-amber-400 hover:border-amber-500/40'}`}
+                      >
+                        {saving === user.id ? '...' : user.is_suspended ? '停止解除' : '停止'}
+                      </button>
+                      {user.stripe_subscription_id && (
+                        <button
+                          onClick={() => forceCancel(user.id, user.email)}
+                          disabled={canceling === user.id}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-red-500/20 text-red-400/70 hover:text-red-400 hover:border-red-500/40 transition-all disabled:opacity-50"
+                        >
+                          {canceling === user.id ? '...' : '強制解約'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
