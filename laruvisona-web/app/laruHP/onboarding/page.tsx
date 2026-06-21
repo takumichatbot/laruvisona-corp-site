@@ -132,6 +132,25 @@ const GENERATE_STEPS = [
   'テンプレートにデータを適用',
 ];
 
+const INDUSTRY_SERVICE_HINTS: Record<string, Array<{ name: string; price: string; description: string }>> = {
+  restaurant:   [{ name: 'ランチセット', price: '¥1,200', description: 'サラダ・スープ付き' }, { name: 'ディナーコース', price: '¥4,800', description: '全8品・飲み物別' }, { name: 'テイクアウト弁当', price: '¥850', description: '日替わりメニュー' }],
+  beauty:       [{ name: 'カット', price: '¥4,400', description: 'シャンプー・ブロー込み' }, { name: 'カラー', price: '¥8,800', description: 'リタッチ〜フルカラー' }, { name: 'パーマ', price: '¥11,000', description: 'デジタルパーマ対応' }],
+  clinic:       [{ name: '初回施術', price: '¥1,500', description: '問診・検査込み' }, { name: '骨盤矯正', price: '¥5,500', description: '産後・姿勢改善に' }, { name: '鍼灸治療', price: '¥6,600', description: '自律神経・冷え性に' }],
+  legal:        [{ name: '無料相談（30分）', price: '¥0', description: 'まずはお気軽にどうぞ' }, { name: '相続・遺言作成', price: '¥110,000〜', description: '遺産分割協議書対応' }, { name: '企業法務顧問', price: '¥33,000/月', description: '契約書チェック含む' }],
+  construction: [{ name: '外壁塗装', price: '¥50万〜', description: '10年保証・無料見積' }, { name: 'キッチンリフォーム', price: '¥80万〜', description: '工期2〜3週間' }, { name: '屋根葺き替え', price: '¥40万〜', description: '瓦・スレート対応' }],
+  realestate:   [{ name: '賃貸物件紹介', price: '仲介手数料 1ヶ月', description: '0円物件多数あり' }, { name: '売買仲介', price: '成約価格×3%+6万', description: '買取保証あり' }, { name: '管理代行', price: '賃料の5%', description: 'オーナー様向け' }],
+  retail:       [{ name: '定番商品', price: '¥2,500', description: 'ベストセラー' }, { name: 'セット商品', price: '¥5,800', description: 'ギフトにも最適' }, { name: '限定品', price: '¥3,800', description: '季節・数量限定' }],
+  fitness:      [{ name: '体験トレーニング', price: '¥0', description: '60分・カウンセリング込み' }, { name: 'パーソナル月4回', price: '¥19,800', description: '食事指導付き' }, { name: 'オンライン指導', price: '¥9,800/月', description: 'どこでも受講可' }],
+  hotel:        [{ name: 'スタンダードルーム', price: '¥9,800/泊〜', description: '朝食付きプランあり' }, { name: 'ファミリープラン', price: '¥22,000/泊〜', description: '最大4名・夕食付き' }, { name: '記念日プラン', price: '¥35,000/泊〜', description: 'ケーキ・装飾込み' }],
+  education:    [{ name: '個別指導（週1回）', price: '¥8,800/月', description: '小中高・大学受験対応' }, { name: 'グループ授業', price: '¥4,400/月', description: '少人数制・5名まで' }, { name: '夏期講習', price: '¥22,000', description: '5日間集中コース' }],
+  wedding:      [{ name: 'ウェディングパーティー', price: '¥200万〜', description: '着席50名〜対応' }, { name: '二次会パーティー', price: '¥80万〜', description: '着席100名まで' }, { name: '前撮り撮影', price: '¥55,000〜', description: 'フォト・動画込み' }],
+  pet:          [{ name: 'トリミング（小型犬）', price: '¥5,500', description: 'シャンプー・カット込み' }, { name: 'ペットホテル', price: '¥3,300/泊', description: '24時間見守り対応' }, { name: 'デンタルケア', price: '¥2,200', description: '口臭・歯石予防' }],
+  dental:       [{ name: '初診・検診', price: '¥0〜3,000', description: 'レントゲン込み' }, { name: '定期クリーニング', price: '¥3,300', description: '3〜6ヶ月ごと推奨' }, { name: 'ホワイトニング', price: '¥22,000〜', description: '最短1日で完了' }],
+  photo:        [{ name: '家族写真撮影', price: '¥22,000', description: '1時間・データ30枚' }, { name: 'マタニティフォト', price: '¥18,000', description: 'ヘアメイク込み' }, { name: '証明写真', price: '¥1,980', description: '即日渡し・デジタル込み' }],
+  accounting:   [{ name: '記帳代行', price: '¥11,000/月〜', description: '領収書預かりでOK' }, { name: '確定申告サポート', price: '¥33,000〜', description: '個人・法人両対応' }, { name: '税務顧問契約', price: '¥22,000/月〜', description: '決算・申告込み' }],
+  other:        [{ name: 'サービスA', price: '¥5,000', description: 'メインサービス' }, { name: 'サービスB', price: '¥10,000', description: 'スタンダードプラン' }, { name: 'サービスC', price: '¥18,000', description: 'プレミアムプラン' }],
+};
+
 const HOURS_PRESETS = [
   { label: '平日 9〜18時', fn: (h: typeof defaultForm.hours) => h.map((d, i) => ({ ...d, open: '09:00', close: '18:00', closed: i >= 5 })) },
   { label: '毎日 10〜19時', fn: (h: typeof defaultForm.hours) => h.map(d => ({ ...d, open: '10:00', close: '19:00', closed: false })) },
@@ -1397,10 +1416,45 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
 
             {/* Services */}
             <div className="mb-8">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-3">
                 <h3 className="font-bold text-gray-900">サービス・料金メニュー</h3>
                 <button onClick={addService} className="text-xs bg-white hover:bg-sky-50 border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-colors text-gray-600">+ 追加</button>
               </div>
+              {/* Industry service hints */}
+              {form.industry && INDUSTRY_SERVICE_HINTS[form.industry] && (
+                <div className="mb-4 p-3 bg-sky-50 border border-sky-100 rounded-xl">
+                  <p className="text-[11px] text-sky-600 font-medium mb-2">💡 {INDUSTRIES.find(i => i.id === form.industry)?.name}のよくある例（クリックで入力）</p>
+                  <div className="flex flex-wrap gap-2">
+                    {INDUSTRY_SERVICE_HINTS[form.industry].map((hint, hi) => (
+                      <button
+                        key={hi}
+                        onClick={() => setForm(f => {
+                          const svcs = [...f.services];
+                          const emptyIdx = svcs.findIndex(s => !s.name);
+                          if (emptyIdx >= 0) {
+                            svcs[emptyIdx] = { name: hint.name, price: hint.price, description: hint.description };
+                          } else {
+                            svcs.push({ name: hint.name, price: hint.price, description: hint.description });
+                          }
+                          return { ...f, services: svcs };
+                        })}
+                        className="text-[11px] bg-white border border-sky-200 hover:bg-sky-100 hover:border-sky-400 text-sky-700 px-2.5 py-1 rounded-full transition-all"
+                      >
+                        {hint.name} {hint.price}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setForm(f => ({
+                        ...f,
+                        services: INDUSTRY_SERVICE_HINTS[f.industry] ?? f.services,
+                      }))}
+                      className="text-[11px] bg-sky-600 text-white hover:bg-sky-500 px-2.5 py-1 rounded-full transition-all font-medium"
+                    >
+                      3つ全部入力 →
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="space-y-3">
                 {form.services.map((svc, i) => (
                   <div key={i} className="bg-white border border-gray-200 shadow-sm rounded-2xl p-4">

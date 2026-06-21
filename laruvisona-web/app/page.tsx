@@ -295,7 +295,7 @@ export default function Home() {
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {/* Service Card 1 */}
-            <div className="min-w-[280px] sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
+            <div className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center text-2xl mb-8 border border-blue-500/20"><i className="fas fa-code"></i></div>
@@ -309,7 +309,7 @@ export default function Home() {
             </div>
 
             {/* Service Card 2 */}
-            <div className="min-w-[280px] sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-gradient-to-br from-indigo-900/40 to-[#0f172a] rounded-[1.5rem] p-8 border border-indigo-500/20 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
+            <div className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-gradient-to-br from-indigo-900/40 to-[#0f172a] rounded-[1.5rem] p-8 border border-indigo-500/20 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
               <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-4 py-1.5 rounded-bl-xl tracking-widest">主力事業</div>
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-indigo-500/20 text-indigo-300 rounded-2xl flex items-center justify-center text-2xl mb-8 border border-indigo-400/30"><i className="fas fa-brain"></i></div>
@@ -323,7 +323,7 @@ export default function Home() {
             </div>
 
             {/* Service Card 3 */}
-            <div className="min-w-[280px] sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
+            <div className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center text-2xl mb-8 border border-purple-500/20"><i className="fas fa-chart-line"></i></div>

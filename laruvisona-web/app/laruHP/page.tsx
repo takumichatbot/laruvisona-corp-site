@@ -1,6 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+const LaruHPScene = dynamic(() => import('@/components/Canvas/LaruHPScene'), { ssr: false });
 
 const INDUSTRIES = [
   { color: 'from-orange-900/60 to-red-900/60',   name: '飲食店・カフェ', id: 'restaurant' },
@@ -147,12 +152,64 @@ export default function LaruHPLandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeIndustry, setActiveIndustry] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveIndustry(prev => (prev + 1) % INDUSTRIES.length);
     }, 1800);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Hero entrance
+    const tl = gsap.timeline({ delay: 0.1 });
+    tl.fromTo('.lp-hero-badge',
+      { y: 24, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' })
+     .fromTo('.lp-hero-h1 span',
+      { y: 56, opacity: 0, skewY: 4 },
+      { y: 0, opacity: 1, skewY: 0, duration: 0.85, stagger: 0.15, ease: 'power4.out' }, '-=0.35')
+     .fromTo('.lp-hero-sub',
+      { y: 28, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.65, ease: 'power3.out' }, '-=0.4')
+     .fromTo('.lp-hero-cta',
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power3.out' }, '-=0.35')
+     .fromTo('.lp-hero-tags span',
+      { y: 12, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.4, stagger: 0.07, ease: 'power2.out' }, '-=0.2');
+
+    // Scroll fade-up
+    gsap.utils.toArray<Element>('.lp-fade-up').forEach(el => {
+      gsap.fromTo(el,
+        { y: 64, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.85, ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 87%', toggleActions: 'play none none none' } });
+    });
+
+    // Stagger children
+    gsap.utils.toArray<Element>('.lp-stagger').forEach(parent => {
+      gsap.fromTo(parent.querySelectorAll(':scope > *'),
+        { y: 44, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.7, stagger: 0.12, ease: 'power3.out',
+          scrollTrigger: { trigger: parent, start: 'top 82%', toggleActions: 'play none none none' } });
+    });
+
+    // Stats count-up
+    gsap.utils.toArray<HTMLElement>('.lp-stat-num').forEach(el => {
+      const target = el.textContent ?? '';
+      ScrollTrigger.create({
+        trigger: el,
+        start: 'top 85%',
+        once: true,
+        onEnter: () => { el.style.opacity = '1'; gsap.fromTo(el, { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.7)' }); },
+      });
+    });
+
+    return () => { ScrollTrigger.getAll().forEach(t => t.kill()); };
   }, []);
 
   return (
@@ -213,16 +270,19 @@ export default function LaruHPLandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="pt-28 md:pt-36 pb-16 md:pb-28 px-6 text-center relative overflow-hidden">
+      <section ref={heroRef} className="pt-28 md:pt-36 pb-16 md:pb-28 px-6 text-center relative overflow-hidden">
+        {/* 3D scene background */}
+        <LaruHPScene />
+
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.15),transparent_65%)]" />
-          <div className="absolute top-20 left-1/4 w-72 h-72 rounded-full bg-sky-400/10 blur-3xl" />
-          <div className="absolute top-32 right-1/4 w-56 h-56 rounded-full bg-sky-300/10 blur-3xl" />
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#0284c7 1px,transparent 1px),linear-gradient(90deg,#0284c7 1px,transparent 1px)', backgroundSize: '80px 80px' }} />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.12),transparent_65%)]" />
+          <div className="absolute top-20 left-1/4 w-72 h-72 rounded-full bg-sky-400/8 blur-3xl" />
+          <div className="absolute top-32 right-1/4 w-56 h-56 rounded-full bg-sky-300/8 blur-3xl" />
+          <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'linear-gradient(#0284c7 1px,transparent 1px),linear-gradient(90deg,#0284c7 1px,transparent 1px)', backgroundSize: '80px 80px' }} />
         </div>
 
-        <div className="max-w-5xl mx-auto relative">
-          <div className="inline-flex items-center gap-2.5 bg-sky-100 border border-sky-300 px-5 py-2.5 rounded-full text-sky-700 text-xs font-medium tracking-widest mb-10 shadow-[0_0_30px_rgba(14,165,233,0.1)]">
+        <div className="max-w-5xl mx-auto relative z-10">
+          <div className="lp-hero-badge inline-flex items-center gap-2.5 bg-sky-100/90 backdrop-blur-sm border border-sky-300 px-5 py-2.5 rounded-full text-sky-700 text-xs font-medium tracking-widest mb-10 shadow-[0_0_30px_rgba(14,165,233,0.15)]" style={{ opacity: 0 }}>
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-500/75 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-600" />
@@ -230,27 +290,29 @@ export default function LaruHPLandingPage() {
             新登場 — AI搭載 HPビルダー 2026
           </div>
 
-          <h1 className="text-[2.8rem] sm:text-6xl md:text-[6.5rem] font-bold tracking-tighter mb-6 leading-[1.05] md:leading-[1.02]">
-            <span className="block text-gray-900">最高のHPを、</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500">
+          <h1 className="lp-hero-h1 text-[2.8rem] sm:text-6xl md:text-[6.5rem] font-bold tracking-tighter mb-6 leading-[1.05] md:leading-[1.02]">
+            <span className="block text-gray-900" style={{ opacity: 0 }}>最高のHPを、</span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500" style={{ opacity: 0 }}>
               最短5分で。
             </span>
           </h1>
 
-          <p className="text-gray-600 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal">
+          <p className="lp-hero-sub text-gray-600 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal" style={{ opacity: 0 }}>
             業種情報を入力するだけ。AIが<strong className="text-sky-700 font-semibold">5分以内</strong>にプロ品質のホームページを自動生成。<br className="hidden md:block" />
             SEO・LARUbot連携・ビジュアル編集がすべて月額<strong className="text-sky-700 font-semibold">999円</strong>。
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
             <Link href="/laruHP/onboarding"
-              className="relative bg-sky-600 text-white px-9 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_4px_20px_rgba(2,132,199,0.3)] flex items-center gap-3 w-full sm:w-auto justify-center overflow-hidden group">
+              className="lp-hero-cta relative bg-sky-600 text-white px-9 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_4px_20px_rgba(2,132,199,0.3)] flex items-center gap-3 w-full sm:w-auto justify-center overflow-hidden group"
+              style={{ opacity: 0 }}>
               <span className="absolute inset-0 bg-gradient-to-r from-sky-500 to-sky-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               <span className="relative">無料で始める（初月無料）</span>
               <span className="relative text-white font-bold">→</span>
             </Link>
             <Link href="/laruHP/builder"
-              className="text-gray-600 hover:text-gray-900 px-9 py-4 rounded-2xl font-medium text-base border border-gray-200 hover:border-sky-300 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center backdrop-blur-sm">
+              className="lp-hero-cta text-gray-600 hover:text-gray-900 px-9 py-4 rounded-2xl font-medium text-base border border-gray-200 hover:border-sky-300 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center backdrop-blur-sm"
+              style={{ opacity: 0 }}>
               <span className="text-sky-600">▶</span> デモを体験
             </Link>
           </div>
@@ -260,9 +322,9 @@ export default function LaruHPLandingPage() {
             <Link href="/laruHP/auth/login" className="text-blue-500 hover:text-blue-400 underline underline-offset-2">ログイン</Link>
           </p>
 
-          <div className="hidden md:flex justify-center gap-3 mt-8 flex-wrap">
+          <div className="lp-hero-tags hidden md:flex justify-center gap-3 mt-8 flex-wrap">
             {['AI コンテンツ生成', 'SEO 自動最適化', 'LARUbot 連携', 'モバイル完全対応', 'SSL 込み'].map((tag, i) => (
-              <span key={i} className="bg-white border border-sky-100 text-gray-500 text-xs px-3 py-1.5 rounded-full hover:border-sky-200 hover:text-gray-700 transition-all">
+              <span key={i} className="bg-white/80 backdrop-blur-sm border border-sky-100 text-gray-500 text-xs px-3 py-1.5 rounded-full hover:border-sky-200 hover:text-gray-700 transition-all" style={{ opacity: 0 }}>
                 {tag}
               </span>
             ))}
@@ -273,11 +335,11 @@ export default function LaruHPLandingPage() {
         <div className="max-w-3xl mx-auto mt-10 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {[
             { num: '5分', label: 'でサイト完成', sub: 'AI自動生成' },
-            { num: '12+', label: '業種テンプレート', sub: '随時追加中' },
+            { num: '15', label: '業種テンプレート', sub: '全業種対応' },
             { num: '¥999〜', label: '/月（初月無料）', sub: '税別' },
             { num: '100%', label: 'SEO自動化', sub: 'AI最適化' },
           ].map((stat, i) => (
-            <div key={i} className="relative bg-white border border-sky-100 rounded-2xl p-5 text-center shadow-sm hover:border-sky-200 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+            <div key={i} className="lp-stat-num relative bg-white border border-sky-100 rounded-2xl p-5 text-center shadow-sm hover:border-sky-200 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
               <div className="text-2xl md:text-3xl font-bold text-sky-700">{stat.num}</div>
               <div className="text-xs text-gray-600 font-medium mt-1">{stat.label}</div>
               <div className="text-[10px] text-gray-400 mt-0.5">{stat.sub}</div>
@@ -289,12 +351,12 @@ export default function LaruHPLandingPage() {
       {/* How it works */}
       <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="lp-fade-up text-center mb-16">
             <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">使い方</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">3ステップで完成</h2>
             <p className="text-gray-500 text-sm">業種情報を入力するだけ。5分でプロ品質のHPが完成します</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6 relative">
+          <div className="lp-stagger grid md:grid-cols-3 gap-6 relative">
             <div className="hidden md:block absolute top-12 left-[calc(33%+1rem)] right-[calc(33%+1rem)] h-[1px] bg-gradient-to-r from-sky-300/40 via-sky-300/20 to-sky-300/40" />
             {[
               { step: '01', title: '情報を入力',    desc: '業種・店舗名・住所・サービス内容などを入力。AIが残りを全部やってくれます。',                                       tag: '約2分' },
@@ -316,7 +378,7 @@ export default function LaruHPLandingPage() {
       {/* Features */}
       <section id="features" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="lp-fade-up text-center mb-16">
             <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">機能一覧</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">すべてが揃っている</h2>
             <p className="text-gray-500">プロのエージェンシーが使う機能を、個人は月額<span className="text-gray-700">999円</span>から。</p>
@@ -401,7 +463,7 @@ export default function LaruHPLandingPage() {
       {/* Templates */}
       <section id="templates" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-sky-50">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="lp-fade-up text-center mb-16">
             <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">テンプレート</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">業種別テンプレート</h2>
             <p className="text-gray-500">各業種のベストプラクティスを詰め込んだプロテンプレート。SEO設定・構造化データ付き。</p>
@@ -425,425 +487,417 @@ export default function LaruHPLandingPage() {
       </section>
 
       {/* Showcase — demo site examples */}
-      <section id="showcase" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
+      <section id="showcase" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-sky-50">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="text-emerald-600 font-medium text-xs tracking-[0.2em]">デモ・実例</span>
+          <div className="lp-fade-up text-center mb-14">
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">完成イメージ</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">こんなサイトが作れます</h2>
-            <p className="text-gray-500">AIが業種に最適化したコンテンツを自動生成。プロのデザイナーが作ったクオリティが5分で。</p>
+            <p className="text-gray-500">AIが業種に最適化したレイアウト・写真・コピーを自動生成。5分でここまで仕上がります。</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {/* === 美容室 Hair Salon AN === */}
-            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(244,63,94,0.10)] bg-white">
+            {/* ── 美容室 ── */}
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 transition-all shadow-md hover:shadow-xl bg-white">
               <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5 flex-shrink-0">
-                  <div className="w-3 h-3 bg-red-400 rounded-full" />
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
+                <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 salon-an.laruvisona.com</div>
+              </div>
+              {/* Hero photo area */}
+              <div className="relative overflow-hidden" style={{height:180}}>
+                <div className="absolute inset-0 bg-gradient-to-br from-rose-900 via-pink-900 to-rose-950" />
+                {/* Decorative SVG shapes simulating salon interior */}
+                <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
+                  <ellipse cx="240" cy="40" rx="80" ry="60" fill="rgba(255,200,200,0.4)"/>
+                  <ellipse cx="60" cy="150" rx="70" ry="50" fill="rgba(255,150,180,0.3)"/>
+                  <rect x="100" y="60" width="2" height="80" fill="rgba(255,255,255,0.15)" rx="1"/>
+                  <rect x="180" y="40" width="2" height="100" fill="rgba(255,255,255,0.1)" rx="1"/>
+                  <circle cx="150" cy="20" r="40" fill="none" stroke="rgba(255,200,210,0.2)" strokeWidth="1"/>
+                </svg>
+                <div className="relative z-10 px-5 pt-5 pb-4">
+                  <div className="text-[8px] text-rose-300 tracking-[0.2em] mb-2">HAIR SALON · SINCE 2015</div>
+                  <div className="text-[15px] font-bold text-white leading-tight mb-2">美しさを、<br/>もっと自由に。</div>
+                  <div className="text-[8px] text-rose-200 mb-3">カット ¥4,400〜 / カラー ¥8,800〜</div>
+                  <span className="inline-block text-[8px] bg-rose-400 text-white px-3 py-1 rounded-full font-bold">今すぐ予約する →</span>
                 </div>
-                <div className="flex-1 bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[9px] text-gray-400 flex items-center justify-center gap-1 min-w-0">
-                  <span>🔒</span><span className="truncate">hair-salon-an.laruHP.com</span>
+                {/* Photo grid overlay at bottom */}
+                <div className="absolute bottom-0 right-0 flex gap-1 p-2 opacity-70">
+                  <div className="w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-rose-300 to-pink-200 flex items-end justify-center">
+                    <div className="text-[18px] mb-1">✂️</div>
+                  </div>
+                  <div className="w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-pink-200 to-rose-300 flex items-end justify-center">
+                    <div className="text-[18px] mb-1">💇</div>
+                  </div>
+                  <div className="w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-rose-200 to-pink-300 flex items-end justify-center">
+                    <div className="text-[18px] mb-1">🌸</div>
+                  </div>
                 </div>
               </div>
-              <div className="overflow-hidden" style={{ height: 320 }}>
-                <div className="bg-rose-950 px-3 py-1.5 flex items-center justify-between">
-                  <span className="text-[8px] font-bold text-white tracking-widest">✨ SALON AN</span>
-                  <div className="flex gap-2.5">
-                    {['カット','カラー','パーマ','予約'].map(t => <span key={t} className="text-[6px] text-rose-200">{t}</span>)}
-                  </div>
-                  <span className="text-[6px] bg-rose-400 text-white px-2 py-0.5 rounded-full font-medium">予約する</span>
-                </div>
-                <div className="bg-gradient-to-br from-rose-800 via-pink-800 to-rose-950 px-4 pt-4 pb-3">
-                  <div className="text-[6px] text-rose-300 mb-1.5 tracking-[0.2em]">HAIR SALON SINCE 2015</div>
-                  <div className="text-[13px] font-bold text-white leading-snug mb-1.5">美しさを、<br/>もっと自由に。</div>
-                  <div className="text-[7px] text-rose-200 mb-3 leading-relaxed">あなたの個性を活かした<br/>とっておきのスタイルへ。</div>
-                  <span className="inline-block text-[7px] bg-rose-400 text-white px-3 py-1 rounded-full font-medium">今すぐ予約する →</span>
-                </div>
-                <div className="bg-white px-3 py-2.5">
-                  <div className="text-[7px] text-center text-gray-400 mb-2 tracking-widest font-medium">— 人気メニュー —</div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[{ icon:'✂️', name:'カット', price:'¥4,400' },{ icon:'🎨', name:'カラー', price:'¥8,800' },{ icon:'💆', name:'トリート', price:'¥3,300' }].map(s => (
-                      <div key={s.name} className="bg-rose-50 rounded-xl p-2 text-center border border-rose-100">
-                        <div className="text-[12px] mb-0.5">{s.icon}</div>
-                        <div className="text-[7px] font-semibold text-gray-700 mb-0.5">{s.name}</div>
-                        <div className="text-[7px] text-rose-500 font-bold">{s.price}〜</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-rose-50 px-3 pb-2 pt-1.5">
-                  <div className="text-[6px] text-gray-400 mb-1.5">📸 施術ギャラリー</div>
-                  <div className="flex gap-1.5">
-                    <div className="flex-1 h-11 bg-gradient-to-br from-rose-200 to-pink-300 rounded-lg" />
-                    <div className="flex-1 h-11 bg-gradient-to-br from-pink-200 to-rose-200 rounded-lg" />
-                    <div className="flex-1 h-11 bg-gradient-to-br from-rose-300 to-pink-200 rounded-lg" />
-                  </div>
-                </div>
-                <div className="bg-rose-950 px-3 py-1.5 flex items-center justify-between">
-                  <span className="text-[6px] text-rose-300">📍 東京都渋谷区神宮前</span>
-                  <span className="text-[6px] text-rose-300">☎ 03-1234-5678</span>
-                  <span className="text-[6px] text-rose-300">月〜土 10:00〜19:00</span>
-                </div>
+              {/* Nav */}
+              <div className="bg-rose-950 px-3 py-1.5 flex items-center justify-between">
+                <span className="text-[7px] font-bold text-white">✨ SALON AN</span>
+                <div className="flex gap-2">{['カット','カラー','パーマ','予約'].map(t=><span key={t} className="text-[6px] text-rose-300">{t}</span>)}</div>
               </div>
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">美容室・サロン</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">Hair Salon AN（東京・渋谷区）</div>
-                  </div>
-                  <Link href="/laruHP/onboarding?industry=beauty" className="text-[11px] bg-rose-500/10 text-rose-500 border border-rose-500/20 px-3 py-1.5 rounded-lg hover:bg-rose-500/20 transition-all whitespace-nowrap flex-shrink-0">
-                    このテンプレで作る →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* === 整体 みどり接骨院 === */}
-            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-emerald-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(16,185,129,0.10)] bg-white">
-              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5 flex-shrink-0">
-                  <div className="w-3 h-3 bg-red-400 rounded-full" />
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
-                </div>
-                <div className="flex-1 bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[9px] text-gray-400 flex items-center justify-center gap-1 min-w-0">
-                  <span>🔒</span><span className="truncate">midori-sekkotsu.laruHP.com</span>
-                </div>
-              </div>
-              <div className="overflow-hidden" style={{ height: 320 }}>
-                <div className="bg-white border-b border-emerald-100 px-3 py-1.5 flex items-center justify-between shadow-sm">
-                  <span className="text-[8px] font-bold text-emerald-800">🍃 みどり接骨院</span>
-                  <div className="flex gap-2">
-                    {['施術案内','料金','アクセス'].map(t => <span key={t} className="text-[6px] text-gray-500">{t}</span>)}
-                  </div>
-                  <span className="text-[6px] bg-emerald-500 text-white px-2 py-0.5 rounded font-medium">ご予約</span>
-                </div>
-                <div className="bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-900 px-4 pt-4 pb-3">
-                  <div className="inline-block text-[6px] bg-white/20 text-emerald-100 px-2 py-0.5 rounded-full mb-1.5 tracking-wide">累計施術実績 10,000人以上</div>
-                  <div className="text-[13px] font-bold text-white leading-snug mb-1.5">痛みのない<br/>毎日を取り戻す。</div>
-                  <div className="text-[7px] text-emerald-100 mb-3 leading-relaxed">整体・鍼灸・骨盤矯正で<br/>根本から改善します。</div>
-                  <span className="inline-block text-[7px] bg-white text-emerald-700 px-3 py-1 rounded font-bold">初回限定 ¥1,500 →</span>
-                </div>
-                <div className="bg-white px-3 py-2.5">
-                  <div className="text-[7px] text-gray-500 mb-2 font-medium">対応症状</div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[{ icon:'💆', label:'肩こり・首こり' },{ icon:'🦴', label:'腰痛・ぎっくり' },{ icon:'🦵', label:'ひざ・股関節' }].map(s => (
-                      <div key={s.label} className="bg-emerald-50 border border-emerald-100 rounded-lg p-1.5 text-center">
-                        <div className="text-[11px] mb-0.5">{s.icon}</div>
-                        <div className="text-[6px] text-emerald-700 font-medium leading-tight">{s.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-emerald-50 px-3 py-2">
-                  <div className="text-[6px] text-gray-400 mb-1.5">⭐ お客様の声</div>
-                  <div className="bg-white rounded-lg border border-emerald-100 p-2">
-                    <div className="text-[6px] text-yellow-500 mb-0.5">★★★★★</div>
-                    <div className="text-[6px] text-gray-600 leading-relaxed">"長年悩んでいた腰痛が、3回の施術でほぼ消えました！"</div>
-                    <div className="text-[5px] text-gray-400 mt-0.5">— 田中様（40代・主婦）</div>
-                  </div>
-                </div>
-                <div className="bg-emerald-600 px-3 py-2 flex items-center justify-between">
-                  <div>
-                    <div className="text-[7px] text-white font-bold">📅 今すぐ予約</div>
-                    <div className="text-[6px] text-emerald-100">当日予約OK・夜21時まで受付</div>
-                  </div>
-                  <span className="text-[6px] bg-white text-emerald-700 px-2 py-1 rounded font-bold">空き確認</span>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">整体・クリニック</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">みどり接骨院（大阪・梅田）</div>
-                  </div>
-                  <Link href="/laruHP/onboarding?industry=clinic" className="text-[11px] bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all whitespace-nowrap flex-shrink-0">
-                    このテンプレで作る →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* === 飲食 Bistro Nakano === */}
-            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-amber-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(245,158,11,0.10)] bg-white">
-              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5 flex-shrink-0">
-                  <div className="w-3 h-3 bg-red-400 rounded-full" />
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
-                </div>
-                <div className="flex-1 bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[9px] text-gray-400 flex items-center justify-center gap-1 min-w-0">
-                  <span>🔒</span><span className="truncate">bistro-nakano.laruHP.com</span>
-                </div>
-              </div>
-              <div className="overflow-hidden" style={{ height: 320 }}>
-                <div className="bg-gray-900 px-3 py-1.5 flex items-center justify-between">
-                  <span className="text-[8px] font-bold text-amber-400 tracking-widest font-en">BISTRO NAKANO</span>
-                  <div className="flex gap-2">
-                    {['ランチ','ディナー','ワイン','アクセス'].map(t => <span key={t} className="text-[6px] text-gray-400">{t}</span>)}
-                  </div>
-                  <span className="text-[6px] border border-amber-400 text-amber-400 px-2 py-0.5 rounded font-medium">予約</span>
-                </div>
-                <div className="bg-gradient-to-br from-orange-900 via-amber-900 to-orange-950 px-4 pt-4 pb-3">
-                  <div className="text-[6px] text-amber-300 mb-1.5 tracking-[0.2em] uppercase">French Cuisine · Tokyo</div>
-                  <div className="text-[13px] font-bold text-white leading-snug mb-1.5">気軽に、<br/>本格フレンチを。</div>
-                  <div className="text-[7px] text-amber-200 mb-3 leading-relaxed">ランチ ¥1,500〜 / ディナー ¥4,800〜<br/>ソムリエ厳選ワイン 50種以上</div>
-                  <span className="inline-block text-[7px] bg-amber-500 text-white px-3 py-1 rounded font-bold">席を予約する →</span>
-                </div>
-                <div className="bg-white px-3 py-2">
-                  <div className="text-[7px] text-gray-500 mb-1.5 font-medium">🍽 人気メニュー</div>
-                  <div className="grid grid-cols-3 gap-1">
-                    {[
-                      { gradient:'from-orange-200 to-amber-200', name:'フォアグラの\nテリーヌ', price:'¥1,980' },
-                      { gradient:'from-amber-200 to-yellow-200', name:'ブイヤベース', price:'¥2,280' },
-                      { gradient:'from-yellow-200 to-orange-200', name:'シャトーブリアン', price:'¥4,980' },
-                    ].map(m => (
-                      <div key={m.name} className="rounded-lg overflow-hidden border border-amber-100">
-                        <div className={`h-9 bg-gradient-to-br ${m.gradient}`} />
-                        <div className="bg-white p-1">
-                          <div className="text-[5.5px] font-medium text-gray-700 leading-tight whitespace-pre-line">{m.name}</div>
-                          <div className="text-[6px] text-amber-600 font-bold">{m.price}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-gray-900 px-3 py-2 flex items-center justify-between">
-                  <div className="text-[6px] text-gray-400 space-y-0.5">
-                    <div>📍 東京都中野区中野5-1-1</div>
-                    <div>🕐 月〜土 11:30〜14:00 / 17:00〜22:00</div>
-                  </div>
-                  <span className="text-[6px] bg-amber-500 text-white px-2 py-0.5 rounded">📞 電話予約</span>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">飲食店・カフェ</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">Bistro Nakano（東京・中野区）</div>
-                  </div>
-                  <Link href="/laruHP/onboarding?industry=restaurant" className="text-[11px] bg-amber-500/10 text-amber-600 border border-amber-500/20 px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-all whitespace-nowrap flex-shrink-0">
-                    このテンプレで作る →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Second row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* === 法律事務所 山本法律事務所 === */}
-            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-slate-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(148,163,184,0.10)] bg-white">
-              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5 flex-shrink-0">
-                  <div className="w-3 h-3 bg-red-400 rounded-full" />
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
-                </div>
-                <div className="flex-1 bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[9px] text-gray-400 flex items-center justify-center gap-1 min-w-0">
-                  <span>🔒</span><span className="truncate">yamamoto-law.laruHP.com</span>
-                </div>
-              </div>
-              <div className="overflow-hidden" style={{ height: 320 }}>
-                <div className="bg-slate-900 px-3 py-1.5 flex items-center justify-between">
-                  <span className="text-[7px] font-bold text-white tracking-wide">山本法律事務所</span>
-                  <div className="flex gap-2">
-                    {['業務案内','費用','弁護士'].map(t => <span key={t} className="text-[6px] text-slate-400">{t}</span>)}
-                  </div>
-                  <span className="text-[6px] border border-yellow-600 text-yellow-600 px-2 py-0.5 font-medium">無料相談</span>
-                </div>
-                <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 pt-4 pb-3">
-                  <div className="text-[6px] text-slate-400 mb-1.5 tracking-[0.15em]">YAMAMOTO LAW FIRM — 設立30年</div>
-                  <div className="text-[13px] font-bold text-white leading-snug mb-1.5">難しい問題こそ、<br/>ご相談を。</div>
-                  <div className="text-[7px] text-slate-300 mb-3 leading-relaxed">遺産相続・企業法務・不動産まで<br/>30年以上の実績で丁寧に対応</div>
-                  <span className="inline-block text-[7px] bg-yellow-600 text-white px-3 py-1 font-bold">無料相談を予約する →</span>
-                </div>
-                <div className="bg-slate-50 px-3 py-2.5">
-                  <div className="text-[7px] text-gray-500 mb-1.5 font-medium">専門分野</div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[{ icon:'📜', label:'相続・遺言' },{ icon:'💼', label:'企業法務' },{ icon:'🏠', label:'不動産法務' }].map(a => (
-                      <div key={a.label} className="bg-white border border-slate-200 p-2 text-center shadow-sm">
-                        <div className="text-[12px] mb-0.5">{a.icon}</div>
-                        <div className="text-[6px] text-slate-600 font-medium">{a.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-white border-t border-slate-100 px-3 py-2">
-                  <div className="text-[7px] text-gray-400 mb-1.5">👤 弁護士紹介</div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-slate-200 rounded-full flex-shrink-0 flex items-center justify-center text-[14px]">👨‍⚖️</div>
-                    <div>
-                      <div className="text-[7px] font-bold text-gray-800">山本 太郎 弁護士</div>
-                      <div className="text-[6px] text-gray-500">東京弁護士会 · 弁護士歴25年 · 解決実績500件以上</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-yellow-600 px-3 py-1.5 text-center">
-                  <div className="text-[7px] text-white font-bold">初回相談30分 無料 ・ 秘密厳守</div>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">法律事務所・士業</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">山本法律事務所（東京・丸の内）</div>
-                  </div>
-                  <Link href="/laruHP/onboarding?industry=legal" className="text-[11px] bg-slate-500/10 text-slate-600 border border-slate-500/20 px-3 py-1.5 rounded-lg hover:bg-slate-500/20 transition-all whitespace-nowrap flex-shrink-0">
-                    このテンプレで作る →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* === フィットネス IRON BODY GYM === */}
-            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-red-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(239,68,68,0.10)] bg-white">
-              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5 flex-shrink-0">
-                  <div className="w-3 h-3 bg-red-400 rounded-full" />
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
-                </div>
-                <div className="flex-1 bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[9px] text-gray-400 flex items-center justify-center gap-1 min-w-0">
-                  <span>🔒</span><span className="truncate">ironbody-gym.laruHP.com</span>
-                </div>
-              </div>
-              <div className="overflow-hidden" style={{ height: 320 }}>
-                <div className="bg-black px-3 py-1.5 flex items-center justify-between border-b border-red-900">
-                  <span className="text-[8px] font-bold text-white font-en tracking-widest">💪 IRON BODY</span>
-                  <div className="flex gap-2">
-                    {['プログラム','料金','体験'].map(t => <span key={t} className="text-[6px] text-gray-400">{t}</span>)}
-                  </div>
-                  <span className="text-[6px] bg-red-600 text-white px-2 py-0.5 font-bold">無料体験</span>
-                </div>
-                <div className="bg-gradient-to-br from-red-950 to-gray-950 px-4 pt-4 pb-3 relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(45deg,#ff0000 0,#ff0000 1px,transparent 0,transparent 50%)', backgroundSize: '12px 12px' }} />
-                  <div className="relative">
-                    <div className="text-[6px] text-red-400 mb-1.5 tracking-[0.2em] uppercase font-en">Professional Personal Training</div>
-                    <div className="text-[14px] font-bold text-white leading-snug mb-1.5">限界を、超えろ。</div>
-                    <div className="text-[7px] text-gray-300 mb-3 leading-relaxed">プロトレーナーが目標達成まで<br/>完全マンツーマンでサポート</div>
-                    <span className="inline-block text-[7px] bg-red-600 text-white px-3 py-1 rounded font-bold">無料体験を申し込む →</span>
-                  </div>
-                </div>
-                <div className="bg-zinc-900 px-3 py-2">
-                  <div className="text-[7px] text-gray-400 mb-1.5">プログラム</div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[{ icon:'💪', name:'パーソナル', price:'¥8,800/月' },{ icon:'🏋️', name:'グループ', price:'¥4,400/月' },{ icon:'🔥', name:'ダイエット', price:'¥6,600/月' }].map(p => (
-                      <div key={p.name} className="bg-zinc-800 border border-zinc-700 rounded-lg p-1.5 text-center">
-                        <div className="text-[12px] mb-0.5">{p.icon}</div>
-                        <div className="text-[6px] text-white font-semibold">{p.name}</div>
-                        <div className="text-[6px] text-red-400">{p.price}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-zinc-800 px-3 py-2">
-                  <div className="flex gap-3">
-                    {[{ n:'500+', l:'会員数' },{ n:'92%', l:'目標達成率' },{ n:'4.9★', l:'Google評価' }].map(s => (
-                      <div key={s.l} className="text-center flex-1">
-                        <div className="text-[10px] font-bold text-red-400">{s.n}</div>
-                        <div className="text-[5.5px] text-gray-500">{s.l}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-red-600 px-3 py-1.5 text-center">
-                  <div className="text-[7px] text-white font-bold">今月限定 入会金 ¥0 キャンペーン実施中！</div>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">フィットネス・ジム</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">IRON BODY GYM（大阪・難波）</div>
-                  </div>
-                  <Link href="/laruHP/onboarding?industry=fitness" className="text-[11px] bg-red-500/10 text-red-600 border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all whitespace-nowrap flex-shrink-0">
-                    このテンプレで作る →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* === ホテル SEABREEZE HOTEL === */}
-            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-sky-400 transition-all shadow-lg hover:shadow-[0_0_40px_rgba(14,165,233,0.10)] bg-white">
-              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5 flex-shrink-0">
-                  <div className="w-3 h-3 bg-red-400 rounded-full" />
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
-                </div>
-                <div className="flex-1 bg-white border border-gray-200 rounded-md px-2 py-0.5 text-[9px] text-gray-400 flex items-center justify-center gap-1 min-w-0">
-                  <span>🔒</span><span className="truncate">hotel-seabreeze.laruHP.com</span>
-                </div>
-              </div>
-              <div className="overflow-hidden" style={{ height: 320 }}>
-                <div className="bg-white border-b border-sky-100 px-3 py-1.5 flex items-center justify-between shadow-sm">
-                  <span className="text-[8px] font-bold text-sky-800 tracking-wider">⛵ SEABREEZE</span>
-                  <div className="flex gap-2">
-                    {['客室','レストラン','温泉'].map(t => <span key={t} className="text-[6px] text-gray-500">{t}</span>)}
-                  </div>
-                  <span className="text-[6px] bg-sky-600 text-white px-2 py-0.5 rounded-full font-medium">宿泊予約</span>
-                </div>
-                <div className="bg-gradient-to-br from-sky-500 via-sky-600 to-blue-700 px-4 pt-4 pb-3">
-                  <div className="text-[6px] text-sky-200 mb-1.5 tracking-[0.2em] uppercase">Okinawa Resort · 全室オーシャンビュー</div>
-                  <div className="text-[13px] font-bold text-white leading-snug mb-1.5">海が見える、<br/>特別な時間。</div>
-                  <div className="text-[7px] text-sky-100 mb-3 leading-relaxed">那覇から30分・白砂のビーチと<br/>碧い珊瑚礁の海が目の前に</div>
-                  <span className="inline-block text-[7px] bg-white text-sky-700 px-3 py-1 rounded-full font-bold">空室確認・予約 →</span>
-                </div>
-                <div className="bg-white px-3 py-2">
-                  <div className="text-[7px] text-gray-500 mb-1.5 font-medium">🛏 客室タイプ</div>
-                  <div className="grid grid-cols-3 gap-1">
-                    {[
-                      { gradient:'from-sky-200 to-blue-200', name:'デラックス', price:'¥25,000〜' },
-                      { gradient:'from-blue-200 to-sky-300', name:'スイート', price:'¥45,000〜' },
-                      { gradient:'from-sky-300 to-cyan-200', name:'ファミリー', price:'¥35,000〜' },
-                    ].map(r => (
-                      <div key={r.name} className="rounded-lg overflow-hidden border border-sky-100">
-                        <div className={`h-10 bg-gradient-to-br ${r.gradient}`} />
-                        <div className="bg-white p-1">
-                          <div className="text-[6px] font-semibold text-gray-700">{r.name}</div>
-                          <div className="text-[6px] text-sky-600 font-bold">{r.price}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-sky-50 px-3 py-2 border-t border-sky-100">
-                  <div className="text-[6px] text-gray-500 mb-1.5">📅 日程を選んで予約</div>
-                  <div className="flex gap-1 items-center">
-                    <div className="flex-1 bg-white border border-sky-200 rounded px-2 py-1 text-[6px] text-gray-400">チェックイン ▾</div>
-                    <span className="text-[6px] text-gray-400">→</span>
-                    <div className="flex-1 bg-white border border-sky-200 rounded px-2 py-1 text-[6px] text-gray-400">チェックアウト ▾</div>
-                    <div className="bg-sky-600 text-white rounded px-2 py-1 text-[6px] font-bold">検索</div>
-                  </div>
-                </div>
-                <div className="bg-sky-600 px-3 py-1.5 flex justify-around">
-                  {[{ n:'4.8★', l:'トリップ評価' },{ n:'#1', l:'沖縄ランキング' },{ n:'98%', l:'リピート率' }].map(s => (
-                    <div key={s.l} className="text-center">
-                      <div className="text-[8px] font-bold text-white">{s.n}</div>
-                      <div className="text-[5.5px] text-sky-200">{s.l}</div>
+              {/* Services */}
+              <div className="bg-white px-3 py-3">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[{icon:'✂️',name:'カット',price:'¥4,400'},{icon:'🎨',name:'カラー',price:'¥8,800'},{icon:'💆',name:'トリート',price:'¥3,300'}].map(s=>(
+                    <div key={s.name} className="bg-rose-50 rounded-xl p-2 text-center border border-rose-100">
+                      <div className="text-[14px] mb-0.5">{s.icon}</div>
+                      <div className="text-[7px] font-semibold text-gray-700">{s.name}</div>
+                      <div className="text-[7px] text-rose-500 font-bold">{s.price}〜</div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">ホテル・旅館・民泊</div>
-                    <div className="text-[11px] text-gray-500 mt-0.5">SEABREEZE HOTEL（沖縄・那覇）</div>
-                  </div>
-                  <Link href="/laruHP/onboarding?industry=hotel" className="text-[11px] bg-sky-500/10 text-sky-600 border border-sky-500/20 px-3 py-1.5 rounded-lg hover:bg-sky-500/20 transition-all whitespace-nowrap flex-shrink-0">
-                    このテンプレで作る →
-                  </Link>
+              <div className="px-3 pb-3">
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-2">
+                  <div className="text-[6px] text-yellow-500 mb-0.5">★★★★★</div>
+                  <div className="text-[6px] text-gray-600">"カラーが得意なサロン。毎回満足しています！"</div>
+                  <div className="text-[5px] text-gray-400 mt-0.5">— 田中様（30代・OL）</div>
                 </div>
+              </div>
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                <div><div className="text-sm font-semibold text-gray-900">美容室・サロン</div><div className="text-[11px] text-gray-500">Hair Salon AN（東京・渋谷）</div></div>
+                <Link href="/laruHP/onboarding?industry=beauty" className="text-[11px] bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+              </div>
+            </div>
+
+            {/* ── 整体院 ── */}
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-emerald-300 transition-all shadow-md hover:shadow-xl bg-white">
+              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
+                <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 midori-sekkotsu.laruvisona.com</div>
+              </div>
+              <div className="relative overflow-hidden" style={{height:180}}>
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-teal-800 to-emerald-950" />
+                <svg className="absolute inset-0 w-full h-full opacity-15" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
+                  <circle cx="260" cy="30" r="70" fill="rgba(110,231,183,0.4)"/>
+                  <circle cx="40" cy="160" r="60" fill="rgba(52,211,153,0.3)"/>
+                  <line x1="0" y1="90" x2="300" y2="90" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5"/>
+                  <rect x="120" y="50" width="60" height="80" rx="4" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5"/>
+                </svg>
+                <div className="relative z-10 px-5 pt-5 pb-4">
+                  <div className="inline-block text-[7px] bg-white/20 text-emerald-100 px-2 py-0.5 rounded-full mb-2">累計施術実績 10,000人以上</div>
+                  <div className="text-[15px] font-bold text-white leading-tight mb-2">痛みのない<br/>毎日を取り戻す。</div>
+                  <div className="text-[8px] text-emerald-200 mb-3">整体・骨盤矯正・鍼灸 / 初回 ¥1,500</div>
+                  <span className="inline-block text-[8px] bg-white text-emerald-700 px-3 py-1 rounded font-bold">初回限定で予約 →</span>
+                </div>
+                <div className="absolute bottom-2 right-2 flex gap-1 opacity-60">
+                  <div className="w-11 h-13 rounded-lg bg-gradient-to-b from-emerald-300 to-teal-200 flex items-end justify-center pb-1"><div className="text-[16px]">💆</div></div>
+                  <div className="w-11 h-13 rounded-lg bg-gradient-to-b from-teal-200 to-emerald-300 flex items-end justify-center pb-1"><div className="text-[16px]">🌿</div></div>
+                </div>
+              </div>
+              <div className="bg-white border-b border-emerald-50 px-3 py-1.5 flex items-center justify-between">
+                <span className="text-[7px] font-bold text-emerald-800">🍃 みどり接骨院</span>
+                <div className="flex gap-2">{['施術案内','料金','アクセス'].map(t=><span key={t} className="text-[6px] text-gray-500">{t}</span>)}</div>
+                <span className="text-[6px] bg-emerald-600 text-white px-2 py-0.5 rounded font-medium">予約</span>
+              </div>
+              <div className="bg-white px-3 py-2.5">
+                <div className="text-[7px] text-gray-500 mb-1.5 font-medium">対応症状</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[{icon:'💆',label:'肩こり・首こり'},{icon:'🦴',label:'腰痛・ぎっくり'},{icon:'🦵',label:'ひざ・股関節'}].map(s=>(
+                    <div key={s.label} className="bg-emerald-50 border border-emerald-100 rounded-lg p-1.5 text-center">
+                      <div className="text-[12px] mb-0.5">{s.icon}</div>
+                      <div className="text-[6px] text-emerald-700 font-medium leading-tight">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-emerald-50 mx-3 mb-3 rounded-xl p-2">
+                <div className="text-[6px] text-yellow-500 mb-0.5">★★★★★</div>
+                <div className="text-[6px] text-gray-600">"3回の施術で長年の腰痛がほぼ解消！先生の説明も丁寧です。"</div>
+                <div className="text-[5px] text-gray-400 mt-0.5">— 鈴木様（40代・会社員）</div>
+              </div>
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                <div><div className="text-sm font-semibold text-gray-900">整体・接骨院</div><div className="text-[11px] text-gray-500">みどり接骨院（大阪・梅田）</div></div>
+                <Link href="/laruHP/onboarding?industry=clinic" className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+              </div>
+            </div>
+
+            {/* ── 飲食店 ── */}
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-amber-300 transition-all shadow-md hover:shadow-xl bg-white">
+              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
+                <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 bistro-nakano.laruvisona.com</div>
+              </div>
+              <div className="relative overflow-hidden" style={{height:180}}>
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-900 via-amber-900 to-orange-950" />
+                <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
+                  <circle cx="250" cy="50" r="60" fill="rgba(251,191,36,0.3)"/>
+                  <circle cx="50" cy="140" r="50" fill="rgba(245,158,11,0.2)"/>
+                  <ellipse cx="150" cy="90" rx="30" ry="40" fill="none" stroke="rgba(255,220,150,0.2)" strokeWidth="0.5"/>
+                  <circle cx="200" cy="80" r="20" fill="rgba(255,200,100,0.15)"/>
+                </svg>
+                <div className="relative z-10 px-5 pt-5 pb-4">
+                  <div className="text-[7px] text-amber-300 mb-2 tracking-[0.2em] uppercase">French Cuisine · Tokyo</div>
+                  <div className="text-[15px] font-bold text-white leading-tight mb-2">気軽に、<br/>本格フレンチを。</div>
+                  <div className="text-[8px] text-amber-200 mb-3">ランチ ¥1,500〜 / ディナー ¥4,800〜</div>
+                  <span className="inline-block text-[8px] bg-amber-500 text-white px-3 py-1 rounded font-bold">席を予約する →</span>
+                </div>
+                <div className="absolute bottom-2 right-2 grid grid-cols-3 gap-1 opacity-60">
+                  {[{bg:'from-orange-200 to-amber-200',icon:'🍽'},{bg:'from-amber-200 to-yellow-200',icon:'🥂'},{bg:'from-yellow-200 to-orange-200',icon:'🥩'}].map((m,i)=>(
+                    <div key={i} className={`w-11 h-12 rounded-lg bg-gradient-to-br ${m.bg} flex items-end justify-center pb-1`}><div className="text-[16px]">{m.icon}</div></div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-gray-900 px-3 py-1.5 flex items-center justify-between">
+                <span className="text-[8px] font-bold text-amber-400 tracking-widest">BISTRO NAKANO</span>
+                <div className="flex gap-2">{['ランチ','ディナー','ワイン','予約'].map(t=><span key={t} className="text-[6px] text-gray-400">{t}</span>)}</div>
+                <span className="text-[6px] border border-amber-400 text-amber-400 px-2 py-0.5 rounded font-medium">予約</span>
+              </div>
+              <div className="bg-white px-3 py-2">
+                <div className="text-[7px] text-gray-500 mb-1.5 font-medium">🍽 人気メニュー</div>
+                <div className="grid grid-cols-3 gap-1">
+                  {[{bg:'from-orange-100 to-amber-100',name:'フォアグラのテリーヌ',price:'¥1,980'},{bg:'from-amber-100 to-yellow-100',name:'ブイヤベース',price:'¥2,280'},{bg:'from-yellow-100 to-orange-100',name:'シャトーブリアン',price:'¥4,980'}].map(m=>(
+                    <div key={m.name} className="rounded-lg overflow-hidden border border-amber-100">
+                      <div className={`h-8 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[16px]`}>🍴</div>
+                      <div className="bg-white p-1"><div className="text-[5.5px] font-medium text-gray-700 leading-tight">{m.name}</div><div className="text-[6px] text-amber-600 font-bold">{m.price}</div></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-gray-900 mx-3 mb-3 rounded-xl px-3 py-2 flex items-center justify-between">
+                <div className="text-[6px] text-gray-400"><div>📍 東京都中野区中野5-1-1</div><div className="mt-0.5">🕐 月〜土 11:30〜14:00 / 17:00〜22:00</div></div>
+                <span className="text-[6px] bg-amber-500 text-white px-2 py-0.5 rounded">📞 電話予約</span>
+              </div>
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                <div><div className="text-sm font-semibold text-gray-900">飲食店・カフェ</div><div className="text-[11px] text-gray-500">Bistro Nakano（東京・中野区）</div></div>
+                <Link href="/laruHP/onboarding?industry=restaurant" className="text-[11px] bg-amber-50 text-amber-600 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-all whitespace-nowrap">このテンプレで →</Link>
               </div>
             </div>
           </div>
 
-          <div className="text-center mt-10">
-            <Link href="/laruHP/onboarding" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm transition-colors border border-gray-200 hover:border-sky-300 px-5 py-2.5 rounded-xl">
-              全テンプレートを見る →
-            </Link>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* ── 法律事務所 ── */}
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-slate-400 transition-all shadow-md hover:shadow-xl bg-white">
+              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
+                <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 yamamoto-law.laruvisona.com</div>
+              </div>
+              <div className="relative overflow-hidden" style={{height:180}}>
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
+                <svg className="absolute inset-0 w-full h-full opacity-10" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
+                  <rect x="0" y="0" width="300" height="180" fill="none" stroke="rgba(200,200,220,0.3)" strokeWidth="0.3"/>
+                  {[0,30,60,90,120,150,180].map(y=><line key={y} x1="0" y1={y} x2="300" y2={y} stroke="rgba(200,210,230,0.08)" strokeWidth="0.5"/>)}
+                  <circle cx="250" cy="30" r="50" fill="rgba(245,200,50,0.08)"/>
+                  <rect x="20" y="40" width="8" height="100" rx="2" fill="rgba(255,255,255,0.06)"/>
+                  <rect x="35" y="50" width="8" height="90" rx="2" fill="rgba(255,255,255,0.04)"/>
+                  <rect x="50" y="30" width="8" height="110" rx="2" fill="rgba(255,255,255,0.06)"/>
+                </svg>
+                <div className="relative z-10 px-5 pt-5">
+                  <div className="text-[7px] text-slate-400 mb-2 tracking-[0.15em]">YAMAMOTO LAW FIRM — 設立30年</div>
+                  <div className="text-[15px] font-bold text-white leading-tight mb-2">難しい問題こそ、<br/>ご相談を。</div>
+                  <div className="text-[8px] text-slate-300 mb-3">遺産相続・企業法務・不動産 / 初回無料相談</div>
+                  <span className="inline-block text-[8px] bg-yellow-600 text-white px-3 py-1 font-bold">無料相談を予約する →</span>
+                </div>
+                <div className="absolute bottom-3 right-4 text-[40px] opacity-10">⚖️</div>
+              </div>
+              <div className="bg-slate-900 px-3 py-1.5 flex items-center justify-between">
+                <span className="text-[7px] font-bold text-white">山本法律事務所</span>
+                <div className="flex gap-2">{['業務案内','費用','弁護士'].map(t=><span key={t} className="text-[6px] text-slate-400">{t}</span>)}</div>
+                <span className="text-[6px] border border-yellow-600 text-yellow-600 px-2 py-0.5 font-medium">無料相談</span>
+              </div>
+              <div className="bg-slate-50 px-3 py-2.5">
+                <div className="text-[7px] text-gray-500 mb-1.5 font-medium">専門分野</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[{icon:'📜',label:'相続・遺言'},{icon:'💼',label:'企業法務'},{icon:'🏠',label:'不動産法務'}].map(a=>(
+                    <div key={a.label} className="bg-white border border-slate-200 p-2 text-center shadow-sm">
+                      <div className="text-[12px] mb-0.5">{a.icon}</div>
+                      <div className="text-[6px] text-slate-600 font-medium">{a.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white border-t border-slate-100 px-3 py-2 flex items-center gap-2">
+                <div className="w-8 h-8 bg-slate-200 rounded-full flex-shrink-0 flex items-center justify-center text-[14px]">👨‍⚖️</div>
+                <div><div className="text-[7px] font-bold text-gray-800">山本 太郎 弁護士</div><div className="text-[6px] text-gray-500">東京弁護士会 · 解決実績500件以上</div></div>
+              </div>
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                <div><div className="text-sm font-semibold text-gray-900">士業・法律事務所</div><div className="text-[11px] text-gray-500">山本法律事務所（東京・新宿）</div></div>
+                <Link href="/laruHP/onboarding?industry=legal" className="text-[11px] bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-all whitespace-nowrap">このテンプレで →</Link>
+              </div>
+            </div>
+
+            {/* ── フィットネス ── */}
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-red-300 transition-all shadow-md hover:shadow-xl bg-white">
+              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
+                <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 studio-iron.laruvisona.com</div>
+              </div>
+              <div className="relative overflow-hidden" style={{height:180}}>
+                <div className="absolute inset-0 bg-gradient-to-br from-red-900 via-orange-900 to-red-950" />
+                <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
+                  <circle cx="150" cy="90" r="80" fill="none" stroke="rgba(255,100,50,0.3)" strokeWidth="1"/>
+                  <circle cx="150" cy="90" r="55" fill="none" stroke="rgba(255,120,60,0.2)" strokeWidth="0.5"/>
+                  <rect x="70" y="85" width="160" height="5" rx="2.5" fill="rgba(255,150,100,0.2)"/>
+                  <rect x="60" y="80" width="15" height="15" rx="7.5" fill="rgba(255,180,100,0.3)"/>
+                  <rect x="225" y="80" width="15" height="15" rx="7.5" fill="rgba(255,180,100,0.3)"/>
+                </svg>
+                <div className="relative z-10 px-5 pt-5">
+                  <div className="text-[7px] text-red-300 mb-2 tracking-[0.2em]">PERSONAL GYM IRON</div>
+                  <div className="text-[15px] font-bold text-white leading-tight mb-2">限界を超える、<br/>一歩先へ。</div>
+                  <div className="text-[8px] text-red-200 mb-3">パーソナルトレーニング / 月額 ¥8,800〜</div>
+                  <span className="inline-block text-[8px] bg-red-500 text-white px-3 py-1 rounded font-bold">無料体験を予約 →</span>
+                </div>
+                <div className="absolute bottom-3 right-4 text-[36px] opacity-15">💪</div>
+              </div>
+              <div className="bg-gray-900 px-3 py-1.5 flex items-center justify-between">
+                <span className="text-[8px] font-bold text-red-400">STUDIO IRON</span>
+                <div className="flex gap-2">{['プログラム','料金','トレーナー'].map(t=><span key={t} className="text-[6px] text-gray-400">{t}</span>)}</div>
+                <span className="text-[6px] bg-red-500 text-white px-2 py-0.5 rounded font-medium">無料体験</span>
+              </div>
+              <div className="bg-white px-3 py-2.5">
+                <div className="text-[7px] text-gray-500 mb-1.5 font-medium">プログラム</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[{icon:'🏋️',label:'筋力UP',price:'¥8,800'},{icon:'🏃',label:'ダイエット',price:'¥9,800'},{icon:'🧘',label:'体質改善',price:'¥7,800'}].map(s=>(
+                    <div key={s.label} className="bg-red-50 border border-red-100 rounded-lg p-2 text-center">
+                      <div className="text-[12px] mb-0.5">{s.icon}</div>
+                      <div className="text-[6px] font-bold text-gray-700">{s.label}</div>
+                      <div className="text-[6px] text-red-500 font-bold">{s.price}〜</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-red-900 mx-3 mb-3 rounded-xl px-3 py-2 flex items-center justify-between">
+                <div><div className="text-[7px] text-white font-bold">🎯 今月の空き枠残り3名</div><div className="text-[6px] text-red-300">初回体験 ¥0 / 当日OK</div></div>
+                <span className="text-[6px] bg-white text-red-700 px-2 py-0.5 rounded font-bold">申込む</span>
+              </div>
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                <div><div className="text-sm font-semibold text-gray-900">フィットネス・ジム</div><div className="text-[11px] text-gray-500">Studio IRON（名古屋・栄）</div></div>
+                <Link href="/laruHP/onboarding?industry=fitness" className="text-[11px] bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+              </div>
+            </div>
+
+            {/* ── 工務店 ── */}
+            <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-amber-400 transition-all shadow-md hover:shadow-xl bg-white">
+              <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
+                <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 takumi-koumuten.laruvisona.com</div>
+              </div>
+              <div className="relative overflow-hidden" style={{height:180}}>
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-800 via-yellow-900 to-amber-950" />
+                <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
+                  {/* House silhouette */}
+                  <polygon points="150,20 240,80 60,80" fill="none" stroke="rgba(255,220,100,0.4)" strokeWidth="1.5"/>
+                  <rect x="85" y="80" width="130" height="80" fill="none" stroke="rgba(255,200,80,0.3)" strokeWidth="1"/>
+                  <rect x="130" y="110" width="40" height="50" fill="rgba(255,200,80,0.1)"/>
+                  <rect x="95" y="90" width="30" height="30" fill="rgba(255,200,80,0.1)"/>
+                  <rect x="175" y="90" width="30" height="30" fill="rgba(255,200,80,0.1)"/>
+                </svg>
+                <div className="relative z-10 px-5 pt-5">
+                  <div className="text-[7px] text-amber-300 mb-2">地域密着 · 創業35年</div>
+                  <div className="text-[15px] font-bold text-white leading-tight mb-2">地元の技術と<br/>信頼で建てる。</div>
+                  <div className="text-[8px] text-amber-200 mb-3">新築・リフォーム・外構 / 見積もり無料</div>
+                  <span className="inline-block text-[8px] bg-amber-600 text-white px-3 py-1 rounded font-bold">無料見積もりを依頼 →</span>
+                </div>
+              </div>
+              <div className="bg-amber-900 px-3 py-1.5 flex items-center justify-between">
+                <span className="text-[7px] font-bold text-white">🏗 匠工務店</span>
+                <div className="flex gap-2">{['施工事例','サービス','料金','見積り'].map(t=><span key={t} className="text-[6px] text-amber-300">{t}</span>)}</div>
+              </div>
+              <div className="bg-white px-3 py-2.5">
+                <div className="text-[7px] text-gray-500 mb-1.5 font-medium">施工事例</div>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    {bg:'from-amber-100 to-yellow-100',label:'新築住宅',icon:'🏠'},
+                    {bg:'from-orange-100 to-amber-100',label:'キッチンリフォーム',icon:'🍳'},
+                    {bg:'from-yellow-100 to-orange-100',label:'外壁塗装',icon:'🎨'},
+                  ].map(m=>(
+                    <div key={m.label} className="rounded-lg overflow-hidden border border-amber-100">
+                      <div className={`h-9 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[18px]`}>{m.icon}</div>
+                      <div className="bg-white p-1 text-center"><div className="text-[5.5px] font-medium text-gray-600">{m.label}</div></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-amber-50 border-t border-amber-100 mx-3 mb-3 rounded-xl px-3 py-2">
+                <div className="text-[6px] text-yellow-500 mb-0.5">★★★★★</div>
+                <div className="text-[6px] text-gray-600">"親切丁寧な対応と高品質な仕上がりで大満足！"</div>
+                <div className="text-[5px] text-gray-400 mt-0.5">— 佐藤様（50代・自営業）</div>
+              </div>
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                <div><div className="text-sm font-semibold text-gray-900">建設・工務店</div><div className="text-[11px] text-gray-500">匠工務店（埼玉・さいたま市）</div></div>
+                <Link href="/laruHP/onboarding?industry=construction" className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Industry links */}
+          <div className="mt-10 text-center">
+            <p className="text-gray-500 text-sm mb-5">他の業種も同じクオリティで作れます →</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {[
+                {id:'realestate',label:'不動産'},
+                {id:'hotel',label:'ホテル・旅館'},
+                {id:'education',label:'教育・スクール'},
+                {id:'dental',label:'歯科クリニック'},
+                {id:'wedding',label:'ウェディング'},
+                {id:'pet',label:'ペットサロン'},
+                {id:'photo',label:'フォトスタジオ'},
+                {id:'accounting',label:'税理士・会計士'},
+                {id:'retail',label:'小売・ショップ'},
+              ].map(ind=>(
+                <Link key={ind.id} href={`/laruHP/${ind.id}`}
+                  className="text-sm text-gray-600 hover:text-sky-600 border border-gray-200 hover:border-sky-300 px-4 py-2 rounded-full bg-white hover:bg-sky-50 transition-all">
+                  {ind.label} →
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="lp-fade-up text-center mb-12">
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">導入事例</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">お客様の声</h2>
+            <p className="text-gray-500">実際にLARU HPを使ったオーナーから届いたリアルな声</p>
+          </div>
+          <div className="lp-stagger grid md:grid-cols-3 gap-6">
+            {[
+              {
+                name: '田中 美里',
+                role: '美容室オーナー（東京・新宿）',
+                avatar: '💇',
+                stars: 5,
+                quote: '以前はWordPressで毎月8,000円払っていましたが、LARU HPに移行したら月999円で全機能が使えるようになりました。AIでコンテンツを作ってくれるので更新も楽になり、お問い合わせも月30件から55件に増えました。',
+                highlight: 'お問い合わせが1.8倍に',
+              },
+              {
+                name: '中村 大輔',
+                role: '整体院院長（大阪・天王寺）',
+                avatar: '💆',
+                stars: 5,
+                quote: 'ホームページを持っていなかったので、Instagramだけで集客していました。LARU HPで自社HPを持って3ヶ月で月20件以上の新規予約がネット経由で入るようになりました。費用対効果が素晴らしい。',
+                highlight: '月20件以上の新規予約',
+              },
+              {
+                name: '渡辺 健太',
+                role: '個人事業主・税理士（名古屋）',
+                avatar: '📊',
+                stars: 5,
+                quote: 'SEOの知識がなくても、AIが全部やってくれるのが助かります。「名古屋 税理士 相続」で検索1ページ目に表示されるようになり、問い合わせが月5件程度から安定して入るようになりました。',
+                highlight: 'Google検索1ページ目へ',
+              },
+            ].map((t, i) => (
+              <div key={i} className="bg-sky-50 border border-sky-100 rounded-3xl p-7 flex flex-col hover:border-sky-300 hover:shadow-md transition-all">
+                <div className="flex gap-0.5 mb-4">
+                  {Array(t.stars).fill(0).map((_, j) => (
+                    <span key={j} className="text-amber-400 text-sm">★</span>
+                  ))}
+                </div>
+                <div className="bg-sky-100 border border-sky-200 text-sky-700 text-xs font-semibold px-3 py-1 rounded-full self-start mb-4">{t.highlight}</div>
+                <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-6">"{t.quote}"</p>
+                <div className="flex items-center gap-3 border-t border-sky-100 pt-4">
+                  <div className="w-10 h-10 bg-sky-200 rounded-full flex items-center justify-center text-[18px] flex-shrink-0">{t.avatar}</div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{t.name}</div>
+                    <div className="text-xs text-gray-400">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -851,12 +905,12 @@ export default function LaruHPLandingPage() {
       {/* LARUbot + LARUSEO Integration */}
       <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-sky-50">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="lp-fade-up text-center mb-12">
             <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">連携機能</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">強力な連携機能</h2>
             <p className="text-gray-500">AIチャットボット・SEOツールとシームレスに連携。集客を自動化します。</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="lp-stagger grid md:grid-cols-2 gap-8">
             <div className="bg-indigo-50 border border-indigo-200 rounded-3xl p-8 hover:border-indigo-300 transition-all">
               <div className="inline-block bg-indigo-100 text-indigo-600 text-xs font-medium px-3 py-1 rounded-full mb-4">LARUbot 連携</div>
               <h3 className="text-xl font-semibold mb-3 text-gray-900">AIチャットボットを即導入</h3>
@@ -977,7 +1031,7 @@ export default function LaruHPLandingPage() {
           <p className="text-gray-500 mb-2">全プラン 初月無料・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
           <p className="text-gray-400 text-xs mb-12">クレジットカード決済 / Stripe安全決済</p>
 
-          <div className="grid md:grid-cols-3 gap-5 mb-8">
+          <div className="lp-stagger grid md:grid-cols-3 gap-5 mb-8">
             {PLANS.map((plan) => (
               <div
                 key={plan.id}
@@ -1073,7 +1127,7 @@ export default function LaruHPLandingPage() {
       {/* FAQ */}
       <section id="faq" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="lp-fade-up text-center mb-12">
             <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">よくある質問</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 text-gray-900">よくある質問</h2>
           </div>
