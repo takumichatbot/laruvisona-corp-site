@@ -233,7 +233,7 @@ export default function SettingsPage() {
                   <img src={brandLogoUrl} alt="ロゴプレビュー" className="h-8 w-auto max-w-[120px] object-contain rounded border border-gray-200" />
                 )}
                 {!brandLogoUrl && (
-                  <div className="h-8 w-8 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-gray-400 text-xs font-bold">L</div>
+                  <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto rounded" />
                 )}
                 <span className="text-xs text-gray-500">現在のロゴ</span>
               </div>

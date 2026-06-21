@@ -175,8 +175,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link href="/laruHP/dashboard" className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-black text-sm">L</div>
-              <span className="font-bold text-lg">LARU<span className="text-blue-400 font-light">HP</span></span>
+              <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto brightness-0 invert" />
             </Link>
             <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-full font-bold">ADMIN</span>
           </div>

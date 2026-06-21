@@ -55,8 +55,7 @@ export default function TermsPage() {
       <header className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
           <Link href="/laruHP" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black text-xs">L</div>
-            <span className="font-bold">LARU<span className="text-blue-400 font-light">HP</span></span>
+            <img src="/laruhp_logo.png" alt="LARU HP" className="h-7 w-auto brightness-0 invert" />
           </Link>
           <span className="text-slate-600">/</span>
           <span className="text-slate-400 text-sm">利用規約</span>

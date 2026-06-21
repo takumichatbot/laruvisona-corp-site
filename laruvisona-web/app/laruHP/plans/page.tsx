@@ -92,8 +92,7 @@ export default function PlansPage() {
       <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-sky-600 text-white rounded-lg flex items-center justify-center font-bold text-sm">L</div>
-            <span className="text-gray-900 font-semibold tracking-tight text-lg">LARU<span className="text-sky-500 font-light">HP</span></span>
+            <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-2.5">
             <Link href="/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">

@@ -53,8 +53,8 @@ export default async function InvitePage({ params }: Props) {
     <div className="min-h-screen bg-sky-50 flex items-center justify-center p-4">
       <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full shadow-sm">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center mx-auto mb-4">
-            <div className="w-7 h-7 bg-sky-600 text-white rounded-md flex items-center justify-center font-bold text-xs">L</div>
+          <div className="flex items-center justify-center mx-auto mb-4">
+            <img src="/laruhp_logo.png" alt="LARU HP" className="h-10 w-auto" />
           </div>
           <h1 className="text-lg font-bold text-gray-900 mb-1">サイト編集への招待</h1>
           <p className="text-gray-500 text-sm">

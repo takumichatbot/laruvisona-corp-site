@@ -714,8 +714,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
       <header className="fixed top-0 w-full z-50 bg-white border-b border-sky-100 shadow-sm backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-sky-600 text-white rounded-lg flex items-center justify-center font-bold text-sm">L</div>
-            <span className="font-bold tracking-tight text-gray-900">LARU<span className="text-sky-500 font-light">HP</span></span>
+            <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto" />
           </Link>
           <div className="flex flex-col items-end">
             <div className="text-gray-500 text-sm">サイト作成ウィザード</div>

@@ -4787,8 +4787,7 @@ function BuilderContent() {
               <img src={brandLogoUrl} alt="logo" className="h-7 w-auto max-w-[120px] object-contain rounded" />
             ) : (
               <>
-                <div className="w-7 h-7 bg-white text-black rounded-lg flex items-center justify-center font-black text-xs">L</div>
-                <span className="hidden sm:block font-bold">LARU<span className="text-blue-400 font-light">HP</span></span>
+                <img src="/laruhp_logo.png" alt="LARU HP" className="h-7 w-auto brightness-0 invert" />
               </>
             )}
           </button>

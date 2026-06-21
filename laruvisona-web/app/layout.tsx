@@ -19,6 +19,21 @@ const notoSansJP = Noto_Sans_JP({
 export const metadata = {
   title: 'LARUVisona | 「想像」を「実装」する',
   description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
+  openGraph: {
+    title: 'LARUVisona | 「想像」を「実装」する',
+    description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
+    url: 'https://laruvisona.jp',
+    siteName: 'LARUVisona',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'LARUVisona | 「想像」を「実装」する' }],
+    locale: 'ja_JP',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'LARUVisona | 「想像」を「実装」する',
+    description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
+    images: ['/opengraph-image'],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

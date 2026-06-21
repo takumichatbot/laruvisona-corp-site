@@ -1,11 +1,15 @@
 import { ImageResponse } from 'next/og';
+import fs from 'fs';
+import path from 'path';
 
-export const runtime = 'edge';
 export const alt = 'LARU HP — AIで最高のHPを最短で';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default function Image() {
+  const logoData = fs.readFileSync(path.join(process.cwd(), 'public/laruhp_logo.png'));
+  const logoSrc = `data:image/png;base64,${logoData.toString('base64')}`;
+
   return new ImageResponse(
     (
       <div
@@ -35,15 +39,17 @@ export default function Image() {
         }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', padding: '64px 72px', height: '100%', position: 'relative' }}>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 'auto' }}>
+          {/* Logo — white card so the PNG's white bg blends cleanly */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 'auto' }}>
             <div style={{
-              width: 48, height: 48, borderRadius: 12,
-              background: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22, fontWeight: 900, color: '#0c1a3a',
-            }}>L</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'white', letterSpacing: '-0.5px' }}>
-              LARU<span style={{ color: '#38bdf8', fontWeight: 300 }}>HP</span>
+              background: 'white',
+              borderRadius: 14,
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoSrc} style={{ height: 44, width: 'auto', objectFit: 'contain' }} alt="LARU HP" />
             </div>
           </div>
 
@@ -65,7 +71,7 @@ export default function Image() {
               { label: 'HP', price: '¥999/月', color: '#38bdf8' },
               { label: 'HP + LARUbot', price: '¥4,980/月', color: '#818cf8' },
               { label: 'エージェンシー', price: '¥19,800/月', color: '#c084fc' },
-            ].map(p => (
+            ].map((p) => (
               <div key={p.label} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',

@@ -384,8 +384,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-sky-600 text-white rounded-md flex items-center justify-center font-bold text-xs">L</div>
-            <span className="font-semibold text-gray-900">LARU<span className="text-sky-500 font-light">HP</span></span>
+            <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/laruHP/auth/login" className="hidden sm:block text-sm text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-lg transition-all">
@@ -599,8 +598,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
       <footer className="bg-gray-900 text-gray-400 py-10 px-6">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-sky-600 text-white rounded flex items-center justify-center font-bold text-xs">L</div>
-            <span className="text-white font-semibold">LARU HP</span>
+            <img src="/laruhp_logo.png" alt="LARU HP" className="h-6 w-auto brightness-0 invert" />
           </div>
           <div className="flex gap-4 flex-wrap">
             <Link href="/laruHP/privacy" className="hover:text-white transition-colors">プライバシーポリシー</Link>

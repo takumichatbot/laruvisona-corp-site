@@ -29,8 +29,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-sky-600 text-white rounded-xl flex items-center justify-center font-bold text-lg">L</div>
-          <span className="text-gray-900 font-semibold text-2xl">LARU<span className="text-sky-500 font-light">HP</span></span>
+          <img src="/laruhp_logo.png" alt="LARU HP" className="h-10 w-auto" />
         </Link>
 
         <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
