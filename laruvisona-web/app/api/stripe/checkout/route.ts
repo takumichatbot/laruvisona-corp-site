@@ -7,7 +7,16 @@ const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   'hp-bot': process.env.STRIPE_BUNDLE_BOT_PRICE_ID,
   'hp-bot-seo': process.env.STRIPE_BUNDLE_FULL_PRICE_ID,
   agency: process.env.STRIPE_AGENCY_PRICE_ID,
-  lite: process.env.STRIPE_LITE_PRICE_ID,
+  lite: process.env.STRIPE_BUNDLE_BOT_PRICE_ID, // lite は hp-bot と同じ Price ID
+};
+
+// Annual price IDs — create these in Stripe Dashboard as yearly prices (approx 20% discount)
+const PLAN_ANNUAL_PRICE_MAP: Record<string, string | undefined> = {
+  hp: process.env.STRIPE_HP_ANNUAL_PRICE_ID,
+  'hp-bot': process.env.STRIPE_BOT_ANNUAL_PRICE_ID,
+  'hp-bot-seo': process.env.STRIPE_FULL_ANNUAL_PRICE_ID,
+  agency: process.env.STRIPE_AGENCY_ANNUAL_PRICE_ID,
+  lite: process.env.STRIPE_BOT_ANNUAL_PRICE_ID, // lite は hp-bot と同じ Annual Price ID
 };
 
 export async function POST(req: Request) {
@@ -18,13 +27,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { siteId, plan = 'hp' } = await req.json().catch(() => ({}));
+  const { siteId, plan = 'hp', billing = 'monthly' } = await req.json().catch(() => ({}));
+  const isAnnual = billing === 'annual';
   const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
 
-  const priceId = PLAN_PRICE_MAP[plan];
+  const priceId = isAnnual ? PLAN_ANNUAL_PRICE_MAP[plan] : PLAN_PRICE_MAP[plan];
   if (!priceId) {
-    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    // Annual price not configured yet — fall back to monthly
+    if (isAnnual) {
+      const fallback = PLAN_PRICE_MAP[plan];
+      if (!fallback) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    } else {
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    }
   }
+  const resolvedPriceId = priceId || PLAN_PRICE_MAP[plan]!;
 
   // Get or create Stripe customer
   const { data: profile } = await supabase
@@ -51,21 +68,22 @@ export async function POST(req: Request) {
     plan,
   };
 
-  // 全プラン初月無料クーポンを適用
-  const couponId = process.env.STRIPE_FIRST_MONTH_COUPON_ID;
+  // 月払いのみ初月無料クーポン適用（年払いは割引価格自体で節約）
+  const couponId = !isAnnual ? process.env.STRIPE_FIRST_MONTH_COUPON_ID : undefined;
 
   try {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: resolvedPriceId, quantity: 1 }],
       ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       metadata: sessionMeta,
       subscription_data: {
         metadata: {
           ...sessionMeta,
-          contract_months: '6',
+          contract_months: isAnnual ? '12' : '6',
+          billing: billing,
         },
       },
       success_url: `${origin}/laruHP/dashboard?payment=success`,

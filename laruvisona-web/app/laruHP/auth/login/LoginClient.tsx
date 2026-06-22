@@ -1,15 +1,18 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirectTo') || '/laruHP/dashboard';
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -22,26 +25,31 @@ export default function LoginPage() {
       setError('メールアドレスまたはパスワードが正しくありません');
       setLoading(false);
     } else {
-      router.push('/laruHP/dashboard');
+      router.push(redirectTo);
     }
   };
 
   const handleGoogleLogin = async () => {
     setError('');
+    const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/dashboard';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/laruHP/dashboard`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
     if (error) setError('Googleログインに失敗しました');
   };
 
+  const signupHref = redirectTo !== '/laruHP/dashboard'
+    ? `/laruHP/auth/signup?redirectTo=${encodeURIComponent(redirectTo)}`
+    : '/laruHP/auth/signup';
+
   return (
     <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
-          <img src="/laruhp_logo.png" alt="LARU HP" className="h-10 w-auto" />
+          <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" style={{ width: 'auto' }} />
         </Link>
 
         <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
@@ -109,7 +117,7 @@ export default function LoginPage() {
 
         <p className="text-center text-gray-500 text-sm mt-6">
           アカウントをお持ちでない方は{' '}
-          <Link href="/laruHP/auth/signup" className="text-sky-600 hover:text-sky-500">新規登録</Link>
+          <Link href={signupHref} className="text-sky-600 hover:text-sky-500">新規登録</Link>
         </p>
         <p className="text-center mt-3">
           <Link href="/laruHP/auth/reset-password" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">
@@ -121,5 +129,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginClient() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

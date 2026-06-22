@@ -79,6 +79,61 @@ export default function LarubotLogsPage() {
   const avgMessages = conversations.length > 0 ? (totalMessages / conversations.length).toFixed(1) : '0';
   const userMessages = conversations.reduce((s, c) => s + c.messages.filter(m => m.role === 'user').length, 0);
 
+  // AI chat analysis
+  const [analysis, setAnalysis] = useState<{
+    faqs: Array<{ question: string; frequency: number; suggestedAnswer: string }>;
+    painPoints: Array<{ topic: string; count: number; description: string }>;
+    popularTopics: Array<{ topic: string; count: number }>;
+    summary: string;
+    conversationCount: number;
+  } | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+
+  // Lead scoring
+  const [leadScores, setLeadScores] = useState<Array<{
+    conversationId: string;
+    score: number;
+    intent: 'hot' | 'warm' | 'cold';
+    reasons: string[];
+    suggestedAction: string;
+    estimatedValue?: number;
+  }>>([]);
+  const [leadLoading, setLeadLoading] = useState(false);
+  const [showLeads, setShowLeads] = useState(false);
+
+  const handleLeadScore = async () => {
+    if (!selectedSiteId) return;
+    setLeadLoading(true);
+    setShowLeads(true);
+    try {
+      const res = await fetch('/api/ai/lead-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId: selectedSiteId }),
+      });
+      const d = await res.json() as { scores?: typeof leadScores };
+      setLeadScores(d.scores || []);
+    } catch { setLeadScores([]); }
+    setLeadLoading(false);
+  };
+
+  const handleAnalyze = async () => {
+    if (!selectedSiteId) return;
+    setAnalysisLoading(true);
+    setShowAnalysis(true);
+    try {
+      const res = await fetch('/api/ai/chat-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId: selectedSiteId }),
+      });
+      const d = await res.json();
+      setAnalysis(d.analysis ?? null);
+    } catch { setAnalysis(null); }
+    setAnalysisLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
       <header className="border-b border-gray-200 bg-white backdrop-blur-xl sticky top-0 z-30">
@@ -109,6 +164,131 @@ export default function LarubotLogsPage() {
                 {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+
+            {/* AI Analysis buttons */}
+            {conversations.length > 0 && (
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <button
+                  onClick={handleAnalyze}
+                  disabled={analysisLoading}
+                  className="flex items-center gap-2 text-xs bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl transition-all"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+                  {analysisLoading ? 'AI分析中...' : 'AI分析（FAQ・課題抽出）'}
+                </button>
+                <button
+                  onClick={handleLeadScore}
+                  disabled={leadLoading}
+                  className="flex items-center gap-2 text-xs bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl transition-all"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  {leadLoading ? 'スコアリング中...' : 'リードスコア分析'}
+                </button>
+              </div>
+            )}
+
+            {/* AI Analysis results */}
+            {showAnalysis && (
+              <div className="bg-white border border-purple-200 rounded-2xl p-5 mb-6 shadow-sm">
+                <h3 className="font-bold text-sm text-gray-900 mb-3 flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-purple-600"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+                  AIチャット分析レポート
+                </h3>
+                {analysisLoading ? (
+                  <div className="text-sm text-gray-400 text-center py-8">AIが会話を分析中...</div>
+                ) : analysis ? (
+                  <div className="space-y-5">
+                    <div className="text-xs text-gray-500 bg-purple-50 rounded-lg px-3 py-2">{analysis.summary}</div>
+
+                    {/* FAQs */}
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-700 mb-2">よくある質問 Top {analysis.faqs.length}件</h4>
+                      <div className="space-y-2">
+                        {analysis.faqs.map((faq, i) => (
+                          <div key={i} className="border border-gray-200 rounded-xl p-3">
+                            <div className="flex items-start gap-2 mb-1.5">
+                              <span className="text-[10px] font-bold text-purple-600 flex-shrink-0">{faq.frequency}件</span>
+                              <div className="text-xs font-semibold text-gray-900">{faq.question}</div>
+                            </div>
+                            <div className="text-[10px] text-gray-500 leading-relaxed">{faq.suggestedAnswer}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Pain points */}
+                    {analysis.painPoints.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-700 mb-2">顧客の課題・悩み</h4>
+                        <div className="space-y-2">
+                          {analysis.painPoints.map((p, i) => (
+                            <div key={i} className="border border-amber-200 bg-amber-50 rounded-xl p-3">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-[10px] font-bold text-amber-700">{p.count}件</span>
+                                <div className="text-xs font-semibold text-gray-900">{p.topic}</div>
+                              </div>
+                              <div className="text-[10px] text-gray-600">{p.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Popular topics */}
+                    {analysis.popularTopics.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-700 mb-2">人気トピック</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {analysis.popularTopics.map((t, i) => (
+                            <span key={i} className="text-xs bg-sky-50 border border-sky-200 text-sky-700 px-2.5 py-1 rounded-full">
+                              {t.topic} <span className="font-bold">{t.count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400 text-center py-4">分析に失敗しました。会話ログが少ない可能性があります。</div>
+                )}
+              </div>
+            )}
+
+            {/* Lead Scores */}
+            {showLeads && (
+              <div className="bg-white border border-amber-200 rounded-2xl p-5 mb-6 shadow-sm">
+                <h3 className="font-bold text-sm text-gray-900 mb-3 flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  リードスコアリング（直近7日間）
+                </h3>
+                {leadLoading ? (
+                  <div className="text-sm text-gray-400 text-center py-8">AIがリードを分析中...</div>
+                ) : leadScores.length === 0 ? (
+                  <div className="text-sm text-gray-400 text-center py-4">スコアリング対象の会話がありません</div>
+                ) : (
+                  <div className="space-y-3">
+                    {leadScores.map((lead, i) => (
+                      <div key={i} className={`border rounded-xl p-3 ${lead.intent === 'hot' ? 'border-red-200 bg-red-50' : lead.intent === 'warm' ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${lead.intent === 'hot' ? 'bg-red-500 text-white' : lead.intent === 'warm' ? 'bg-amber-500 text-white' : 'bg-gray-400 text-white'}`}>
+                            {lead.intent.toUpperCase()} {lead.score}点
+                          </span>
+                          {lead.estimatedValue && (
+                            <span className="text-[10px] text-gray-500">見込み: ¥{lead.estimatedValue.toLocaleString()}</span>
+                          )}
+                        </div>
+                        <div className="text-xs font-semibold text-gray-800 mb-1">{lead.suggestedAction}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {lead.reasons.map((r, j) => (
+                            <span key={j} className="text-[10px] text-gray-500 bg-white border border-gray-200 px-1.5 py-0.5 rounded">{r}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Stats */}
             {!convLoading && conversations.length > 0 && (

@@ -128,6 +128,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   }
 
+  // Find active sequence to auto-enroll (stored in extra_fields to avoid schema dependency)
+  const siteSettings = site.settings_json as Record<string, unknown> | null;
+  const sequences = (siteSettings?.sequences as Array<{
+    id: string; trigger: string; active: boolean;
+    steps: Array<{ delay: number }>;
+  }>) || [];
+  const contactTrigger = (type === 'booking') ? 'booking' : 'contact_form';
+  const matchedSeq = sequences.find(s => s.active && s.trigger === contactTrigger);
+
+  const mergedExtraFields = {
+    ...(extraFields || {}),
+    ...(matchedSeq ? {
+      _seq_id: matchedSeq.id,
+      _seq_step: '0',
+      _seq_next: new Date().toISOString(),
+    } : {}),
+  };
+
   // Save to DB — await so we can update with webhook result later
   const { data: contactRow } = await supabase.from('contacts').insert({
     site_id: siteId,
@@ -136,7 +154,7 @@ export async function POST(req: Request) {
     email,
     phone: phone || null,
     message: message || null,
-    extra_fields: extraFields || null,
+    extra_fields: mergedExtraFields,
   }).select('id').single();
 
   // Get owner email from auth.users

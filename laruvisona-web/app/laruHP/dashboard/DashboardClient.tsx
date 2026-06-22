@@ -1,9 +1,14 @@
 'use client';
 import { useState, useEffect, useCallback, useId } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SearchConsoleWidget from './SearchConsoleWidget';
+import QRCodeModal from '@/components/QRCodeModal';
+import CommandPalette from '@/components/CommandPalette';
+import OnboardingTour from '@/components/OnboardingTour';
+import { getSiteLimit } from '@/lib/plan-limits';
 
 interface SiteSettings {
   larubot?: boolean;
@@ -135,8 +140,15 @@ function MiniChart({ data }: { data: DayView[] }) {
   const allZero = data.every(d => d.views === 0);
   if (allZero) {
     return (
-      <div className="h-14 flex items-center justify-center text-gray-400 text-[10px]">
-        まだデータがありません
+      <div className="py-6 flex flex-col items-center justify-center gap-2 text-center">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true" className="text-gray-300">
+          <rect x="2" y="18" width="4" height="8" rx="1" fill="currentColor"/>
+          <rect x="8" y="13" width="4" height="13" rx="1" fill="currentColor"/>
+          <rect x="14" y="8" width="4" height="18" rx="1" fill="currentColor"/>
+          <rect x="20" y="3" width="4" height="23" rx="1" fill="currentColor" opacity="0.35"/>
+        </svg>
+        <p className="text-[11px] text-gray-400 font-medium">まだ閲覧データがありません</p>
+        <p className="text-[10px] text-gray-300">サイトを公開するとここにアクセス数が表示されます</p>
       </div>
     );
   }
@@ -236,6 +248,9 @@ export default function DashboardPage() {
   const [domainErrors, setDomainErrors] = useState<Record<string, string>>({});
   const [newSiteError, setNewSiteError] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
+  const [fetchError, setFetchError] = useState('');
+  const [showSiteLimitModal, setShowSiteLimitModal] = useState<{ limit: number; current: number } | null>(null);
+  const [planModalAnnual, setPlanModalAnnual] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [slugInput, setSlugInput] = useState('');
@@ -261,23 +276,28 @@ export default function DashboardPage() {
       setUserEmail(user.email || '');
       setUserId(user.id);
 
-      const [sitesRes, profileRes, analyticsRes, contactsRes] = await Promise.all([
-        fetch('/api/sites'),
-        supabase.from('profiles').select('business_name, subscription_status, plan, contract_ends_at, stripe_customer_id').eq('id', user.id).single(),
-        fetch('/api/sites/analytics?days=7'),
-        fetch('/api/contacts'),
+      const results = await Promise.allSettled([
+        fetch('/api/sites').then(r => r.json()),
+        supabase.from('profiles').select('business_name, subscription_status, plan, contract_ends_at, stripe_customer_id').eq('id', user.id).single().then(r => r.data),
+        fetch('/api/sites/analytics?days=7').then(r => r.json()),
+        fetch('/api/contacts').then(r => r.json()),
       ]);
 
-      const sitesData = await sitesRes.json();
+      const sitesData  = results[0].status === 'fulfilled' ? results[0].value : { sites: [] };
+      const profileData = results[1].status === 'fulfilled' ? results[1].value : null;
+      const analyticsData = results[2].status === 'fulfilled' ? results[2].value : { data: {} };
+      const contactsData  = results[3].status === 'fulfilled' ? results[3].value : { contacts: [] };
+
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+      if (failedCount > 0) setFetchError(`一部のデータ（${failedCount}件）の読み込みに失敗しました`);
+
       const loadedSites: Site[] = sitesData.sites || [];
       setSites(loadedSites);
       const initDomains: Record<string, string> = {};
       for (const s of loadedSites) initDomains[s.id] = s.custom_domain || '';
       setDomainInputs(initDomains);
-      setProfile(profileRes.data);
-      const analyticsData = await analyticsRes.json();
+      setProfile(profileData);
       setAnalytics(prev => ({ ...prev, '7': analyticsData.data || {} }));
-      const contactsData = await contactsRes.json();
       setContacts((contactsData.contacts || []).map((c: { id: string; site_id: string; read: boolean }) => ({ id: c.id, site_id: c.site_id, read: c.read })));
       setLoading(false);
     })();
@@ -308,12 +328,13 @@ export default function DashboardPage() {
       setSites(prev => {
         const updated = prev.map(s => s.id === siteId ? { ...s, published: true, slug: data.slug || s.slug } : s);
         const site = updated.find(s => s.id === siteId);
+        const publishedSlug = data.slug || site?.slug;
         if (site?.settings_json?.larubot && !site.settings_json?.larubotPublicId) {
           setPublishToast({ message: 'LARUbot の Public ID が未設定です。ビルダーで設定してください。', type: 'warn' });
         } else if (site?.settings_json?.larubot && site.settings_json?.larubotPublicId) {
-          setPublishToast({ message: 'サイトを公開しました。LARUbot も有効です！', type: 'success' });
+          setPublishToast({ message: 'サイトを公開しました。LARUbot も有効です！', type: 'success', slug: publishedSlug });
         } else {
-          setPublishToast({ message: 'サイトを公開しました', type: 'success' });
+          setPublishToast({ message: 'サイトを公開しました', type: 'success', slug: publishedSlug });
         }
         setTimeout(() => setPublishToast(null), 5000);
         return updated;
@@ -462,8 +483,24 @@ export default function DashboardPage() {
   const [memberLists, setMemberLists] = useState<Record<string, { id: string; invited_email: string; role: string; status: string }[]>>({});
   const [memberLoading, setMemberLoading] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<Record<string, string>>({});
-  const [publishToast, setPublishToast] = useState<{ message: string; type: 'success' | 'warn' } | null>(null);
+  const [publishToast, setPublishToast] = useState<{ message: string; type: 'success' | 'warn'; slug?: string } | null>(null);
   const [abWinnerLoading, setAbWinnerLoading] = useState<string | null>(null);
+  const [qrSite, setQrSite] = useState<{ url: string; name: string } | null>(null);
+  // PageSpeed
+  const [pagespeedData, setPagespeedData] = useState<Record<string, { performance: number; seo: number } | null>>({});
+  const [pagespeedLoading, setPagespeedLoading] = useState<string | null>(null);
+  // Snapshots
+  const [snapshotPanels, setSnapshotPanels] = useState<Record<string, boolean>>({});
+  const [snapshotLists, setSnapshotLists] = useState<Record<string, { id: string; label: string; created_at: string }[]>>({});
+  const [snapshotRestoring, setSnapshotRestoring] = useState<string | null>(null);
+  // AI Audit
+  const [auditPanels, setAuditPanels] = useState<Record<string, boolean>>({});
+  const [auditData, setAuditData] = useState<Record<string, { score: number; summary: string; items: Array<{ category: string; issue: string; suggestion: string; impact: string; score: number }> } | null>>({});
+  const [auditLoading, setAuditLoading] = useState<string | null>(null);
+  // Heatmap
+  const [heatmapPanels, setHeatmapPanels] = useState<Record<string, boolean>>({});
+  const [heatmapData, setHeatmapData] = useState<Record<string, { type: string; points?: { x: number; y: number }[]; total: number; histogram?: { depth: number; count: number; pct: number }[] } | null>>({});
+  const [heatmapLoading, setHeatmapLoading] = useState<string | null>(null);
   const handleUpgrade = async (plan: string) => {
     setUpgradeLoading(plan);
     setUpgradeError('');
@@ -512,6 +549,76 @@ export default function DashboardPage() {
     router.push('/laruHP');
   };
 
+  const handlePagespeed = async (siteId: string) => {
+    if (pagespeedLoading) return;
+    setPagespeedLoading(siteId);
+    try {
+      const res = await fetch(`/api/sites/${siteId}/pagespeed`);
+      const d = await res.json();
+      setPagespeedData(prev => ({ ...prev, [siteId]: d.mobile ?? null }));
+    } catch {
+      setPagespeedData(prev => ({ ...prev, [siteId]: null }));
+    }
+    setPagespeedLoading(null);
+  };
+
+  const handleSnapshotPanel = async (siteId: string) => {
+    const open = !snapshotPanels[siteId];
+    setSnapshotPanels(p => ({ ...p, [siteId]: open }));
+    if (open && !snapshotLists[siteId]) {
+      const res = await fetch(`/api/sites/${siteId}/versions`);
+      const d = await res.json();
+      setSnapshotLists(p => ({ ...p, [siteId]: d.versions || [] }));
+    }
+  };
+
+  const handleSnapshotRestore = async (siteId: string, versionId: string, label: string) => {
+    if (!confirm(`「${label}」の時点に復元しますか？現在のコンテンツは上書きされます。`)) return;
+    setSnapshotRestoring(versionId);
+    const res = await fetch(`/api/sites/${siteId}/versions/${versionId}`, { method: 'POST' });
+    if (res.ok) {
+      setPublishToast({ message: `「${label}」に復元しました。ビルダーで確認してください。`, type: 'success' });
+      setTimeout(() => setPublishToast(null), 6000);
+    }
+    setSnapshotRestoring(null);
+  };
+
+  const handleAudit = async (siteId: string) => {
+    const open = !auditPanels[siteId];
+    setAuditPanels(p => ({ ...p, [siteId]: open }));
+    if (open && !auditData[siteId] && auditLoading !== siteId) {
+      // Check for cached audit in settings_json
+      const site = sites.find(s => s.id === siteId);
+      const cached = (site?.settings_json as Record<string, unknown> | null)?.last_audit;
+      if (cached) { setAuditData(p => ({ ...p, [siteId]: cached as typeof auditData[string] })); return; }
+      setAuditLoading(siteId);
+      try {
+        const res = await fetch('/api/ai/site-audit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ siteId }),
+        });
+        const d = await res.json();
+        setAuditData(p => ({ ...p, [siteId]: d.audit ?? null }));
+      } catch { setAuditData(p => ({ ...p, [siteId]: null })); }
+      setAuditLoading(null);
+    }
+  };
+
+  const handleHeatmapPanel = async (siteId: string) => {
+    const open = !heatmapPanels[siteId];
+    setHeatmapPanels(p => ({ ...p, [siteId]: open }));
+    if (open && !heatmapData[siteId]) {
+      setHeatmapLoading(siteId);
+      try {
+        const res = await fetch(`/api/heatmap?siteId=${siteId}&type=click`);
+        const d = await res.json();
+        setHeatmapData(p => ({ ...p, [siteId]: d }));
+      } catch { setHeatmapData(p => ({ ...p, [siteId]: null })); }
+      setHeatmapLoading(null);
+    }
+  };
+
   const handleNewSite = async () => {
     setNewSiteError('');
     try {
@@ -521,8 +628,13 @@ export default function DashboardPage() {
         body: JSON.stringify({ name: '新しいサイト', seo_json: { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' } }),
       });
       const data = await res.json();
-      if (data.site) router.push(`/laruHP/builder?siteId=${data.site.id}`);
-      else setNewSiteError(data.error || 'サイトの作成に失敗しました');
+      if (data.site) {
+        router.push(`/laruHP/builder?siteId=${data.site.id}`);
+      } else if (data.code === 'site_limit') {
+        setShowSiteLimitModal({ limit: data.limit as number, current: data.current as number });
+      } else {
+        setNewSiteError(data.error || 'サイトの作成に失敗しました');
+      }
     } catch {
       setNewSiteError('サイトの作成に失敗しました。もう一度お試しください。');
     }
@@ -533,15 +645,53 @@ export default function DashboardPage() {
   const rawPlan = profile?.plan || null;
   const effectivePlan = isAdmin ? 'hp-bot-seo' : (rawPlan === 'agency' ? 'hp-bot-seo' : rawPlan);
   const status = STATUS_MAP[effectiveStatus];
+  const planSiteLimit = getSiteLimit(isAdmin ? 'agency' : rawPlan);
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
 
       {/* ── Publish toast ── */}
       {publishToast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 border rounded-xl px-4 py-3 shadow-2xl ${publishToast.type === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-white border-gray-200 text-gray-700'}`}>
-          <span className="text-sm">{publishToast.type === 'warn' ? '⚠ ' : '✓ '}{publishToast.message}</span>
-          <button onClick={() => setPublishToast(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 border rounded-2xl px-4 py-3 shadow-2xl ${publishToast.type === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-white border-gray-200 text-gray-700'}`}>
+          <div className="flex items-center gap-3">
+            <span className="text-sm">{publishToast.type === 'warn' ? '⚠ ' : '✓ '}{publishToast.message}</span>
+            <button onClick={() => setPublishToast(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+          </div>
+          {publishToast.slug && publishToast.type === 'success' && (() => {
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
+            const siteUrl = `${appUrl}/hp/${publishToast.slug}`;
+            const siteName = sites.find(s => s.slug === publishToast.slug)?.name || 'マイサイト';
+            const tweetText = encodeURIComponent(`「${siteName}」のホームページを公開しました！\n\n#LARUHP #ホームページ作成\n👉 ${siteUrl}`);
+            return (
+              <div className="flex items-center gap-2 pt-1 border-t border-gray-100 w-full justify-center">
+                <span className="text-xs text-gray-400">シェア：</span>
+                <a href={`https://twitter.com/intent/tweet?text=${tweetText}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 bg-black text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  X
+                </a>
+                <a href={`https://line.me/R/share?text=${encodeURIComponent(`「${siteName}」のHPを公開しました！ ${siteUrl}`)}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 bg-[#06C755] text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#05b34c] transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.630 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.630 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.070 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+                  LINE
+                </a>
+                <button onClick={() => navigator.clipboard.writeText(siteUrl)}
+                  className="flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  URL
+                </button>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ── Fetch error banner ── */}
+      {fetchError && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-4 py-3 shadow-lg text-sm max-w-sm w-full mx-4">
+          <span className="flex-1">⚠ {fetchError}</span>
+          <button onClick={() => window.location.reload()} className="text-xs font-bold text-amber-700 hover:text-amber-900 whitespace-nowrap">再読込</button>
+          <button onClick={() => setFetchError('')} className="text-amber-400 hover:text-amber-700 text-lg leading-none">×</button>
         </div>
       )}
 
@@ -606,7 +756,7 @@ export default function DashboardPage() {
             <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-30">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
                 <Link href="/laruHP" className="flex items-center gap-2.5">
-                  <img src="/laruhp_logo.png" alt="LARU HP" className="h-7 w-auto" />
+                  <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto" style={{ width: 'auto' }} />
                 </Link>
                 <div className="flex items-center gap-3">
                   <span className="text-gray-500 text-xs hidden sm:block truncate max-w-[220px]">{userEmail}</span>
@@ -718,7 +868,98 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Search Console Widget ── */}
-        <SearchConsoleWidget />
+        <div data-tour="search-console">
+          <SearchConsoleWidget />
+        </div>
+
+        {/* ── Insight Cards ── */}
+        {loading && (
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {[1, 2].map(i => (
+              <div key={i} className="flex-shrink-0 w-64 bg-white border border-gray-200 rounded-2xl p-4 animate-pulse">
+                <div className="h-8 w-8 bg-gray-100 rounded-xl mb-3" />
+                <div className="h-3.5 bg-gray-100 rounded w-3/4 mb-2" />
+                <div className="h-3 bg-gray-100 rounded w-full mb-1" />
+                <div className="h-3 bg-gray-100 rounded w-2/3" />
+              </div>
+            ))}
+          </div>
+        )}
+        {!loading && (() => {
+          const publishedSites = sites.filter(s => s.published);
+          const unpublishedSites = sites.filter(s => !s.published);
+          const totalContacts = contacts.length;
+          const unreadContacts = contacts.filter(c => !c.read).length;
+          const totalViews = Object.values(analytics['7'] || {}).reduce((sum: number, v) => {
+            const arr = v as { views: number }[];
+            return sum + (Array.isArray(arr) ? arr.reduce((s, d) => s + (d.views || 0), 0) : 0);
+          }, 0);
+
+          const tips: { icon: string; title: string; body: string; href?: string; cta?: string }[] = [];
+
+          if (unpublishedSites.length > 0) {
+            tips.push({
+              icon: '🚀',
+              title: 'サイトを公開しましょう',
+              body: `「${unpublishedSites[0].name}」がまだ非公開です。公開するとGoogleに認識されSEO効果が始まります。`,
+              href: `/laruHP/builder?siteId=${unpublishedSites[0].id}`,
+              cta: 'ビルダーを開く',
+            });
+          }
+
+          if (publishedSites.length > 0 && totalViews === 0) {
+            tips.push({
+              icon: '🔍',
+              title: 'Google Search Consoleを連携しよう',
+              body: '検索順位・クリック数をダッシュボードで確認できます。連携は設定画面から2分で完了。',
+              href: '/laruHP/settings?section=gsc',
+              cta: '設定する',
+            });
+          }
+
+          if (unreadContacts > 0) {
+            tips.push({
+              icon: '💬',
+              title: `未読のお問い合わせが${unreadContacts}件あります`,
+              body: '早めの返信で顧客満足度が上がります。24時間以内の返信を心がけましょう。',
+              href: '/laruHP/contacts',
+              cta: '確認する',
+            });
+          }
+
+          if (publishedSites.length > 0 && totalContacts === 0) {
+            tips.push({
+              icon: '📣',
+              title: 'CTAボタンのテキストを見直す',
+              body: '「お気軽にご相談ください」より「無料で相談する」の方が問い合わせが2〜3倍になる傾向があります。',
+              href: `/laruHP/builder?siteId=${publishedSites[0].id}`,
+              cta: 'ビルダーを開く',
+            });
+          }
+
+          if (tips.length === 0) return null;
+          return (
+            <div className="mb-6">
+              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">今週のアドバイス</div>
+              <div className="space-y-3">
+                {tips.slice(0, 2).map((tip, i) => (
+                  <div key={i} className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-start gap-3 shadow-sm hover:border-sky-200 transition-colors">
+                    <span className="text-xl flex-shrink-0 mt-0.5">{tip.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-gray-900 mb-0.5">{tip.title}</div>
+                      <p className="text-xs text-gray-500 leading-relaxed">{tip.body}</p>
+                    </div>
+                    {tip.href && tip.cta && (
+                      <a href={tip.href} className="flex-shrink-0 text-xs font-bold text-sky-600 hover:text-sky-500 border border-sky-200 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                        {tip.cta}
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Referral ── */}
         {effectiveStatus === 'active' && userId && (() => {
@@ -848,16 +1089,20 @@ export default function DashboardPage() {
 
         {/* ── Sites Header ── */}
         <div className="mb-5">
-          <div className="flex justify-between items-center mb-2.5">
+          <div className="flex justify-between items-center mb-2.5" data-tour="sites">
             <div>
               <h1 className="text-xl font-bold text-gray-900">マイサイト</h1>
-              {!loading && sites.length > 0 && (
-                <p className="text-gray-500 text-xs mt-0.5">
-                  {sites.length}件 · 公開中 {sites.filter(s => s.published).length}件
-                </p>
-              )}
+              {!loading && sites.length > 0 && (() => {
+                const limit = planSiteLimit;
+                return (
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    {sites.length}{limit < 999 ? `/${limit}` : ''}件 · 公開中 {sites.filter(s => s.published).length}件
+                  </p>
+                );
+              })()}
             </div>
             <button
+              data-tour="new-site"
               onClick={handleNewSite}
               className="flex items-center gap-1.5 bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all flex-shrink-0"
             >
@@ -869,6 +1114,7 @@ export default function DashboardPage() {
           <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             <Link
               href="/laruHP/contacts"
+              data-tour="contacts"
               className="relative flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -922,11 +1168,88 @@ export default function DashboardPage() {
               エージェンシー
             </Link>
             <Link
+              href="/laruHP/calendar"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              カレンダー
+            </Link>
+            <Link
+              href="/laruHP/payments"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              決済リンク
+            </Link>
+            <Link
+              href="/laruHP/popups"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" fillOpacity="0.15"/></svg>
+              ポップアップ
+            </Link>
+            <Link
+              href="/laruHP/loyalty"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              ポイントカード
+            </Link>
+            <Link
               href="/laruHP/onboarding"
               className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
             >
               <IcSparkle />
               AIウィザード
+            </Link>
+            <Link
+              href="/laruHP/shop"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-green-300 hover:text-green-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              ショップ
+            </Link>
+            <Link
+              href="/laruHP/translate"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-indigo-300 hover:text-indigo-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+              多言語翻訳
+            </Link>
+            <Link
+              href="/laruHP/analytics"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-purple-300 hover:text-purple-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              BI分析
+            </Link>
+            <Link
+              href="/laruHP/sequences"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-amber-300 hover:text-amber-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              シーケンス
+            </Link>
+            <Link
+              href="/laruHP/seo"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-emerald-300 hover:text-emerald-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              SEO設定
+            </Link>
+            <Link
+              href="/laruHP/ab-test"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-orange-300 hover:text-orange-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+              A/Bテスト
+            </Link>
+            <Link
+              href="/laruHP/heatmap"
+              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-rose-300 hover:text-rose-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+              ヒートマップ
             </Link>
           </div>
         </div>
@@ -1338,6 +1661,216 @@ export default function DashboardPage() {
                       )}
                     </div>
 
+                    {/* PageSpeed */}
+                    {site.published && site.slug && (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => handlePagespeed(site.id)}
+                          disabled={pagespeedLoading === site.id}
+                          className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            PageSpeed スコア
+                          </div>
+                          {pagespeedLoading === site.id ? (
+                            <svg className="animate-spin text-gray-400" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                          ) : pagespeedData[site.id] ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold ${pagespeedData[site.id]!.performance >= 90 ? 'text-green-600' : pagespeedData[site.id]!.performance >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                                {pagespeedData[site.id]!.performance}
+                              </span>
+                              <span className="text-[10px] text-sky-600 font-bold">SEO {pagespeedData[site.id]!.seo}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-gray-400">計測する</span>
+                          )}
+                        </button>
+                        {pagespeedData[site.id] && (
+                          <div className="px-3 py-2 border-t border-gray-100 flex gap-3">
+                            {[
+                              { label: 'パフォーマンス', val: pagespeedData[site.id]!.performance },
+                              { label: 'SEO', val: pagespeedData[site.id]!.seo },
+                            ].map(({ label, val }) => (
+                              <div key={label} className="flex-1 text-center">
+                                <div className={`text-lg font-black ${val >= 90 ? 'text-green-600' : val >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{val}</div>
+                                <div className="text-[9px] text-gray-400">{label}</div>
+                                <div className="h-1 rounded-full bg-gray-100 mt-1 overflow-hidden">
+                                  <div className={`h-full rounded-full ${val >= 90 ? 'bg-green-500' : val >= 50 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${val}%` }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* AI Site Audit */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => handleAudit(site.id)}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+                          AI診断
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {auditLoading === site.id && (
+                            <svg className="animate-spin text-gray-400" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                          )}
+                          {auditData[site.id] && (
+                            <span className={`text-[10px] font-bold ${auditData[site.id]!.score >= 70 ? 'text-green-600' : auditData[site.id]!.score >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {auditData[site.id]!.score}点
+                            </span>
+                          )}
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-gray-400 transition-transform ${auditPanels[site.id] ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                      </button>
+                      {auditPanels[site.id] && (
+                        <div className="px-3 py-2.5 border-t border-gray-100">
+                          {auditLoading === site.id ? (
+                            <div className="text-[10px] text-gray-400 text-center py-3">AIが診断中...</div>
+                          ) : auditData[site.id] ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className={`text-2xl font-black ${auditData[site.id]!.score >= 70 ? 'text-green-600' : auditData[site.id]!.score >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+                                  {auditData[site.id]!.score}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                                    <div className={`h-full rounded-full ${auditData[site.id]!.score >= 70 ? 'bg-green-500' : auditData[site.id]!.score >= 40 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${auditData[site.id]!.score}%` }} />
+                                  </div>
+                                  <div className="text-[9px] text-gray-400 mt-0.5">{auditData[site.id]!.summary}</div>
+                                </div>
+                              </div>
+                              {auditData[site.id]!.items.slice(0, 3).map((item, i) => (
+                                <div key={i} className={`rounded-md px-2.5 py-2 border text-[10px] ${item.impact === 'high' ? 'border-red-200 bg-red-50' : item.impact === 'medium' ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
+                                  <div className={`font-semibold mb-0.5 ${item.impact === 'high' ? 'text-red-700' : item.impact === 'medium' ? 'text-amber-700' : 'text-gray-700'}`}>
+                                    [{item.impact === 'high' ? '高' : item.impact === 'medium' ? '中' : '低'}] {item.category}
+                                  </div>
+                                  <div className="text-gray-600">{item.suggestion}</div>
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => { setAuditData(p => ({ ...p, [site.id]: null })); handleAudit(site.id); }}
+                                className="text-[9px] text-gray-400 hover:text-sky-600 transition-colors mt-1"
+                              >
+                                再診断する
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-center py-2">
+                              <div className="text-[10px] text-gray-400 mb-2">AIがサイトを分析して改善点をスコアリングします</div>
+                              <button
+                                onClick={() => handleAudit(site.id)}
+                                className="text-[10px] bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 px-3 py-1.5 rounded-md transition-all font-bold"
+                              >
+                                診断を開始
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Heatmap */}
+                    {site.published && (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => handleHeatmapPanel(site.id)}
+                          className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+                            ヒートマップ
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {heatmapLoading === site.id && (
+                              <svg className="animate-spin text-gray-400" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                            )}
+                            {heatmapData[site.id] && (
+                              <span className="text-[10px] text-gray-400">{heatmapData[site.id]!.total}件</span>
+                            )}
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-gray-400 transition-transform ${heatmapPanels[site.id] ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                          </div>
+                        </button>
+                        {heatmapPanels[site.id] && (
+                          <div className="px-3 py-2.5 border-t border-gray-100">
+                            {heatmapLoading === site.id ? (
+                              <div className="text-[10px] text-gray-400 text-center py-3">データ取得中...</div>
+                            ) : heatmapData[site.id] && heatmapData[site.id]!.total > 0 ? (
+                              <div>
+                                <div className="text-[9px] text-gray-400 mb-2">過去30日間のクリック分布（{heatmapData[site.id]!.total}件）</div>
+                                <div className="relative bg-slate-50 border border-gray-100 rounded h-28 overflow-hidden">
+                                  {(heatmapData[site.id]!.points || []).slice(0, 200).map((pt, i) => (
+                                    <div
+                                      key={i}
+                                      className="absolute w-3 h-3 rounded-full bg-red-500/40 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                                      style={{ left: `${pt.x}%`, top: `${pt.y}%` }}
+                                    />
+                                  ))}
+                                </div>
+                                <p className="text-[9px] text-gray-400 mt-1.5">各点 = クリック位置（ビューポート比率）</p>
+                              </div>
+                            ) : (
+                              <div className="text-center py-3">
+                                <div className="text-[10px] text-gray-400">まだクリックデータがありません</div>
+                                <div className="text-[9px] text-gray-300 mt-0.5">公開サイトにトラッキングスクリプトを追加してください</div>
+                                <a
+                                  href={`/laruHP/builder?siteId=${site.id}&tab=settings`}
+                                  className="text-[10px] text-sky-600 hover:text-sky-500 mt-1.5 inline-block transition-colors"
+                                >
+                                  スクリプト設定 →
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Snapshots */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => handleSnapshotPanel(site.id)}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                          バックアップ履歴
+                        </div>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-gray-400 transition-transform ${snapshotPanels[site.id] ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      {snapshotPanels[site.id] && (
+                        <div className="px-3 py-2.5 border-t border-gray-100">
+                          {!snapshotLists[site.id] ? (
+                            <div className="text-[10px] text-gray-400 text-center py-2">読み込み中...</div>
+                          ) : snapshotLists[site.id].length === 0 ? (
+                            <div className="text-[10px] text-gray-400 text-center py-2">まだ保存履歴がありません</div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {snapshotLists[site.id].slice(0, 5).map(v => (
+                                <div key={v.id} className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <div className="text-[10px] text-gray-700 font-medium truncate">{v.label}</div>
+                                    <div className="text-[9px] text-gray-400">{new Date(v.created_at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleSnapshotRestore(site.id, v.id, v.label)}
+                                    disabled={snapshotRestoring === v.id}
+                                    className="text-[9px] bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 px-2 py-0.5 rounded transition-all disabled:opacity-50 flex-shrink-0 font-bold"
+                                  >
+                                    {snapshotRestoring === v.id ? '...' : '復元'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Actions */}
                     <div className="flex flex-col gap-1.5 mt-auto">
                       <Link
@@ -1359,6 +1892,14 @@ export default function DashboardPage() {
                               <IcEye />
                               表示
                             </a>
+                            <button
+                              onClick={() => setQrSite({ url: `${window.location.origin}/hp/${site.slug}`, name: site.name })}
+                              title="QRコード"
+                              aria-label="QRコードを表示"
+                              className="flex items-center justify-center text-[11px] text-gray-400 hover:text-sky-600 border border-gray-200 hover:border-sky-200 py-2 px-3 rounded-lg transition-all"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+                            </button>
                             <button
                               onClick={() => handleUnpublish(site.id)}
                               disabled={publishing === site.id}
@@ -1414,62 +1955,145 @@ export default function DashboardPage() {
         )}
       </main>
 
+      {/* Command Palette */}
+      <CommandPalette siteId={sites[0]?.id} />
+
+      {/* Onboarding Tour */}
+      <OnboardingTour />
+
+      {/* QR Code modal */}
+      {qrSite && (
+        <QRCodeModal
+          url={qrSite.url}
+          siteName={qrSite.name}
+          onClose={() => setQrSite(null)}
+        />
+      )}
+
       {/* Plan picker modal */}
-      {showPlanModal && (
+      {/* ── Site limit upgrade modal ── */}
+      {showSiteLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-            <h2 className="text-gray-900 font-bold text-lg mb-1">プランを選択して公開</h2>
-            <p className="text-gray-600 text-sm mb-5">初月無料でお試しいただけます</p>
-            <div className="space-y-3">
-              {([
-                { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
-                { id: 'lite', label: 'HP + LARUbot Lite', price: '¥2,480', sub: '/月', badge: null, desc: 'HP + AIチャットボット（機能制限あり）' },
-                { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP作成 + AIチャットボット搭載' },
-                { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800', sub: '/月', badge: '半年間限定', desc: 'HP + チャットボット + AIブログSEO' },
-                { id: 'agency', label: 'エージェンシー', price: '¥19,800', sub: '/月', badge: '代理店向け', desc: 'クライアント数無制限・全機能込み' },
-              ] as const).map(plan => (
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="w-12 h-12 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">🚧</div>
+            <h2 className="text-gray-900 font-bold text-lg text-center mb-1">サイト数の上限に達しました</h2>
+            <p className="text-gray-500 text-sm text-center mb-5">
+              現在のプランでは <strong className="text-gray-900">{showSiteLimitModal.current}/{showSiteLimitModal.limit}件</strong> が上限です。<br/>
+              プランをアップグレードするとサイト数を増やせます。
+            </p>
+            <div className="space-y-2 mb-5">
+              {[
+                { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980/月', sites: '2サイト', badge: 'おすすめ' },
+                { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800/月', sites: '3サイト', badge: null },
+                { id: 'agency', label: 'エージェンシー', price: '¥19,800/月', sites: '無制限', badge: '代理店向け' },
+              ].map(p => (
                 <button
-                  key={plan.id}
+                  key={p.id}
                   onClick={async () => {
-                    setShowPlanModal(false);
-                    setCheckoutError('');
-                    const res = await fetch('/api/stripe/checkout', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ siteId: pendingSiteId, plan: plan.id }),
-                    });
+                    setShowSiteLimitModal(null);
+                    const res = await fetch('/api/stripe/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: p.id }) });
                     const d = await res.json();
                     if (d.url) window.location.href = d.url;
-                    else setCheckoutError('決済ページの取得に失敗しました。もう一度お試しください。');
                   }}
                   className="w-full flex items-center justify-between bg-sky-50 hover:bg-sky-100 border border-gray-200 hover:border-sky-300 rounded-xl px-4 py-3 transition-all text-left"
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-900 font-bold text-sm">{plan.label}</span>
-                      {plan.badge && <span className="text-[10px] bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full font-bold">{plan.badge}</span>}
+                      <span className="text-gray-900 font-bold text-sm">{p.label}</span>
+                      {p.badge && <span className="text-[10px] bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full font-bold">{p.badge}</span>}
                     </div>
-                    <div className="text-gray-500 text-[11px] mt-0.5">{plan.desc}</div>
+                    <div className="text-gray-500 text-[11px]">サイト {p.sites}</div>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-4">
-                    <div className="text-gray-900 font-bold text-base">{plan.price}<span className="text-gray-500 text-[11px] font-normal">{plan.sub}</span></div>
+                  <div className="text-right ml-4 flex-shrink-0">
+                    <div className="text-gray-900 font-bold text-sm">{p.price}</div>
                     <div className="text-sky-600 text-[10px]">初月無料</div>
                   </div>
                 </button>
               ))}
             </div>
-            {checkoutError && (
-              <p className="mt-3 text-red-600 text-xs text-center">{checkoutError}</p>
-            )}
-            <button
-              onClick={() => { setShowPlanModal(false); setCheckoutError(''); }}
-              className="mt-4 w-full text-gray-400 text-sm hover:text-gray-600 transition-colors"
-            >
-              キャンセル
-            </button>
+            <button onClick={() => setShowSiteLimitModal(null)} className="w-full text-gray-400 text-sm hover:text-gray-600 transition-colors">キャンセル</button>
           </div>
         </div>
       )}
+
+      {showPlanModal && (() => {
+        const MODAL_PLANS = [
+          { id: 'hp',         label: 'LARU HP',          monthlyPrice: 999,   annualPrice: 833,   badge: null,           desc: 'ホームページ作成・公開' },
+          { id: 'lite',       label: 'HP + LARUbot Lite', monthlyPrice: 4980,  annualPrice: 4150,  badge: null,           desc: 'HP + AIチャットボット（機能制限あり）' },
+          { id: 'hp-bot',     label: 'HP + LARUbot',      monthlyPrice: 4980,  annualPrice: 4150,  badge: 'おすすめ',     desc: 'HP作成 + AIチャットボット搭載' },
+          { id: 'hp-bot-seo', label: 'HP + Bot + SEO',    monthlyPrice: 9800,  annualPrice: 8166,  badge: '半年間限定',   desc: 'HP + チャットボット + AIブログSEO' },
+          { id: 'agency',     label: 'エージェンシー',    monthlyPrice: 19800, annualPrice: 16500, badge: '代理店向け',   desc: 'クライアント数無制限・全機能込み' },
+        ] as const;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+            <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+              <h2 className="text-gray-900 font-bold text-lg mb-1">プランを選択して公開</h2>
+              <p className="text-gray-600 text-sm mb-4">お試し期間後は選択したプランで課金されます</p>
+
+              {/* Billing toggle */}
+              <div className="flex items-center gap-3 mb-5 bg-gray-50 border border-gray-200 rounded-xl p-1 self-start w-fit">
+                <button
+                  onClick={() => setPlanModalAnnual(false)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${!planModalAnnual ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                >
+                  月払い
+                </button>
+                <button
+                  onClick={() => setPlanModalAnnual(true)}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${planModalAnnual ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}
+                >
+                  年払い <span className="text-[9px] font-bold bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">20%オフ</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {MODAL_PLANS.map(plan => {
+                  const price = planModalAnnual ? plan.annualPrice : plan.monthlyPrice;
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={async () => {
+                        setShowPlanModal(false);
+                        setCheckoutError('');
+                        const res = await fetch('/api/stripe/checkout', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ siteId: pendingSiteId, plan: plan.id, billing: planModalAnnual ? 'annual' : 'monthly' }),
+                        });
+                        const d = await res.json();
+                        if (d.url) window.location.href = d.url;
+                        else setCheckoutError('決済ページの取得に失敗しました。もう一度お試しください。');
+                      }}
+                      className="w-full flex items-center justify-between bg-sky-50 hover:bg-sky-100 border border-gray-200 hover:border-sky-300 rounded-xl px-4 py-3 transition-all text-left"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-900 font-bold text-sm">{plan.label}</span>
+                          {plan.badge && <span className="text-[10px] bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full font-bold">{plan.badge}</span>}
+                        </div>
+                        <div className="text-gray-500 text-[11px] mt-0.5">{plan.desc}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-4">
+                        <div className="text-gray-900 font-bold text-sm">¥{price.toLocaleString()}<span className="text-gray-400 text-[10px] font-normal">/月</span></div>
+                        <div className="text-sky-600 text-[10px]">{planModalAnnual ? '年払い一括' : '初月無料'}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {checkoutError && (
+                <p className="mt-3 text-red-600 text-xs text-center">{checkoutError}</p>
+              )}
+              <button
+                onClick={() => { setShowPlanModal(false); setCheckoutError(''); }}
+                className="mt-4 w-full text-gray-400 text-sm hover:text-gray-600 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

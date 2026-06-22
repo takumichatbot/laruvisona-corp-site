@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getSiteLimit } from '@/lib/plan-limits';
 
 // GET /api/sites — list user's sites
 export async function GET() {
@@ -22,6 +23,41 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Plan limit check
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan, subscription_status')
+    .eq('id', user.id)
+    .single();
+
+  const plan = profile?.plan as string | null;
+  const subStatus = profile?.subscription_status as string | null;
+
+  if (!plan || (subStatus && subStatus !== 'active' && subStatus !== 'trialing')) {
+    return NextResponse.json(
+      { error: 'サブスクリプションが必要です。プランを選択してください。', code: 'no_plan' },
+      { status: 403 }
+    );
+  }
+
+  const limit = getSiteLimit(plan);
+  const { count } = await supabase
+    .from('sites')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  if ((count ?? 0) >= limit) {
+    return NextResponse.json(
+      {
+        error: `現在のプラン（${plan}）ではサイトを${limit}件まで作成できます。プランをアップグレードしてください。`,
+        code: 'site_limit',
+        limit,
+        current: count,
+      },
+      { status: 403 }
+    );
+  }
 
   const body = await req.json();
   const { name, industry, blocks_json, seo_json, settings_json } = body;

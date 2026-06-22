@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 
 const INDUSTRIES = [
@@ -714,7 +715,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
       <header className="fixed top-0 w-full z-50 bg-white border-b border-sky-100 shadow-sm backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto" />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
           </Link>
           <div className="flex flex-col items-end">
             <div className="text-gray-500 text-sm">サイト作成ウィザード</div>

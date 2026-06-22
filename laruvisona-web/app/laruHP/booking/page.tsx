@@ -74,8 +74,11 @@ export default function BookingPage() {
 
   const addSlot = () => {
     if (!newSlot.date) return;
-    const iso = `${newSlot.date}T${newSlot.time}:00`;
-    const slot: Slot = { id: newId(), datetime: iso, duration: newSlot.duration, label: newSlot.label, available: true };
+    // Parse as JST (UTC+9) and store as UTC ISO string, consistent with addBulk
+    const [h, m] = newSlot.time.split(':').map(Number);
+    const [y, mo, d] = newSlot.date.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, mo - 1, d, h - 9, m)); // subtract 9h to convert JST→UTC
+    const slot: Slot = { id: newId(), datetime: dt.toISOString(), duration: newSlot.duration, label: newSlot.label, available: true };
     const updated = { ...config, slots: [...config.slots, slot].sort((a, b) => a.datetime.localeCompare(b.datetime)) };
     save(updated);
     setShowAdd(false);

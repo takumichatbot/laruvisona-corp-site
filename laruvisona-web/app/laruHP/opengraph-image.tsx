@@ -55,12 +55,11 @@ export default function Image() {
 
           {/* Main headline */}
           <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 40 }}>
-            <div style={{ fontSize: 62, fontWeight: 900, color: 'white', lineHeight: 1.1, letterSpacing: '-2px', marginBottom: 20 }}>
-              AIで最高のHPを
-              <br />
+            <div style={{ display: 'flex', flexDirection: 'column', fontSize: 62, fontWeight: 900, lineHeight: 1.1, letterSpacing: '-2px', marginBottom: 20 }}>
+              <span style={{ color: 'white' }}>AIで最高のHPを</span>
               <span style={{ color: '#38bdf8' }}>最短で。</span>
             </div>
-            <div style={{ fontSize: 24, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+            <div style={{ display: 'flex', fontSize: 24, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
               業種別テンプレート × AI自動生成 × ビジュアルエディタ
             </div>
           </div>

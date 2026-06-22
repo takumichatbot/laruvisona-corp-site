@@ -73,13 +73,17 @@ function ClicksChart({ data }: { data: GscDateRow[] }) {
 export default function SearchConsoleWidget() {
   const [data, setData] = useState<GscData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     fetch('/api/search-console/data')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { setFetchError(true); setLoading(false); });
   }, []);
 
   if (loading) {
@@ -87,6 +91,19 @@ export default function SearchConsoleWidget() {
       <div className="bg-white border border-gray-200 shadow-sm rounded-xl px-5 py-4 mb-6 animate-pulse">
         <div className="h-4 bg-gray-100 rounded w-40 mb-2" />
         <div className="h-3 bg-gray-100 rounded w-60" />
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="bg-white border border-red-100 rounded-xl px-5 py-4 mb-6 flex items-center gap-3 text-sm text-red-500">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+          <line x1="8" y1="4.5" x2="8" y2="8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <circle cx="8" cy="11" r="0.75" fill="currentColor"/>
+        </svg>
+        Search Console データの取得に失敗しました。しばらくしてから再読み込みしてください。
       </div>
     );
   }

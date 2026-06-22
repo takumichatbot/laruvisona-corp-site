@@ -40,6 +40,8 @@ export default function BlogPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', content: '', category: 'お知らせ', image_url: '', published: true, published_at: new Date().toISOString().split('T')[0] });
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiMsg, setAiMsg] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -106,6 +108,39 @@ export default function BlogPage() {
     setDeleteConfirmId(null);
   };
 
+  const handleAiGenerate = async () => {
+    if (!selectedSiteId) return;
+    setAiGenerating(true);
+    setAiMsg('');
+    const res = await fetch('/api/ai/blog-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siteId: selectedSiteId, save: true }),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setAiMsg(d.error || 'AI記事の生成に失敗しました');
+      setAiGenerating(false);
+      return;
+    }
+    setAiMsg(`✓ 「${d.title}」を下書き保存しました`);
+    // Reload posts
+    const postsRes = await fetch(`/api/sites/${selectedSiteId}/posts?all=true`);
+    const postsData = await postsRes.json();
+    const updatedPosts: Post[] = postsData.posts || [];
+    setPosts(updatedPosts);
+    setAiGenerating(false);
+    // 生成した記事のモーダルを自動で開く
+    const newPost = updatedPosts.find(p => p.title === d.title);
+    if (newPost) {
+      setEditingPost(newPost);
+      setForm({ title: newPost.title, content: newPost.content || d.content || '', category: newPost.category || 'ブログ', image_url: newPost.image_url || '', published: newPost.published, published_at: (newPost.published_at || new Date().toISOString()).split('T')[0] });
+      setShowModal(true);
+    } else {
+      setTimeout(() => setAiMsg(''), 5000);
+    }
+  };
+
   const handleTogglePublish = async (post: Post) => {
     await fetch(`/api/posts/${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ published: !post.published }) });
     setPosts(prev => prev.map(p => p.id === post.id ? { ...p, published: !p.published } : p));
@@ -139,13 +174,33 @@ export default function BlogPage() {
                 </select>
                 <span className="text-slate-500 text-sm">{posts.length} 件</span>
               </div>
-              <button
-                onClick={openCreate}
-                className="text-xs bg-white text-black font-bold px-4 py-2 rounded-lg hover:bg-blue-50 transition-all"
-              >
-                + 新規投稿
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAiGenerate}
+                  disabled={aiGenerating || !selectedSiteId}
+                  className="text-xs bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  title="AIがSEO最適化された記事を自動生成して下書き保存します"
+                >
+                  {aiGenerating ? (
+                    <>
+                      <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                      生成中...
+                    </>
+                  ) : '✨ AI記事生成'}
+                </button>
+                <button
+                  onClick={openCreate}
+                  className="text-xs bg-white text-black font-bold px-4 py-2 rounded-lg hover:bg-blue-50 transition-all"
+                >
+                  + 新規投稿
+                </button>
+              </div>
             </div>
+            {aiMsg && (
+              <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${aiMsg.startsWith('✓') ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                {aiMsg}
+              </div>
+            )}
 
             {postsLoading ? (
               <div className="text-slate-500 text-sm py-8 text-center">読み込み中...</div>

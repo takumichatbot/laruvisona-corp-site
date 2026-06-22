@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import PwaInit from '@/components/PwaInit';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,8 +57,11 @@ const jsonLd = {
 export default function LaruHPLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <link rel="manifest" href="/manifest.json" />
+      <meta name="theme-color" content="#0ea5e9" />
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <PwaInit />
       {children}
     </>
   );

@@ -7,7 +7,7 @@ const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   'hp-bot': process.env.STRIPE_BUNDLE_BOT_PRICE_ID,
   'hp-bot-seo': process.env.STRIPE_BUNDLE_FULL_PRICE_ID,
   agency: process.env.STRIPE_AGENCY_PRICE_ID,
-  lite: process.env.STRIPE_LITE_PRICE_ID,
+  lite: process.env.STRIPE_BUNDLE_BOT_PRICE_ID,
 };
 
 export async function POST(req: Request) {

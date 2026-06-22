@@ -1,0 +1,26 @@
+{
+  "name": "LARU HP",
+  "short_name": "LARU HP",
+  "description": "AIホームページビルダー - 月額999円〜",
+  "start_url": "/laruHP/dashboard",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/laruhp_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/laruhp_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "ja"
+}

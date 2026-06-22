@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const PLAN_LABELS: Record<string, { name: string; price: string; color: string }> = {
   hp:           { name: 'HP プラン',               price: '¥999/月',    color: 'text-sky-600 bg-sky-50 border-sky-200' },
-  lite:         { name: 'HP + LARUbot Lite',        price: '¥2,480/月',  color: 'text-indigo-500 bg-indigo-50 border-indigo-200' },
+  lite:         { name: 'HP + LARUbot Lite',        price: '¥4,980/月',  color: 'text-indigo-500 bg-indigo-50 border-indigo-200' },
   'hp-bot':     { name: 'HP + LARUbot',             price: '¥4,980/月',  color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
   'hp-bot-seo': { name: 'HP + Bot + SEO',           price: '¥9,800/月',  color: 'text-purple-600 bg-purple-50 border-purple-200' },
   agency:       { name: 'エージェンシー',            price: '¥19,800/月', color: 'text-violet-600 bg-violet-50 border-violet-200' },
@@ -61,6 +62,32 @@ export default function SettingsPage() {
       } catch {/* ignore */} finally {
         setGscLoading(false);
       }
+
+      // Load sites for custom domain settings
+      const sitesRes = await fetch('/api/sites');
+      const sitesData = await sitesRes.json();
+      const ds = (sitesData.sites || []) as { id: string; name: string; slug: string | null; custom_domain: string | null }[];
+      setDomainSites(ds);
+      const vals: Record<string, string> = {};
+      for (const s of ds) vals[s.id] = s.custom_domain || '';
+      setDomainValues(vals);
+
+      // Load saved GMB place ID + Instagram from profile
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (u) {
+        const { data: prof } = await supabase.from('profiles').select('gmb_place_id, instagram_username, instagram_access_token').eq('id', u.id).single();
+        const gmbSavedVal = (prof as { gmb_place_id?: string } | null)?.gmb_place_id ?? '';
+        if (gmbSavedVal) { setGmbPlaceId(gmbSavedVal); setGmbSaved(gmbSavedVal); }
+        const igUser = (prof as { instagram_username?: string } | null)?.instagram_username;
+        if (igUser) {
+          setIgConnected(true);
+          setIgUsername(igUser);
+          // Load media preview
+          const igRes = await fetch('/api/instagram');
+          const igData = await igRes.json();
+          if (igData.media) setIgMedia(igData.media.slice(0, 6));
+        }
+      }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -97,6 +124,36 @@ export default function SettingsPage() {
   const [brandLogoUrl, setBrandLogoUrl] = useState('');
   const [brandLogoLoading, setBrandLogoLoading] = useState(false);
   const [brandLogoMsg, setBrandLogoMsg] = useState('');
+
+  // GMB (Google My Business) state
+  const [gmbPlaceId, setGmbPlaceId] = useState('');
+  const [gmbSaved, setGmbSaved] = useState('');
+  const [gmbSaving, setGmbSaving] = useState(false);
+  const [gmbPreview, setGmbPreview] = useState<{ name: string; rating: number; totalRatings: number } | null>(null);
+  const [gmbPreviewLoading, setGmbPreviewLoading] = useState(false);
+  const [gmbMsg, setGmbMsg] = useState('');
+
+  // Instagram state
+  const [igToken, setIgToken] = useState('');
+  const [igConnected, setIgConnected] = useState(false);
+  const [igUsername, setIgUsername] = useState('');
+  const [igSaving, setIgSaving] = useState(false);
+  const [igMsg, setIgMsg] = useState('');
+  const [igMedia, setIgMedia] = useState<{ id: string; media_url: string; permalink: string; caption?: string }[]>([]);
+
+  // Custom domain state
+  const [domainSites, setDomainSites] = useState<{ id: string; name: string; slug: string | null; custom_domain: string | null }[]>([]);
+  const [domainValues, setDomainValues] = useState<Record<string, string>>({});
+  const [domainSaving, setDomainSaving] = useState<string | null>(null);
+  const [domainChecking, setDomainChecking] = useState<string | null>(null);
+  const [domainMsg, setDomainMsg] = useState<Record<string, { text: string; type: 'success' | 'error' | 'info' }>>({});
+  const [domainVerified, setDomainVerified] = useState<Record<string, { verified: boolean; cname: string | null; expectedTarget: string }>>({});
+
+  // GMB reviews + AI reply
+  const [gmbReviews, setGmbReviews] = useState<{ author_name: string; rating: number; text: string; relative_time_description: string }[]>([]);
+  const [reviewReplies, setReviewReplies] = useState<Record<number, string[]>>({});
+  const [reviewReplyLoading, setReviewReplyLoading] = useState<number | null>(null);
+  const [reviewReplySelected, setReviewReplySelected] = useState<Record<number, string>>({});
 
   const handleEmailChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +199,134 @@ export default function SettingsPage() {
     }
   };
 
+  const handleIgConnect = async () => {
+    if (!igToken.trim()) return;
+    setIgSaving(true);
+    setIgMsg('');
+    const res = await fetch('/api/instagram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: igToken.trim() }),
+    });
+    const d = await res.json();
+    if (!res.ok) { setIgMsg(`エラー: ${d.error ?? '接続に失敗しました'}`); setIgSaving(false); return; }
+    setIgConnected(true);
+    setIgUsername(d.username);
+    setIgMsg('接続しました');
+    setIgToken('');
+    const igRes = await fetch('/api/instagram');
+    const igData = await igRes.json();
+    if (igData.media) setIgMedia(igData.media.slice(0, 6));
+    setIgSaving(false);
+  };
+
+  const handleIgDisconnect = async () => {
+    if (!confirm('Instagramの連携を解除しますか？')) return;
+    await fetch('/api/instagram', { method: 'DELETE' });
+    setIgConnected(false);
+    setIgUsername('');
+    setIgMedia([]);
+    setIgMsg('連携を解除しました');
+  };
+
+  const handleGmbPreview = async () => {
+    if (!gmbPlaceId.trim()) return;
+    setGmbPreviewLoading(true);
+    setGmbMsg('');
+    try {
+      const res = await fetch(`/api/google/reviews?placeId=${encodeURIComponent(gmbPlaceId.trim())}`);
+      if (!res.ok) { const e = await res.json(); setGmbMsg(`エラー: ${e.error ?? '確認できませんでした'}`); return; }
+      const d = await res.json();
+      setGmbPreview({ name: d.name, rating: d.rating, totalRatings: d.totalRatings });
+      setGmbReviews(d.reviews || []);
+    } catch { setGmbMsg('確認に失敗しました。Place IDを確認してください。'); }
+    finally { setGmbPreviewLoading(false); }
+  };
+
+  const handleReviewReply = async (idx: number, review: { author_name: string; rating: number; text: string }) => {
+    if (!gmbPreview) return;
+    setReviewReplyLoading(idx);
+    const res = await fetch('/api/ai/review-reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reviewText: review.text,
+        reviewerName: review.author_name,
+        rating: review.rating,
+        businessName: gmbPreview.name,
+      }),
+    });
+    const d = await res.json();
+    if (res.ok && d.replies) {
+      setReviewReplies(prev => ({ ...prev, [idx]: d.replies }));
+    }
+    setReviewReplyLoading(null);
+  };
+
+  const handleGmbSave = async () => {
+    if (!gmbPlaceId.trim()) return;
+    setGmbSaving(true);
+    setGmbMsg('');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setGmbMsg('ログインが必要です'); setGmbSaving(false); return; }
+    const { error } = await supabase.from('profiles').update({ gmb_place_id: gmbPlaceId.trim() }).eq('id', user.id);
+    if (error) { setGmbMsg(`保存に失敗しました: ${error.message}`); }
+    else { setGmbSaved(gmbPlaceId.trim()); setGmbMsg('保存しました'); }
+    setGmbSaving(false);
+  };
+
+  const handleDomainSave = async (siteId: string) => {
+    const domain = (domainValues[siteId] || '').trim().toLowerCase().replace(/^https?:\/\//, '');
+    setDomainSaving(siteId);
+    setDomainMsg(prev => ({ ...prev, [siteId]: { text: '', type: 'info' } }));
+    const res = await fetch(`/api/sites/${siteId}/domain`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customDomain: domain || null }),
+    });
+    const d = await res.json() as { ok?: boolean; error?: string; renderStatus?: string };
+    if (res.ok) {
+      setDomainSites(prev => prev.map(s => s.id === siteId ? { ...s, custom_domain: domain || null } : s));
+      const renderNote = d.renderStatus && d.renderStatus !== 'registered' ? `（Render: ${d.renderStatus}）` : '';
+      setDomainMsg(prev => ({ ...prev, [siteId]: { text: domain ? `保存しました${renderNote}。次にDNSを設定してください。` : 'ドメインを削除しました', type: 'success' } }));
+    } else {
+      setDomainMsg(prev => ({ ...prev, [siteId]: { text: `エラー: ${d.error || '保存に失敗しました'}`, type: 'error' } }));
+    }
+    setDomainSaving(null);
+  };
+
+  const handleDomainCheck = async (siteId: string) => {
+    setDomainChecking(siteId);
+    setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'DNS確認中...', type: 'info' } }));
+    try {
+      const res = await fetch(`/api/sites/${siteId}/domain`);
+      const d = await res.json() as { verified?: boolean; dnsVerified?: boolean; cname?: string | null; expectedTarget?: string; reason?: string };
+      if (d.reason === 'no_domain') {
+        setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'ドメインが設定されていません', type: 'error' } }));
+      } else if (d.verified) {
+        setDomainMsg(prev => ({ ...prev, [siteId]: { text: '✓ DNS確認済み！サイトが独自ドメインで表示されています。', type: 'success' } }));
+        setDomainVerified(prev => ({ ...prev, [siteId]: { verified: true, cname: d.cname ?? null, expectedTarget: d.expectedTarget ?? '' } }));
+      } else {
+        setDomainMsg(prev => ({ ...prev, [siteId]: { text: `DNS未反映。CNAME: ${d.cname || '未設定'} → 期待値: ${d.expectedTarget || '---'}`, type: 'error' } }));
+        setDomainVerified(prev => ({ ...prev, [siteId]: { verified: false, cname: d.cname ?? null, expectedTarget: d.expectedTarget ?? '' } }));
+      }
+    } catch {
+      setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'DNS確認に失敗しました', type: 'error' } }));
+    }
+    setDomainChecking(null);
+  };
+
   const inputCls = 'w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-sky-500 transition-colors';
+
+  type Tab = 'account' | 'domain' | 'integrations' | 'danger';
+  const [activeTab, setActiveTab] = useState<Tab>('account');
+
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'account', label: 'アカウント' },
+    { id: 'domain', label: '独自ドメイン' },
+    { id: 'integrations', label: '外部連携' },
+    { id: 'danger', label: '危険な操作' },
+  ];
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
@@ -151,7 +335,25 @@ export default function SettingsPage() {
         <h1 className="text-sm font-bold text-gray-900 ml-auto mr-auto">アカウント設定</h1>
       </header>
 
+      {/* Tabs */}
+      <div className="border-b border-sky-100 bg-white/70 backdrop-blur-md">
+        <div className="max-w-xl mx-auto px-6 flex gap-1">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors ${activeTab === tab.id ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-xl mx-auto px-6 py-10 space-y-8">
+
+        {/* ── Account tab ── */}
+        {activeTab === 'account' && <>
 
         {/* Plan */}
         {!planLoading && (
@@ -233,7 +435,7 @@ export default function SettingsPage() {
                   <img src={brandLogoUrl} alt="ロゴプレビュー" className="h-8 w-auto max-w-[120px] object-contain rounded border border-gray-200" />
                 )}
                 {!brandLogoUrl && (
-                  <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto rounded" />
+                  <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto rounded" style={{ width: 'auto' }} />
                 )}
                 <span className="text-xs text-gray-500">現在のロゴ</span>
               </div>
@@ -287,6 +489,75 @@ export default function SettingsPage() {
             </div>
           </section>
         )}
+
+        </> /* end account tab */}
+
+        {/* ── Domain tab ── */}
+        {activeTab === 'domain' && <>
+
+        {/* Custom Domain (moved to its own tab) */}
+        {domainSites.length > 0 && (
+          <section className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-700"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </div>
+              <h2 className="font-bold text-sm text-gray-900">独自ドメイン設定</h2>
+            </div>
+            <p className="text-xs text-gray-500 mb-5">取得済みドメインをサイトに紐付けます。設定後、ドメインのDNSにCNAMEレコードを追加してください。</p>
+            <div className="space-y-5">
+              {domainSites.map(site => (
+                <div key={site.id} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-700">{site.name}</span>
+                    {domainVerified[site.id]?.verified && (
+                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✓ 確認済み</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={domainValues[site.id] ?? ''}
+                      onChange={e => setDomainValues(prev => ({ ...prev, [site.id]: e.target.value }))}
+                      placeholder="example.com"
+                      className={inputCls}
+                    />
+                    <button onClick={() => handleDomainSave(site.id)} disabled={domainSaving === site.id}
+                      className="flex-shrink-0 text-sm bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-lg transition-all">
+                      {domainSaving === site.id ? '...' : '保存'}
+                    </button>
+                    {site.custom_domain && (
+                      <button onClick={() => handleDomainCheck(site.id)} disabled={domainChecking === site.id}
+                        className="flex-shrink-0 text-xs border border-gray-200 hover:border-sky-300 text-gray-600 px-3 py-2.5 rounded-lg transition-all disabled:opacity-50">
+                        {domainChecking === site.id ? '確認中...' : 'DNS確認'}
+                      </button>
+                    )}
+                  </div>
+                  {domainMsg[site.id]?.text && (
+                    <p className={`text-[11px] font-semibold ${domainMsg[site.id].type === 'error' ? 'text-red-600' : domainMsg[site.id].type === 'success' ? 'text-green-600' : 'text-sky-600'}`}>
+                      {domainMsg[site.id].text}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+              <p className="text-[11px] font-bold text-gray-700">DNS設定手順（Render）</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-gray-600">
+                  <thead><tr className="border-b border-gray-200"><th className="text-left pb-1.5 font-semibold">タイプ</th><th className="text-left pb-1.5 font-semibold">ホスト</th><th className="text-left pb-1.5 font-semibold">値</th></tr></thead>
+                  <tbody className="font-mono"><tr><td className="py-1 pr-3">CNAME</td><td className="py-1 pr-3">@（またはwww）</td><td className="py-1 text-sky-600">laruvisona.onrender.com</td></tr></tbody>
+                </table>
+              </div>
+              <p className="text-[10px] text-gray-400">設定後「DNS確認」ボタンで反映状況を確認できます。反映には最大48時間かかる場合があります。</p>
+            </div>
+          </section>
+        )}
+
+        </> /* end domain tab */}
+
+        {/* ── Integrations tab ── */}
+        {activeTab === 'integrations' && <>
 
         {/* Google Search Console */}
         <section id="gsc" className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
@@ -373,6 +644,248 @@ export default function SettingsPage() {
           )}
         </section>
 
+        {/* Instagram */}
+        <section id="instagram" className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </div>
+            <div>
+              <h2 className="font-bold text-sm text-gray-900">Instagram連携</h2>
+              <p className="text-gray-500 text-xs mt-0.5">最新投稿をサイトに自動表示。アクセストークンを入力して連携します。</p>
+            </div>
+          </div>
+
+          {igConnected ? (
+            <>
+              <div className="flex items-center gap-3 bg-pink-50 border border-pink-200 rounded-xl px-4 py-3 mb-4">
+                <div className="w-4 h-4 rounded-full" style={{ background: 'linear-gradient(135deg,#f09433,#bc1888)' }} />
+                <div className="flex-1">
+                  <div className="font-semibold text-sm text-gray-900">@{igUsername}</div>
+                  <div className="text-xs text-gray-500">連携済み</div>
+                </div>
+                <button onClick={handleIgDisconnect} className="text-xs text-gray-400 hover:text-red-500 transition-colors">解除</button>
+              </div>
+
+              {igMedia.length > 0 && (
+                <div className="grid grid-cols-3 gap-1.5 mb-4 rounded-xl overflow-hidden">
+                  {igMedia.map(m => (
+                    <a key={m.id} href={m.permalink} target="_blank" rel="noopener noreferrer" className="block aspect-square bg-gray-100 overflow-hidden group">
+                      <img src={m.media_url} alt={m.caption?.slice(0, 30) ?? ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400">最新投稿はビルダーの「Instagram」ブロックをページに追加すると表示されます。</p>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">アクセストークン</label>
+                <input
+                  type="password"
+                  value={igToken}
+                  onChange={e => setIgToken(e.target.value)}
+                  placeholder="Instagram Graph API アクセストークン"
+                  className={inputCls}
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Meta Developer Console で「Instagram Basic Display API」のトークンを取得してください。
+                  長期トークン（60日）を推奨します。
+                </p>
+              </div>
+
+              {igMsg && (
+                <p className={`text-xs font-semibold ${igMsg.startsWith('エラー') ? 'text-red-600' : 'text-green-600'}`}>{igMsg}</p>
+              )}
+
+              <button
+                onClick={handleIgConnect}
+                disabled={!igToken.trim() || igSaving}
+                className="w-full text-sm bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-40"
+              >
+                {igSaving ? '接続中...' : 'Instagramと連携する'}
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* GMB (Google My Business) */}
+        <section id="gmb" className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-700" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div>
+              <h2 className="font-bold text-sm text-gray-900">Googleビジネスプロフィール（GMB）連携</h2>
+              <p className="text-gray-500 text-xs mt-0.5">Google Place IDを入力すると、ダッシュボードで口コミ・評価を確認できます。</p>
+            </div>
+          </div>
+
+          {gmbSaved && gmbPreview && (
+            <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+              <div className="text-green-600">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm text-gray-900 truncate">{gmbPreview.name}</div>
+                <div className="text-xs text-gray-500">
+                  ★ {gmbPreview.rating?.toFixed(1)} · {gmbPreview.totalRatings?.toLocaleString()}件の口コミ
+                </div>
+              </div>
+              <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-bold">連携済み</span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Google Place ID</label>
+              <input
+                type="text"
+                value={gmbPlaceId}
+                onChange={e => setGmbPlaceId(e.target.value)}
+                placeholder="例: ChIJN1t_tDeuEmsRUsoyG83frY4"
+                className={inputCls}
+              />
+              <p className="text-[10px] text-gray-400 mt-1">
+                <a href="https://developers.google.com/maps/documentation/javascript/place-id" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">Place ID Finder</a>
+                でPlace IDを確認できます
+              </p>
+            </div>
+
+            {gmbMsg && (
+              <p className={`text-xs font-semibold ${gmbMsg.startsWith('エラー') || gmbMsg.startsWith('保存に失敗') ? 'text-red-600' : 'text-green-600'}`}>
+                {gmbMsg}
+              </p>
+            )}
+
+            {gmbPreview && !gmbMsg.startsWith('エラー') && gmbPlaceId !== gmbSaved && (
+              <div className="bg-sky-50 border border-sky-100 rounded-xl px-4 py-3">
+                <div className="font-semibold text-sm text-gray-900">{gmbPreview.name}</div>
+                <div className="text-xs text-gray-500">★ {gmbPreview.rating?.toFixed(1)} · {gmbPreview.totalRatings?.toLocaleString()}件の口コミ</div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleGmbPreview}
+                disabled={!gmbPlaceId.trim() || gmbPreviewLoading}
+                className="flex-1 text-sm border border-gray-200 hover:border-sky-300 text-gray-700 py-2.5 rounded-xl transition-all disabled:opacity-40"
+              >
+                {gmbPreviewLoading ? '確認中...' : '確認する'}
+              </button>
+              <button
+                onClick={handleGmbSave}
+                disabled={!gmbPlaceId.trim() || gmbSaving || gmbPlaceId === gmbSaved}
+                className="flex-1 text-sm bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-40"
+              >
+                {gmbSaving ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* GMB Reviews with AI Reply */}
+        {gmbReviews.length > 0 && (
+          <section className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-700"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+              </div>
+              <h2 className="font-bold text-sm text-gray-900">AI口コミ返信文生成</h2>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">口コミに対してAIが返信案を3パターン提案します。コピーして活用してください。</p>
+
+            <div className="space-y-4">
+              {gmbReviews.map((review, idx) => (
+                <div key={idx} className="border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-500 flex-shrink-0">
+                      {review.author_name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-gray-900">{review.author_name}</span>
+                        <span className="text-amber-500 text-xs">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
+                        <span className="text-[10px] text-gray-400">{review.relative_time_description}</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-0.5 line-clamp-3">{review.text}</p>
+                    </div>
+                  </div>
+
+                  {reviewReplies[idx] ? (
+                    <div className="space-y-2">
+                      <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">返信案（3パターン）</div>
+                      {reviewReplies[idx].map((reply, ri) => (
+                        <div
+                          key={ri}
+                          className={`border rounded-lg p-3 cursor-pointer transition-all ${reviewReplySelected[idx] === reply ? 'border-sky-400 bg-sky-50' : 'border-gray-200 hover:border-sky-200'}`}
+                          onClick={() => setReviewReplySelected(prev => ({ ...prev, [idx]: reply }))}
+                        >
+                          <div className="text-xs text-gray-700 leading-relaxed">{reply}</div>
+                          <div className="flex items-center gap-2 mt-2">
+                            {reviewReplySelected[idx] === reply && <span className="text-[9px] text-sky-600 font-bold">✓ 選択中</span>}
+                            <button
+                              onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(reply); }}
+                              className="ml-auto text-[10px] bg-gray-100 hover:bg-sky-100 border border-gray-200 text-gray-600 px-2 py-0.5 rounded transition-all"
+                            >
+                              コピー
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleReviewReply(idx, review)}
+                      disabled={reviewReplyLoading === idx}
+                      className="w-full text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-bold py-2 rounded-lg transition-all disabled:opacity-50"
+                    >
+                      {reviewReplyLoading === idx ? 'AIが生成中...' : '✨ AI返信案を生成する'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        </> /* end integrations tab */}
+
+        {/* ── Danger tab ── */}
+        {activeTab === 'danger' && <>
+
+        {/* Export data */}
+        <section className="bg-white border border-gray-200 rounded-2xl p-6 mb-4">
+          <h2 className="font-bold text-sm text-gray-900 mb-1">データのエクスポート</h2>
+          <p className="text-gray-500 text-xs mb-5">サイト設定・問い合わせ履歴をJSONファイルとしてダウンロードします。削除前にバックアップとして保存できます。</p>
+          <button
+            onClick={async () => {
+              const [sitesRes, contactsRes] = await Promise.all([
+                fetch('/api/sites').then(r => r.json()),
+                fetch('/api/contacts').then(r => r.json()),
+              ]);
+              const payload = {
+                exported_at: new Date().toISOString(),
+                sites: sitesRes.sites || [],
+                contacts: contactsRes.contacts || [],
+              };
+              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `laruHP_export_${new Date().toISOString().split('T')[0]}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            データをダウンロード (JSON)
+          </button>
+        </section>
+
         {/* Delete account */}
         <section className="bg-red-50 border border-red-200 rounded-2xl p-6">
           <h2 className="font-bold text-sm text-red-600 mb-1">アカウントの削除</h2>
@@ -395,6 +908,8 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+
+        </> /* end danger tab */}
 
       </div>
     </div>

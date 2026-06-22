@@ -53,7 +53,7 @@ export default function Home() {
     });
 
     // 🌟 スクロール連動のフェードアップアニメーション
-    gsap.utils.toArray('.gsap-fade-up').forEach((elem: any) => {
+    gsap.utils.toArray<HTMLElement>('.gsap-fade-up').forEach((elem) => {
       gsap.fromTo(elem, 
         { y: 50, opacity: 0 },
         { 

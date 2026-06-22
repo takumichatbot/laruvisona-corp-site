@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -46,7 +47,7 @@ function UpdatePasswordContent() {
     <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
-          <img src="/laruhp_logo.png" alt="LARU HP" className="h-10 w-auto" />
+          <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" style={{ width: 'auto' }} />
         </Link>
 
         <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">

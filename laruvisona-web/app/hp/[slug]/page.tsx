@@ -23,32 +23,105 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from('sites')
-    .select('name, seo_json')
+    .select('name, seo_json, settings_json')
     .eq('slug', slug)
     .eq('published', true)
     .single();
 
   if (!data) return { title: 'Not Found' };
-  const seo = data.seo_json as { title?: string; description?: string; ogTitle?: string; ogDescription?: string; ogImage?: string };
+
+  const seo = (data.seo_json ?? {}) as { title?: string; description?: string; ogTitle?: string; ogDescription?: string; ogImage?: string };
+  const settings = (data.settings_json ?? {}) as { noIndex?: boolean };
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
+  const canonical = `${base}/hp/${slug}`;
   const ogTitle = seo.ogTitle || seo.title || data.name;
   const ogDesc = seo.ogDescription || seo.description || '';
-  const ogImage = seo.ogImage || `https://laruvisona.com/og-default.png`;
 
-  return {
+  const metadata: Metadata = {
     title: seo.title || data.name,
     description: seo.description || '',
+    alternates: { canonical },
+    robots: settings.noIndex
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
     openGraph: {
       title: ogTitle,
       description: ogDesc,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: ogTitle }],
+      url: canonical,
+      type: 'website',
+      // If ogImage is explicitly set in builder, use it; otherwise opengraph-image.tsx handles it
+      ...(seo.ogImage ? { images: [{ url: seo.ogImage, width: 1200, height: 630, alt: ogTitle }] } : {}),
     },
     twitter: {
       card: 'summary_large_image',
       title: ogTitle,
       description: ogDesc,
-      images: [ogImage],
+      ...(seo.ogImage ? { images: [seo.ogImage] } : {}),
     },
   };
+
+  return metadata;
+}
+
+interface BusinessInfo {
+  type?: string;
+  name?: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  phone?: string;
+  priceRange?: string;
+  openingHours?: string[];
+  latitude?: string;
+  longitude?: string;
+  sameAs?: string[];
+}
+
+function buildJsonLd(siteName: string, slug: string, seo: { description?: string }, bi: BusinessInfo): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
+  const url = `${base}/hp/${slug}`;
+  const schemaType = bi.type || 'LocalBusiness';
+  const name = bi.name || siteName;
+
+  const obj: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': schemaType,
+    name,
+    url,
+  };
+
+  if (bi.description || seo.description) obj.description = bi.description || seo.description;
+  if (bi.phone) obj.telephone = bi.phone;
+  if (bi.priceRange) obj.priceRange = bi.priceRange;
+
+  if (bi.address || bi.city || bi.postalCode) {
+    obj.address = {
+      '@type': 'PostalAddress',
+      ...(bi.address ? { streetAddress: bi.address } : {}),
+      ...(bi.city ? { addressLocality: bi.city } : {}),
+      ...(bi.postalCode ? { postalCode: bi.postalCode } : {}),
+      addressCountry: 'JP',
+    };
+  }
+
+  if (bi.latitude && bi.longitude) {
+    obj.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: bi.latitude,
+      longitude: bi.longitude,
+    };
+  }
+
+  if (bi.openingHours?.length) {
+    obj.openingHours = bi.openingHours;
+  }
+
+  if (bi.sameAs?.length) {
+    obj.sameAs = bi.sameAs.filter(Boolean);
+  }
+
+  return JSON.stringify(obj);
 }
 
 export default async function PublishedSitePage({ params }: Props) {
@@ -57,7 +130,7 @@ export default async function PublishedSitePage({ params }: Props) {
 
   const { data: site } = await supabase
     .from('sites')
-    .select('published_html, name, settings_json')
+    .select('published_html, name, settings_json, seo_json')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -74,8 +147,17 @@ export default async function PublishedSitePage({ params }: Props) {
     laruseoPublicId?: string;
     gaTrackingId?: string;
     clarityId?: string;
+    popups?: Array<{ enabled: boolean }>;
+    businessInfo?: BusinessInfo;
   };
   const { larubotPublicId, laruseoPublicId, gaTrackingId, clarityId } = settings;
+  const hasActivePopup = (settings.popups || []).some(p => p.enabled);
+
+  const seo = (site.seo_json ?? {}) as { description?: string };
+  const hasBusinessInfo = !!settings.businessInfo;
+  const jsonLdStr = hasBusinessInfo
+    ? buildJsonLd(site.name, slug, seo, settings.businessInfo!)
+    : null;
 
   return (
     <>
@@ -83,6 +165,9 @@ export default async function PublishedSitePage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: site.published_html }}
         style={{ minHeight: '100vh' }}
       />
+      {jsonLdStr && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdStr }} />
+      )}
       {gaTrackingId && (
         <>
           <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`} />
@@ -97,6 +182,12 @@ export default async function PublishedSitePage({ params }: Props) {
       )}
       {laruseoPublicId && (
         <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
+      )}
+      {/* Heatmap tracking */}
+      <script dangerouslySetInnerHTML={{ __html: `(function(){var S='${slug}',P='/api/heatmap?slug='+S,Q=[];function flush(){if(!Q.length)return;fetch(P,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Q),keepalive:true});Q=[];}document.addEventListener('click',function(e){Q.push({type:'click',x:e.clientX,y:e.clientY,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});});window.addEventListener('scroll',function(){var d=Math.round((scrollY/(document.body.scrollHeight-innerHeight||1))*100);Q.push({type:'scroll',scrollDepth:d,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});},{passive:true});window.addEventListener('beforeunload',flush);setInterval(flush,30000);})()` }} />
+      {/* Popup */}
+      {hasActivePopup && (
+        <script src={`/api/popup?slug=${slug}`} defer />
       )}
     </>
   );

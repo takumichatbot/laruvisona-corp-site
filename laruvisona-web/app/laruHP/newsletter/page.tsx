@@ -293,7 +293,10 @@ export default function NewsletterPage() {
                 <div className="space-y-3">
                   {campaigns.map(c => {
                     const openRate = c.sent_count > 0 ? Math.round((c.open_count / c.sent_count) * 100) : 0;
-                    const clickRate = c.sent_count > 0 ? Math.round((c.click_count / c.sent_count) * 100) : 0;
+                    // 解除率: キャンペーン送信後に登録解除した購読者数
+                    const unsubAfter = subscribers.filter(s => s.unsubscribed_at && s.unsubscribed_at > c.created_at).length;
+                    const unsubRate = c.sent_count > 0 ? ((unsubAfter / c.sent_count) * 100).toFixed(1) : '0.0';
+                    const unsubDanger = parseFloat(unsubRate) >= 2.0;
                     return (
                       <div key={c.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
@@ -305,28 +308,30 @@ export default function NewsletterPage() {
                             {c.sent_count}件送信
                           </span>
                         </div>
-                        <div className="mt-3 grid grid-cols-3 gap-3">
-                          <div className="bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 text-center">
-                            <p className="text-lg font-bold text-sky-600">{pct(c.open_count, c.sent_count)}</p>
+                        <div className="mt-3 grid grid-cols-4 gap-2">
+                          <div className="bg-sky-50 border border-sky-100 rounded-lg px-2 py-2 text-center">
+                            <p className="text-base font-bold text-sky-600">{pct(c.open_count, c.sent_count)}</p>
                             <p className="text-[10px] text-gray-500 mt-0.5">開封率</p>
-                            <p className="text-[10px] text-gray-400">{c.open_count} 件</p>
+                            <p className="text-[10px] text-gray-400">{c.open_count}件</p>
                           </div>
-                          <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-2 text-center">
-                            <p className="text-lg font-bold text-violet-600">{pct(c.click_count, c.sent_count)}</p>
+                          <div className="bg-violet-50 border border-violet-100 rounded-lg px-2 py-2 text-center">
+                            <p className="text-base font-bold text-violet-600">{pct(c.click_count, c.sent_count)}</p>
                             <p className="text-[10px] text-gray-500 mt-0.5">クリック率</p>
-                            <p className="text-[10px] text-gray-400">{c.click_count} 件</p>
+                            <p className="text-[10px] text-gray-400">{c.click_count}件</p>
                           </div>
-                          <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-center">
+                          <div className="bg-green-50 border border-green-100 rounded-lg px-2 py-2 text-center">
                             <div className="relative h-5 flex items-center justify-center">
                               <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                <div
-                                  className="bg-green-500 h-1.5 rounded-full transition-all"
-                                  style={{ width: `${Math.min(openRate, 100)}%` }}
-                                />
+                                <div className="bg-green-500 h-1.5 rounded-full transition-all" style={{ width: `${Math.min(openRate, 100)}%` }} />
                               </div>
                             </div>
                             <p className="text-[10px] text-gray-500 mt-1">到達率</p>
-                            <p className="text-[10px] text-gray-400">{c.sent_count} 件</p>
+                            <p className="text-[10px] text-gray-400">{c.sent_count}件</p>
+                          </div>
+                          <div className={`rounded-lg px-2 py-2 text-center border ${unsubDanger ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'}`}>
+                            <p className={`text-base font-bold ${unsubDanger ? 'text-red-600' : 'text-gray-500'}`}>{unsubRate}%</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">解除率</p>
+                            <p className={`text-[10px] ${unsubDanger ? 'text-red-400' : 'text-gray-400'}`}>{unsubAfter}件{unsubDanger ? ' ⚠' : ''}</p>
                           </div>
                         </div>
                       </div>

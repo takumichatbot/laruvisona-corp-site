@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function SignupPage() {
+function SignupForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -12,14 +13,17 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirectTo') || '/laruHP/onboarding';
   const supabase = createClient();
 
   const handleGoogleSignup = async () => {
     setError('');
+    const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/onboarding';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/laruHP/onboarding`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
     if (error) setError('Googleログインに失敗しました');
@@ -42,7 +46,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { business_name: businessName, ...(referredBy ? { referred_by: referredBy } : {}) },
-        emailRedirectTo: `${location.origin}/api/auth/callback?next=/laruHP/onboarding`,
+        emailRedirectTo: `${location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
     });
 
@@ -56,7 +60,7 @@ export default function SignupPage() {
 
     if (data.session) {
       // Auto-confirmed (dev mode)
-      router.push('/laruHP/onboarding');
+      router.push(redirectTo);
     } else {
       setSent(true);
     }
@@ -84,7 +88,7 @@ export default function SignupPage() {
     <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
-          <img src="/laruhp_logo.png" alt="LARU HP" className="h-10 w-auto" />
+          <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" style={{ width: 'auto' }} />
         </Link>
 
         <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
@@ -175,9 +179,17 @@ export default function SignupPage() {
 
         <p className="text-center text-gray-500 text-sm mt-6">
           既にアカウントをお持ちの方は{' '}
-          <Link href="/laruHP/auth/login" className="text-sky-600 hover:text-sky-500">ログイン</Link>
+          <Link href={`/laruHP/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-sky-600 hover:text-sky-500">ログイン</Link>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupClient() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

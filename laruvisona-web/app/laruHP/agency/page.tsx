@@ -69,6 +69,16 @@ export default function AgencyPage() {
   const [larubotError, setLarubotError] = useState('');
   const [copiedEmbedId, setCopiedEmbedId] = useState<string | null>(null);
 
+  // Affiliate/referral state
+  const [refStats, setRefStats] = useState<{
+    referralUrl: string;
+    total: number;
+    active: number;
+    totalCommissionMonthly: number;
+    referrals: { id: string; plan: string; status: string; joinedAt: string; commission: number }[];
+  } | null>(null);
+  const [refCopied, setRefCopied] = useState(false);
+
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace('/laruHP/auth/login?redirectTo=/laruHP/agency'); return; }
@@ -91,6 +101,11 @@ export default function AgencyPage() {
     setSites(sData ?? []);
     setContacts(cData ?? []);
     setLoading(false);
+
+    // Load referral stats
+    fetch('/api/referral/stats').then(r => r.json()).then(d => {
+      if (!d.error) setRefStats(d);
+    }).catch(() => {});
   }, [supabase, router]);
 
   useEffect(() => { load(); }, [load]);
@@ -444,6 +459,82 @@ export default function AgencyPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Affiliate / Referral Section ── */}
+      {refStats && (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 border-t border-white/[0.07]">
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">📣 紹介プログラム</h2>
+
+          {/* KPI row */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-white">{refStats.total}</div>
+              <div className="text-xs text-slate-500 mt-0.5">紹介した人数</div>
+            </div>
+            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-green-400">{refStats.active}</div>
+              <div className="text-xs text-slate-500 mt-0.5">現在の有効契約</div>
+            </div>
+            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-sky-400">¥{refStats.totalCommissionMonthly.toLocaleString()}</div>
+              <div className="text-xs text-slate-500 mt-0.5">月間コミッション（20%）</div>
+            </div>
+          </div>
+
+          {/* Referral link */}
+          <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 mb-6">
+            <div className="text-xs font-bold text-slate-400 mb-2">あなたの紹介リンク</div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 bg-white/[0.05] border border-white/[0.07] rounded-lg px-3 py-2 font-mono text-xs text-slate-300 truncate">
+                {refStats.referralUrl}
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(refStats.referralUrl);
+                  setRefCopied(true);
+                  setTimeout(() => setRefCopied(false), 2000);
+                }}
+                className="flex-shrink-0 text-xs font-bold px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors"
+              >
+                {refCopied ? '✓ コピー' : 'コピー'}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-600 mt-2">
+              このリンクから登録した方が契約すると、月額の20%をクレジットとして毎月還元します。
+            </p>
+          </div>
+
+          {/* Referral list */}
+          {refStats.referrals.length > 0 && (
+            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl overflow-hidden">
+              <div className="grid grid-cols-4 px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.07] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <span>ID</span>
+                <span>プラン</span>
+                <span>ステータス</span>
+                <span className="text-right">コミッション/月</span>
+              </div>
+              {refStats.referrals.map(r => (
+                <div key={r.id} className="grid grid-cols-4 px-4 py-3 border-b border-white/[0.05] last:border-0">
+                  <span className="font-mono text-xs text-slate-400">{r.id}…</span>
+                  <span className="text-xs text-slate-300">{r.plan || 'hp'}</span>
+                  <span className={`text-xs font-semibold ${r.status === 'active' ? 'text-green-400' : 'text-slate-500'}`}>
+                    {r.status === 'active' ? '契約中' : '未契約'}
+                  </span>
+                  <span className={`text-xs font-bold text-right ${r.status === 'active' ? 'text-sky-400' : 'text-slate-600'}`}>
+                    {r.status === 'active' ? `¥${r.commission.toLocaleString()}` : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {refStats.referrals.length === 0 && (
+            <div className="text-center py-8 text-slate-600 text-sm">
+              まだ紹介実績がありません。リンクをSNSや名刺に掲載しましょう。
+            </div>
+          )}
         </div>
       )}
     </div>

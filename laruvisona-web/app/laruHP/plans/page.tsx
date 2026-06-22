@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 type Availability = 'yes' | 'no' | 'limited';
 
@@ -36,12 +37,18 @@ function Cell({ value }: { value: Availability }) {
   return <div className="flex justify-center"><span className="text-gray-300 text-base">−</span></div>;
 }
 
+const MONTHLY = { hp: 999, lite: 4980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 } as const;
+const ANNUAL  = { hp: 833, lite: 4150, hpBot: 4150, hpBotSeo: 8166, agency: 16500 } as const;
+const ANNUAL_TOTAL = { hp: 9990, lite: 49800, hpBot: 49800, hpBotSeo: 98000, agency: 198000 } as const;
+
 function CheckoutButton({
   plan,
+  annual = false,
   className,
   children,
 }: {
   plan: string;
+  annual?: boolean;
   className: string;
   children: React.ReactNode;
 }) {
@@ -55,10 +62,21 @@ function CheckoutButton({
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, billing: annual ? 'annual' : 'monthly' }),
       });
       if (res.status === 401) {
+        setLoading(false);
         window.location.href = `/laruHP/auth/login?redirectTo=/laruHP/plans`;
+        return;
+      }
+      if (res.status === 402) {
+        setError('支払い情報に問題があります。設定からご確認ください。');
+        setLoading(false);
+        return;
+      }
+      if (res.status === 429) {
+        setError('しばらく待ってからもう一度お試しください。');
+        setLoading(false);
         return;
       }
       const data = await res.json();
@@ -69,7 +87,7 @@ function CheckoutButton({
         setLoading(false);
       }
     } catch {
-      setError('接続エラーが発生しました。');
+      setError('接続エラーが発生しました。通信状況をご確認ください。');
       setLoading(false);
     }
   };
@@ -85,6 +103,9 @@ function CheckoutButton({
 }
 
 export default function PlansPage() {
+  const [annual, setAnnual] = useState(false);
+  const P = annual ? ANNUAL : MONTHLY;
+
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900 overflow-x-hidden">
 
@@ -92,7 +113,7 @@ export default function PlansPage() {
       <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto" />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
           </Link>
           <div className="flex items-center gap-2.5">
             <Link href="/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">
@@ -117,8 +138,31 @@ export default function PlansPage() {
           <div className="block">
             <span className="text-sky-600 font-bold text-xs tracking-[0.2em] uppercase">PLAN COMPARISON</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mt-4 mb-4 text-gray-900">プラン比較</h1>
-          <p className="text-gray-500 text-base font-normal">全プラン 初月無料・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
+          <h1 className="text-4xl md:text-5xl font-bold mt-4 mb-6 text-gray-900">プラン比較</h1>
+
+          {/* Billing toggle */}
+          <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-2 py-2 shadow-sm mb-4">
+            <button
+              onClick={() => setAnnual(false)}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${!annual ? 'bg-sky-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              月払い
+            </button>
+            <button
+              onClick={() => setAnnual(true)}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${annual ? 'bg-sky-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              年払い
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${annual ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                2ヶ月無料
+              </span>
+            </button>
+          </div>
+          {annual && (
+            <p className="text-emerald-600 text-xs font-medium mt-1">年間一括払いで2ヶ月分お得</p>
+          )}
+
+          <p className="text-gray-500 text-base font-normal mt-3">全プラン 初月無料・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
         </div>
       </section>
 
@@ -135,13 +179,15 @@ export default function PlansPage() {
               <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP単体</div>
               <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">999</div>
-              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.hp.toLocaleString()}</div>
+              <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
+              {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hp.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
                 初月無料
               </div>
               <CheckoutButton
                 plan="hp"
+                annual={annual}
                 className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2 rounded-xl text-xs hover:bg-sky-50 transition-all"
               >
                 始める →
@@ -153,13 +199,15 @@ export default function PlansPage() {
               <div className="text-xs font-medium text-indigo-500 tracking-widest uppercase mb-2">lite</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP + Bot Lite</div>
               <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">2,480</div>
-              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.lite.toLocaleString()}</div>
+              <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
+              {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.lite.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
                 初月無料
               </div>
               <CheckoutButton
                 plan="lite"
+                annual={annual}
                 className="block w-full bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold py-2 rounded-xl text-xs hover:bg-indigo-100 transition-all"
               >
                 始める →
@@ -176,13 +224,15 @@ export default function PlansPage() {
               <div className="text-xs font-medium text-sky-600 tracking-widest uppercase mb-2">hp-bot</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP + LARUbot</div>
               <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">4,980</div>
-              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.hpBot.toLocaleString()}</div>
+              <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
+              {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hpBot.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
                 初月無料
               </div>
               <CheckoutButton
                 plan="hp-bot"
+                annual={annual}
                 className="block w-full bg-sky-600 text-white font-semibold py-2 rounded-xl text-xs hover:bg-sky-500 transition-all shadow-sm"
               >
                 始める →
@@ -199,13 +249,15 @@ export default function PlansPage() {
               <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp-bot-seo</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP + Bot + SEO</div>
               <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">9,800</div>
-              <div className="text-gray-600 text-xs mb-3">/ 月（税別）</div>
+              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.hpBotSeo.toLocaleString()}</div>
+              <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
+              {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hpBotSeo.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
                 初月無料
               </div>
               <CheckoutButton
                 plan="hp-bot-seo"
+                annual={annual}
                 className="block w-full bg-gray-50 border border-gray-200 text-gray-900 font-semibold py-2 rounded-xl text-xs hover:bg-sky-50 transition-all"
               >
                 始める →
@@ -258,12 +310,14 @@ export default function PlansPage() {
               <div className="md:text-right flex-shrink-0">
                 <div className="flex items-baseline gap-1 md:justify-end mb-1">
                   <span className="text-purple-600 text-sm">¥</span>
-                  <span className="text-5xl font-bold text-gray-900">19,800</span>
+                  <span className="text-5xl font-bold text-gray-900">{P.agency.toLocaleString()}</span>
                   <span className="text-gray-500 text-sm">/ 月（税別）</span>
                 </div>
+                {annual && <div className="text-gray-400 text-xs md:text-right mb-1">年間 ¥{ANNUAL_TOTAL.agency.toLocaleString()}</div>}
                 <div className="text-purple-600 text-xs font-medium mb-5">クライアント数無制限</div>
                 <CheckoutButton
                   plan="agency"
+                  annual={annual}
                   className="block w-full md:w-auto bg-purple-600 text-white font-bold py-3 px-8 rounded-xl text-sm hover:bg-purple-500 transition-all shadow-sm"
                 >
                   このプランで始める →

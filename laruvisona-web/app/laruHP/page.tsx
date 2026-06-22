@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -35,6 +36,8 @@ const FEATURES = [
   { num: '07', title: 'エージェンシーモード',          desc: '複数クライアントサイトを1アカウントで管理。PV・問い合わせ・公開状況をまとめて確認。',                                                    color: 'blue' },
   { num: '08', title: 'マルチページ対応',             desc: '「トップ」「会社概要」「アクセス」など複数ページを作成可能。ナビゲーションバーも自動生成。',                                                   color: 'purple' },
 ];
+
+const PLAN_ANNUAL_PRICE: Record<string, number> = { hp: 833, lite: 4150, 'hp-bot': 4150, 'hp-bot-seo': 8166 };
 
 const PLANS = [
   {
@@ -132,6 +135,10 @@ const FAQ_ITEMS = [
     q: '6ヶ月の最低契約期間中に解約したい場合は？',
     a: '6ヶ月の最低契約期間中は解約できません。7ヶ月目以降は翌月末までに解約申請いただければ、翌月から課金が停止されます。',
   },
+  {
+    q: '年払いプランはありますか？',
+    a: '料金プランページで月払い/年払いを選択できます。年払いは月額換算で約20%お得になります（例：HPプランは月833円）。年払いは一括請求となり、途中解約時の返金はありません。',
+  },
 ];
 
 const COLOR_MAP: Record<string, string> = {
@@ -152,6 +159,7 @@ export default function LaruHPLandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeIndustry, setActiveIndustry] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [annualPricing, setAnnualPricing] = useState(false);
   const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -219,7 +227,7 @@ export default function LaruHPLandingPage() {
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/laruhp_logo.png" alt="LARU HP" className="h-8 w-auto" />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-gray-500">
             <a href="#features" className="hover:text-gray-900 transition-colors">機能</a>
@@ -234,14 +242,20 @@ export default function LaruHPLandingPage() {
             <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
               初月無料で始める →
             </Link>
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-gray-700 w-10 h-10 flex items-center justify-center bg-sky-50 rounded-xl border border-sky-200">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden text-gray-700 w-10 h-10 flex items-center justify-center bg-sky-50 rounded-xl border border-sky-200"
+              aria-label={isMenuOpen ? 'メニューを閉じる' : 'メニューを開く'}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-nav"
+            >
               {isMenuOpen ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   <line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               ) : (
-                <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+                <svg width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
                   <line x1="0" y1="1" x2="18" y2="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   <line x1="0" y1="6" x2="18" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   <line x1="0" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -251,7 +265,7 @@ export default function LaruHPLandingPage() {
           </div>
         </div>
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-sky-100 shadow-lg px-6 py-4 flex flex-col gap-1">
+          <div id="mobile-nav" className="md:hidden absolute top-full left-0 w-full bg-white border-b border-sky-100 shadow-lg px-6 py-4 flex flex-col gap-1">
             <a href="#features" onClick={() => setIsMenuOpen(false)} className="text-gray-600 hover:text-sky-700 py-3 border-b border-gray-100">機能</a>
             <a href="#templates" onClick={() => setIsMenuOpen(false)} className="text-gray-600 hover:text-sky-700 py-3 border-b border-gray-100">テンプレート</a>
             <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="text-gray-600 hover:text-sky-700 py-3 border-b border-gray-100">料金</a>
@@ -370,6 +384,93 @@ export default function LaruHPLandingPage() {
                 <p className="text-gray-600 text-sm leading-relaxed">{step.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Before / After comparison */}
+      <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-gradient-to-b from-sky-50 to-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="lp-fade-up text-center mb-12">
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">比較</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">従来のHP制作 vs LARU HP</h2>
+            <p className="text-gray-500 text-sm">なぜ今、個人事業主・中小企業が LARU HP を選ぶのか</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Before */}
+            <div className="bg-white border border-red-200 rounded-3xl p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 to-orange-400 rounded-t-3xl" />
+              <div className="inline-flex items-center gap-2 bg-red-50 text-red-600 text-xs font-bold px-3 py-1.5 rounded-full mb-6">
+                <span>✕</span> 従来の制作会社・独自構築
+              </div>
+              <ul className="space-y-4">
+                {[
+                  { icon: '💸', label: '制作費', value: '20〜80万円', sub: '初期費用だけで大きな出費' },
+                  { icon: '⏳', label: '完成まで', value: '1〜3ヶ月', sub: 'その間ビジネスは止まる' },
+                  { icon: '🔧', label: '更新作業', value: '業者に都度依頼', sub: '1回1〜3万円が積み重なる' },
+                  { icon: '📉', label: 'SEO設定', value: '知識が必要 or 別途費用', sub: 'プラグイン・コンサル費が追加' },
+                  { icon: '💰', label: '維持費', value: '月1〜2万円〜', sub: 'サーバー・SSL・保守を個別で' },
+                  { icon: '📵', label: 'AI機能', value: 'なし', sub: '24時間自動対応は夢のまま' },
+                ].map((row, i) => (
+                  <li key={i} className="flex items-start gap-4">
+                    <span className="text-2xl flex-shrink-0 mt-0.5">{row.icon}</span>
+                    <div>
+                      <div className="text-xs text-gray-400 font-semibold mb-0.5">{row.label}</div>
+                      <div className="text-sm font-bold text-red-600">{row.value}</div>
+                      <div className="text-xs text-gray-400">{row.sub}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* After */}
+            <div className="bg-sky-600 rounded-3xl p-8 relative overflow-hidden text-white">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 to-sky-300 rounded-t-3xl" />
+              <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 70% 30%, white, transparent 50%)' }} />
+              <div className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-3 py-1.5 rounded-full mb-6 relative">
+                <span>✓</span> LARU HP
+              </div>
+              <ul className="space-y-4 relative">
+                {[
+                  { icon: '🎉', label: '制作費', value: '0円', sub: '初月無料・設定費なし' },
+                  { icon: '⚡', label: '完成まで', value: '最短5分', sub: 'AIが自動生成。今日から公開OK' },
+                  { icon: '✏️', label: '更新作業', value: '自分でいつでも', sub: 'ビジュアルエディタで即反映' },
+                  { icon: '🚀', label: 'SEO設定', value: '完全自動化', sub: 'JSON-LD・メタタグをAIが設定' },
+                  { icon: '💎', label: '維持費', value: '月額999円〜', sub: 'サーバー・SSL・AI全込み' },
+                  { icon: '🤖', label: 'AI機能', value: 'LARUbot連携', sub: '24時間365日、自動で問い合わせ対応' },
+                ].map((row, i) => (
+                  <li key={i} className="flex items-start gap-4">
+                    <span className="text-2xl flex-shrink-0 mt-0.5">{row.icon}</span>
+                    <div>
+                      <div className="text-xs text-white/60 font-semibold mb-0.5">{row.label}</div>
+                      <div className="text-sm font-bold text-white">{row.value}</div>
+                      <div className="text-xs text-sky-200">{row.sub}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-8 pt-6 border-t border-white/20 relative">
+                <Link
+                  href="/laruHP/onboarding"
+                  className="w-full block text-center bg-white text-sky-700 font-bold py-3.5 rounded-2xl text-sm hover:bg-sky-50 transition-colors"
+                >
+                  初月無料で今すぐ試す →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary callout */}
+          <div className="mt-8 bg-white border border-sky-100 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
+            <div className="text-4xl">💡</div>
+            <div>
+              <p className="font-bold text-gray-900 mb-1">初年度の節約額: 最大 <span className="text-sky-600">79万円以上</span></p>
+              <p className="text-sm text-gray-500">制作費80万円 + 維持費12万円（年間） − LARU HP年間費用 = 大幅節約。しかもAI機能つき。</p>
+            </div>
+            <Link href="/laruHP/onboarding" className="flex-shrink-0 bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm px-6 py-3 rounded-xl transition-colors whitespace-nowrap">
+              始める →
+            </Link>
           </div>
         </div>
       </section>
@@ -1028,10 +1129,30 @@ export default function LaruHPLandingPage() {
           <span className="text-blue-600 font-medium text-xs tracking-[0.2em]">料金プラン</span>
           <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">料金プラン</h2>
           <p className="text-gray-500 mb-2">全プラン 初月無料・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
-          <p className="text-gray-400 text-xs mb-12">クレジットカード決済 / Stripe安全決済</p>
+          <p className="text-gray-400 text-xs mb-8">クレジットカード決済 / Stripe安全決済</p>
+
+          {/* Billing toggle */}
+          <div className="inline-flex items-center gap-4 bg-white border border-gray-200 rounded-2xl p-1.5 mb-10 shadow-sm">
+            <button
+              onClick={() => setAnnualPricing(false)}
+              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${!annualPricing ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              月払い
+            </button>
+            <button
+              onClick={() => setAnnualPricing(true)}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${annualPricing ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              年払い
+              <span className="text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">20%オフ</span>
+            </button>
+          </div>
 
           <div className="lp-stagger grid md:grid-cols-3 gap-5 mb-8">
-            {PLANS.map((plan) => (
+            {PLANS.map((plan) => {
+              const displayPrice = annualPricing ? (PLAN_ANNUAL_PRICE[plan.id] ?? plan.price) : plan.price;
+              const saving = annualPricing ? plan.price - displayPrice : 0;
+              return (
               <div
                 key={plan.id}
                 className={`relative rounded-3xl p-8 flex flex-col text-left transition-all duration-300 hover:-translate-y-1 shadow-sm ${
@@ -1054,13 +1175,27 @@ export default function LaruHPLandingPage() {
                 <h3 className="text-lg font-semibold mb-1 text-gray-900">{plan.name}</h3>
                 <p className="text-gray-500 text-xs mb-4">{plan.sub}</p>
 
-                <div className="mb-1">
-                  <span className="text-gray-400 text-base">¥</span>
-                  <span className="text-4xl font-bold text-gray-900">{plan.price.toLocaleString()}</span>
+                <div className="mb-1 flex items-baseline gap-2">
+                  <div>
+                    <span className="text-gray-400 text-base">¥</span>
+                    <span className="text-4xl font-bold text-gray-900">{displayPrice.toLocaleString()}</span>
+                  </div>
+                  {annualPricing && (
+                    <span className="text-sm text-gray-400 line-through">¥{plan.price.toLocaleString()}</span>
+                  )}
                 </div>
-                <div className="text-gray-400 text-xs mb-1">/ 月（税別）</div>
-                <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-3 py-1 rounded-full mb-6 self-start">
-                  初月無料
+                <div className="text-gray-400 text-xs mb-1">/ 月（税別）{annualPricing ? ' · 年払い一括' : ''}</div>
+                <div className="flex gap-2 mb-6 flex-wrap">
+                  {!annualPricing && (
+                    <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-3 py-1 rounded-full self-start">
+                      初月無料
+                    </div>
+                  )}
+                  {annualPricing && saving > 0 && (
+                    <div className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full self-start">
+                      年間¥{(saving * 12).toLocaleString()}お得
+                    </div>
+                  )}
                 </div>
 
                 <ul className="space-y-2.5 mb-8 flex-1">
@@ -1089,7 +1224,7 @@ export default function LaruHPLandingPage() {
                   初月無料で始める →
                 </Link>
               </div>
-            ))}
+            ); })}
           </div>
 
           <Link href="/laruHP/plans" className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-500 text-sm font-normal transition-colors mb-12">
@@ -1119,6 +1254,55 @@ export default function LaruHPLandingPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust / Guarantee section */}
+      <section className="py-16 md:py-20 px-6 border-t border-sky-100 bg-sky-600 text-white">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="text-sky-200 font-medium text-xs tracking-[0.2em]">安心保証</span>
+            <h2 className="text-2xl md:text-3xl font-bold mt-3 text-white">リスクゼロで始められる理由</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              {
+                icon: '🆓',
+                title: '初月完全無料',
+                desc: '最初の1ヶ月は一切費用なし。クレジットカードの請求は翌月から。',
+              },
+              {
+                icon: '📅',
+                title: '7ヶ月目から解約自由',
+                desc: '6ヶ月後からは月単位でいつでも解約できます。長期縛りなし。',
+              },
+              {
+                icon: '💾',
+                title: 'データは保持',
+                desc: '解約後もサイトデータはしばらく保持。再契約時にすぐ再開可能。',
+              },
+              {
+                icon: '🔒',
+                title: 'Stripe決済で安全',
+                desc: 'カード情報はStripeが管理。当社サーバーにカード情報は一切保存しません。',
+              },
+            ].map((item, i) => (
+              <div key={i} className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/15 transition-colors">
+                <div className="text-3xl mb-3">{item.icon}</div>
+                <div className="font-bold text-white text-sm mb-2">{item.title}</div>
+                <div className="text-sky-100 text-xs leading-relaxed">{item.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/laruHP/onboarding"
+              className="inline-flex items-center gap-3 bg-white text-sky-700 font-bold px-10 py-4 rounded-2xl text-base hover:bg-sky-50 transition-colors shadow-lg"
+            >
+              初月無料で試してみる → <span className="text-xs font-normal text-sky-500">7ヶ月目から解約可能</span>
+            </Link>
           </div>
         </div>
       </section>
@@ -1174,11 +1358,18 @@ export default function LaruHPLandingPage() {
             </Link>
           </div>
           <div className="mt-10 flex flex-wrap justify-center gap-5 text-xs text-gray-500">
-            <span>✓ クレジットカード決済</span>
-            <span>✓ 初月無料</span>
+            <span>✓ クレジットカード決済（Stripe）</span>
+            <span>✓ 初月完全無料</span>
             <span>✓ 最短5分で完成</span>
             <span>✓ SSL・サーバー込み</span>
             <span>✓ 7ヶ月目から解約可</span>
+            <span>✓ カード情報は当社保存なし</span>
+          </div>
+
+          {/* Urgency nudge */}
+          <div className="mt-8 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-4 py-2.5 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+            現在、初月無料キャンペーン実施中 — いつ終了するか未定
           </div>
         </div>
       </section>
@@ -1188,7 +1379,7 @@ export default function LaruHPLandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
             <div className="flex-shrink-0">
-              <img src="/laruhp_logo.png" alt="LARU HP" className="h-7 w-auto mb-2" />
+              <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto mb-2" style={{ width: 'auto' }} />
               <p className="text-gray-500 text-xs max-w-xs leading-relaxed">AIで最高のホームページを最短で。株式会社LARUVisonaが提供するHP作成SaaSサービスです。</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-6 text-xs w-full md:w-auto">
@@ -1231,6 +1422,22 @@ export default function LaruHPLandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile sticky CTA bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-sky-100 px-4 py-3 flex items-center gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="flex-1 min-w-0">
+          <div className="text-gray-900 font-bold text-sm leading-tight">初月完全無料で始める</div>
+          <div className="text-gray-400 text-[11px]">月額¥999〜 · AI自動生成</div>
+        </div>
+        <Link
+          href="/laruHP/onboarding"
+          className="flex-shrink-0 bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm px-5 py-3 rounded-xl transition-all active:scale-95"
+        >
+          無料で始める →
+        </Link>
+      </div>
+      {/* Bottom padding to prevent content being hidden by sticky bar on mobile */}
+      <div className="md:hidden h-20" />
     </div>
   );
 }

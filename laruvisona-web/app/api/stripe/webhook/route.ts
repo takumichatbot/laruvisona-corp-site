@@ -9,7 +9,7 @@ const PLAN_LABEL: Record<string, string> = {
   'hp-bot': 'HP + LARUbot (¥4,980/月)',
   'hp-bot-seo': 'HP + Bot + SEO (¥9,800/月)',
   agency: 'エージェンシー (¥19,800/月)',
-  lite: 'HP + LARUbot Lite (¥2,480/月)',
+  lite: 'HP + LARUbot Lite (¥4,980/月)',
 };
 
 async function sendEmail(to: string, subject: string, html: string) {
@@ -192,6 +192,37 @@ export async function POST(req: Request) {
       };
       if (updatedPlan) updates['plan'] = updatedPlan;
       await supabase.from('profiles').update(updates).eq('stripe_subscription_id', sub.id);
+
+      // プラン変更確認メール (アクティブ時のみ)
+      if (updatedPlan && (sub.status === 'active' || sub.status === 'trialing')) {
+        const { data: upgProfile } = await supabase.from('profiles').select('id').eq('stripe_subscription_id', sub.id).single();
+        if (upgProfile) {
+          const { data: { user: upgUser } } = await supabase.auth.admin.getUserById(upgProfile.id);
+          if (upgUser?.email) {
+            const planLabel = PLAN_LABEL[updatedPlan] || updatedPlan;
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
+            await sendEmail(upgUser.email, '【LARU HP】プランを変更しました', `
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f0f9ff;font-family:'Helvetica Neue',Arial,sans-serif">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+    <div style="background:linear-gradient(135deg,#7c3aed,#0ea5e9);padding:36px 40px">
+      <div style="font-size:16px;font-weight:900;color:white;letter-spacing:-0.5px;margin-bottom:16px">LARU<span style="font-weight:300">HP</span></div>
+      <h1 style="color:white;font-size:22px;font-weight:800;margin:0">プランを変更しました</h1>
+    </div>
+    <div style="padding:36px 40px">
+      <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 20px">プランの変更が完了しました。<br>新しいプランの機能をすぐにご利用いただけます。</p>
+      <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:20px 24px;margin-bottom:28px">
+        <div style="color:#7c3aed;font-size:13px;font-weight:600;margin-bottom:4px">変更後のプラン</div>
+        <div style="color:#0f172a;font-size:18px;font-weight:800">${planLabel}</div>
+      </div>
+      <a href="${appUrl}/laruHP/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#7c3aed,#0ea5e9);color:white;font-weight:800;font-size:15px;text-decoration:none;padding:16px 24px;border-radius:12px;margin-bottom:20px">ダッシュボードで確認 →</a>
+      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a> までどうぞ</p>
+    </div>
+  </div>
+</body></html>`);
+          }
+        }
+      }
       break;
     }
 

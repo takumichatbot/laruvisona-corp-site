@@ -60,6 +60,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ site: data });
   }
 
+  // custom_domain: set or clear
+  if ('custom_domain' in body) {
+    const domain = (body.custom_domain as string | null)?.toLowerCase().trim() || null;
+    if (domain && !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(domain)) {
+      return NextResponse.json({ error: '有効なドメイン形式で入力してください（例: example.com）' }, { status: 400 });
+    }
+    if (domain) {
+      const { data: existing } = await supabase.from('sites').select('id').eq('custom_domain', domain).neq('id', id).limit(1);
+      if (existing && existing.length > 0) {
+        return NextResponse.json({ error: 'このドメインはすでに別のサイトに設定されています' }, { status: 409 });
+      }
+    }
+    const { data, error } = await supabase
+      .from('sites')
+      .update({ custom_domain: domain })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ site: data });
+  }
+
   const { slug } = body;
   if (!slug || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug) || slug.length < 3 || slug.length > 60 || /--/.test(slug)) {
     return NextResponse.json({ error: 'slugは3〜60文字・英数字とハイフン（先頭末尾・連続ハイフン不可）' }, { status: 400 });

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export const metadata = { title: '特定商取引法に基づく表記 | LARU HP' };
 
@@ -25,7 +26,7 @@ export default function TokushoPage() {
       <header className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
           <Link href="/laruHP" className="flex items-center gap-2">
-            <img src="/laruhp_logo.png" alt="LARU HP" className="h-7 w-auto brightness-0 invert" />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto brightness-0 invert" style={{ width: 'auto' }} />
           </Link>
           <span className="text-slate-600">/</span>
           <span className="text-slate-400 text-sm">特定商取引法に基づく表記</span>

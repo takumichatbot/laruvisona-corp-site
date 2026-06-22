@@ -12,7 +12,7 @@ const PLAN_PRICE: Record<string, number> = {
   'hp-bot': 4980,
   'hp-bot-seo': 9800,
   'agency': 19800,
-  'lite': 2480,
+  'lite': 4980,
 };
 
 export async function GET() {
