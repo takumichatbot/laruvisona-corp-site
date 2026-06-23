@@ -147,12 +147,15 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-[#030712] text-white">
-      {/* Realtime new booking toast */}
+      {/* Realtime new booking toast — aria-live for screen readers */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {newBooking ? `${newBooking.name}さんから予約が届きました` : ''}
+      </div>
       {newBooking && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 bg-[#1e293b] border border-blue-500/30 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-2xl">
           <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0" />
           {newBooking.name}さんから予約が届きました
-          <button onClick={() => setNewBooking(null)} className="ml-2 text-slate-400 hover:text-white text-base leading-none">×</button>
+          <button onClick={() => setNewBooking(null)} aria-label="通知を閉じる" className="ml-2 text-slate-400 hover:text-white text-base leading-none">×</button>
         </div>
       )}
       <div className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-sm sticky top-0 z-10">
@@ -224,8 +227,12 @@ export default function BookingPage() {
           {/* Upcoming slots */}
           <div className="space-y-2 mb-6">
             {upcoming.length === 0 && (
-              <div className="text-slate-500 text-sm text-center py-12 border border-dashed border-white/10 rounded-xl">
-                予約枠がありません。「+ 枠を追加」から追加してください。
+              <div className="text-center py-12 border border-dashed border-white/10 rounded-xl flex flex-col items-center gap-3">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <div>
+                  <p className="text-slate-400 text-sm font-semibold">予約枠がありません</p>
+                  <p className="text-slate-500 text-xs mt-1">下の「+ 枠を追加」ボタンで予約枠を作成しましょう</p>
+                </div>
               </div>
             )}
             {upcoming.map(slot => {

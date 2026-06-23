@@ -776,10 +776,14 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
               </div>
             ))}
           </div>
-          <div className="hidden sm:flex justify-between text-[10px] text-gray-500 mt-1">
+          <div className="hidden sm:flex justify-between text-[10px] text-gray-500 mt-1 items-center">
             {STEPS.map((s, i) => (
               <span key={i} className={i + 1 === step ? 'text-gray-900 font-bold' : ''}>{s}</span>
             ))}
+          </div>
+          <div className="hidden sm:flex items-center justify-end mt-1.5">
+            <span className="text-[10px] text-gray-400">目安: <span className="font-semibold text-gray-500">{STEP_TIMES[step - 1]}</span></span>
+            <span className="text-[10px] text-gray-400 ml-3 font-semibold">STEP {step} / {STEPS.length}</span>
           </div>
           <div className="sm:hidden mt-3">
             <div className="flex items-center justify-between mb-1.5">
@@ -913,43 +917,43 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
             <div className="space-y-5">
               <div className="grid sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-gray-900">店舗・会社名 <span className="text-red-500">*</span></label>
-                  <input type="text" value={form.businessName} onChange={e => updateForm('businessName', e.target.value)}
+                  <label htmlFor="ob-businessName" className="block text-sm font-bold mb-2 text-gray-900">店舗・会社名 <span className="text-red-500">*</span></label>
+                  <input id="ob-businessName" type="text" value={form.businessName} onChange={e => updateForm('businessName', e.target.value)}
                     placeholder="例: 鈴木整体院"
                     className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-gray-900">電話番号</label>
-                  <input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)}
+                  <label htmlFor="ob-phone" className="block text-sm font-bold mb-2 text-gray-900">電話番号</label>
+                  <input id="ob-phone" type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)}
                     placeholder="例: 03-1234-5678"
                     className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2 text-gray-900">住所</label>
-                <input type="text" value={form.address} onChange={e => updateForm('address', e.target.value)}
+                <label htmlFor="ob-address" className="block text-sm font-bold mb-2 text-gray-900">住所</label>
+                <input id="ob-address" type="text" value={form.address} onChange={e => updateForm('address', e.target.value)}
                   placeholder="例: 東京都渋谷区渋谷1-1-1 〇〇ビル2F"
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2 text-gray-900">メールアドレス</label>
-                <input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)}
+                <label htmlFor="ob-email" className="block text-sm font-bold mb-2 text-gray-900">メールアドレス</label>
+                <input id="ob-email" type="email" value={form.email} onChange={e => updateForm('email', e.target.value)}
                   placeholder="例: info@your-shop.com"
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2 text-gray-900">キャッチフレーズ（任意）</label>
-                <input type="text" value={form.catchphrase} onChange={e => updateForm('catchphrase', e.target.value)}
+                <label htmlFor="ob-catchphrase" className="block text-sm font-bold mb-2 text-gray-900">キャッチフレーズ（任意）</label>
+                <input id="ob-catchphrase" type="text" value={form.catchphrase} onChange={e => updateForm('catchphrase', e.target.value)}
                   placeholder="例: 地域No.1の施術技術で、あなたの痛みを根本から解決"
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors" />
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2 text-gray-900">お店・会社の紹介文（任意）</label>
-                <textarea value={form.description} onChange={e => updateForm('description', e.target.value)}
+                <label htmlFor="ob-description" className="block text-sm font-bold mb-2 text-gray-900">お店・会社の紹介文（任意）</label>
+                <textarea id="ob-description" value={form.description} onChange={e => updateForm('description', e.target.value)}
                   rows={3}
                   placeholder="例: 2010年に創業した整体院です。延べ10,000人以上の施術実績があり..."
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors resize-none" />
@@ -967,21 +971,21 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-bold mb-1.5 text-violet-800">クライアント名</label>
-                      <input type="text" value={form.clientName} onChange={e => updateForm('clientName', e.target.value)}
+                      <label htmlFor="ob-clientName" className="block text-xs font-bold mb-1.5 text-violet-800">クライアント名</label>
+                      <input id="ob-clientName" type="text" value={form.clientName} onChange={e => updateForm('clientName', e.target.value)}
                         placeholder="例: 株式会社〇〇 / 田中太郎様"
                         className="w-full bg-white border border-violet-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 transition-colors" />
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold mb-1.5 text-violet-800">クライアントメール</label>
-                        <input type="email" value={form.clientEmail} onChange={e => updateForm('clientEmail', e.target.value)}
+                        <label htmlFor="ob-clientEmail" className="block text-xs font-bold mb-1.5 text-violet-800">クライアントメール</label>
+                        <input id="ob-clientEmail" type="email" value={form.clientEmail} onChange={e => updateForm('clientEmail', e.target.value)}
                           placeholder="client@example.com"
                           className="w-full bg-white border border-violet-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 transition-colors" />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold mb-1.5 text-violet-800">クライアント電話</label>
-                        <input type="tel" value={form.clientPhone} onChange={e => updateForm('clientPhone', e.target.value)}
+                        <label htmlFor="ob-clientPhone" className="block text-xs font-bold mb-1.5 text-violet-800">クライアント電話</label>
+                        <input id="ob-clientPhone" type="tel" value={form.clientPhone} onChange={e => updateForm('clientPhone', e.target.value)}
                           placeholder="090-1234-5678"
                           className="w-full bg-white border border-violet-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400 transition-colors" />
                       </div>

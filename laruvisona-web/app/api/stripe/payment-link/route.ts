@@ -23,8 +23,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'siteId, amount, description required' }, { status: 400 });
   }
 
-  if (amount < 50) {
+  if (!Number.isInteger(amount) || amount < 50) {
     return NextResponse.json({ error: '最低金額は50円です' }, { status: 400 });
+  }
+  if (amount > 9999999) {
+    return NextResponse.json({ error: '最大金額は9,999,999円です' }, { status: 400 });
+  }
+  if (description.length > 500) {
+    return NextResponse.json({ error: '説明文は500文字以内にしてください' }, { status: 400 });
   }
 
   // Verify site ownership
@@ -97,7 +103,10 @@ export async function POST(req: Request) {
       url: paymentLink.url,
     });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : '支払いリンクの作成に失敗しました';
+    // Hide internal Stripe error details from client
+    const safeMsg = msg.includes('No such') || msg.includes('Invalid') ? '決済設定に問題があります。管理者にお問い合わせください。' : '支払いリンクの作成に失敗しました';
+    return NextResponse.json({ error: safeMsg }, { status: 500 });
   }
 }
 
@@ -121,7 +130,20 @@ export async function GET(req: Request) {
   if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
 
   const settings = (site.settings_json as Record<string, unknown>) || {};
-  const paymentLinks = (settings.payment_links as unknown[]) || [];
+  const rawLinks = (settings.payment_links as Array<{ id: string; [key: string]: unknown }>) || [];
+
+  // Fetch completed order counts from Stripe in parallel
+  const paymentLinks = await Promise.all(
+    rawLinks.map(async (link) => {
+      try {
+        const sessions = await stripe.checkout.sessions.list({ payment_link: link.id, limit: 100 });
+        const completedOrders = sessions.data.filter(s => s.status === 'complete').length;
+        return { ...link, completedOrders };
+      } catch {
+        return { ...link, completedOrders: 0 };
+      }
+    })
+  );
 
   return NextResponse.json({ paymentLinks });
 }

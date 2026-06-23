@@ -104,7 +104,26 @@ function buildEmailHtml({
 </html>`;
 }
 
+// Simple in-memory rate limiter: 5 submissions per IP per hour
+const _rateMap = new Map<string, number[]>();
+function checkRate(ip: string): boolean {
+  const now = Date.now();
+  const window = 60 * 60 * 1000; // 1 hour
+  const limit = 5;
+  const prev = (_rateMap.get(ip) ?? []).filter(t => now - t < window);
+  if (prev.length >= limit) return false;
+  _rateMap.set(ip, [...prev, now]);
+  return true;
+}
+
 export async function POST(req: Request) {
+  // Rate limiting
+  const forwarded = req.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+  if (!checkRate(ip)) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+  }
+
   const { siteId, name, email, phone, message, type, extraFields, _hp } = await req.json();
 
   // Honeypot: bots fill hidden fields, humans don't

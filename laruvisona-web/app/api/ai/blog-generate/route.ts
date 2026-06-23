@@ -59,6 +59,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'このプランではAIブログ生成は利用できません。HP + Bot + SEOプラン以上が必要です。' }, { status: 403 });
   }
 
+  // Monthly usage limit per plan
+  const MONTHLY_LIMITS: Record<string, number> = { 'hp-bot-seo': 20, agency: 100 };
+  const monthlyLimit = MONTHLY_LIMITS[plan] ?? 0;
+  if (monthlyLimit > 0) {
+    // Use JST midnight as month start (UTC+9)
+    const now = new Date();
+    const jstOffset = 9 * 60;
+    const jstNow = new Date(now.getTime() + jstOffset * 60 * 1000);
+    const monthStartJst = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1) - jstOffset * 60 * 1000);
+    const userSiteIds = (await supabase.from('sites').select('id').eq('user_id', user.id)).data?.map(s => s.id) ?? [];
+    const { count: monthlyCount } = await supabase
+      .from('news_posts')
+      .select('id', { count: 'exact', head: true })
+      .in('site_id', userSiteIds)
+      .gte('created_at', monthStartJst.toISOString());
+    if ((monthlyCount ?? 0) >= monthlyLimit) {
+      return NextResponse.json({
+        error: `今月のAIブログ生成上限（${monthlyLimit}件）に達しました。来月1日にリセットされます。`,
+        limit: monthlyLimit, used: monthlyCount,
+        upgradeRequired: true,
+      }, { status: 429 });
+    }
+  }
+
   const industryLabel = INDUSTRY_LABELS[site.industry || ''] || '事業';
   const templates = SEO_KEYWORD_TEMPLATES[site.industry || ''] || ['サービス 特徴', 'よくある質問', '料金 案内'];
 
@@ -103,16 +127,31 @@ export async function POST(req: Request) {
     });
 
     const text = msg.content[0].type === 'text' ? msg.content[0].text : '';
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // Use non-greedy match to avoid spanning multiple JSON objects
+    const jsonMatch = text.match(/\{[\s\S]*?\}(?=\s*$)/m) || text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      generated = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Schema validation: ensure required string fields exist
+      if (
+        parsed && typeof parsed === 'object' &&
+        typeof parsed.title === 'string' && parsed.title.trim() &&
+        typeof parsed.content === 'string' && parsed.content.trim()
+      ) {
+        generated = {
+          title: String(parsed.title).slice(0, 100),
+          category: ['お知らせ', 'ブログ', 'イベント', 'キャンペーン'].includes(String(parsed.category))
+            ? String(parsed.category)
+            : 'ブログ',
+          content: String(parsed.content).slice(0, 8000),
+        };
+      }
     }
-  } catch (e) {
-    return NextResponse.json({ error: 'AI generation failed', detail: String(e) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'AI生成に失敗しました' }, { status: 500 });
   }
 
   if (!generated) {
-    return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
+    return NextResponse.json({ error: 'AI応答の解析に失敗しました' }, { status: 500 });
   }
 
   // Optionally save as draft to news_posts

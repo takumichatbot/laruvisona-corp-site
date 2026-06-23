@@ -380,6 +380,15 @@ export default function PaymentsPage() {
                       >
                         QR
                       </button>
+                      {typeof navigator !== 'undefined' && 'share' in navigator && (
+                        <button
+                          onClick={() => navigator.share({ title: link.description, text: `¥${link.amount.toLocaleString()} — ${link.description}`, url: link.url })}
+                          className="text-[10px] bg-green-50 border border-green-200 text-green-700 px-2 py-1 rounded-lg hover:bg-green-100 transition-all font-bold"
+                          title="SNS・LINEで共有"
+                        >
+                          共有
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5 flex-shrink-0">
@@ -436,6 +445,8 @@ export default function PaymentsPage() {
             </div>
           )}
           <canvas
+            role="img"
+            aria-label={`${qrLink.description} ¥${qrLink.amount.toLocaleString()} の支払いQRコード — URL: ${qrLink.url}`}
             ref={el => {
               (qrCanvasRef as { current: HTMLCanvasElement | null }).current = el;
               if (el && qrLink) {
@@ -446,7 +457,10 @@ export default function PaymentsPage() {
             }}
             className={`mx-auto rounded-xl border border-gray-100 ${qrReady ? '' : 'hidden'}`}
           />
-          <div className="flex gap-2 mt-4">
+          {qrReady && (
+            <p className="text-xs text-gray-400 mt-2">印刷してレジ横やメニューに貼るとスムーズです</p>
+          )}
+          <div className="flex gap-2 mt-3">
             <button
               onClick={() => {
                 const canvas = qrCanvasRef.current;

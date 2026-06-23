@@ -552,6 +552,7 @@ export default function DashboardPage() {
 
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState('');
+  const [deleteConfirmSiteId, setDeleteConfirmSiteId] = useState<string | null>(null);
   const [startGuideDismissed, setStartGuideDismissed] = useState(false);
   const [userId, setUserId] = useState('');
   const [refCopied, setRefCopied] = useState(false);
@@ -2230,14 +2231,27 @@ export default function DashboardPage() {
                         >
                           {duplicating === site.id ? '...' : <IcDuplicate />}
                         </button>
-                        <button
-                          onClick={() => handleDelete(site.id)}
-                          title="削除"
-                          aria-label="サイトを削除"
-                          className="flex items-center justify-center text-[11px] text-gray-400 hover:text-red-600 border border-transparent hover:border-red-200 py-2 px-3 rounded-lg transition-all"
-                        >
-                          <IcTrash />
-                        </button>
+                        {deleteConfirmSiteId === site.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => { handleDelete(site.id); setDeleteConfirmSiteId(null); }}
+                              className="text-[10px] font-bold text-red-600 border border-red-300 bg-red-50 hover:bg-red-100 px-2 py-1.5 rounded-lg transition-all"
+                            >削除</button>
+                            <button
+                              onClick={() => setDeleteConfirmSiteId(null)}
+                              className="text-[10px] text-gray-500 border border-gray-200 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-all"
+                            >取消</button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirmSiteId(site.id)}
+                            title="削除"
+                            aria-label="サイトを削除"
+                            className="flex items-center justify-center text-[11px] text-gray-400 hover:text-red-600 border border-transparent hover:border-red-200 py-2 px-3 rounded-lg transition-all"
+                          >
+                            <IcTrash />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

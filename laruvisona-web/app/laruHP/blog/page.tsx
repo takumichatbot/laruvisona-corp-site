@@ -43,6 +43,7 @@ export default function BlogPage() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiStep, setAiStep] = useState(0);
   const [aiMsg, setAiMsg] = useState('');
+  const [aiLimitReached, setAiLimitReached] = useState(false);
   const [firstPostToast, setFirstPostToast] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
@@ -150,6 +151,7 @@ export default function BlogPage() {
     const d = await res.json();
     if (!res.ok) {
       setAiMsg(d.error || 'AI記事の生成に失敗しました');
+      if (d.upgradeRequired) setAiLimitReached(true);
       setAiGenerating(false);
       setAiStep(0);
       return;
@@ -252,6 +254,15 @@ export default function BlogPage() {
             {aiMsg && (
               <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${aiMsg.startsWith('✓') ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                 {aiMsg}
+              </div>
+            )}
+            {aiLimitReached && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-3 text-xs">
+                <p className="font-bold text-amber-400 mb-1">今月の生成上限に達しました</p>
+                <p className="text-amber-300/80 mb-2">上位プランにアップグレードすると毎月100件まで生成できます。</p>
+                <a href="/laruHP/plans" className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-1.5 rounded-lg transition-all">
+                  プランを確認する →
+                </a>
               </div>
             )}
             {firstPostToast && (

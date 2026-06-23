@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -50,6 +50,7 @@ export default function SequencesPage() {
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'success' | 'error'>('success');
   const [showForm, setShowForm] = useState(false);
+  const stepsEndRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -323,11 +324,15 @@ export default function SequencesPage() {
               </div>
 
               <button
-                onClick={() => setForm(f => ({ ...f, steps: [...f.steps, { delay: 48, subject: 'フォローアップ', body: '' }] }))}
+                onClick={() => {
+                  setForm(f => ({ ...f, steps: [...f.steps, { delay: 48, subject: 'フォローアップ', body: '' }] }));
+                  setTimeout(() => stepsEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+                }}
                 className="mt-3 w-full border border-dashed border-gray-300 text-gray-500 hover:border-sky-300 hover:text-sky-600 text-xs font-semibold py-2.5 rounded-xl transition-colors"
               >
                 + ステップを追加
               </button>
+              <div ref={stepsEndRef} />
             </div>
 
             <div className="flex gap-3">

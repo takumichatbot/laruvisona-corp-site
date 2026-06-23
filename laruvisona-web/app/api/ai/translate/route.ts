@@ -59,8 +59,11 @@ export async function POST(req: Request) {
     ...extractTexts(blocks),
   ].filter(Boolean);
 
-  // Deduplicate
-  const unique = [...new Set(sourceTexts)].slice(0, 200);
+  // Deduplicate and sanitize: strip control chars, limit per-item length
+  const unique = [...new Set(sourceTexts)]
+    .map(t => t.replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500))
+    .filter(Boolean)
+    .slice(0, 200);
 
   if (!unique.length) {
     return NextResponse.json({ error: 'No text content found to translate' }, { status: 400 });
@@ -79,23 +82,30 @@ Translate the following JSON array of Japanese strings into ${LOCALE_NAMES[targe
 Source texts (JSON array):
 ${JSON.stringify(unique)}`;
 
-  const message = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: prompt }],
-  });
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    });
+  } catch {
+    return NextResponse.json({ error: '翻訳サービスへの接続に失敗しました' }, { status: 503 });
+  }
 
   const raw = (message.content[0] as { type: string; text: string }).text.trim();
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
-    return NextResponse.json({ error: 'Translation failed: invalid response format' }, { status: 500 });
+    return NextResponse.json({ error: '翻訳結果の形式が不正です' }, { status: 500 });
   }
 
   let translated: string[];
   try {
-    translated = JSON.parse(jsonMatch[0]) as string[];
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed)) throw new Error('not array');
+    translated = parsed.map(t => (typeof t === 'string' ? t : String(t)));
   } catch {
-    return NextResponse.json({ error: 'Translation parse error' }, { status: 500 });
+    return NextResponse.json({ error: '翻訳結果の解析に失敗しました' }, { status: 500 });
   }
 
   // Build translation map

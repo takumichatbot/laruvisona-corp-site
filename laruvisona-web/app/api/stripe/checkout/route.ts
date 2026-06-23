@@ -32,16 +32,11 @@ export async function POST(req: Request) {
   const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
 
   const priceId = isAnnual ? PLAN_ANNUAL_PRICE_MAP[plan] : PLAN_PRICE_MAP[plan];
-  if (!priceId) {
-    // Annual price not configured yet — fall back to monthly
-    if (isAnnual) {
-      const fallback = PLAN_PRICE_MAP[plan];
-      if (!fallback) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
-    } else {
-      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
-    }
+  // Annual price not configured yet — fall back to monthly
+  const resolvedPriceId = priceId ?? (isAnnual ? PLAN_PRICE_MAP[plan] : undefined);
+  if (!resolvedPriceId) {
+    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
   }
-  const resolvedPriceId = priceId || PLAN_PRICE_MAP[plan]!;
 
   // Get or create Stripe customer
   const { data: profile } = await supabase
