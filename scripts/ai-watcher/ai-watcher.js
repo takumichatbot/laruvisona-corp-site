@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * AI司令室 ローカル Watcher
+ * AI司令室 ローカル Watcher v2
  * スマホから送ったコマンドをピックアップして claude CLI で実行する
  *
  * 起動:
- *   NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co \
- *   SUPABASE_SERVICE_ROLE_KEY=eyJh... \
- *   node ai-watcher.js
+ *   cd scripts/ai-watcher && node ai-watcher.js
+ *   (.env に NEXT_PUBLIC_SUPABASE_URL と SUPABASE_SERVICE_ROLE_KEY を設定)
  */
 
 require('dotenv').config();
@@ -25,9 +24,17 @@ const db = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-// commandId -> ChildProcess
-const procs = new Map();
+const procs = new Map(); // commandId -> ChildProcess
 let busy = false;
+
+// ── Heartbeat ─────────────────────────────────────────────────────
+// UI にオンライン状態を伝えるため 10 秒ごとに更新
+
+async function heartbeat() {
+  await db.from('watcher_heartbeat').upsert({ id: 'main', last_seen: new Date().toISOString() });
+}
+heartbeat();
+setInterval(heartbeat, 10_000);
 
 // ── Supabase helpers ──────────────────────────────────────────────
 
@@ -50,13 +57,6 @@ async function setStatus(id, status, extra = {}) {
   await db.from('ai_commands').update({ status, ...extra }).eq('id', id);
 }
 
-async function appendOutput(id, text) {
-  // Fetch current output and append (Supabase doesn't have native append)
-  const { data } = await db.from('ai_commands').select('output').eq('id', id).single();
-  const next = (data?.output ?? '') + text;
-  await db.from('ai_commands').update({ output: next }).eq('id', id);
-}
-
 // ── Runner ────────────────────────────────────────────────────────
 
 async function run(cmd) {
@@ -66,11 +66,15 @@ async function run(cmd) {
   console.log(`\n▶ [${short}] ${session.name}`);
   console.log(`  > ${cmd.message.slice(0, 120)}`);
   if (cmd.image_urls?.length) console.log(`  📎 画像: ${cmd.image_urls.length}枚`);
+  if (session.system_context) console.log(`  📋 system_context あり`);
 
   await setStatus(cmd.id, 'running', { started_at: new Date().toISOString() });
 
-  // Build message (append image URLs as context)
+  // system_context を先頭に付ける
   let msg = cmd.message;
+  if (session.system_context?.trim()) {
+    msg = `[プロジェクトコンテキスト]\n${session.system_context.trim()}\n\n---\n${msg}`;
+  }
   if (cmd.image_urls?.length) {
     msg += '\n\n---\n添付画像（参照してください）:\n' + cmd.image_urls.join('\n');
   }
@@ -88,15 +92,14 @@ async function run(cmd) {
   procs.set(cmd.id, proc);
 
   let buf = '';
+  let currentOutput = '';
   let lastFlush = Date.now();
 
   const flush = async (final = false) => {
     if (!buf && !final) return;
-    const chunk = buf;
+    currentOutput += buf;
     buf = '';
-    if (!chunk) return;
-    const { data } = await db.from('ai_commands').select('output').eq('id', cmd.id).single();
-    await db.from('ai_commands').update({ output: (data?.output ?? '') + chunk }).eq('id', cmd.id);
+    await db.from('ai_commands').update({ output: currentOutput }).eq('id', cmd.id);
   };
 
   proc.stdout.on('data', chunk => {
@@ -124,7 +127,6 @@ async function run(cmd) {
       await flush(true);
       procs.delete(cmd.id);
 
-      // Re-check status in case user hit stop
       const { data: current } = await db.from('ai_commands').select('status').eq('id', cmd.id).single();
       if (current?.status === 'cancelled') {
         console.log(`  ⛔ [${short}] キャンセル済み`);
@@ -134,7 +136,7 @@ async function run(cmd) {
 
       if (code === 0) {
         await setStatus(cmd.id, 'done', { completed_at: new Date().toISOString() });
-        console.log(`  ✅ [${short}] 完了 (${code})`);
+        console.log(`  ✅ [${short}] 完了`);
       } else {
         await setStatus(cmd.id, 'error', {
           completed_at: new Date().toISOString(),
@@ -147,7 +149,7 @@ async function run(cmd) {
   });
 }
 
-// ── Cancellation watcher ──────────────────────────────────────────
+// ── Cancellation check ────────────────────────────────────────────
 
 async function checkCancels() {
   for (const [id, proc] of procs.entries()) {
@@ -175,7 +177,6 @@ async function tick() {
   }
 }
 
-// Realtime: instant pickup on INSERT
 db.channel('watcher')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ai_commands', filter: 'status=eq.pending' }, () => {
     console.log('\n📨 新コマンドを受信');
@@ -183,12 +184,11 @@ db.channel('watcher')
   })
   .subscribe(status => console.log(`Realtime: ${status}`));
 
-// Polling fallback
 setInterval(() => { tick(); checkCancels(); }, 3000);
 
-tick(); // initial check
+tick();
 
-console.log('\n🤖 AI司令室 Watcher 起動');
+console.log('\n🤖 AI司令室 Watcher 起動 v2');
 console.log(`   Supabase: ${SUPABASE_URL}`);
 console.log('   Ctrl+C で停止\n');
 

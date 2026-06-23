@@ -22,6 +22,16 @@ export async function GET(req: Request) {
   return NextResponse.json(data ?? []);
 }
 
+export async function DELETE(req: Request) {
+  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { searchParams } = new URL(req.url);
+  const sessionId = searchParams.get('session_id');
+  if (!sessionId) return NextResponse.json({ error: 'session_id が必要です' }, { status: 400 });
+  const service = await createServiceClient();
+  await service.from('ai_commands').delete().eq('session_id', sessionId);
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST(req: Request) {
   if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await req.json();

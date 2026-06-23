@@ -1,2 +1,3 @@
 # Claude Code agent worktrees (temporary, not for version control)
 .claude/worktrees/
+scripts/ai-watcher/.env
