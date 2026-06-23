@@ -37,7 +37,7 @@ const FEATURES = [
   { num: '08', title: 'マルチページ対応',             desc: '「トップ」「会社概要」「アクセス」など複数ページを作成可能。ナビゲーションバーも自動生成。',                                                   color: 'purple' },
 ];
 
-const PLAN_ANNUAL_PRICE: Record<string, number> = { hp: 833, lite: 4150, 'hp-bot': 4150, 'hp-bot-seo': 8166 };
+const PLAN_ANNUAL_PRICE: Record<string, number> = { hp: 833, 'hp-bot': 4150, 'hp-bot-seo': 8166 };
 
 const PLANS = [
   {
@@ -1122,7 +1122,7 @@ export default function LaruHPLandingPage() {
       {/* Pricing */}
       <section id="pricing" className="py-16 md:py-24 px-6 bg-slate-50 border-t border-gray-200">
         <div className="max-w-5xl mx-auto text-center">
-          <span className="text-blue-600 font-medium text-xs tracking-[0.2em]">料金プラン</span>
+          <span className="text-blue-600 font-medium text-xs tracking-[0.2em]">PRICING</span>
           <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">料金プラン</h2>
           <p className="text-gray-500 mb-2">全プラン 初月無料・最低6ヶ月契約。7ヶ月目からいつでも解約可。</p>
           <p className="text-gray-400 text-xs mb-8">クレジットカード決済 / Stripe安全決済</p>
@@ -1182,13 +1182,11 @@ export default function LaruHPLandingPage() {
                 </div>
                 <div className="text-gray-400 text-xs mb-1">/ 月（税別）{annualPricing ? ' · 年払い一括' : ''}</div>
                 <div className="flex gap-2 mb-6 flex-wrap">
-                  {!annualPricing && (
-                    <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-3 py-1 rounded-full self-start">
-                      初月無料
-                    </div>
-                  )}
+                  <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-3 py-1 rounded-full self-start">
+                    初月無料
+                  </div>
                   {annualPricing && saving > 0 && (
-                    <div className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full self-start">
+                    <div className="inline-flex items-center gap-1 bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold px-3 py-1 rounded-full self-start">
                       年間¥{(saving * 12).toLocaleString()}お得
                     </div>
                   )}
@@ -1307,7 +1305,7 @@ export default function LaruHPLandingPage() {
       <section id="faq" className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-3xl mx-auto">
           <div className="lp-fade-up text-center mb-12">
-            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">よくある質問</span>
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">FAQ</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 text-gray-900">よくある質問</h2>
           </div>
           <div className="space-y-2">

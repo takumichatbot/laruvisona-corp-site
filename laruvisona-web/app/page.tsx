@@ -126,7 +126,7 @@ export default function Home() {
         {/* --- Header --- */}
         <header className="fixed w-full z-50 p-4 md:p-6 transition-all duration-500">
           <div className="container mx-auto max-w-7xl flex justify-between items-center bg-[#030712]/60 backdrop-blur-xl rounded-2xl p-3 pl-5 md:pl-6 border border-white/10 shadow-2xl">
-            <a href="#" className="flex items-center group">
+            <a href="/" className="flex items-center group">
               <img src="/images/logo_dark.png" alt="LARUVisona" className="h-10 w-auto transition-transform duration-300 group-hover:scale-105" />
             </a>
             
@@ -439,7 +439,7 @@ export default function Home() {
                   <span className="bg-white/10 text-slate-300 text-xs px-3 py-1.5 rounded-full">🤝 LARUbot連携</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  <a href="/laruHP/auth/signup" className="bg-white text-black font-bold py-4 px-8 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)] inline-flex items-center justify-center gap-2">
+                  <a href="/laruHP/onboarding" className="bg-white text-black font-bold py-4 px-8 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)] inline-flex items-center justify-center gap-2">
                     🎁 無料で始める（初月無料）
                   </a>
                   <a href="/laruHP/builder" className="border border-white/20 text-slate-300 hover:text-white font-bold py-4 px-8 rounded-full hover:border-white/40 transition-all inline-flex items-center justify-center gap-2">
@@ -525,7 +525,7 @@ export default function Home() {
               <a href="/terms" className="hover:text-white transition-colors">Terms</a>
               <a href="#about" className="hover:text-white transition-colors">Company</a>
             </div>
-            <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LaruVisona All Rights Reserved.</p>
+            <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LARUVisona All Rights Reserved.</p>
           </div>
         </footer>
 
