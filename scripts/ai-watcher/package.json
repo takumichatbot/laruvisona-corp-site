@@ -1,0 +1,12 @@
+{
+  "name": "ai-watcher",
+  "version": "1.0.0",
+  "description": "AI司令室 ローカル Watcher — スマホから送ったコマンドを claude CLI で実行",
+  "main": "ai-watcher.js",
+  "scripts": {
+    "start": "node ai-watcher.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0"
+  }
+}
