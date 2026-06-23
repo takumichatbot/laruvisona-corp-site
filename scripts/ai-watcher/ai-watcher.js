@@ -9,6 +9,7 @@
  *   node ai-watcher.js
  */
 
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { spawn } = require('child_process');
 
