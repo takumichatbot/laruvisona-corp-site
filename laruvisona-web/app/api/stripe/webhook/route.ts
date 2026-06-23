@@ -48,12 +48,21 @@ export async function POST(req: Request) {
       const { data: { user: adminCheck } } = await supabase.auth.admin.getUserById(userId);
       if (adminCheck?.email === process.env.ADMIN_EMAIL) break;
 
-      const contractStart = new Date();
-      const contractEnd = new Date();
+      // Fetch subscription to get accurate period dates
+      const subId = typeof session.subscription === 'string' ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id;
+      let contractStart = new Date();
+      let contractEnd = new Date();
       contractEnd.setMonth(contractEnd.getMonth() + 6);
+      if (subId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subId) as unknown as { current_period_start: number; current_period_end: number };
+          if (sub.current_period_start) contractStart = new Date(sub.current_period_start * 1000);
+          if (sub.current_period_end) contractEnd = new Date(sub.current_period_end * 1000);
+        } catch { /* fall through to default */ }
+      }
 
       const profileUpdates: Record<string, unknown> = {
-        stripe_subscription_id: session.subscription as string,
+        stripe_subscription_id: subId ?? (session.subscription as string),
         subscription_status: 'active',
         plan: plan || 'hp',
         contract_starts_at: contractStart.toISOString(),
@@ -129,18 +138,24 @@ export async function POST(req: Request) {
 
     case 'invoice.payment_succeeded': {
       const inv = event.data.object as unknown as Record<string, unknown>;
-      const subId = (typeof inv['subscription'] === 'string' ? inv['subscription'] : (inv['subscription'] as { id?: string } | null)?.id) ?? (inv['subscription_id'] as string | null);
+      const subRaw = inv['subscription'];
+      const subId = typeof subRaw === 'string' ? subRaw : (subRaw as { id?: string } | null)?.id ?? (inv['subscription_id'] as string | null);
       if (!subId) break;
 
-      await supabase.from('profiles')
-        .update({ subscription_status: 'active' })
-        .eq('stripe_subscription_id', subId);
+      // Update contract_ends_at based on the latest invoice period_end
+      const updates: Record<string, unknown> = { subscription_status: 'active' };
+      const lines = inv['lines'] as { data?: Array<{ period?: { end?: number } }> } | undefined;
+      if (lines?.data?.[0]?.period?.end) {
+        updates.contract_ends_at = new Date(lines.data[0].period.end! * 1000).toISOString();
+      }
+      await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId);
       break;
     }
 
     case 'invoice.payment_failed': {
       const inv = event.data.object as unknown as Record<string, unknown>;
-      const subId = (typeof inv['subscription'] === 'string' ? inv['subscription'] : (inv['subscription'] as { id?: string } | null)?.id) ?? (inv['subscription_id'] as string | null);
+      const subRaw2 = inv['subscription'];
+      const subId = typeof subRaw2 === 'string' ? subRaw2 : (subRaw2 as { id?: string } | null)?.id ?? (inv['subscription_id'] as string | null);
       if (!subId) break;
 
       await supabase.from('profiles')

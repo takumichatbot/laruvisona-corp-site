@@ -345,6 +345,8 @@ export default function ContactsPage() {
       <div className="flex gap-3 px-4 sm:px-6 py-3 border-b border-white/[0.07] overflow-x-auto flex-shrink-0">
         {(Object.entries(STATUS_CONFIG) as [CrmStatus, typeof STATUS_CONFIG[CrmStatus]][]).map(([key, cfg]) => (
           <button key={key} onClick={() => setStatusFilter(statusFilter === key ? '' : key)}
+            aria-pressed={statusFilter === key}
+            aria-label={`${cfg.label}でフィルター: ${byStatus(key)}件`}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0 transition-all ${statusFilter === key ? cfg.bg + ' ' + cfg.color : 'bg-white/[0.03] border-white/[0.07] text-slate-400 hover:bg-white/[0.07]'}`}>
             <span>{cfg.label}</span>
             <span className={`font-bold ${cfg.color}`}>{byStatus(key)}</span>
@@ -496,13 +498,15 @@ export default function ContactsPage() {
           {/* Select-all header */}
           {!loading && filtered.length > 0 && (
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02]">
-              <label className="flex items-center gap-2 px-2 cursor-pointer min-h-[36px]">
+              <label htmlFor="contacts-select-all" className="flex items-center gap-2 px-2 cursor-pointer min-h-[44px]">
                 <input
+                  id="contacts-select-all"
                   type="checkbox"
                   checked={filtered.length > 0 && filtered.every(c => checkedIds.has(c.id))}
                   ref={el => { if (el) el.indeterminate = checkedIds.size > 0 && !filtered.every(c => checkedIds.has(c.id)); }}
                   onChange={e => setCheckedIds(e.target.checked ? new Set(filtered.map(c => c.id)) : new Set())}
                   className="w-4 h-4 rounded accent-sky-500 cursor-pointer flex-shrink-0"
+                  aria-label="全件選択"
                 />
                 <span className="text-[10px] text-slate-400">全選択</span>
               </label>
@@ -522,6 +526,14 @@ export default function ContactsPage() {
               <div className="p-6 text-center">
                 <div className="text-3xl mb-2">📭</div>
                 <div className="text-slate-500 text-sm">{searchQ || statusFilter ? '該当なし' : 'まだ問い合わせがありません'}</div>
+                {!searchQ && !statusFilter && !siteFilter && !typeFilter && (
+                  <div className="mt-3 space-y-1">
+                    <p className="text-xs text-slate-600">HPにお問い合わせフォームを設置しましょう</p>
+                    <a href="/laruHP/builder" className="text-xs text-sky-500 hover:text-sky-400 underline underline-offset-2">
+                      ビルダーでフォームを追加 →
+                    </a>
+                  </div>
+                )}
               </div>
             ) : (
               filtered.map(c => {

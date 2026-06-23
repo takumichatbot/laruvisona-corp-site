@@ -11,6 +11,9 @@ export async function POST(req: Request) {
   if (!contactId || !message?.trim()) {
     return NextResponse.json({ error: 'contactId and message are required' }, { status: 400 });
   }
+  if (typeof message !== 'string' || message.trim().length > 5000) {
+    return NextResponse.json({ error: 'Message must be 5000 characters or less' }, { status: 400 });
+  }
 
   const service = await createServiceClient();
 
@@ -61,7 +64,8 @@ export async function POST(req: Request) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[CRM Reply] Resend error:', error);
+    return NextResponse.json({ error: 'メールの送信に失敗しました' }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

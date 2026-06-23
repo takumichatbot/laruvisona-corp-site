@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import QRCode from 'qrcode';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -359,7 +358,8 @@ export default function PaymentsPage() {
                       />
                       <button
                         onClick={() => { navigator.clipboard.writeText(link.url); setCopiedId(link.id); setTimeout(() => setCopiedId(null), 1500); }}
-                        className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-all font-bold ${copiedId === link.id ? 'bg-green-100 border border-green-300 text-green-700' : 'bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100'}`}
+                        aria-label={copiedId === link.id ? 'コピー済み' : `${link.description}のURLをコピー`}
+                        className={`flex-shrink-0 text-xs px-3 min-h-[44px] rounded-lg transition-all font-bold ${copiedId === link.id ? 'bg-green-100 border border-green-300 text-green-700' : 'bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100'}`}
                       >
                         {copiedId === link.id ? '✓ コピー済み' : 'コピー'}
                       </button>
@@ -451,8 +451,10 @@ export default function PaymentsPage() {
               (qrCanvasRef as { current: HTMLCanvasElement | null }).current = el;
               if (el && qrLink) {
                 setQrReady(false);
-                QRCode.toCanvas(el, qrLink.url, { width: Math.min(240, window.innerWidth - 80), margin: 2, color: { dark: '#0f172a', light: '#ffffff' } })
-                  .then(() => setQrReady(true));
+                import('qrcode').then(({ default: QRCode }) => {
+                  QRCode.toCanvas(el, qrLink.url, { width: Math.min(240, window.innerWidth - 80), margin: 2, color: { dark: '#0f172a', light: '#ffffff' } })
+                    .then(() => setQrReady(true));
+                });
               }
             }}
             className={`mx-auto rounded-xl border border-gray-100 ${qrReady ? '' : 'hidden'}`}

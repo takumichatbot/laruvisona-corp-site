@@ -187,6 +187,7 @@ export default function LoyaltyPage() {
           <select
             value={selectedSiteId}
             onChange={e => setSelectedSiteId(e.target.value)}
+            aria-label="スタンプカードを表示するサイトを選択"
             className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-sky-500"
           >
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -300,7 +301,7 @@ export default function LoyaltyPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={card.stamps} aria-valuemin={0} aria-valuemax={card.max_stamps} aria-label={`${card.customer_name}のスタンプ: ${card.stamps}/${card.max_stamps}枚`}>
                           <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                         </div>
                         <span className="text-[10px] text-gray-500 flex-shrink-0">{card.stamps}/{card.max_stamps}</span>

@@ -14,10 +14,25 @@ interface ChatAnalysis {
   conversationCount: number;
 }
 
+// Per-user rate limit: 5 AI analyses per hour
+const _chatAnalysisRateMap = new Map<string, number[]>();
+function checkChatAnalysisRate(userId: string): boolean {
+  const now = Date.now();
+  const window = 3600_000;
+  const prev = (_chatAnalysisRateMap.get(userId) ?? []).filter(t => now - t < window);
+  if (prev.length >= 5) return false;
+  _chatAnalysisRateMap.set(userId, [...prev, now]);
+  return true;
+}
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  if (!checkChatAnalysisRate(user.id)) {
+    return NextResponse.json({ error: '1時間あたりの分析上限（5回）に達しました' }, { status: 429 });
+  }
 
   const { siteId } = await req.json() as { siteId: string };
   if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });

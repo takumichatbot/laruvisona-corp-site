@@ -143,10 +143,17 @@ export default function Home() {
               </a>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden text-white w-12 h-12 flex items-center justify-center bg-white/15 rounded-xl border border-white/30 z-[60] hover:bg-white/25 transition-all active:scale-95"
+                className={`md:hidden flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-xl border z-[60] transition-all active:scale-95 ${isMenuOpen ? 'bg-white/25 border-white/50' : 'bg-white/15 border-white/30 hover:bg-white/25'}`}
                 aria-label={isMenuOpen ? 'メニューを閉じる' : 'メニューを開く'}
               >
-                <i className={`fas fa-bars text-xl transition-all ${isMenuOpen ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}></i>
+                <div className="relative w-5 h-4 flex flex-col justify-between" aria-hidden="true">
+                  <span className={`block h-[2px] rounded-full bg-white transition-all duration-300 origin-center ${isMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`} style={{ width: '100%' }} />
+                  <span className={`block h-[2px] rounded-full bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0 scale-x-0' : ''}`} style={{ width: '100%' }} />
+                  <span className={`block h-[2px] rounded-full bg-white transition-all duration-300 origin-center ${isMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} style={{ width: isMenuOpen ? '100%' : '70%' }} />
+                </div>
+                <span className="text-[9px] font-bold tracking-widest leading-none text-white/90">
+                  {isMenuOpen ? 'CLOSE' : 'MENU'}
+                </span>
               </button>
             </div>
           </div>

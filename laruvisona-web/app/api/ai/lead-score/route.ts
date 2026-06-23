@@ -11,11 +11,26 @@ interface LeadScore {
   estimatedValue?: number;
 }
 
+// Per-user rate limit: 5 lead-score requests per hour
+const _leadScoreRateMap = new Map<string, number[]>();
+function checkLeadScoreRate(userId: string): boolean {
+  const now = Date.now();
+  const window = 3600_000;
+  const prev = (_leadScoreRateMap.get(userId) ?? []).filter(t => now - t < window);
+  if (prev.length >= 5) return false;
+  _leadScoreRateMap.set(userId, [...prev, now]);
+  return true;
+}
+
 // POST /api/ai/lead-score — score recent conversations for buying intent
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  if (!checkLeadScoreRate(user.id)) {
+    return NextResponse.json({ error: '1時間あたりのスコアリング上限（5回）に達しました' }, { status: 429 });
+  }
 
   const { siteId } = await req.json() as { siteId: string };
   if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });

@@ -101,10 +101,13 @@ export default function LarubotLogsPage() {
   }>>([]);
   const [leadLoading, setLeadLoading] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
+  const [leadError, setLeadError] = useState('');
+  const [analysisError, setAnalysisError] = useState('');
 
   const handleLeadScore = async () => {
     if (!selectedSiteId) return;
     setLeadLoading(true);
+    setLeadError('');
     setShowLeads(true);
     try {
       const res = await fetch('/api/ai/lead-score', {
@@ -112,15 +115,17 @@ export default function LarubotLogsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteId: selectedSiteId }),
       });
-      const d = await res.json() as { scores?: typeof leadScores };
-      setLeadScores(d.scores || []);
-    } catch { setLeadScores([]); }
+      const d = await res.json() as { scores?: typeof leadScores; error?: string };
+      if (!res.ok) { setLeadError(d.error || 'スコアリングに失敗しました'); setLeadScores([]); }
+      else setLeadScores(d.scores || []);
+    } catch { setLeadError('通信エラーが発生しました'); setLeadScores([]); }
     setLeadLoading(false);
   };
 
   const handleAnalyze = async () => {
     if (!selectedSiteId) return;
     setAnalysisLoading(true);
+    setAnalysisError('');
     setShowAnalysis(true);
     try {
       const res = await fetch('/api/ai/chat-analysis', {
@@ -128,9 +133,10 @@ export default function LarubotLogsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteId: selectedSiteId }),
       });
-      const d = await res.json();
-      setAnalysis(d.analysis ?? null);
-    } catch { setAnalysis(null); }
+      const d = await res.json() as { analysis?: typeof analysis; error?: string };
+      if (!res.ok) { setAnalysisError(d.error || 'AI分析に失敗しました'); setAnalysis(null); }
+      else setAnalysis(d.analysis ?? null);
+    } catch { setAnalysisError('通信エラーが発生しました'); setAnalysis(null); }
     setAnalysisLoading(false);
   };
 
@@ -203,6 +209,8 @@ export default function LarubotLogsPage() {
                 </h3>
                 {analysisLoading ? (
                   <div className="text-sm text-gray-400 text-center py-8">AIが会話を分析中...</div>
+                ) : analysisError ? (
+                  <div className="text-sm text-red-500 text-center py-4">{analysisError}</div>
                 ) : analysis ? (
                   <div className="space-y-5">
                     <div className="text-xs text-gray-500 bg-purple-50 rounded-lg px-3 py-2">{analysis.summary}</div>
@@ -270,6 +278,8 @@ export default function LarubotLogsPage() {
                 </h3>
                 {leadLoading ? (
                   <div className="text-sm text-gray-400 text-center py-8">AIがリードを分析中...</div>
+                ) : leadError ? (
+                  <div className="text-sm text-red-500 text-center py-4">{leadError}</div>
                 ) : leadScores.length === 0 ? (
                   <div className="text-sm text-gray-400 text-center py-4">スコアリング対象の会話がありません</div>
                 ) : (

@@ -195,13 +195,13 @@ export default function BookingPage() {
               <div className="text-sm font-semibold mb-3 text-white">新しい予約枠</div>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">日付</label>
-                  <input type="date" value={newSlot.date} onChange={e => setNewSlot(v => ({ ...v, date: e.target.value }))}
+                  <label htmlFor="slot-date" className="text-slate-400 text-xs block mb-1">日付</label>
+                  <input id="slot-date" type="date" value={newSlot.date} onChange={e => setNewSlot(v => ({ ...v, date: e.target.value }))}
                     className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">時刻</label>
-                  <input type="time" value={newSlot.time} onChange={e => setNewSlot(v => ({ ...v, time: e.target.value }))}
+                  <label htmlFor="slot-time" className="text-slate-400 text-xs block mb-1">時刻</label>
+                  <input id="slot-time" type="time" value={newSlot.time} onChange={e => setNewSlot(v => ({ ...v, time: e.target.value }))}
                     className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
                 </div>
                 <div>
@@ -265,7 +265,7 @@ export default function BookingPage() {
                       </button>
                     )}
                     {!taken && (
-                      <button onClick={() => deleteSlot(slot.id)} className="text-red-400/60 hover:text-red-400 text-xs px-2 transition-all">✕</button>
+                      <button onClick={() => deleteSlot(slot.id)} aria-label={`${slot.datetime} の枠を削除`} className="text-red-400/60 hover:text-red-400 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all">✕</button>
                     )}
                     {taken && <span className="text-xs text-blue-400 font-bold bg-blue-900/30 px-2.5 py-1 rounded-lg border border-blue-500/30">予約済</span>}
                   </div>
@@ -383,6 +383,13 @@ function BulkAddButton({ onAdd }: { onAdd: (s: string, e: string, t: string[], d
     startDate: '', endDate: '', times: '09:00,10:00,11:00,14:00,15:00,16:00',
     duration: 60, label: '相談・カウンセリング', excludeWeekends: true,
   });
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open]);
 
   const handleAdd = () => {
     if (!form.startDate || !form.endDate) return;

@@ -244,23 +244,19 @@ export default function LaruHPLandingPage() {
             </Link>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden text-gray-700 w-10 h-10 flex items-center justify-center bg-sky-50 rounded-xl border border-sky-200"
+              className={`md:hidden flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-xl border transition-all active:scale-95 ${isMenuOpen ? 'bg-sky-600 border-sky-500 text-white' : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'}`}
               aria-label={isMenuOpen ? 'メニューを閉じる' : 'メニューを開く'}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-nav"
             >
-              {isMenuOpen ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              ) : (
-                <svg width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
-                  <line x1="0" y1="1" x2="18" y2="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="0" y1="6" x2="18" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="0" y1="11" x2="14" y2="11" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              )}
+              <div className="relative w-5 h-4 flex flex-col justify-between" aria-hidden="true">
+                <span className={`block h-[2px] rounded-full bg-current transition-all duration-300 origin-center ${isMenuOpen ? 'rotate-45 translate-y-[7px]' : ''}`} style={{ width: '100%' }} />
+                <span className={`block h-[2px] rounded-full bg-current transition-all duration-300 ${isMenuOpen ? 'opacity-0 scale-x-0' : ''}`} style={{ width: '100%' }} />
+                <span className={`block h-[2px] rounded-full bg-current transition-all duration-300 origin-center ${isMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} style={{ width: isMenuOpen ? '100%' : '70%' }} />
+              </div>
+              <span className="text-[9px] font-bold tracking-widest leading-none">
+                {isMenuOpen ? 'CLOSE' : 'MENU'}
+              </span>
             </button>
           </div>
         </div>
