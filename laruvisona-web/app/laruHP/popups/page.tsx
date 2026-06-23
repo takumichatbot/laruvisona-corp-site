@@ -233,28 +233,37 @@ export default function PopupsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
-                    {form.trigger === 'timer' ? '表示まで（秒）' : form.trigger === 'scroll' ? 'スクロール率（%）' : '設定なし'}
+                  <label htmlFor="popup-triggerValue" className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                    {form.trigger === 'timer' ? '表示まで' : form.trigger === 'scroll' ? 'スクロール率' : '設定なし'}
+                    {form.trigger === 'exit' && <span className="ml-1 text-[10px] text-sky-600 font-normal">※ PC専用。モバイルは非対応</span>}
                   </label>
-                  <input
-                    type="number"
-                    value={form.triggerValue}
-                    onChange={e => {
-                      const v = parseInt(e.target.value) || 0;
-                      setForm(f => ({ ...f, triggerValue: v }));
-                      if (form.trigger === 'scroll') {
-                        setTriggerInlineError(v < 1 || v > 100 ? 'スクロール率は1〜100%で入力してください' : '');
-                      } else if (form.trigger === 'timer') {
-                        setTriggerInlineError(v < 1 || v > 120 ? 'タイマーは1〜120秒で入力してください' : '');
-                      } else {
-                        setTriggerInlineError('');
-                      }
-                    }}
-                    min={form.trigger === 'exit' ? 0 : 1}
-                    max={form.trigger === 'scroll' ? 100 : form.trigger === 'timer' ? 120 : undefined}
-                    disabled={form.trigger === 'exit'}
-                    className={inputCls + ' disabled:opacity-40 disabled:bg-gray-100 disabled:cursor-not-allowed' + (triggerInlineError ? ' border-red-400' : '')}
-                  />
+                  <div className="relative">
+                    <input
+                      id="popup-triggerValue"
+                      type="number"
+                      value={form.triggerValue}
+                      onChange={e => {
+                        const v = parseInt(e.target.value) || 0;
+                        setForm(f => ({ ...f, triggerValue: v }));
+                        if (form.trigger === 'scroll') {
+                          setTriggerInlineError(v < 1 || v > 100 ? 'スクロール率は1〜100%で入力してください' : '');
+                        } else if (form.trigger === 'timer') {
+                          setTriggerInlineError(v < 1 || v > 120 ? 'タイマーは1〜120秒で入力してください' : '');
+                        } else {
+                          setTriggerInlineError('');
+                        }
+                      }}
+                      min={form.trigger === 'exit' ? 0 : 1}
+                      max={form.trigger === 'scroll' ? 100 : form.trigger === 'timer' ? 120 : undefined}
+                      disabled={form.trigger === 'exit'}
+                      className={inputCls + ' pr-10 disabled:opacity-40 disabled:bg-gray-100 disabled:cursor-not-allowed' + (triggerInlineError ? ' border-red-400' : '')}
+                    />
+                    {form.trigger !== 'exit' && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold pointer-events-none">
+                        {form.trigger === 'scroll' ? '%' : form.trigger === 'timer' ? '秒' : ''}
+                      </span>
+                    )}
+                  </div>
                   {triggerInlineError && (
                     <p className="text-[10px] text-red-500 mt-1">{triggerInlineError}</p>
                   )}
@@ -304,16 +313,16 @@ export default function PopupsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">背景色</label>
+                  <label htmlFor="popup-bgColor" className="text-xs font-semibold text-gray-600 mb-1.5 block">背景色</label>
                   <div className="flex gap-2 items-center">
-                    <input type="color" value={form.bgColor} onChange={e => setForm(f => ({ ...f, bgColor: e.target.value }))} className="h-10 w-16 rounded-lg border border-gray-200 cursor-pointer" />
+                    <input id="popup-bgColor" type="color" value={form.bgColor} onChange={e => setForm(f => ({ ...f, bgColor: e.target.value }))} className="h-10 w-16 rounded-lg border border-gray-200 cursor-pointer" aria-label="背景色を選択" />
                     <span className="text-xs text-gray-500 font-mono">{form.bgColor}</span>
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">テキスト色</label>
+                  <label htmlFor="popup-textColor" className="text-xs font-semibold text-gray-600 mb-1.5 block">テキスト色</label>
                   <div className="flex gap-2 items-center">
-                    <input type="color" value={form.textColor} onChange={e => setForm(f => ({ ...f, textColor: e.target.value }))} className="h-10 w-16 rounded-lg border border-gray-200 cursor-pointer" />
+                    <input id="popup-textColor" type="color" value={form.textColor} onChange={e => setForm(f => ({ ...f, textColor: e.target.value }))} className="h-10 w-16 rounded-lg border border-gray-200 cursor-pointer" aria-label="テキスト色を選択" />
                     <span className="text-xs text-gray-500 font-mono">{form.textColor}</span>
                   </div>
                 </div>

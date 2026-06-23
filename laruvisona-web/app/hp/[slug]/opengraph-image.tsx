@@ -37,10 +37,19 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const siteName = data?.name || slug;
   const seo = (data?.seo_json ?? {}) as { title?: string; description?: string };
   const description = seo.description || '';
+  const primaryColor = (data?.settings_json as { primaryColor?: string } | null)?.primaryColor;
 
-  // Deterministic gradient from slug
-  const gradientIndex = slug.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % GRADIENTS.length;
-  const [topColor, bottomColor, accentColor] = GRADIENTS[gradientIndex];
+  // Use site's primaryColor if available, otherwise fall back to deterministic gradient
+  let topColor: string, bottomColor: string, accentColor: string;
+  if (primaryColor) {
+    // Derive dark bg from primaryColor; use it as accent directly
+    topColor = '#0c1a2e';
+    bottomColor = '#1a2a40';
+    accentColor = primaryColor;
+  } else {
+    const gradientIndex = slug.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % GRADIENTS.length;
+    [topColor, bottomColor, accentColor] = GRADIENTS[gradientIndex];
+  }
 
   return new ImageResponse(
     (

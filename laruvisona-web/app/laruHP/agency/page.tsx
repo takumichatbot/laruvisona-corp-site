@@ -211,6 +211,7 @@ export default function AgencyPage() {
           <div className="flex items-center gap-2">
             <span className="text-slate-500 text-xs">並び替え:</span>
             <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}
+              aria-label="並び替え方法を選択"
               className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-xs text-white outline-none">
               <option value="updated">最終更新</option>
               <option value="name">クライアント名</option>
@@ -328,6 +329,8 @@ export default function AgencyPage() {
                 <button
                   key={p.id}
                   onClick={() => setLarubotPlan(p.id)}
+                  aria-pressed={larubotPlan === p.id}
+                  aria-label={`${p.label}: ${p.desc}`}
                   className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3 transition-all text-left ${larubotPlan === p.id ? p.color + ' border-opacity-100' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
                 >
                   <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${larubotPlan === p.id ? 'border-current' : 'border-slate-600'}`}>

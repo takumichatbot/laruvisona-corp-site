@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
@@ -20,10 +20,17 @@ interface Contact {
 
 interface Site { id: string; name: string }
 
+const STATUS_ICONS: Record<CRMStatus, React.ReactNode> = {
+  '未対応': <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>,
+  '対応中': <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-9.82"/></svg>,
+  '成約': <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  'NG': <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+};
+
 const COLUMNS: { id: CRMStatus; label: string; color: string; bg: string }[] = [
   { id: '未対応', label: '未対応', color: 'text-gray-700 bg-gray-50 border border-gray-200', bg: 'bg-gray-50' },
   { id: '対応中', label: '対応中', color: 'text-amber-700 bg-amber-50 border border-amber-200', bg: 'bg-amber-50/40' },
-  { id: '成約', label: '成約 🎉', color: 'text-green-700 bg-green-50 border border-green-200', bg: 'bg-green-50/40' },
+  { id: '成約', label: '成約', color: 'text-green-700 bg-green-50 border border-green-200', bg: 'bg-green-50/40' },
   { id: 'NG', label: 'NG', color: 'text-red-700 bg-red-50 border border-red-200', bg: 'bg-red-50/30' },
 ];
 
@@ -53,7 +60,11 @@ function getStatus(c: Contact): CRMStatus {
 
 function statusBadge(status: CRMStatus) {
   const col = COLUMNS.find(c => c.id === status)!;
-  return <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${col.color}`}>{col.label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold ${col.color}`}>
+      {STATUS_ICONS[status]}{col.label}
+    </span>
+  );
 }
 
 export default function CRMPage() {
@@ -120,12 +131,43 @@ export default function CRMPage() {
   const [sendingContractEmail, setSendingContractEmail] = useState(false);
   const [contractEmailMsg, setContractEmailMsg] = useState('');
 
-  const updateStatus = async (contactId: string, status: CRMStatus) => {
+  // 成約確認モーダル
+  const [pendingContractId, setPendingContractId] = useState<{ id: string; prevStatus: CRMStatus } | null>(null);
+
+  // Kanbanドラッグ undo toast
+  const [undoInfo, setUndoInfo] = useState<{ contactId: string; prevStatus: CRMStatus; name: string } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const applyStatusChange = async (contactId: string, status: CRMStatus) => {
     await updateExtra(contactId, { crm_status: status });
     if (status === '成約') {
       const c = contacts.find(x => x.id === contactId);
       if (c) setContractEmail(c);
     }
+  };
+
+  const updateStatus = (contactId: string, status: CRMStatus, prevStatus?: CRMStatus) => {
+    if (status === '成約') {
+      const prev = prevStatus ?? (getStatus(contacts.find(x => x.id === contactId)!) as CRMStatus);
+      setPendingContractId({ id: contactId, prevStatus: prev });
+      return;
+    }
+    void applyStatusChange(contactId, status);
+  };
+
+  const handleDragDrop = (contactId: string, newStatus: CRMStatus) => {
+    const c = contacts.find(x => x.id === contactId);
+    if (!c) return;
+    const prev = getStatus(c) as CRMStatus;
+    if (prev === newStatus) return;
+    if (newStatus === '成約') {
+      setPendingContractId({ id: contactId, prevStatus: prev });
+      return;
+    }
+    void applyStatusChange(contactId, newStatus);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoInfo({ contactId, prevStatus: prev, name: c.name });
+    undoTimer.current = setTimeout(() => setUndoInfo(null), 6000);
   };
 
   const applyBulkStatus = async () => {
@@ -196,6 +238,31 @@ export default function CRMPage() {
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
+      {/* 成約確認モーダル */}
+      {pendingContractId && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <div className="text-2xl mb-2">🤝</div>
+            <h2 className="font-bold text-gray-900 mb-2">成約にしますか？</h2>
+            <p className="text-sm text-gray-500 mb-5">ステータスを「成約」に変更します。後からでも変更できます。</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const { id } = pendingContractId;
+                  setPendingContractId(null);
+                  void applyStatusChange(id, '成約');
+                }}
+                className="flex-1 bg-green-600 hover:bg-green-500 text-white text-sm font-bold py-2.5 rounded-xl transition-all"
+              >
+                成約にする
+              </button>
+              <button onClick={() => setPendingContractId(null)} className="flex-1 border border-gray-200 text-gray-600 hover:text-gray-900 text-sm py-2.5 rounded-xl transition-all">
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 成約時お礼メール送信モーダル */}
       {contractEmail && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -269,6 +336,23 @@ export default function CRMPage() {
         </div>
       </div>
 
+      {/* Undo toast */}
+      {undoInfo && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-3 bg-gray-900 text-white text-sm px-4 py-3 rounded-xl shadow-xl">
+          <span>{undoInfo.name} のステータスを変更しました</span>
+          <button
+            onClick={() => {
+              if (undoTimer.current) clearTimeout(undoTimer.current);
+              void applyStatusChange(undoInfo.contactId, undoInfo.prevStatus);
+              setUndoInfo(null);
+            }}
+            className="font-bold text-sky-400 hover:text-sky-300 underline underline-offset-2"
+          >
+            元に戻す
+          </button>
+          <button onClick={() => { if (undoTimer.current) clearTimeout(undoTimer.current); setUndoInfo(null); }} className="text-gray-400 hover:text-white ml-1">✕</button>
+        </div>
+      )}
       {/* Stats strip */}
       <div className="max-w-screen-xl mx-auto px-4 pt-4 pb-0">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -341,7 +425,7 @@ export default function CRMPage() {
                   e.preventDefault();
                   setDragOverCol(null);
                   const contactId = e.dataTransfer.getData('contactId');
-                  if (contactId) updateStatus(contactId, col.id);
+                  if (contactId) handleDragDrop(contactId, col.id);
                 }}
               >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white rounded-t-xl">

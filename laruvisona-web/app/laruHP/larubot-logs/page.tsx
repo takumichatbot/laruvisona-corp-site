@@ -174,6 +174,8 @@ export default function LarubotLogsPage() {
                 <button
                   onClick={handleAnalyze}
                   disabled={analysisLoading}
+                  aria-busy={analysisLoading}
+                  aria-label={analysisLoading ? 'AI分析中' : 'AI分析（FAQ・課題抽出）'}
                   className="flex items-center gap-2 text-xs bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl transition-all"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
@@ -182,6 +184,8 @@ export default function LarubotLogsPage() {
                 <button
                   onClick={handleLeadScore}
                   disabled={leadLoading}
+                  aria-busy={leadLoading}
+                  aria-label={leadLoading ? 'スコアリング中' : 'リードスコア分析'}
                   className="flex items-center gap-2 text-xs bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl transition-all"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -330,6 +334,9 @@ export default function LarubotLogsPage() {
                   <div key={conv.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                     <button
                       onClick={() => setExpanded(expanded === conv.id ? null : conv.id)}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(expanded === conv.id ? null : conv.id); } }}
+                      aria-expanded={expanded === conv.id}
+                      aria-label={`会話を${expanded === conv.id ? '閉じる' : '開く'}: ${conv.summary || firstUserMessage(conv.messages)}`}
                       className="w-full flex items-center gap-4 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors"
                     >
                       <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 text-[9px] font-bold text-indigo-600">

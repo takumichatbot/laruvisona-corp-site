@@ -154,6 +154,10 @@ export default async function PublishedSitePage({ params }: Props) {
   const hasActivePopup = (settings.popups || []).some(p => p.enabled);
 
   const seo = (site.seo_json ?? {}) as { description?: string };
+
+  // Ensure the first <img> in the page is eager-loaded (improves LCP)
+  const eagerHtml = site.published_html.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
+
   const hasBusinessInfo = !!settings.businessInfo;
   const jsonLdStr = hasBusinessInfo
     ? buildJsonLd(site.name, slug, seo, settings.businessInfo!)
@@ -162,7 +166,7 @@ export default async function PublishedSitePage({ params }: Props) {
   return (
     <>
       <div
-        dangerouslySetInnerHTML={{ __html: site.published_html }}
+        dangerouslySetInnerHTML={{ __html: eagerHtml }}
         style={{ minHeight: '100vh' }}
       />
       {jsonLdStr && (

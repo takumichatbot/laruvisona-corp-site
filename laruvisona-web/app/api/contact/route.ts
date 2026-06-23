@@ -247,7 +247,7 @@ export async function POST(req: Request) {
       replyTo: email,
       subject,
       html,
-    }),
+    }).catch(err => { console.error('[Contact] owner email failed:', err); }),
     resend.emails.send({
       from: `${site.name} <noreply@laruvisona.jp>`,
       to: email,
@@ -255,7 +255,7 @@ export async function POST(req: Request) {
         ? `【受付完了】ご予約リクエストを承りました — ${site.name}`
         : `【受付完了】お問い合わせを承りました — ${site.name}`,
       html: autoReplyHtml,
-    }),
+    }).catch(err => { console.error('[Contact] auto-reply email failed:', err); }),
     ...(lineToken ? [
       fetch('https://notify-api.line.me/api/notify', {
         method: 'POST',

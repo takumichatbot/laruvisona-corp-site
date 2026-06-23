@@ -3704,7 +3704,8 @@ function BuilderContent() {
 
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState<string | false>(false);
+  const [deletePageConfirmId, setDeletePageConfirmId] = useState<string | null>(null);
   const [deletedBlockUndo, setDeletedBlockUndo] = useState<{ block: Block; pageId: string; index: number } | null>(null);
   const deletedBlockUndoTimer = useState<ReturnType<typeof setTimeout> | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -3858,7 +3859,7 @@ function BuilderContent() {
   }, [isDirty]);
 
   const pushHistory = useCallback((snapshot: SiteData) => {
-    undoStack.current = [...undoStack.current, JSON.parse(JSON.stringify(snapshot))].slice(-50);
+    undoStack.current = [...undoStack.current, structuredClone(snapshot)].slice(-50);
     redoStack.current = [];
     setCanUndo(true);
     setCanRedo(false);
@@ -3867,7 +3868,7 @@ function BuilderContent() {
   const undo = useCallback(() => {
     if (!undoStack.current.length) return;
     const past = undoStack.current.pop()!;
-    redoStack.current.push(JSON.parse(JSON.stringify(siteRef.current)));
+    redoStack.current.push(structuredClone(siteRef.current));
     setSite(past);
     setCanUndo(undoStack.current.length > 0);
     setCanRedo(true);
@@ -3876,7 +3877,7 @@ function BuilderContent() {
   const redo = useCallback(() => {
     if (!redoStack.current.length) return;
     const next = redoStack.current.pop()!;
-    undoStack.current.push(JSON.parse(JSON.stringify(siteRef.current)));
+    undoStack.current.push(structuredClone(siteRef.current));
     setSite(next);
     setCanUndo(true);
     setCanRedo(redoStack.current.length > 0);
@@ -3884,11 +3885,11 @@ function BuilderContent() {
 
   const handleUrlImport = useCallback((extracted: Record<string, unknown>) => {
     setSite(prev => {
-      const updated = JSON.parse(JSON.stringify(prev));
+      const updated = structuredClone(prev);
       if (extracted.businessName) updated.siteName = extracted.businessName as string;
-      const firstPage = updated.pages[updated.currentPageIndex ?? 0];
+      const firstPage = updated.pages[0];
       if (firstPage) {
-        firstPage.blocks = firstPage.blocks.map((b: { type: string; data: Record<string, unknown> }) => {
+        firstPage.blocks = firstPage.blocks.map((b) => {
           if (b.type === 'hero') {
             return {
               ...b, data: {
@@ -3986,7 +3987,7 @@ function BuilderContent() {
         if (tag2 !== 'INPUT' && tag2 !== 'TEXTAREA' && !editable2) {
           const block = currentPage?.blocks.find(b => b.id === selectedId);
           if (block) {
-            setCopiedBlock(JSON.parse(JSON.stringify(block)));
+            setCopiedBlock(structuredClone(block));
             setCopyToast(true);
             setTimeout(() => setCopyToast(false), 1500);
           }
@@ -4000,7 +4001,7 @@ function BuilderContent() {
         if (tag3 !== 'INPUT' && tag3 !== 'TEXTAREA' && !editable3) {
           e.preventDefault();
           pushHistory(siteRef.current);
-          const newBlock: Block = { ...JSON.parse(JSON.stringify(copiedBlock)), id: crypto.randomUUID() };
+          const newBlock: Block = { ...structuredClone(copiedBlock), id: crypto.randomUUID() };
           setSite(prev => ({
             ...prev,
             pages: prev.pages.map(p => {
@@ -4566,7 +4567,7 @@ function BuilderContent() {
 
   const handleSave = async () => {
     setSaving(true);
-    setSaveError(false);
+    setSaveError(false as string | false);
     const payload = {
       name: site.siteName,
       blocks_json: { v: 2, pages: site.pages },
@@ -4580,14 +4581,14 @@ function BuilderContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error('save failed');
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `保存エラー (${res.status})`); }
       } else {
         const res = await fetch('/api/sites', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...payload, industry: onboardingData?.industry }),
         });
-        if (!res.ok) throw new Error('save failed');
+        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `保存エラー (${res.status})`); }
         const { site: s } = await res.json();
         if (s?.id) setDbSiteId(s.id);
       }
@@ -4596,8 +4597,8 @@ function BuilderContent() {
       setSaved(true);
       setLastSavedAt(new Date());
       setTimeout(() => setSaved(false), 2000);
-    } catch {
-      setSaveError(true);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : '保存に失敗しました');
     }
     setSaving(false);
   };
@@ -4913,7 +4914,7 @@ function BuilderContent() {
               style={{ top: contextMenu.y, left: contextMenu.x }}
             >
               <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
-                if (block) { setCopiedBlock(JSON.parse(JSON.stringify(block))); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }
+                if (block) { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }
                 setContextMenu(null);
               }}>📋 コピー</button>
               <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
@@ -5098,12 +5099,28 @@ function BuilderContent() {
                   ⧉
                 </button>
                 {site.pages.length > 1 && (
-                  <button
-                    onClick={() => deletePage(page.id)}
-                    className="opacity-0 group-hover/tab:opacity-100 text-slate-600 hover:text-red-400 w-4 h-4 text-[11px] flex items-center justify-center transition-all ml-0.5"
-                  >
-                    ×
-                  </button>
+                  deletePageConfirmId === page.id ? (
+                    <div className="flex items-center gap-0.5 ml-0.5">
+                      <button
+                        onClick={() => { deletePage(page.id); setDeletePageConfirmId(null); }}
+                        className="text-red-400 hover:text-red-300 text-[10px] font-bold px-1 leading-none"
+                        title="削除を確定"
+                      >削除</button>
+                      <button
+                        onClick={() => setDeletePageConfirmId(null)}
+                        className="text-slate-500 hover:text-slate-300 text-[10px] px-1 leading-none"
+                        title="キャンセル"
+                      >取消</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setDeletePageConfirmId(page.id)}
+                      className="opacity-0 group-hover/tab:opacity-100 text-slate-600 hover:text-red-400 w-4 h-4 text-[11px] flex items-center justify-center transition-all ml-0.5"
+                      aria-label={`${page.name}ページを削除`}
+                    >
+                      ×
+                    </button>
+                  )
                 )}
               </div>
             ))}
@@ -5228,7 +5245,7 @@ function BuilderContent() {
             </button>
           )}
           {saveError && (
-            <span className="text-red-400 text-[10px] font-bold flex-shrink-0">⚠ 保存失敗</span>
+            <span className="text-red-400 text-[10px] font-bold flex-shrink-0" title={typeof saveError === 'string' ? saveError : undefined}>⚠ {typeof saveError === 'string' ? saveError : '保存失敗'}</span>
           )}
           {lastSavedAt && !isDirty && !saved && !saveError && (
             <span className="hidden sm:flex items-center gap-1 text-slate-600 text-[10px] whitespace-nowrap">
@@ -5568,7 +5585,7 @@ function BuilderContent() {
                         className="w-6 h-6 bg-blue-500 text-white rounded text-xs flex items-center justify-center disabled:opacity-30 hover:bg-blue-600">↓</button>
                       <button onClick={() => duplicateBlock(block.id)}
                         className="w-6 h-6 bg-slate-600 text-white rounded text-xs flex items-center justify-center hover:bg-slate-500" title="複製">⧉</button>
-                      <button onClick={() => { setCopiedBlock(JSON.parse(JSON.stringify(block))); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }}
+                      <button onClick={() => { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }}
                         className="w-6 h-6 bg-slate-700 text-white rounded text-xs flex items-center justify-center hover:bg-slate-600" title="コピー (Ctrl+C)">📋</button>
                       <button onClick={() => deleteBlock(block.id)}
                         className="w-6 h-6 bg-red-500 text-white rounded text-xs flex items-center justify-center hover:bg-red-600">✕</button>

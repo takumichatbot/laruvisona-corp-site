@@ -438,9 +438,9 @@ export default function SettingsPage() {
           <h2 className="font-bold text-sm mb-1 text-gray-900">パスワードの変更</h2>
           <p className="text-gray-500 text-xs mb-5">8文字以上で設定してください。</p>
           <form onSubmit={handlePasswordChange} className="space-y-3">
-            <input type="password" placeholder="現在のパスワード（確認用）" value={currentPw} onChange={e => setCurrentPw(e.target.value)} className={inputCls} />
+            <input type="password" autoComplete="current-password" placeholder="現在のパスワード（確認用）" value={currentPw} onChange={e => setCurrentPw(e.target.value)} className={inputCls} />
             <div>
-              <input type="password" placeholder="新しいパスワード（8文字以上）" value={newPw} onChange={e => setNewPw(e.target.value)} className={inputCls} required />
+              <input type="password" autoComplete="new-password" placeholder="新しいパスワード（8文字以上）" value={newPw} onChange={e => setNewPw(e.target.value)} className={inputCls} required />
               {newPw && (
                 <div className="mt-1.5 flex items-center gap-2">
                   <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden flex gap-0.5">
@@ -454,7 +454,7 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
-            <input type="password" placeholder="新しいパスワード（確認）" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className={inputCls} required />
+            <input type="password" autoComplete="new-password" placeholder="新しいパスワード（確認）" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className={inputCls} required />
             {pwMsg && <p className={`text-xs ${pwMsg.startsWith('エラー') || pwMsg.includes('一致') || pwMsg.includes('文字') ? 'text-red-600' : 'text-emerald-700'}`}>{pwMsg}</p>}
             <button type="submit" disabled={pwLoading} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">
               {pwLoading ? '変更中...' : 'パスワードを変更'}
@@ -761,6 +761,7 @@ export default function SettingsPage() {
                 <label className="text-xs font-semibold text-gray-600 mb-1.5 block">アクセストークン</label>
                 <input
                   type="password"
+                  autoComplete="off"
                   value={igToken}
                   onChange={e => setIgToken(e.target.value)}
                   placeholder="Instagram Graph API アクセストークン"
