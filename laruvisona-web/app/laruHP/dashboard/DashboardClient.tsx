@@ -328,7 +328,8 @@ export default function DashboardPage() {
         const contactsLastWeek = loadedContacts.filter((c: { created_at?: string }) => c.created_at && new Date(c.created_at).getTime() > twoWeeksAgo && new Date(c.created_at).getTime() <= weekAgo).length;
         const allDays: DayView[] = (Object.values(analyticsData.data || {}) as DayView[][]).flat();
         const pvThisWeek = allDays.filter(d => new Date(d.date).getTime() > weekAgo).reduce((s, d) => s + d.views, 0);
-        setWeekSummary({ pvThisWeek, pvLastWeek: 0, contactsThisWeek, contactsLastWeek });
+        const pvLastWeek = allDays.filter(d => { const t = new Date(d.date).getTime(); return t > twoWeeksAgo && t <= weekAgo; }).reduce((s, d) => s + d.views, 0);
+        setWeekSummary({ pvThisWeek, pvLastWeek, contactsThisWeek, contactsLastWeek });
       }
       setLoading(false);
     })();

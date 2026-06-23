@@ -160,12 +160,12 @@ function SignupForm() {
               />
             </div>
             <p className="text-gray-500 text-xs">
-              登録することで<a href="#" className="text-sky-600 hover:text-sky-500">利用規約</a>・<a href="#" className="text-sky-600 hover:text-sky-500">プライバシーポリシー</a>に同意したものとみなします
+              登録することで<a href="/laruHP/terms" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:text-sky-500">利用規約</a>・<a href="/laruHP/privacy" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:text-sky-500">プライバシーポリシー</a>に同意したものとみなします
             </p>
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50"
+              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '処理中...' : 'アカウントを作成する →'}
             </button>

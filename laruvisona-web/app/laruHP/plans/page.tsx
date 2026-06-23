@@ -183,8 +183,10 @@ export default function PlansPage() {
             <div className="p-4 text-center border-t border-l border-r border-gray-200 bg-white rounded-tl-2xl rounded-tr-none">
               <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP単体</div>
-              <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.hp.toLocaleString()}</div>
+              <div className="flex items-baseline justify-center gap-0.5 mb-1">
+                <span className="text-gray-500 text-xs">¥</span>
+                <span className="text-3xl font-bold leading-none text-gray-900">{P.hp.toLocaleString()}</span>
+              </div>
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hp.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
@@ -203,8 +205,10 @@ export default function PlansPage() {
             <div className="p-4 text-center border-t border-l border-r border-gray-200 bg-white relative">
               <div className="text-xs font-medium text-indigo-500 tracking-widest uppercase mb-2">lite</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP + Bot Lite</div>
-              <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.lite.toLocaleString()}</div>
+              <div className="flex items-baseline justify-center gap-0.5 mb-1">
+                <span className="text-gray-500 text-xs">¥</span>
+                <span className="text-3xl font-bold leading-none text-gray-900">{P.lite.toLocaleString()}</span>
+              </div>
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.lite.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
@@ -228,8 +232,10 @@ export default function PlansPage() {
               </div>
               <div className="text-xs font-medium text-sky-600 tracking-widest uppercase mb-2">hp-bot</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP + LARUbot</div>
-              <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.hpBot.toLocaleString()}</div>
+              <div className="flex items-baseline justify-center gap-0.5 mb-1">
+                <span className="text-gray-500 text-xs">¥</span>
+                <span className="text-3xl font-bold leading-none text-gray-900">{P.hpBot.toLocaleString()}</span>
+              </div>
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hpBot.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
@@ -253,8 +259,10 @@ export default function PlansPage() {
               </div>
               <div className="text-xs font-medium text-gray-500 tracking-widest uppercase mb-2">hp-bot-seo</div>
               <div className="text-base font-semibold mb-1 text-gray-900">HP + Bot + SEO</div>
-              <div className="text-gray-500 text-xs mb-1">¥</div>
-              <div className="text-3xl font-bold leading-none mb-1 text-gray-900">{P.hpBotSeo.toLocaleString()}</div>
+              <div className="flex items-baseline justify-center gap-0.5 mb-1">
+                <span className="text-gray-500 text-xs">¥</span>
+                <span className="text-3xl font-bold leading-none text-gray-900">{P.hpBotSeo.toLocaleString()}</span>
+              </div>
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hpBotSeo.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">

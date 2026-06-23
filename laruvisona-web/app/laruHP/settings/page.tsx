@@ -427,7 +427,7 @@ export default function SettingsPage() {
           <form onSubmit={handleEmailChange} className="space-y-3">
             <input type="email" placeholder="新しいメールアドレス" value={email} onChange={e => setEmail(e.target.value)} className={inputCls} required />
             {emailMsg && <p className={`text-xs ${emailMsg.startsWith('エラー') ? 'text-red-600' : 'text-emerald-700'}`}>{emailMsg}</p>}
-            <button type="submit" disabled={emailLoading} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">
+            <button type="submit" disabled={emailLoading} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-sm transition-colors">
               {emailLoading ? '送信中...' : '確認メールを送信'}
             </button>
           </form>
@@ -456,7 +456,7 @@ export default function SettingsPage() {
             </div>
             <input type="password" autoComplete="new-password" placeholder="新しいパスワード（確認）" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className={inputCls} required />
             {pwMsg && <p className={`text-xs ${pwMsg.startsWith('エラー') || pwMsg.includes('一致') || pwMsg.includes('文字') ? 'text-red-600' : 'text-emerald-700'}`}>{pwMsg}</p>}
-            <button type="submit" disabled={pwLoading} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">
+            <button type="submit" disabled={pwLoading} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-sm transition-colors">
               {pwLoading ? '変更中...' : 'パスワードを変更'}
             </button>
           </form>
@@ -501,7 +501,7 @@ export default function SettingsPage() {
                     setBrandLogoLoading(false);
                   }}
                   disabled={brandLogoLoading}
-                  className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg text-sm transition-colors"
+                  className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg text-sm transition-colors"
                 >
                   {brandLogoLoading ? '保存中...' : 'ロゴURLを保存'}
                 </button>
@@ -561,7 +561,7 @@ export default function SettingsPage() {
                       className={inputCls}
                     />
                     <button onClick={() => handleDomainSave(site.id)} disabled={domainSaving === site.id}
-                      className="flex-shrink-0 text-sm bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-lg transition-all">
+                      className="flex-shrink-0 text-sm bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-lg transition-all">
                       {domainSaving === site.id ? '...' : '保存'}
                     </button>
                     {site.custom_domain && (
@@ -685,7 +685,7 @@ export default function SettingsPage() {
                         setGscSaving(false);
                       }}
                       disabled={gscSaving || !gscSelectVal}
-                      className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors whitespace-nowrap"
+                      className="bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors whitespace-nowrap"
                     >
                       {gscSaving ? '保存中...' : '保存'}
                     </button>
@@ -789,7 +789,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleIgConnect}
                 disabled={!igToken.trim() || igSaving}
-                className="w-full text-sm bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-40"
+                className="w-full text-sm bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {igSaving ? '接続中...' : 'Instagramと連携する'}
               </button>
@@ -866,14 +866,14 @@ export default function SettingsPage() {
               <button
                 onClick={handleGmbPreview}
                 disabled={!gmbPlaceId.trim() || gmbPreviewLoading}
-                className="flex-1 text-sm border border-gray-200 hover:border-sky-300 text-gray-700 py-2.5 rounded-xl transition-all disabled:opacity-40"
+                className="flex-1 text-sm border border-gray-200 hover:border-sky-300 text-gray-700 py-2.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {gmbPreviewLoading ? '確認中...' : '確認する'}
               </button>
               <button
                 onClick={handleGmbSave}
                 disabled={!gmbPlaceId.trim() || gmbSaving || gmbPlaceId === gmbSaved}
-                className="flex-1 text-sm bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-40"
+                className="flex-1 text-sm bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {gmbSaving ? '保存中...' : '保存'}
               </button>

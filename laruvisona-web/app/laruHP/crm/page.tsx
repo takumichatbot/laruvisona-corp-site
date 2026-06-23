@@ -292,7 +292,7 @@ export default function CRMPage() {
                   else setContractEmailMsg('エラー: 送信に失敗しました');
                 }}
                 disabled={sendingContractEmail}
-                className="flex-1 bg-green-600 hover:bg-green-500 text-white text-sm font-bold py-2.5 rounded-xl transition-all disabled:opacity-50"
+                className="flex-1 bg-green-600 hover:bg-green-500 text-white text-sm font-bold py-2.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {sendingContractEmail ? '送信中...' : 'お礼メールを送る'}
               </button>
@@ -395,7 +395,7 @@ export default function CRMPage() {
             <button
               onClick={applyBulkStatus}
               disabled={bulkLoading}
-              className="bg-white text-sky-900 font-bold text-sm px-4 py-1.5 rounded-lg hover:bg-sky-50 disabled:opacity-50 transition-all"
+              className="bg-white text-sky-900 font-bold text-sm px-4 py-1.5 rounded-lg hover:bg-sky-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {bulkLoading ? '適用中...' : '一括変更'}
             </button>
@@ -608,7 +608,7 @@ export default function CRMPage() {
                 <button
                   onClick={saveNote}
                   disabled={savingNote}
-                  className="w-full bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white font-bold py-2 rounded-lg text-sm transition-all"
+                  className="w-full bg-gray-900 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg text-sm transition-all"
                 >
                   {savingNote ? '保存中...' : 'メモを保存'}
                 </button>

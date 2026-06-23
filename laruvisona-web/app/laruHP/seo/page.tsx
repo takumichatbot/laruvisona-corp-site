@@ -412,7 +412,7 @@ export default function SeoPage() {
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600 mb-1.5 block">店舗・事業所名 <span className="text-red-400">*</span></label>
-              <input type="text" value={form.name} onChange={e => setField('name', e.target.value)} className={requiredInputCls(form.name)} placeholder={selectedSite?.name || '店舗名'} />
+              <input type="text" value={form.name} onChange={e => setField('name', e.target.value)} className={requiredInputCls(form.name)} placeholder={selectedSite?.name || '例：鈴木カフェ'} />
             </div>
           </div>
 
@@ -657,7 +657,7 @@ export default function SeoPage() {
           <button
             onClick={handleSave}
             disabled={saving || republishing || (!form.name.trim() && !selectedSite?.name) || !form.description.trim()}
-            className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl text-sm transition-colors"
+            className="flex-1 bg-white border border-gray-200 hover:border-sky-400 hover:bg-sky-50 text-gray-700 font-bold py-3.5 rounded-2xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={(!form.name.trim() && !selectedSite?.name) ? '店舗名を入力してください' : !form.description.trim() ? '説明文を入力してください' : ''}
           >
             {saving ? '保存中...' : 'SEO情報を保存'}
@@ -665,7 +665,7 @@ export default function SeoPage() {
           <button
             onClick={async () => { await handleSave(); if (!saving) await handleRepublish(); }}
             disabled={saving || republishing || (!form.name.trim() && !selectedSite?.name) || !form.description.trim()}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl text-sm transition-colors"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl text-sm transition-colors"
             title={(!form.name.trim() && !selectedSite?.name) ? '店舗名を入力してください' : !form.description.trim() ? '説明文を入力してください' : '保存後すぐにサイトを再公開します'}
           >
             {republishing ? '公開中...' : '保存して公開'}
@@ -673,7 +673,7 @@ export default function SeoPage() {
         </div>
 
         <p className="text-[10px] text-gray-400 text-center">
-          「保存して即座に公開」でビルダーに戻らずそのままGoogle に反映されます
+          「保存して公開」でビルダーに戻らずそのままGoogleに反映されます
         </p>
         {selectedSite?.slug && (
           <a

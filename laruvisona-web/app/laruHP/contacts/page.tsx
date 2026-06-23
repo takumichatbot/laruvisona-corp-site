@@ -807,7 +807,7 @@ export default function ContactsPage() {
 
                 <div className="flex items-center gap-3">
                   <button onClick={saveCrm} disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-50">
+                    className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {saving ? '保存中...' : '保存'}
                   </button>
                   {saveMsg && <span className="text-green-400 text-xs">{saveMsg}</span>}

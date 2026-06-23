@@ -77,9 +77,9 @@ function LoginForm() {
           </button>
 
           <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px border-gray-200 bg-gray-200" />
+            <div className="flex-1 h-px bg-gray-200" />
             <span className="text-gray-400 text-xs">または</span>
-            <div className="flex-1 h-px border-gray-200 bg-gray-200" />
+            <div className="flex-1 h-px bg-gray-200" />
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -108,25 +108,27 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50"
+              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-gray-500 text-sm mt-6">
-          アカウントをお持ちでない方は{' '}
-          <Link href={signupHref} className="text-sky-600 hover:text-sky-500">新規登録</Link>
-        </p>
-        <p className="text-center mt-3">
-          <Link href="/laruHP/auth/reset-password" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">
-            パスワードをお忘れですか？
-          </Link>
-        </p>
-        <p className="text-center mt-2">
-          <Link href="/laruHP" className="text-gray-500 text-xs hover:text-gray-900">← LARU HPトップへ</Link>
-        </p>
+        <div className="mt-6 space-y-3 text-center">
+          <p className="text-gray-500 text-sm">
+            アカウントをお持ちでない方は{' '}
+            <Link href={signupHref} className="text-sky-600 hover:text-sky-500">新規登録</Link>
+          </p>
+          <p>
+            <Link href="/laruHP/auth/reset-password" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">
+              パスワードをお忘れですか？
+            </Link>
+          </p>
+          <p>
+            <Link href="/laruHP" className="text-gray-500 text-xs hover:text-gray-900">← LARU HPトップへ</Link>
+          </p>
+        </div>
       </div>
     </div>
   );
