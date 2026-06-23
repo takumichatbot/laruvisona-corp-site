@@ -157,9 +157,16 @@ export default function LarubotLogsPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {loading ? (
-          <div className="text-gray-500 text-sm">読み込み中...</div>
+          <div className="min-h-[40vh] flex items-center justify-center">
+            <div className="text-gray-500 text-sm">読み込み中...</div>
+          </div>
         ) : sites.length === 0 ? (
-          <div className="text-gray-500 text-sm">サイトがありません</div>
+          <div className="min-h-[40vh] flex flex-col items-center justify-center text-center py-16">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-indigo-400">LB</div>
+            <p className="text-gray-600 text-sm font-semibold mb-1">サイトがありません</p>
+            <p className="text-gray-400 text-xs mb-4">まずダッシュボードからサイトを作成してください</p>
+            <a href="/laruHP/dashboard" className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-xl hover:bg-sky-500 transition-colors">ダッシュボードへ</a>
+          </div>
         ) : (
           <>
             {/* Site selector */}

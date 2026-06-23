@@ -852,7 +852,7 @@ export default function DashboardPage() {
             <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-30">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
                 <Link href="/laruHP" className="flex items-center gap-2.5">
-                  <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto" style={{ width: 'auto' }} />
+                  <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto" />
                 </Link>
                 <div className="flex items-center gap-3">
                   <span className="text-gray-500 text-xs hidden sm:block truncate max-w-[220px]">{userEmail}</span>

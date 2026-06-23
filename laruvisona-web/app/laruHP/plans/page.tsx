@@ -113,7 +113,7 @@ export default function PlansPage() {
       <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-2.5">
             <Link href="/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">

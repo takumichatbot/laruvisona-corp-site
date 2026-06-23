@@ -473,7 +473,7 @@ export default function SettingsPage() {
                   <img src={brandLogoUrl} alt="ロゴプレビュー" className="h-8 w-auto max-w-[120px] object-contain rounded border border-gray-200" />
                 )}
                 {!brandLogoUrl && (
-                  <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto rounded" style={{ width: 'auto' }} />
+                  <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto rounded" />
                 )}
                 <span className="text-xs text-gray-500">現在のロゴ</span>
               </div>

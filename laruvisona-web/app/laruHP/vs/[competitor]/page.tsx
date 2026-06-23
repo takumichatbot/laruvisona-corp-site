@@ -87,7 +87,7 @@ export default async function VsPage({ params }: { params: Promise<{ competitor:
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
             無料で始める →
@@ -112,7 +112,7 @@ export default async function VsPage({ params }: { params: Promise<{ competitor:
             {/* LARU HP */}
             <div className="bg-white border-2 border-sky-500 rounded-2xl p-7 shadow-[0_0_40px_rgba(14,165,233,0.1)] relative">
               <span className="absolute top-4 right-4 bg-sky-600 text-white text-xs font-bold px-3 py-1 rounded-full">おすすめ</span>
-              <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto mb-4" style={{ width: 'auto' }} />
+              <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto mb-4" />
               <div className="text-3xl font-black text-gray-900 mb-1">¥999<span className="text-base font-normal text-gray-500">/月〜</span></div>
               <p className="text-gray-500 text-xs mb-5">AIで最高のHPを最短で。全機能込み</p>
               <ul className="space-y-2">

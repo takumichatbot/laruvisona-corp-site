@@ -5050,7 +5050,7 @@ function BuilderContent() {
               <img src={brandLogoUrl} alt="logo" className="h-7 w-auto max-w-[120px] object-contain rounded" />
             ) : (
               <>
-                <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto brightness-0 invert" style={{ width: 'auto' }} />
+                <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto brightness-0 invert" />
               </>
             )}
           </button>

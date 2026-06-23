@@ -227,7 +227,7 @@ export default function LaruHPLandingPage() {
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-gray-500">
             <a href="#features" className="hover:text-gray-900 transition-colors">機能</a>
@@ -1373,7 +1373,7 @@ export default function LaruHPLandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
             <div className="flex-shrink-0">
-              <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto mb-2" style={{ width: 'auto' }} />
+              <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto mb-2" />
               <p className="text-gray-500 text-xs max-w-xs leading-relaxed">AIで最高のホームページを最短で。株式会社LARUVisonaが提供するHP作成SaaSサービスです。</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-6 text-xs w-full md:w-auto">

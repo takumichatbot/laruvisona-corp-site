@@ -145,6 +145,14 @@ export default function BookingPage() {
   const upcoming = config.slots.filter(s => new Date(s.datetime) >= today);
   const past = config.slots.filter(s => new Date(s.datetime) < today);
 
+  if (sites.length === 0 && siteId === '') {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <div className="text-slate-500 text-sm">読み込み中...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#030712] text-white">
       {/* Realtime new booking toast — aria-live for screen readers */}
@@ -175,7 +183,7 @@ export default function BookingPage() {
         </div>
       </div>
 
-      <div className="max-w-screen-xl mx-auto px-4 py-6 flex gap-6">
+      <div className="max-w-screen-xl mx-auto px-4 py-6 flex flex-wrap gap-6">
         {/* Main: slot list */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-4">
@@ -299,7 +307,7 @@ export default function BookingPage() {
         </div>
 
         {/* Sidebar: settings + bookings */}
-        <div className="w-72 flex-shrink-0 space-y-4">
+        <div className="w-full sm:w-72 flex-shrink-0 space-y-4">
           {/* Settings */}
           <div className="bg-[#1e293b] border border-white/10 rounded-xl p-4">
             <div className="font-semibold text-sm mb-3 text-white">設定</div>

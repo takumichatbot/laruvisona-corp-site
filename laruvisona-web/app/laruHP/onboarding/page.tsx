@@ -715,7 +715,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
       <header className="fixed top-0 w-full z-50 bg-white border-b border-sky-100 shadow-sm backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <div className="flex flex-col items-end">
             <div className="text-gray-500 text-sm">サイト作成ウィザード</div>
@@ -817,7 +817,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {step === 1 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2 text-gray-900">業種を選んでください</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">業種を選んでください</h2>
               <p className="text-gray-600">業種に最適化されたテンプレートとSEO設定が自動で適用されます。</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -862,7 +862,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
               </div>
             )}
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2 text-gray-900">ビジネス情報を入力</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">ビジネス情報を入力</h2>
               <p className="text-gray-600">AIがこの情報をもとにコンテンツを自動生成します。</p>
             </div>
 
@@ -1001,7 +1001,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {step === 3 && (
           <div>
             <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2 text-gray-900">デザインを設定</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">デザインを設定</h2>
               <p className="text-gray-600">ブランドカラー・スタイル・フォントを選んでください。後でエディタからいつでも変更できます。</p>
             </div>
 
@@ -1418,7 +1418,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
           <div>
             <div className="flex items-start justify-between mb-8">
               <div>
-                <h2 className="text-3xl font-bold mb-2 text-gray-900">コンテンツを入力</h2>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">コンテンツを入力</h2>
                 <p className="text-gray-600">空欄の場合はAIが自動生成します。後でエディタから編集もできます。</p>
               </div>
               <button
@@ -1584,7 +1584,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
             ) : (
               <div>
                 <div className="mb-8">
-                  <h2 className="text-3xl font-bold mb-2 text-gray-900">確認・生成</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900">確認・生成</h2>
                   <p className="text-gray-600">入力内容を確認してAI生成を開始してください。</p>
                 </div>
 

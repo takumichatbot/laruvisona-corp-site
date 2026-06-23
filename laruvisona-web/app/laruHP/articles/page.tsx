@@ -30,7 +30,7 @@ export default function ArticlesPage() {
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
             無料で始める →

@@ -176,7 +176,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link href="/laruHP/dashboard" className="flex items-center gap-3">
-              <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto brightness-0 invert" style={{ width: 'auto' }} />
+              <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto brightness-0 invert" />
             </Link>
             <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-full font-bold">ADMIN</span>
           </div>

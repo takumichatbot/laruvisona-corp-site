@@ -385,7 +385,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/laruHP" className="flex items-center gap-2">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" style={{ width: 'auto' }} />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/laruHP/auth/login" className="hidden sm:block text-sm text-gray-500 hover:text-gray-900 border border-gray-200 px-3 py-1.5 rounded-lg transition-all">
@@ -599,7 +599,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
       <footer className="bg-gray-900 text-gray-400 py-10 px-6">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={24} width={160} className="h-6 w-auto brightness-0 invert" style={{ width: 'auto' }} />
+            <Image src="/laruhp_logo.png" alt="LARU HP" height={24} width={160} className="h-6 w-auto brightness-0 invert" />
           </div>
           <div className="flex gap-4 flex-wrap">
             <Link href="/laruHP/privacy" className="hover:text-white transition-colors">プライバシーポリシー</Link>
