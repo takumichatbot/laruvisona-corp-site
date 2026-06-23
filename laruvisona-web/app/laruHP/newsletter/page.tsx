@@ -180,8 +180,8 @@ export default function NewsletterPage() {
       const cRes = await fetch(`/api/newsletter/${selectedSiteId}/subscribers`);
       const d = await cRes.json();
       setSubscribers(d.subscribers || []);
-    } catch {
-      setCsvImportResult('❌ CSVの読み込みに失敗しました');
+    } catch (err) {
+      setCsvImportResult(`❌ CSVの読み込みに失敗しました（${err instanceof Error ? err.message : '形式を確認してください: 1列目=メールアドレス, 2列目=名前'}）`);
     }
     setCsvImporting(false);
     setTimeout(() => setCsvImportResult(null), 5000);
@@ -645,19 +645,22 @@ export default function NewsletterPage() {
               {/* Segment selector */}
               <div>
                 <label className="text-xs text-gray-600 mb-1.5 block">送信セグメント</label>
-                <div className="flex gap-1 flex-wrap">
+                <div className="grid grid-cols-2 gap-1.5">
                   {([
-                    { key: 'all', label: `全員 (${activeCount})` },
-                    { key: 'new', label: `新規30日以内 (${segmentNewCount})` },
-                    { key: 'mid', label: `30〜90日 (${segmentMidCount})` },
-                    { key: 'veteran', label: `90日以上 (${segmentVetCount})` },
+                    { key: 'all', label: '全員', sub: `${activeCount}件` },
+                    { key: 'new', label: '新規（30日以内）', sub: `${segmentNewCount}件` },
+                    { key: 'mid', label: '中期（30〜90日）', sub: `${segmentMidCount}件` },
+                    { key: 'veteran', label: 'ベテラン（90日以上）', sub: `${segmentVetCount}件` },
                   ] as const).map(s => (
                     <button
                       key={s.key}
                       type="button"
                       onClick={() => setSendSegment(s.key)}
-                      className={`text-[10px] px-2.5 py-1 rounded-full font-semibold border transition-all ${sendSegment === s.key ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300'}`}
-                    >{s.label}</button>
+                      className={`flex items-center justify-between px-3 py-2 rounded-xl font-semibold border transition-all text-left ${sendSegment === s.key ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300'}`}
+                    >
+                      <span className="text-xs">{s.label}</span>
+                      <span className={`text-[10px] font-bold ml-1 ${sendSegment === s.key ? 'text-sky-100' : 'text-gray-400'}`}>{s.sub}</span>
+                    </button>
                   ))}
                 </div>
                 {sendSegment !== 'all' && (

@@ -40,6 +40,7 @@ export default function PaymentsPage() {
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState('');
   const [qrLink, setQrLink] = useState<PaymentLink | null>(null);
+  const [qrReady, setQrReady] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   // qrCanvasRef is set by callback ref on the canvas element in the modal
   const [expiresAt, setExpiresAt] = useState('');
@@ -353,12 +354,12 @@ export default function PaymentsPage() {
                       <input
                         readOnly
                         value={link.url}
-                        className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[10px] text-gray-600 font-mono focus:outline-none select-all"
+                        className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-600 font-mono focus:outline-none select-all"
                         onClick={e => (e.target as HTMLInputElement).select()}
                       />
                       <button
                         onClick={() => { navigator.clipboard.writeText(link.url); setCopiedId(link.id); setTimeout(() => setCopiedId(null), 1500); }}
-                        className={`flex-shrink-0 text-[10px] px-2 py-1 rounded-lg transition-all font-bold ${copiedId === link.id ? 'bg-green-100 border border-green-300 text-green-700' : 'bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100'}`}
+                        className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-all font-bold ${copiedId === link.id ? 'bg-green-100 border border-green-300 text-green-700' : 'bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100'}`}
                       >
                         {copiedId === link.id ? '✓ コピー済み' : 'コピー'}
                       </button>
@@ -429,14 +430,21 @@ export default function PaymentsPage() {
         <div className="bg-white rounded-2xl p-6 shadow-2xl w-full max-w-xs sm:max-w-sm text-center" onClick={e => e.stopPropagation()}>
           <h3 className="font-bold text-gray-900 mb-1">{qrLink.description}</h3>
           <p className="text-sm text-gray-500 mb-4">¥{qrLink.amount.toLocaleString()}</p>
+          {!qrReady && (
+            <div className="mx-auto w-[240px] h-[240px] rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center">
+              <svg className="animate-spin w-8 h-8 text-sky-400" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+            </div>
+          )}
           <canvas
             ref={el => {
               (qrCanvasRef as { current: HTMLCanvasElement | null }).current = el;
               if (el && qrLink) {
-                QRCode.toCanvas(el, qrLink.url, { width: Math.min(240, window.innerWidth - 80), margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+                setQrReady(false);
+                QRCode.toCanvas(el, qrLink.url, { width: Math.min(240, window.innerWidth - 80), margin: 2, color: { dark: '#0f172a', light: '#ffffff' } })
+                  .then(() => setQrReady(true));
               }
             }}
-            className="mx-auto rounded-xl border border-gray-100"
+            className={`mx-auto rounded-xl border border-gray-100 ${qrReady ? '' : 'hidden'}`}
           />
           <div className="flex gap-2 mt-4">
             <button

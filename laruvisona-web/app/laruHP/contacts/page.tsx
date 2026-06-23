@@ -295,7 +295,7 @@ export default function ContactsPage() {
     <div className="min-h-screen bg-[#080f1e] text-white flex flex-col">
       {/* Realtime new contact toast */}
       {newContactToast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-[#1e293b] border border-blue-500/40 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-2xl shadow-blue-900/30 animate-slideIn ring-1 ring-blue-500/20">
+        <div className="fixed top-4 right-4 z-[100] flex items-center gap-3 bg-[#1e293b] border border-blue-500/40 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-2xl shadow-blue-900/30 animate-slideIn ring-1 ring-blue-500/20">
           <span className="relative flex-shrink-0">
             <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-40" />
             <span className="relative w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-base">📬</span>
@@ -496,16 +496,16 @@ export default function ContactsPage() {
           {/* Select-all header */}
           {!loading && filtered.length > 0 && (
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.06] bg-white/[0.02]">
-              <div className="flex items-center px-2 flex-shrink-0">
+              <label className="flex items-center gap-2 px-2 cursor-pointer min-h-[36px]">
                 <input
                   type="checkbox"
                   checked={filtered.length > 0 && filtered.every(c => checkedIds.has(c.id))}
                   ref={el => { if (el) el.indeterminate = checkedIds.size > 0 && !filtered.every(c => checkedIds.has(c.id)); }}
                   onChange={e => setCheckedIds(e.target.checked ? new Set(filtered.map(c => c.id)) : new Set())}
-                  className="w-3.5 h-3.5 rounded accent-sky-500 cursor-pointer"
+                  className="w-4 h-4 rounded accent-sky-500 cursor-pointer flex-shrink-0"
                 />
-              </div>
-              <span className="text-[10px] text-slate-600 ml-1">全選択</span>
+                <span className="text-[10px] text-slate-400">全選択</span>
+              </label>
               {(searchQ || siteFilter || typeFilter || statusFilter || showOverdueOnly) && (
                 <span className="text-[10px] text-slate-500 ml-auto">
                   <span className="text-slate-300 font-semibold">{filtered.length}</span>件 / {contacts.length}件中
@@ -806,9 +806,17 @@ export default function ContactsPage() {
               <div className="flex items-center gap-3">
                 <a
                   href={`mailto:${selected.email}?subject=${encodeURIComponent(`Re: ${selected.name}様の${selected.type === 'booking' ? 'ご予約' : 'お問い合わせ'}について`)}&body=${encodeURIComponent(`${selected.name} 様\n\n${replyTemplates[0]?.body || 'お問い合わせいただきありがとうございます。'}\n\n---\n元のメッセージ:\n${selected.message || ''}`)}`}
-                  className="flex-1 flex items-center justify-center gap-2 bg-white text-black text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-blue-50 transition-colors">
+                  className="flex-1 flex items-center justify-center gap-2 bg-white text-black text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-blue-50 transition-colors"
+                  title="メールクライアントで返信">
                   ✉️ 返信する
                 </a>
+                <button
+                  onClick={() => navigator.clipboard.writeText(selected.email)}
+                  className="px-3 py-2.5 text-slate-400 hover:text-white border border-white/[0.07] hover:border-white/20 rounded-lg transition-colors text-xs"
+                  title="メールアドレスをコピー"
+                >
+                  アドレスをコピー
+                </button>
                 <button onClick={() => deleteContact(selected.id)}
                   className="px-3 py-2.5 text-slate-500 hover:text-red-400 border border-white/[0.07] hover:border-red-500/30 rounded-lg transition-colors text-sm">
                   削除

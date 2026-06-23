@@ -317,7 +317,7 @@ export default function AnalyticsPage() {
             color={periodChange !== null && periodChange >= 0 ? 'sky' : 'amber'}
           />
           <StatCard label="累計問い合わせ" value={totalContacts.toLocaleString()} sub={`今週: ${thisWeek}件`} color="green" trend={contactPeriodChange} />
-          <StatCard label="転換率（CVR）" value={`${cvr}%`} sub={`${totalViews}訪問 → ${totalContacts}件`} color="purple" />
+          <StatCard label="転換率（CVR）" value={`${cvr}%`} sub={`${totalViews} PV → ${totalContacts}件`} color="purple" />
           <StatCard label="予約件数" value={bookings.toLocaleString()} sub={`問い合わせの${totalContacts > 0 ? Math.round((bookings / totalContacts) * 100) : 0}%`} color="indigo" trend={bookingPeriodChange} />
         </div>
 

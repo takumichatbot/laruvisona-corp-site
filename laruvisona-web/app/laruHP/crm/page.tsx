@@ -198,10 +198,11 @@ export default function CRMPage() {
     <div className="min-h-screen bg-sky-50 text-gray-900">
       {/* 成約時お礼メール送信モーダル */}
       {contractEmail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
             <div className="text-2xl mb-2">🎉</div>
             <h2 className="font-bold text-gray-900 mb-1">成約おめでとうございます！</h2>
+            <p className="text-xs text-gray-400 mb-1">ステータスを「成約」に変更しました</p>
             <p className="text-xs text-gray-500 mb-4">{contractEmail.name}さんへお礼メールを自動送信しますか？</p>
             {contractEmailMsg && (
               <p className={`text-xs font-semibold mb-3 ${contractEmailMsg.startsWith('エラー') ? 'text-red-600' : 'text-green-600'}`}>{contractEmailMsg}</p>
@@ -333,7 +334,7 @@ export default function CRMPage() {
             {COLUMNS.map(col => (
               <div
                 key={col.id}
-                className={`w-full md:w-72 rounded-xl ${col.bg} flex flex-col transition-all ${dragOverCol === col.id ? 'ring-2 ring-sky-400 border-sky-300' : 'border border-gray-200'}`}
+                className={`w-full md:w-72 rounded-xl ${col.bg} flex flex-col transition-all ${dragOverCol === col.id ? 'ring-2 ring-sky-400 border-sky-400 bg-sky-50/60 scale-[1.01]' : 'border border-gray-200'}`}
                 onDragOver={e => { e.preventDefault(); setDragOverCol(col.id); }}
                 onDragLeave={() => setDragOverCol(null)}
                 onDrop={e => {

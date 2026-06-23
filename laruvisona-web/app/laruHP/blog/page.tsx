@@ -229,10 +229,16 @@ export default function BlogPage() {
                   title="AIがSEO最適化された記事を自動生成して下書き保存します"
                 >
                   {aiGenerating ? (
-                    <>
-                      <svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                      {aiStep === 1 ? 'サイト情報を取得中...' : aiStep === 2 ? 'SEOキーワードを分析中...' : aiStep === 3 ? '本文を執筆中...' : aiStep >= 4 ? '下書きを保存中...' : 'AIを起動中...'}
-                    </>
+                    <span className="flex flex-col items-start gap-0.5 w-full">
+                      <span className="flex items-center gap-1.5 text-xs">
+                        <svg className="animate-spin flex-shrink-0" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        {aiStep === 1 ? 'サイト情報を取得中...' : aiStep === 2 ? 'SEOキーワードを分析中...' : aiStep === 3 ? '本文を執筆中...' : aiStep >= 4 ? '下書きを保存中...' : 'AIを起動中...'}
+                        <span className="text-purple-300 text-[10px]">({aiStep}/4)</span>
+                      </span>
+                      <div className="w-full h-0.5 bg-purple-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-white/60 rounded-full transition-all duration-1000" style={{ width: `${(aiStep / 4) * 100}%` }} />
+                      </div>
+                    </span>
                   ) : '✨ AI記事生成'}
                 </button>
                 <button
@@ -333,7 +339,7 @@ export default function BlogPage() {
                             return (
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className="text-[10px] text-slate-600">{len.toLocaleString()}文字 · 約{min}分</span>
-                                {len < 300 && <span className="text-[9px] font-bold bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full cursor-help" title="記事は300文字以上が推奨されます">短い記事</span>}
+                                {len < 300 && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full cursor-help" title="記事は300文字以上が推奨されます">⚠ 短い記事</span>}
                               </div>
                             );
                           })()}

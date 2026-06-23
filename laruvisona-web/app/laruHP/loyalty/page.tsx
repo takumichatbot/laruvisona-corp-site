@@ -156,8 +156,8 @@ export default function LoyaltyPage() {
     <div className="min-h-screen bg-sky-50 text-gray-900">
       {/* Celebration modal */}
       {celebrationCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center" onClick={e => e.stopPropagation()}>
             <div className="text-6xl mb-4">🎉</div>
             <h3 className="font-bold text-xl text-gray-900 mb-2">{celebrationCard.stamps}スタンプ達成！</h3>
             <p className="text-sm text-gray-600 mb-1">特典が付与されました</p>
@@ -290,11 +290,11 @@ export default function LoyaltyPage() {
                         {isComplete && <span className="text-[10px] bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full font-bold">達成 🎉</span>}
                       </div>
                       <div className="flex items-center gap-2 mb-1.5">
-                        <div className="flex gap-0.5 flex-wrap">
+                        <div className="flex gap-0.5 flex-wrap max-w-[200px]">
                           {Array.from({ length: card.max_stamps }).map((_, i) => (
                             <div
                               key={i}
-                              className={`w-5 h-5 rounded-full border-2 ${i < card.stamps ? 'bg-sky-500 border-sky-500' : 'bg-white border-gray-300'}`}
+                              className={`rounded-full border-2 flex-shrink-0 ${card.max_stamps > 10 ? 'w-3.5 h-3.5' : 'w-5 h-5'} ${i < card.stamps ? 'bg-sky-500 border-sky-500' : 'bg-white border-gray-300'}`}
                             />
                           ))}
                         </div>

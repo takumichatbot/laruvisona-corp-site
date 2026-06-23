@@ -345,8 +345,9 @@ export default function SeoPage() {
               onClick={async () => { await handleSave(); await handleRepublish(); }}
               disabled={saving || republishing}
               className="flex-shrink-0 text-xs bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+              title="SEO設定を保存してサイトを再公開します（Googleへの反映に必要）"
             >
-              今すぐ公開
+              {republishing ? '公開中...' : '保存して再公開'}
             </button>
           </div>
         )}
@@ -449,11 +450,11 @@ export default function SeoPage() {
                     style={{ width: `${Math.min(100, (form.description.length / 160) * 100)}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[9px] text-gray-400 mt-0.5 px-0.5">
-                  <span>0</span>
-                  <span className="text-amber-500">80</span>
-                  <span className="text-green-600">150</span>
-                  <span className="text-red-500">160+</span>
+                <div className="flex justify-between text-[9px] mt-0.5 px-0.5">
+                  <span className="text-gray-400">0</span>
+                  <span className="text-amber-500">80 推奨開始</span>
+                  <span className="text-green-600">150 最適</span>
+                  <span className="text-red-500">160 上限</span>
                 </div>
               </div>
             )}

@@ -234,7 +234,7 @@ export default function BookingPage() {
               return (
                 <div key={slot.id} className={`flex items-center gap-3 p-4 rounded-xl border transition-all
                   ${taken ? 'bg-blue-900/20 border-blue-500/30' : slot.available ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/10 opacity-50'}`}>
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: taken ? '#3b82f6' : slot.available ? '#22c55e' : '#6b7280' }} />
+                  <div className="w-3 h-3 rounded-full flex-shrink-0 border border-white/20" style={{ background: taken ? '#3b82f6' : slot.available ? '#22c55e' : '#6b7280' }} title={taken ? '予約済み' : slot.available ? '空き' : '締切'} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-white text-sm">{formatDt(slot.datetime)}</span>
@@ -279,7 +279,7 @@ export default function BookingPage() {
                   const booking = bookings.find(b => b.extra_fields?.slot_id === slot.id);
                   return (
                     <div key={slot.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/[0.06] opacity-80">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: taken ? '#3b82f6' : '#374151' }} />
+                      <div className="w-3 h-3 rounded-full flex-shrink-0 border border-white/20" style={{ background: taken ? '#3b82f6' : '#374151' }} title={taken ? '予約済み' : '空き'} />
                       <span className="text-slate-400 text-sm">{formatDt(slot.datetime)}</span>
                       <span className="text-slate-600 text-xs">{slot.duration}分</span>
                       {taken && booking && <span className="text-blue-400/60 text-xs">{booking.name}</span>}
@@ -405,9 +405,25 @@ function BulkAddButton({ onAdd }: { onAdd: (s: string, e: string, t: string[], d
             </div>
           </div>
           <div>
-            <label className="text-slate-400 text-xs block mb-1">時刻（カンマ区切り）</label>
-            <input type="text" value={form.times} onChange={e => setForm(f => ({ ...f, times: e.target.value }))}
-              className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none font-mono" />
+            <label className="text-slate-400 text-xs block mb-1.5">時刻を選択</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'].map(t => {
+                const selected = form.times.split(',').map(x => x.trim()).includes(t);
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      const current = form.times.split(',').map(x => x.trim()).filter(Boolean);
+                      const next = selected ? current.filter(x => x !== t) : [...current, t].sort();
+                      setForm(f => ({ ...f, times: next.join(',') }));
+                    }}
+                    className={`text-xs px-2 py-1 rounded-lg border transition-all ${selected ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/10 text-slate-400 border-white/10 hover:border-white/30'}`}
+                  >{t}</button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-slate-500">選択中: {form.times.split(',').filter(Boolean).length}件</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

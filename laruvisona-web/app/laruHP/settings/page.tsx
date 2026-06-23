@@ -635,7 +635,10 @@ export default function SettingsPage() {
             </p>
           )}
           {gscLoading ? (
-            <div className="text-xs text-gray-400">読み込み中...</div>
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <svg className="animate-spin w-4 h-4 text-gray-300" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+              連携状態を確認中...
+            </div>
           ) : !gscConnected ? (
             <a
               href="/api/auth/google"

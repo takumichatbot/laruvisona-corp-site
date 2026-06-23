@@ -217,17 +217,22 @@ export default function ShopPage() {
 
         {/* Shop URL */}
         {selectedSite?.slug && (
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold text-green-800 mb-0.5">お客様向けショップURL</p>
-              <p className="text-xs text-green-700 font-mono break-all">{process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/hp/{selectedSite.slug}/shop</p>
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-2">
+            <p className="text-xs font-bold text-green-800">お客様向けショップURL</p>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={`${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/hp/${selectedSite.slug}/shop`}
+                className="flex-1 min-w-0 bg-white border border-green-200 rounded-lg px-2 py-1.5 text-xs text-green-700 font-mono focus:outline-none select-all"
+                onClick={e => (e.target as HTMLInputElement).select()}
+              />
+              <button
+                onClick={() => navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/hp/${selectedSite!.slug}/shop`)}
+                className="text-xs text-green-700 border border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors flex-shrink-0 font-semibold"
+              >
+                コピー
+              </button>
             </div>
-            <button
-              onClick={() => navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/hp/${selectedSite!.slug}/shop`)}
-              className="text-xs text-green-700 border border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors flex-shrink-0"
-            >
-              コピー
-            </button>
           </div>
         )}
 
@@ -311,8 +316,16 @@ export default function ShopPage() {
               {products.map(product => (
                 <div key={product.id} className={`border rounded-2xl p-4 transition-colors ${product.active ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
                   <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 bg-sky-50 border border-sky-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                      {product.category === 'サービス' ? '⚙️' : product.category === 'コース・講座' ? '📚' : product.category === 'チケット' ? '🎟️' : '📦'}
+                    <div className="w-12 h-12 bg-sky-50 border border-sky-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      {product.category === 'サービス' ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                      ) : product.category === 'コース・講座' ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                      ) : product.category === 'チケット' ? (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
+                      ) : (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">

@@ -275,17 +275,23 @@ export default function SequencesPage() {
                       <div className="flex-1 grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] font-semibold text-gray-500 mb-1 block">
-                            {i === 0 ? '即時送信' : `前のメールから（時間）`}
+                            {i === 0 ? '送信タイミング' : `前のメールから（時間）`}
                           </label>
-                          <input
-                            type="number"
-                            value={step.delay}
-                            onChange={e => updateStep(i, 'delay', parseInt(e.target.value) || 0)}
-                            disabled={i === 0}
-                            min="0"
-                            className={inputCls + ' disabled:opacity-40 text-xs py-1.5'}
-                            placeholder="0 = 即時"
-                          />
+                          {i === 0 ? (
+                            <div className="flex items-center gap-1.5 bg-sky-50 border border-sky-200 rounded-lg px-2 py-1.5">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-500 flex-shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                              <span className="text-xs text-sky-700 font-semibold">トリガー発生後すぐ（即時）</span>
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              value={step.delay}
+                              onChange={e => updateStep(i, 'delay', parseInt(e.target.value) || 0)}
+                              min="1"
+                              className={inputCls + ' text-xs py-1.5'}
+                              placeholder="例: 24"
+                            />
+                          )}
                         </div>
                         <div>
                           <label className="text-[10px] font-semibold text-gray-500 mb-1 block">件名</label>

@@ -329,7 +329,10 @@ export default function AbTestPage() {
 
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[11px] text-gray-400">合計: {total.toLocaleString()}サンプル</span>
-                          <span className="text-[11px] text-gray-500" title="サンプル数が100件未満は統計的に不安定です。500件以上で高い信頼性が得られます。">{confidenceNote}</span>
+                          <span
+                            className="text-[11px] text-gray-500 cursor-help border-b border-dotted border-gray-300"
+                            title="サンプル数が100件未満は統計的に不安定です。500件以上で高い信頼性が得られます。"
+                          >{confidenceNote} ℹ</span>
                         </div>
                         {total < 500 && (
                           <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 mb-3">
@@ -337,7 +340,7 @@ export default function AbTestPage() {
                               <span className="text-[10px] font-semibold text-gray-600">必要サンプル数（95%信頼度）</span>
                               <span className="text-[10px] text-gray-500">効果量: <span className="font-bold text-gray-700">{effectSize}%</span></span>
                             </div>
-                            <input type="range" min={5} max={50} step={5} value={effectSize} onChange={e => setEffectSize(Number(e.target.value))}
+                            <input type="range" min={5} max={50} step={1} value={effectSize} onChange={e => setEffectSize(Number(e.target.value))}
                               className="w-full h-1.5 rounded-full accent-sky-500 mb-1.5" />
                             <div className="flex justify-between text-[9px] text-gray-400 mb-2"><span>5%</span><span>10%</span><span>20%</span><span>30%</span><span>50%</span></div>
                             {(() => {
@@ -346,11 +349,20 @@ export default function AbTestPage() {
                               const pooled = (p1 + p2) / 2;
                               const needed = Math.ceil(2 * 1.96 * 1.96 * pooled * (1 - pooled) / Math.pow(p2 - p1, 2));
                               const remaining = Math.max(0, needed - Math.min(aCount, bCount));
+                              const progress = Math.min(100, (Math.min(aCount, bCount) / needed) * 100);
                               return (
-                                <p className="text-[10px] text-gray-500 leading-relaxed">
-                                  各バリアント約<span className="font-bold text-gray-700">{needed}件</span>（合計{needed * 2}件）が推奨 ·
-                                  現在 A:{aCount} / B:{bCount}{remaining > 0 ? ` — あと約${remaining}件` : ' — ✓ 十分なサンプル'}
-                                </p>
+                                <>
+                                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-1.5">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${progress >= 100 ? 'bg-green-500' : progress >= 50 ? 'bg-amber-400' : 'bg-sky-400'}`}
+                                      style={{ width: `${progress}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-[10px] text-gray-500 leading-relaxed">
+                                    各バリアント約<span className="font-bold text-gray-700">{needed}件</span>（合計{needed * 2}件）が推奨 ·
+                                    現在 A:{aCount} / B:{bCount}{remaining > 0 ? ` — あと約${remaining}件` : ' — ✓ 十分なサンプル'}
+                                  </p>
+                                </>
                               );
                             })()}
                           </div>

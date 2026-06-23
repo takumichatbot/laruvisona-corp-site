@@ -244,6 +244,7 @@ export default function DashboardPage() {
   const [contacts, setContacts] = useState<{ id: string; site_id: string; read: boolean; crm_followup_at?: string | null; created_at?: string }[]>([]);
   const [analyticsPeriods, setAnalyticsPeriods] = useState<Record<string, '7' | '30' | 'all'>>({});
   const [deleteToast, setDeleteToast] = useState<{ site: Site; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [deleteCountdown, setDeleteCountdown] = useState(5);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [domainErrors, setDomainErrors] = useState<Record<string, string>>({});
   const [newSiteError, setNewSiteError] = useState('');
@@ -355,6 +356,15 @@ export default function DashboardPage() {
     return () => { supabase.removeChannel(channel); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!deleteToast) { setDeleteCountdown(5); return; }
+    setDeleteCountdown(5);
+    const interval = setInterval(() => {
+      setDeleteCountdown(c => Math.max(0, c - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [deleteToast]);
 
   useEffect(() => {
     const channel = supabase
@@ -770,14 +780,23 @@ export default function DashboardPage() {
 
       {/* ── Delete undo toast ── */}
       {deleteToast && (
-        <div className={`fixed ${publishToast ? 'bottom-24' : 'bottom-6'} left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-2xl transition-all`}>
-          <span className="text-sm text-gray-600">「{deleteToast.site.name}」を削除しました</span>
-          <button
-            onClick={handleUndoDelete}
-            className="text-sm font-bold text-sky-600 hover:text-sky-500 transition-colors whitespace-nowrap"
-          >
-            取り消す
-          </button>
+        <div className={`fixed ${publishToast ? 'bottom-24' : 'bottom-6'} left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-1.5 bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-2xl min-w-[280px] transition-all`}>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600 flex-1">「{deleteToast.site.name}」を削除しました</span>
+            <span className="text-xs font-bold text-gray-400 tabular-nums w-4 text-right">{deleteCountdown}</span>
+            <button
+              onClick={handleUndoDelete}
+              className="text-sm font-bold text-sky-600 hover:text-sky-500 transition-colors whitespace-nowrap"
+            >
+              取り消す
+            </button>
+          </div>
+          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-red-400 rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${(deleteCountdown / 5) * 100}%` }}
+            />
+          </div>
         </div>
       )}
 
@@ -842,13 +861,13 @@ export default function DashboardPage() {
                       localStorage.setItem('laruHP_notification_sound', next ? '1' : '0');
                     }}
                     title={soundEnabled ? '通知音: ON（クリックでOFF）' : '通知音: OFF（クリックでON）'}
-                    className={`text-xs p-1.5 rounded-md border transition-all ${soundEnabled ? 'border-sky-200 text-sky-600 bg-sky-50' : 'border-gray-200 text-gray-400 hover:text-gray-600'}`}
+                    className={`text-sm p-2.5 rounded-lg border transition-all min-w-[40px] min-h-[40px] flex items-center justify-center ${soundEnabled ? 'border-sky-200 text-sky-600 bg-sky-50' : 'border-gray-200 text-gray-400 hover:text-gray-600'}`}
                   >
                     {soundEnabled ? '🔔' : '🔕'}
                   </button>
                   <button
                     onClick={() => setShowNotifications(v => !v)}
-                    className="relative text-gray-500 hover:text-gray-900 transition-colors p-1.5"
+                    className="relative text-gray-500 hover:text-gray-900 transition-colors p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
                     aria-label="通知"
                   >
                     <IcBell />
