@@ -30,6 +30,13 @@ function formatDt(iso: string) {
   return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}(${days[d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function formatDtLocal(iso: string) {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const jst = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (tz === 'Asia/Tokyo' || jst === tz) return null;
+  return new Date(iso).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: tz, timeZoneName: 'short' });
+}
+
 function newId() { return crypto.randomUUID(); }
 
 export default function BookingPage() {
@@ -42,6 +49,7 @@ export default function BookingPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [newSlot, setNewSlot] = useState({ date: '', time: '10:00', duration: 60, label: '相談・カウンセリング' });
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
+  const [newBooking, setNewBooking] = useState<Booking | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -114,6 +122,23 @@ export default function BookingPage() {
     save(updated);
   };
 
+  // Supabase Realtime: 新着予約をリアルタイム反映
+  useEffect(() => {
+    if (!siteId) return;
+    const channel = supabase
+      .channel('bookings-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contacts', filter: `site_id=eq.${siteId}` }, (payload) => {
+        const b = payload.new as Booking & { type?: string };
+        if (b.type !== 'booking') return;
+        setBookings(prev => [b, ...prev]);
+        setNewBooking(b);
+        setTimeout(() => setNewBooking(null), 5000);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siteId]);
+
   const takenSlotIds = new Set(bookings.map(b => b.extra_fields?.slot_id).filter(Boolean));
 
   const today = new Date();
@@ -122,9 +147,20 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-[#030712] text-white">
+      {/* Realtime new booking toast */}
+      {newBooking && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 bg-[#1e293b] border border-blue-500/30 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-2xl">
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0" />
+          {newBooking.name}さんから予約が届きました
+          <button onClick={() => setNewBooking(null)} className="ml-2 text-slate-400 hover:text-white text-base leading-none">×</button>
+        </div>
+      )}
       <div className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/laruHP/dashboard" className="text-slate-400 hover:text-white text-sm">← ダッシュボード</Link>
+          <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            ダッシュボード
+          </Link>
           <h1 className="font-bold text-white">予約枠管理</h1>
           {saving && <span className="text-slate-500 text-xs">保存中...</span>}
           <div className="ml-auto flex items-center gap-3">
@@ -144,7 +180,7 @@ export default function BookingPage() {
             <span className="text-slate-500 text-sm">{upcoming.length}件（今後）</span>
             <div className="ml-auto flex gap-2">
               <button onClick={() => setShowAdd(v => !v)}
-                className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition-all">
+                className="text-sm px-4 py-2.5 min-h-[44px] bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition-all flex items-center gap-1.5">
                 + 枠を追加
               </button>
               <BulkAddButton onAdd={addBulk} />
@@ -200,8 +236,11 @@ export default function BookingPage() {
                   ${taken ? 'bg-blue-900/20 border-blue-500/30' : slot.available ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/10 opacity-50'}`}>
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: taken ? '#3b82f6' : slot.available ? '#22c55e' : '#6b7280' }} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-white text-sm">{formatDt(slot.datetime)}</span>
+                      {formatDtLocal(slot.datetime) && (
+                        <span className="text-blue-300 text-[10px] bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded-full font-semibold">🌐 {formatDtLocal(slot.datetime)}</span>
+                      )}
                       <span className="text-slate-500 text-xs">{slot.duration}分</span>
                       <span className="text-slate-400 text-xs">{slot.label}</span>
                     </div>
@@ -214,8 +253,8 @@ export default function BookingPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!taken && (
                       <button onClick={() => toggleSlot(slot.id)}
-                        className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${slot.available ? 'border-white/20 text-slate-400 hover:bg-white/10' : 'border-green-500/50 text-green-400 hover:bg-green-900/30'}`}>
-                        {slot.available ? '無効化' : '有効化'}
+                        className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all flex items-center gap-1 ${slot.available ? 'border-red-500/40 text-red-400 bg-red-500/10 hover:bg-red-500/20' : 'border-green-500/50 text-green-400 bg-green-500/10 hover:bg-green-900/30'}`}>
+                        {slot.available ? '✕ 無効化' : '✓ 有効化'}
                       </button>
                     )}
                     {!taken && (
@@ -239,7 +278,7 @@ export default function BookingPage() {
                   const taken = takenSlotIds.has(slot.id);
                   const booking = bookings.find(b => b.extra_fields?.slot_id === slot.id);
                   return (
-                    <div key={slot.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-white/[0.02] opacity-60">
+                    <div key={slot.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/[0.06] opacity-80">
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: taken ? '#3b82f6' : '#374151' }} />
                       <span className="text-slate-400 text-sm">{formatDt(slot.datetime)}</span>
                       <span className="text-slate-600 text-xs">{slot.duration}分</span>
@@ -305,7 +344,7 @@ export default function BookingPage() {
       {/* Booking detail modal */}
       {detailBooking && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDetailBooking(null)}>
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-white">{detailBooking.name}</h2>
               <button onClick={() => setDetailBooking(null)} className="text-slate-400 hover:text-white text-xl">×</button>

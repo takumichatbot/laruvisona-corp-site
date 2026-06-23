@@ -69,6 +69,7 @@ export default function CRMPage() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<CRMStatus>('対応中');
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [dragOverCol, setDragOverCol] = useState<CRMStatus | null>(null);
 
   // Detail panel state
   const [noteInput, setNoteInput] = useState('');
@@ -115,7 +116,17 @@ export default function CRMPage() {
     if (selected?.id === contactId) setSelected(s => s ? { ...s, extra_fields: newExtra as Record<string, string> } : s);
   };
 
-  const updateStatus = (contactId: string, status: CRMStatus) => updateExtra(contactId, { crm_status: status });
+  const [contractEmail, setContractEmail] = useState<Contact | null>(null);
+  const [sendingContractEmail, setSendingContractEmail] = useState(false);
+  const [contractEmailMsg, setContractEmailMsg] = useState('');
+
+  const updateStatus = async (contactId: string, status: CRMStatus) => {
+    await updateExtra(contactId, { crm_status: status });
+    if (status === '成約') {
+      const c = contacts.find(x => x.id === contactId);
+      if (c) setContractEmail(c);
+    }
+  };
 
   const applyBulkStatus = async () => {
     if (!checkedIds.size) return;
@@ -185,9 +196,51 @@ export default function CRMPage() {
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
+      {/* 成約時お礼メール送信モーダル */}
+      {contractEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <div className="text-2xl mb-2">🎉</div>
+            <h2 className="font-bold text-gray-900 mb-1">成約おめでとうございます！</h2>
+            <p className="text-xs text-gray-500 mb-4">{contractEmail.name}さんへお礼メールを自動送信しますか？</p>
+            {contractEmailMsg && (
+              <p className={`text-xs font-semibold mb-3 ${contractEmailMsg.startsWith('エラー') ? 'text-red-600' : 'text-green-600'}`}>{contractEmailMsg}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setSendingContractEmail(true);
+                  setContractEmailMsg('');
+                  const res = await fetch('/api/crm/reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      contactId: contractEmail.id,
+                      message: `${contractEmail.name} 様\n\nこのたびはご成約いただき、誠にありがとうございます。\n今後ともよろしくお願いいたします。`,
+                    }),
+                  });
+                  setSendingContractEmail(false);
+                  if (res.ok) { setContractEmailMsg('送信しました'); setTimeout(() => setContractEmail(null), 1500); }
+                  else setContractEmailMsg('エラー: 送信に失敗しました');
+                }}
+                disabled={sendingContractEmail}
+                className="flex-1 bg-green-600 hover:bg-green-500 text-white text-sm font-bold py-2.5 rounded-xl transition-all disabled:opacity-50"
+              >
+                {sendingContractEmail ? '送信中...' : 'お礼メールを送る'}
+              </button>
+              <button onClick={() => setContractEmail(null)} className="flex-1 border border-gray-200 text-gray-600 hover:text-gray-900 text-sm py-2.5 rounded-xl transition-all">
+                スキップ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="border-b border-gray-200 bg-white backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
-          <Link href="/laruHP/dashboard" className="text-gray-600 hover:text-gray-900 text-sm">← ダッシュボード</Link>
+          <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 text-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            ダッシュボード
+          </Link>
           <h1 className="font-bold text-gray-900">CRM パイプライン</h1>
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             {/* View toggle */}
@@ -278,7 +331,18 @@ export default function CRMPage() {
         <div className="max-w-screen-xl mx-auto px-4 py-4 overflow-x-auto">
           <div className="flex gap-4 min-w-max">
             {COLUMNS.map(col => (
-              <div key={col.id} className={`w-72 rounded-xl ${col.bg} border border-gray-200 flex flex-col`}>
+              <div
+                key={col.id}
+                className={`w-full md:w-72 rounded-xl ${col.bg} flex flex-col transition-all ${dragOverCol === col.id ? 'ring-2 ring-sky-400 border-sky-300' : 'border border-gray-200'}`}
+                onDragOver={e => { e.preventDefault(); setDragOverCol(col.id); }}
+                onDragLeave={() => setDragOverCol(null)}
+                onDrop={e => {
+                  e.preventDefault();
+                  setDragOverCol(null);
+                  const contactId = e.dataTransfer.getData('contactId');
+                  if (contactId) updateStatus(contactId, col.id);
+                }}
+              >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white rounded-t-xl">
                   <span className={`font-bold text-sm px-2 py-0.5 rounded-full ${col.color}`}>{col.label}</span>
                   <span className="text-gray-500 text-xs bg-gray-100 px-2 py-0.5 rounded-full">{grouped[col.id].length}</span>
@@ -292,11 +356,14 @@ export default function CRMPage() {
                     const hasNote = !!c.extra_fields?.crm_note;
                     const followupOverdue = followup && isPast(followup) && !isToday(followup);
                     const followupToday = followup && isToday(followup);
+                    const isRecent24h = Date.now() - new Date(c.created_at).getTime() < 86400000;
                     return (
                       <div
                         key={c.id}
+                        draggable
+                        onDragStart={e => { e.dataTransfer.setData('contactId', c.id); e.dataTransfer.effectAllowed = 'move'; }}
                         onClick={() => openDetail(c)}
-                        className="bg-white hover:bg-sky-50 border border-gray-200 rounded-xl p-3 cursor-pointer transition-all shadow-sm"
+                        className={`bg-white hover:bg-sky-50 border border-gray-200 rounded-xl p-3 cursor-grab active:cursor-grabbing transition-all shadow-sm ${isRecent24h ? 'border-l-4 border-l-amber-400' : ''}`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <span className="font-semibold text-sm text-gray-900 truncate">{c.name}</span>
@@ -305,9 +372,11 @@ export default function CRMPage() {
                         <div className="text-xs text-gray-600 truncate">{c.email}</div>
                         {c.message && <div className="text-[11px] text-gray-500 mt-1.5 line-clamp-2">{c.message}</div>}
                         <div className="mt-2 flex gap-1 flex-wrap items-center">
-                          {followupOverdue && <span className="text-[10px] bg-red-50 border border-red-200 text-red-600 px-1.5 py-0.5 rounded-full">期限超過 {new Date(followup!).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}</span>}
-                          {followupToday && <span className="text-[10px] bg-amber-50 border border-amber-200 text-amber-600 px-1.5 py-0.5 rounded-full">本日フォロー</span>}
-                          {!followupOverdue && !followupToday && followup && <span className="text-[10px] bg-sky-50 border border-sky-200 text-sky-600 px-1.5 py-0.5 rounded-full">{new Date(followup).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}</span>}
+                          {followup && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${followupOverdue ? 'bg-red-50 border border-red-200 text-red-600' : followupToday ? 'bg-amber-50 border border-amber-200 text-amber-600' : 'bg-sky-50 border border-sky-200 text-sky-600'}`}>
+                              {followupOverdue ? '⚠ 期限超過' : followupToday ? '● 本日'  : '📅'} {new Date(followup).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+                            </span>
+                          )}
                           {hasNote && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">📝</span>}
                         </div>
                         <div className="mt-2 flex gap-1 flex-wrap">
@@ -349,14 +418,15 @@ export default function CRMPage() {
             {filtered.length === 0 ? (
               <div className="text-center py-12 text-gray-400 text-sm">問い合わせがありません</div>
             ) : (
-              filtered.map(c => {
+              filtered.map((c, idx) => {
                 const status = getStatus(c);
                 const followup = c.extra_fields?.followup_at;
                 const followupOverdue = followup && isPast(followup) && !isToday(followup) && status !== '成約' && status !== 'NG';
+                const isRecent24h = Date.now() - new Date(c.created_at).getTime() < 86400000;
                 return (
                   <div
                     key={c.id}
-                    className={`grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_1fr_auto_auto] items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-sky-50 transition-all cursor-pointer ${checkedIds.has(c.id) ? 'bg-sky-50' : ''}`}
+                    className={`grid grid-cols-[auto_1fr_auto_auto] sm:grid-cols-[auto_1fr_1fr_auto_auto] items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-sky-50 transition-all cursor-pointer ${checkedIds.has(c.id) ? 'bg-sky-50' : idx % 2 === 1 ? 'bg-gray-50/60' : ''} ${isRecent24h ? 'border-l-4 border-l-amber-400' : ''}`}
                     onClick={() => openDetail(c)}
                   >
                     <input

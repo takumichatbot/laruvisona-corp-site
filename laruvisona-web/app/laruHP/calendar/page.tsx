@@ -47,6 +47,7 @@ export default function CalendarPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [scheduling, setScheduling] = useState<string | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -114,10 +115,18 @@ export default function CalendarPage() {
 
   if (loading) return <div className="min-h-screen bg-sky-50 flex items-center justify-center"><div className="text-gray-500 text-sm">読み込み中...</div></div>;
 
+  const thisMonthCount = posts.filter(p => {
+    const at = p.scheduled_at || p.published_at || '';
+    return at.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`);
+  }).length;
+
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 mx-auto">コンテンツカレンダー</h1>
         <Link href="/laruHP/blog" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-3 py-1.5 rounded-lg transition-colors">ブログ管理</Link>
       </header>
@@ -145,7 +154,18 @@ export default function CalendarPage() {
               <button onClick={prevMonth} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <h2 className="font-bold text-gray-900">{year}年 {month + 1}月</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-gray-900">{year}年 {month + 1}月</h2>
+                {thisMonthCount > 0 && <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full font-bold">{thisMonthCount}件</span>}
+                {(year !== today.getFullYear() || month !== today.getMonth()) && (
+                  <button
+                    onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); }}
+                    className="text-[10px] text-sky-600 hover:text-sky-500 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-2 py-0.5 rounded-lg transition-all font-bold"
+                  >
+                    今日
+                  </button>
+                )}
+              </div>
               <button onClick={nextMonth} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
@@ -164,13 +184,24 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={i}
-                    className={`min-h-[80px] border-b border-r border-gray-100 p-1.5 ${!day ? 'bg-gray-50' : 'hover:bg-sky-50 transition-colors'} ${i % 7 === 0 ? 'last:border-r-0' : ''}`}
+                    className={`min-h-[100px] border-b border-r border-gray-100 p-1.5 transition-colors group/cell ${!day ? 'bg-gray-50' : dragOverDate === `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` ? 'bg-sky-100 ring-inset ring-1 ring-sky-400' : 'hover:bg-sky-50/70'} ${i % 7 === 0 ? 'last:border-r-0' : ''}`}
+                    onDragOver={day ? (e) => { e.preventDefault(); setDragOverDate(`${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`); } : undefined}
+                    onDragLeave={() => setDragOverDate(null)}
+                    onDrop={day ? (e) => {
+                      e.preventDefault();
+                      setDragOverDate(null);
+                      const postId = e.dataTransfer.getData('postId');
+                      if (postId) handleSchedule(postId, `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+                    } : undefined}
                   >
                     {day && (
                       <>
                         <div className={`text-[11px] font-semibold mb-1 w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-sky-600 text-white' : i % 7 === 0 ? 'text-red-500' : i % 7 === 6 ? 'text-blue-500' : 'text-gray-500'}`}>
                           {day}
                         </div>
+                        {dayPosts.length === 0 && (
+                          <div className="opacity-0 group-hover/cell:opacity-100 transition-opacity text-[9px] text-gray-400 text-center mt-1">+</div>
+                        )}
                         <div className="space-y-0.5">
                           {dayPosts.slice(0, 2).map(p => (
                             <div
@@ -206,9 +237,21 @@ export default function CalendarPage() {
               ) : (
                 <div className="space-y-3">
                   {unscheduledDrafts.map(post => (
-                    <div key={post.id} className="border border-gray-200 rounded-xl p-3">
-                      <div className={`text-[10px] font-semibold mb-1 px-1.5 py-0.5 rounded inline-block ${CATEGORY_COLOR[post.category] || 'bg-gray-100 text-gray-500'}`}>
-                        {post.category}
+                    <div
+                      key={post.id}
+                      draggable
+                      onDragStart={e => { e.dataTransfer.setData('postId', post.id); e.dataTransfer.effectAllowed = 'move'; }}
+                      className="border border-gray-200 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:border-sky-300 transition-colors"
+                    >
+                      <div className="flex items-start gap-1.5 mb-1">
+                        <svg width="10" height="10" viewBox="0 0 10 16" fill="currentColor" className="text-gray-300 mt-0.5 flex-shrink-0">
+                          <circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/>
+                          <circle cx="3" cy="8" r="1.5"/><circle cx="7" cy="8" r="1.5"/>
+                          <circle cx="3" cy="13" r="1.5"/><circle cx="7" cy="13" r="1.5"/>
+                        </svg>
+                        <div className={`text-[10px] font-semibold px-1.5 py-0.5 rounded inline-block ${CATEGORY_COLOR[post.category] || 'bg-gray-100 text-gray-500'}`}>
+                          {post.category}
+                        </div>
                       </div>
                       <div className="text-xs font-semibold text-gray-900 mb-2 line-clamp-2">{post.title}</div>
                       <input

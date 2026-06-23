@@ -51,6 +51,8 @@ export default function LoyaltyPage() {
 
   // Stamp
   const [stamping, setStamping] = useState<string | null>(null);
+  const [celebrationCard, setCelebrationCard] = useState<{ stamps: number; reward: string } | null>(null);
+  const [cardSearch, setCardSearch] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -136,7 +138,7 @@ export default function LoyaltyPage() {
         c.id === cardId ? { ...c, stamps: d.stamps, last_stamped_at: new Date().toISOString() } : c
       ));
       if (d.completed) {
-        alert(`🎉 ${d.stamps}スタンプ達成！特典：${d.reward}`);
+        setCelebrationCard({ stamps: d.stamps, reward: d.reward });
       }
     }
     setStamping(null);
@@ -146,10 +148,35 @@ export default function LoyaltyPage() {
 
   if (loading) return <div className="min-h-screen bg-sky-50 flex items-center justify-center"><div className="text-gray-500 text-sm">読み込み中...</div></div>;
 
+  const filteredCards = cards.filter(c =>
+    !cardSearch || c.customer_name.includes(cardSearch) || (c.customer_phone || '').includes(cardSearch)
+  );
+
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
+      {/* Celebration modal */}
+      {celebrationCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h3 className="font-bold text-xl text-gray-900 mb-2">{celebrationCard.stamps}スタンプ達成！</h3>
+            <p className="text-sm text-gray-600 mb-1">特典が付与されました</p>
+            <p className="text-base font-bold text-sky-700 mb-6">{celebrationCard.reward}</p>
+            <button
+              onClick={() => setCelebrationCard(null)}
+              className="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 mx-auto">デジタルポイントカード</h1>
       </header>
 
@@ -213,10 +240,10 @@ export default function LoyaltyPage() {
               {newCardUrl && (
                 <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-4 text-center">
                   <canvas ref={qrRef} className="mx-auto mb-2 rounded-lg" />
-                  <div className="text-xs text-gray-600 break-all mb-2">{newCardUrl}</div>
+                  <div className="text-[10px] font-mono text-gray-500 truncate mb-2 max-w-[200px] mx-auto">{newCardUrl}</div>
                   <button
                     onClick={() => navigator.clipboard.writeText(newCardUrl)}
-                    className="text-xs bg-emerald-100 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-200 transition-all font-bold"
+                    className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg transition-all font-bold"
                   >
                     URLをコピー
                   </button>
@@ -228,20 +255,34 @@ export default function LoyaltyPage() {
 
         {/* Cards list */}
         <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-          <h2 className="font-bold text-sm text-gray-900 mb-4">発行済みカード ({cards.length}件)</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="font-bold text-sm text-gray-900">発行済みカード ({cards.length}件)</h2>
+            <input
+              type="text"
+              value={cardSearch}
+              onChange={e => setCardSearch(e.target.value)}
+              placeholder="名前・電話で検索"
+              className="ml-auto text-xs border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-sky-400 text-gray-700 placeholder-gray-400 w-40"
+            />
+          </div>
 
           {cards.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-3xl mb-3">⭐</div>
+              <div className="text-5xl mb-4">⭐</div>
               <p className="text-sm text-gray-500">まだカードが発行されていません</p>
+              <p className="text-xs text-gray-400 mt-1">「カードを発行」フォームから登録してください</p>
+            </div>
+          ) : filteredCards.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-gray-400">「{cardSearch}」に一致するカードがありません</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {cards.map(card => {
+              {filteredCards.map(card => {
                 const pct = Math.round((card.stamps / card.max_stamps) * 100);
                 const isComplete = card.stamps >= card.max_stamps;
                 return (
-                  <div key={card.id} className={`border rounded-xl p-4 flex items-center gap-4 ${isComplete ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'}`}>
+                  <div key={card.id} className={`border rounded-xl p-4 flex items-center gap-4 transition-all ${isComplete ? 'ring-2 ring-yellow-400 shadow-md shadow-yellow-100 bg-yellow-50 border-yellow-200' : 'border-gray-200'}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="font-semibold text-sm text-gray-900">{card.customer_name}</span>
@@ -253,16 +294,14 @@ export default function LoyaltyPage() {
                           {Array.from({ length: card.max_stamps }).map((_, i) => (
                             <div
                               key={i}
-                              className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${i < card.stamps ? 'bg-sky-500 text-white' : 'bg-gray-100 text-gray-300'}`}
-                            >
-                              {i < card.stamps ? '★' : '☆'}
-                            </div>
+                              className={`w-5 h-5 rounded-full border-2 ${i < card.stamps ? 'bg-sky-500 border-sky-500' : 'bg-white border-gray-300'}`}
+                            />
                           ))}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-sky-500 rounded-full" style={{ width: `${pct}%` }} />
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                         </div>
                         <span className="text-[10px] text-gray-500 flex-shrink-0">{card.stamps}/{card.max_stamps}</span>
                       </div>

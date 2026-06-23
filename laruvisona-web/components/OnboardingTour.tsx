@@ -69,7 +69,7 @@ export default function OnboardingTour() {
   };
 
   const finish = () => {
-    localStorage.setItem(STORAGE_KEY, '1');
+    localStorage.setItem(STORAGE_KEY, new Date().toISOString());
     setStep(null);
   };
 

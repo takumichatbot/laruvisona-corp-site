@@ -28,6 +28,7 @@ export default function HeatmapPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [viewType, setViewType] = useState<'click' | 'scroll'>('click');
+  const [deviceFilter, setDeviceFilter] = useState<'all' | 'mobile' | 'desktop'>('all');
   const [data, setData] = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(true);
@@ -52,14 +53,14 @@ export default function HeatmapPage() {
     if (!selectedSiteId) return;
     loadData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSiteId, viewType]);
+  }, [selectedSiteId, viewType, deviceFilter]);
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     setData(null);
     try {
-      const res = await fetch(`/api/heatmap?siteId=${selectedSiteId}&type=${viewType}`);
+      const res = await fetch(`/api/heatmap?siteId=${selectedSiteId}&type=${viewType}&device=${deviceFilter}`);
       if (!res.ok) throw new Error('データの取得に失敗しました');
       const d = await res.json() as HeatmapData;
       setData(d);
@@ -131,8 +132,18 @@ export default function HeatmapPage() {
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 mx-auto">ヒートマップ</h1>
+        {selectedSite?.slug && (
+          <a href={`/hp/${selectedSite.slug}`} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-3 py-1.5 rounded-lg transition-colors">
+            サイトを開く
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        )}
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
@@ -170,6 +181,20 @@ export default function HeatmapPage() {
               ))}
             </div>
           </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">デバイス</label>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              {(['all', 'mobile', 'desktop'] as const).map(d => (
+                <button
+                  key={d}
+                  onClick={() => { setDeviceFilter(d); }}
+                  className={`px-3 py-2.5 text-xs font-bold transition-colors ${deviceFilter === d ? 'bg-sky-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {d === 'all' ? '全部' : d === 'mobile' ? '📱' : '🖥'}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <button
             onClick={loadData}
@@ -193,33 +218,26 @@ export default function HeatmapPage() {
                 {viewType === 'click' ? 'クリック' : 'スクロール'}データ
               </span>
               <span className="text-xs text-gray-400">過去30日間 · {data.total.toLocaleString()}件</span>
-              {selectedSite?.slug && (
-                <a
-                  href={`/hp/${selectedSite.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto text-xs text-sky-500 hover:underline"
-                >
-                  サイトを開く ↗
-                </a>
-              )}
             </div>
 
             {data.total === 0 ? (
               <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-                <div className="text-4xl mb-3">📊</div>
+                <div className="text-5xl mb-4">📊</div>
                 <p className="font-bold text-gray-600">データがまだありません</p>
-                <p className="text-xs text-gray-400 mt-1">サイトが訪問されると自動的に計測されます</p>
+                <p className="text-xs text-gray-400 mt-1 mb-4">サイトが訪問されると自動的に計測されます</p>
+                <Link href="/laruHP/builder" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-4 py-2 rounded-lg transition-colors font-semibold">
+                  サイトを確認・公開する →
+                </Link>
               </div>
             ) : viewType === 'click' ? (
               /* Click heatmap canvas */
               <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                   <p className="text-xs font-semibold text-gray-700">クリックヒートマップ <span className="text-gray-400 font-normal ml-1">（ビューポート比率で正規化）</span></p>
-                  <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
-                    <span className="inline-block w-3 h-3 rounded-full bg-blue-400" />低
-                    <span className="inline-block w-3 h-3 rounded-full bg-yellow-400 ml-1" />中
-                    <span className="inline-block w-3 h-3 rounded-full bg-red-500 ml-1" />高
+                  <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                    <span>低</span>
+                    <div className="w-20 h-2.5 rounded-full" style={{ background: 'linear-gradient(to right, #60a5fa, #fbbf24, #ef4444)' }} />
+                    <span>高</span>
                   </div>
                 </div>
                 <div className="p-4 bg-slate-900 flex justify-center">
@@ -228,7 +246,6 @@ export default function HeatmapPage() {
                     width={640}
                     height={400}
                     className="rounded-lg w-full max-w-[640px]"
-                    style={{ imageRendering: 'pixelated' }}
                   />
                 </div>
                 <div className="p-3 bg-gray-50 border-t border-gray-100 text-center">
@@ -284,7 +301,7 @@ export default function HeatmapPage() {
 
         {!data && !loading && !error && (
           <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-            <div className="text-4xl mb-3">🔥</div>
+            <div className="text-5xl mb-4">🔥</div>
             <p className="text-sm font-semibold text-gray-600">サイトを選択してデータを読み込んでください</p>
           </div>
         )}

@@ -23,6 +23,7 @@ interface Block {
   id: string;
   type: BlockType;
   data: Record<string, unknown>;
+  memo?: string;
 }
 
 interface SEOSettings {
@@ -337,12 +338,12 @@ const BLOCK_PALETTE = [
   { group: 'レイアウト', items: [
     { type: 'nav' as BlockType, label: 'ナビバー', icon: '🧭' },
     { type: 'hero' as BlockType, label: 'ヒーロー', icon: '🦸' },
-    { type: 'two-col' as BlockType, label: '2カラム', icon: '▣' },
-    { type: 'three-col' as BlockType, label: '3カラム', icon: '⊞' },
-    { type: 'divider' as BlockType, label: '区切り線', icon: '➖' },
+    { type: 'two-col' as BlockType, label: '2カラム', icon: '⬛' },
+    { type: 'three-col' as BlockType, label: '3カラム', icon: '🔲' },
+    { type: 'divider' as BlockType, label: '区切り線', icon: '〰️' },
   ]},
   { group: 'コンテンツ', items: [
-    { type: 'heading' as BlockType, label: '見出し', icon: 'H' },
+    { type: 'heading' as BlockType, label: '見出し', icon: '🔤' },
     { type: 'paragraph' as BlockType, label: 'テキスト', icon: '📝' },
     { type: 'image' as BlockType, label: '画像', icon: '🖼' },
     { type: 'gallery' as BlockType, label: 'ギャラリー', icon: '📸' },
@@ -432,7 +433,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
     const props = {
       contentEditable: true as const,
       suppressContentEditableWarning: true,
-      className: `outline-none focus:outline-none focus:ring-1 focus:ring-blue-400/40 focus:bg-blue-400/5 rounded transition-all cursor-text ${className}`,
+      className: `outline-none focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:bg-blue-50/80 rounded transition-all cursor-text ${className}`,
       onBlur: (e: React.FocusEvent<HTMLElement>) => {
         onDataChange({ ...d, [key]: e.currentTarget.textContent || '' });
       },
@@ -478,7 +479,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
           <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-8 py-16 relative overflow-hidden" style={{ backgroundColor: d.bgColor as string, color: d.textColor as string }}>
             {(d.bgImage as string) ? <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${d.bgImage as string})` }} /> : null}
             {d.abVariant === 'b' && (
-              <div className="absolute top-2 left-2 z-20 bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">B バリアント</div>
+              <div className="absolute bottom-2 right-2 z-20 bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">B バリアント</div>
             )}
             <div className="relative z-10 max-w-2xl">
               {editable('heading', 'h1', 'text-4xl font-black mb-4 block w-full')}
@@ -714,17 +715,18 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
             <div className="space-y-3 max-w-2xl mx-auto">
               {items.map((item, i) => (
                 <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="p-5 flex gap-3">
-                    <span className="text-blue-500 font-black text-lg flex-shrink-0">Q.</span>
+                  <div className="p-5 flex gap-3 items-start bg-white">
+                    <span className="text-blue-500 font-black text-lg flex-shrink-0 leading-tight">Q</span>
                     <p contentEditable suppressContentEditableWarning
-                      className="font-bold text-gray-800 outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded flex-1"
+                      className="font-bold text-gray-800 outline-none cursor-text focus:ring-2 focus:ring-blue-500/60 focus:bg-blue-50/80 rounded flex-1"
                       onBlur={e => { const ni=[...items]; ni[i]={...ni[i],q:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
                       dangerouslySetInnerHTML={{ __html: item.q }} />
+                    <span className="text-gray-300 text-xs flex-shrink-0 leading-tight mt-1">▼</span>
                   </div>
-                  <div className="px-5 pb-5 pt-0 flex gap-3 bg-gray-50">
-                    <span className="text-gray-400 font-black text-lg flex-shrink-0">A.</span>
+                  <div className="px-5 pb-5 pt-3 flex gap-3 bg-gray-50 border-t border-gray-100">
+                    <span className="text-green-500 font-black text-lg flex-shrink-0 leading-tight">A</span>
                     <p contentEditable suppressContentEditableWarning
-                      className="text-gray-600 text-sm outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded flex-1"
+                      className="text-gray-600 text-sm outline-none cursor-text focus:ring-2 focus:ring-blue-500/60 focus:bg-blue-50/80 rounded flex-1"
                       onBlur={e => { const ni=[...items]; ni[i]={...ni[i],a:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
                       dangerouslySetInnerHTML={{ __html: item.a }} />
                   </div>
@@ -742,11 +744,11 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
             {editable('subtext', 'p', 'text-gray-500 text-center block mb-10')}
             <div className="max-w-lg mx-auto space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <input type="text" placeholder="お名前" className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-white" readOnly />
-                <input type="email" placeholder="メールアドレス" className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-white" readOnly />
+                <input type="text" placeholder="お名前" className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-gray-50 text-gray-400 cursor-not-allowed" readOnly />
+                <input type="email" placeholder="メールアドレス" className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-gray-50 text-gray-400 cursor-not-allowed" readOnly />
               </div>
-              <input type="tel" placeholder="電話番号" className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-white" readOnly />
-              <textarea placeholder="お問い合わせ内容" rows={4} className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-white resize-none" readOnly />
+              <input type="tel" placeholder="電話番号" className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-gray-50 text-gray-400 cursor-not-allowed" readOnly />
+              <textarea placeholder="お問い合わせ内容" rows={4} className="border border-gray-200 rounded-xl px-4 py-3 w-full bg-gray-50 text-gray-400 cursor-not-allowed resize-none" readOnly />
               <button className="w-full py-3 rounded-xl font-bold text-white" style={{ backgroundColor: d.buttonColor as string }}>
                 {d.buttonText as string}
               </button>
@@ -1143,11 +1145,20 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
 }
 
 // ─── AI Image Button ───────────────────────────────────────────────────────────
+const AI_PROMPT_KEY = 'laruHP_builder_recent_ai_prompts';
 function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: string) => void; defaultPrompt?: string }) {
   const [generating, setGenerating] = useState(false);
   const [prompt, setPrompt] = useState(defaultPrompt || '');
   const [open, setOpen] = useState(false);
   const [genError, setGenError] = useState('');
+  const [recentPrompts, setRecentPrompts] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(AI_PROMPT_KEY) || '[]') as string[];
+      setRecentPrompts(saved.slice(0, 5));
+    } catch { /* ignore */ }
+  }, [open]);
 
   const generate = async () => {
     if (!prompt.trim()) return;
@@ -1160,8 +1171,14 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
-      if (data.url) { onGenerated(data.url); setOpen(false); }
-      else setGenError(data.error || '画像生成に失敗しました');
+      if (data.url) {
+        const updated = [prompt.trim(), ...recentPrompts.filter(p => p !== prompt.trim())].slice(0, 5);
+        localStorage.setItem(AI_PROMPT_KEY, JSON.stringify(updated));
+        onGenerated(data.url);
+        setOpen(false);
+      } else {
+        setGenError(data.error || '画像生成に失敗しました');
+      }
     } catch {
       setGenError('画像生成に失敗しました');
     }
@@ -1178,6 +1195,17 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
 
   return (
     <div className="mt-1 bg-purple-500/10 border border-purple-500/20 rounded p-2">
+      {recentPrompts.length > 0 && (
+        <div className="mb-1.5 space-y-0.5">
+          <p className="text-[9px] text-purple-400 font-semibold mb-1">最近使ったプロンプト</p>
+          {recentPrompts.map((p, i) => (
+            <button key={i} onClick={() => setPrompt(p)}
+              className="w-full text-left text-[9px] text-purple-300 hover:text-white bg-white/5 hover:bg-purple-500/20 px-2 py-1 rounded truncate transition-all block">
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
       <textarea
         rows={2}
         value={prompt}
@@ -1540,7 +1568,7 @@ function PaletteSwatches({ palette, onPick }: { palette: string[]; onPick: (c: s
   );
 }
 
-function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, designStyle, onDesignStyleChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus, onOpenImageLib, globalFooter, onGlobalFooterChange, customPalette, onCustomPaletteChange, lineNotifyToken, onLineNotifyTokenChange, clarityId, onClarityIdChange, webhookUrl, onWebhookUrlChange, sitePassword, onSitePasswordChange, siteId }: {
+function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, designStyle, onDesignStyleChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus, onOpenImageLib, globalFooter, onGlobalFooterChange, customPalette, onCustomPaletteChange, lineNotifyToken, onLineNotifyTokenChange, clarityId, onClarityIdChange, webhookUrl, onWebhookUrlChange, sitePassword, onSitePasswordChange, siteId, onMemoChange }: {
   block: Block | null;
   onDataChange: (id: string, data: Record<string, unknown>) => void;
   seo: SEOSettings;
@@ -1582,6 +1610,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   sitePassword: string;
   onSitePasswordChange: (v: string) => void;
   siteId: string | null;
+  onMemoChange: (id: string, memo: string) => void;
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
   const [uploadingImg, setUploadingImg] = useState<string | null>(null);
@@ -3009,6 +3038,23 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </div>
               </div>
             )}
+
+            {/* Block memo */}
+            {block && (
+              <div className="mt-4 border-t border-white/[0.07] pt-4">
+                <label className="text-[10px] font-semibold text-slate-500 mb-1.5 flex items-center gap-1 block">
+                  {block.memo ? <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> : <span className="w-2 h-2 rounded-full bg-white/10 inline-block" />}
+                  メモ（自分だけ見えます）
+                </label>
+                <textarea
+                  rows={2}
+                  value={block.memo || ''}
+                  onChange={e => onMemoChange(block.id, e.target.value)}
+                  placeholder="このブロックへのメモ..."
+                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-xs text-slate-300 placeholder-slate-600 resize-none outline-none focus:border-yellow-400/40"
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -3658,6 +3704,9 @@ function BuilderContent() {
 
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [deletedBlockUndo, setDeletedBlockUndo] = useState<{ block: Block; pageId: string; index: number } | null>(null);
+  const deletedBlockUndoTimer = useState<ReturnType<typeof setTimeout> | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
@@ -3683,6 +3732,10 @@ function BuilderContent() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [recentBlocks, setRecentBlocks] = useState<BlockType[]>(() => {
+    try { return JSON.parse(localStorage.getItem('laruHP_builder_recent_blocks') || '[]'); } catch { return []; }
+  });
+  const [paletteSearch, setPaletteSearch] = useState('');
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string | null>(null);
@@ -3700,6 +3753,7 @@ function BuilderContent() {
   const [previewTokenLoading, setPreviewTokenLoading] = useState(false);
   const [copiedBlock, setCopiedBlock] = useState<Block | null>(null);
   const [copyToast, setCopyToast] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
   const [showPageSpeed, setShowPageSpeed] = useState(false);
   const [snippets, setSnippets] = useState<Array<{ id: string; name: string; blocks: Block[] }>>(() => {
     if (typeof window === 'undefined') return [];
@@ -3715,6 +3769,10 @@ function BuilderContent() {
   const redoStack = useRef<SiteData[]>([]);
   const siteRef = useRef<SiteData>(defaultSiteData);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [showBuilderTour, setShowBuilderTour] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('laruHP_builder_tour_done');
+  });
 
   // Lenis (global smooth scroll) intercepts wheel events at window level.
   // Stop propagation on the canvas so native overflow-y scroll takes over.
@@ -3909,6 +3967,12 @@ function BuilderContent() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Save (Cmd/Ctrl+S)
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+        return;
+      }
       // Undo / Redo
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
@@ -4256,6 +4320,16 @@ function BuilderContent() {
     }));
   }, []);
 
+  const updateBlockMemo = useCallback((id: string, memo: string) => {
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map(p => ({
+        ...p,
+        blocks: p.blocks.map(b => b.id === id ? { ...b, memo } : b),
+      })),
+    }));
+  }, []);
+
   const moveBlock = (id: string, dir: -1 | 1) => {
     pushHistory(siteRef.current);
     setSite(prev => ({
@@ -4273,6 +4347,9 @@ function BuilderContent() {
   };
 
   const deleteBlock = (id: string) => {
+    const currentPage = siteRef.current.pages.find(p => p.id === currentPageId);
+    const blockIndex = currentPage?.blocks.findIndex(b => b.id === id) ?? -1;
+    const blockToDelete = blockIndex >= 0 ? currentPage?.blocks[blockIndex] : undefined;
     pushHistory(siteRef.current);
     setSite(prev => ({
       ...prev,
@@ -4281,6 +4358,26 @@ function BuilderContent() {
       ),
     }));
     setSelectedId(null);
+    if (blockToDelete && blockIndex >= 0) {
+      if (deletedBlockUndoTimer[0]) clearTimeout(deletedBlockUndoTimer[0]);
+      setDeletedBlockUndo({ block: blockToDelete, pageId: currentPageId, index: blockIndex });
+      deletedBlockUndoTimer[0] = setTimeout(() => setDeletedBlockUndo(null), 4000);
+    }
+  };
+
+  const undoBlockDelete = () => {
+    if (!deletedBlockUndo) return;
+    if (deletedBlockUndoTimer[0]) clearTimeout(deletedBlockUndoTimer[0]);
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map(p => {
+        if (p.id !== deletedBlockUndo.pageId) return p;
+        const blocks = [...p.blocks];
+        blocks.splice(deletedBlockUndo.index, 0, deletedBlockUndo.block);
+        return { ...p, blocks };
+      }),
+    }));
+    setDeletedBlockUndo(null);
   };
 
   const duplicateBlock = (id: string) => {
@@ -4300,6 +4397,11 @@ function BuilderContent() {
 
   const addBlock = (type: BlockType, afterId?: string) => {
     pushHistory(siteRef.current);
+    setRecentBlocks(prev => {
+      const next = [type, ...prev.filter(t => t !== type)].slice(0, 3);
+      localStorage.setItem('laruHP_builder_recent_blocks', JSON.stringify(next));
+      return next;
+    });
     const block = defaultBlock(type);
     setSite(prev => ({
       ...prev,
@@ -4337,6 +4439,27 @@ function BuilderContent() {
     const remaining = site.pages.filter(p => p.id !== pageId);
     setSite(prev => ({ ...prev, pages: remaining }));
     if (currentPageId === pageId) setCurrentPageId(remaining[0].id);
+    setSelectedId(null);
+  };
+
+  const duplicatePage = (pageId: string) => {
+    const original = site.pages.find(p => p.id === pageId);
+    if (!original) return;
+    const ts = Date.now();
+    const newPage: Page = {
+      id: `page-${ts}`,
+      name: `${original.name} (コピー)`,
+      path: `${original.path}-copy`,
+      blocks: original.blocks.map(b => ({ ...b, id: `${b.id}-${ts}` })),
+      seo: { ...original.seo },
+    };
+    setSite(prev => {
+      const idx = prev.pages.findIndex(p => p.id === pageId);
+      const pages = [...prev.pages];
+      pages.splice(idx + 1, 0, newPage);
+      return { ...prev, pages };
+    });
+    setCurrentPageId(newPage.id);
     setSelectedId(null);
   };
 
@@ -4443,33 +4566,40 @@ function BuilderContent() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(false);
     const payload = {
       name: site.siteName,
       blocks_json: { v: 2, pages: site.pages },
       seo_json: site.pages[0]?.seo || emptySeo,
       settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, accentColor: site.accentColor, heroLayout: site.heroLayout, headerStyle: site.headerStyle, animLevel: site.animLevel, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl },
     };
-    if (dbSiteId) {
-      await fetch(`/api/sites/${dbSiteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      const res = await fetch('/api/sites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, industry: onboardingData?.industry }),
-      });
-      const { site: s } = await res.json();
-      if (s?.id) setDbSiteId(s.id);
+    try {
+      if (dbSiteId) {
+        const res = await fetch(`/api/sites/${dbSiteId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('save failed');
+      } else {
+        const res = await fetch('/api/sites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, industry: onboardingData?.industry }),
+        });
+        if (!res.ok) throw new Error('save failed');
+        const { site: s } = await res.json();
+        if (s?.id) setDbSiteId(s.id);
+      }
+      localStorage.setItem('laruHP_builder', JSON.stringify(site));
+      setIsDirty(false);
+      setSaved(true);
+      setLastSavedAt(new Date());
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setSaveError(true);
     }
-    localStorage.setItem('laruHP_builder', JSON.stringify(site));
-    setIsDirty(false);
     setSaving(false);
-    setSaved(true);
-    setLastSavedAt(new Date());
-    setTimeout(() => setSaved(false), 2000);
   };
 
   const handlePublish = async () => {
@@ -4702,6 +4832,49 @@ function BuilderContent() {
     <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100vh' }}>
       {/* Mobile not supported overlay */}
       <MobileOverlay />
+      {/* First-time builder tour */}
+      {showBuilderTour && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-[#0f172a] border border-white/10 rounded-3xl p-7 max-w-sm w-full shadow-2xl">
+            <div className="text-2xl mb-3">✨</div>
+            <h2 className="text-lg font-bold text-white mb-1">ビルダーへようこそ</h2>
+            <p className="text-slate-400 text-sm mb-5">3つのコツを押さえるだけで、プロ品質のHPが作れます。</p>
+            <div className="space-y-3 mb-6">
+              <div className="flex items-start gap-3 bg-white/5 rounded-xl px-4 py-3">
+                <span className="text-sky-400 font-bold text-sm flex-shrink-0 mt-0.5">1</span>
+                <div>
+                  <div className="text-white text-sm font-semibold mb-0.5">左パネルからブロックを追加</div>
+                  <p className="text-slate-500 text-xs">ヒーロー・サービス・お問い合わせなど目的別のブロックをドラッグして並べます。</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 bg-white/5 rounded-xl px-4 py-3">
+                <span className="text-sky-400 font-bold text-sm flex-shrink-0 mt-0.5">2</span>
+                <div>
+                  <div className="text-white text-sm font-semibold mb-0.5">キャンバスをクリックして編集</div>
+                  <p className="text-slate-500 text-xs">テキストや画像はキャンバス上で直接クリックして編集できます。</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 bg-white/5 rounded-xl px-4 py-3">
+                <span className="text-sky-400 font-bold text-sm flex-shrink-0 mt-0.5">3</span>
+                <div>
+                  <div className="text-white text-sm font-semibold mb-0.5">右上の「公開」で即時反映</div>
+                  <p className="text-slate-500 text-xs">保存は自動。完成したら「公開」ボタンを押すと世界中からアクセスできます。</p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.setItem('laruHP_builder_tour_done', '1');
+                setShowBuilderTour(false);
+              }}
+              className="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm py-3 rounded-xl transition-all"
+            >
+              はじめる
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Builder toast notification */}
       {builderToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-[#1e293b] border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-sm text-slate-200">
@@ -4710,12 +4883,53 @@ function BuilderContent() {
         </div>
       )}
 
+      {/* Block delete undo toast */}
+      {deletedBlockUndo && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[61] flex items-center gap-3 bg-gray-900 border border-gray-700 px-4 py-3 rounded-xl shadow-2xl">
+          <span className="text-gray-300 text-sm">ブロックを削除しました</span>
+          <button
+            onClick={undoBlockDelete}
+            className="text-sky-400 text-sm font-bold hover:text-sky-300 transition-colors"
+          >
+            元に戻す
+          </button>
+        </div>
+      )}
+
       {/* First publish success modal (onboarding flow) */}
       {copyToast && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#1e293b] border border-white/15 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-xl pointer-events-none animate-fadeIn">
-          📋 ブロックをコピーしました — Ctrl+V で貼り付け
+          📋 ブロックをコピーしました — {typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+V で貼り付け
         </div>
       )}
+
+      {contextMenu && !preview && (() => {
+        const block = currentPage?.blocks.find(b => b.id === contextMenu.blockId);
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+            <div
+              className="fixed z-50 bg-[#1e293b] border border-white/15 rounded-xl shadow-2xl py-1 min-w-[160px] text-sm"
+              style={{ top: contextMenu.y, left: contextMenu.x }}
+            >
+              <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
+                if (block) { setCopiedBlock(JSON.parse(JSON.stringify(block))); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }
+                setContextMenu(null);
+              }}>📋 コピー</button>
+              <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
+                duplicateBlock(contextMenu.blockId); setContextMenu(null);
+              }}>⧉ 複製</button>
+              <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
+                setSelectedId(contextMenu.blockId); setContextMenu(null);
+              }}>⚙ 設定</button>
+              <div className="border-t border-white/[0.07] my-1" />
+              <button className="w-full text-left px-4 py-2 text-red-400 hover:bg-red-500/10 flex items-center gap-2" onClick={() => {
+                deleteBlock(contextMenu.blockId); setContextMenu(null);
+              }}>🗑 削除</button>
+            </div>
+          </>
+        );
+      })()}
 
       {showPublishSuccess && publishedSlug && (() => {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
@@ -4876,6 +5090,13 @@ function BuilderContent() {
                     {page.name}
                   </button>
                 )}
+                <button
+                  onClick={() => duplicatePage(page.id)}
+                  title="このページを複製"
+                  className="opacity-0 group-hover/tab:opacity-100 text-slate-600 hover:text-sky-400 w-4 h-4 text-[10px] flex items-center justify-center transition-all ml-0.5"
+                >
+                  ⧉
+                </button>
                 {site.pages.length > 1 && (
                   <button
                     onClick={() => deletePage(page.id)}
@@ -5006,11 +5227,13 @@ function BuilderContent() {
               🔗
             </button>
           )}
-          {lastSavedAt && !isDirty && !saved && (
-            <span className="hidden sm:block text-slate-600 text-[10px] whitespace-nowrap">
-              {Math.floor((Date.now() - lastSavedAt.getTime()) / 60000) < 1
-                ? 'たった今保存'
-                : `${Math.floor((Date.now() - lastSavedAt.getTime()) / 60000)}分前に保存`}
+          {saveError && (
+            <span className="text-red-400 text-[10px] font-bold flex-shrink-0">⚠ 保存失敗</span>
+          )}
+          {lastSavedAt && !isDirty && !saved && !saveError && (
+            <span className="hidden sm:flex items-center gap-1 text-slate-600 text-[10px] whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_4px_#4ade80] animate-pulse" />
+              {lastSavedAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存
             </span>
           )}
           <button
@@ -5045,6 +5268,16 @@ function BuilderContent() {
         {!preview && (
           <div data-lenis-prevent-wheel className="hidden sm:block w-44 bg-[#0f172a] border-r border-white/10 overflow-y-auto flex-shrink-0 min-h-0">
             <div className="p-3">
+              {/* Palette search */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  value={paletteSearch}
+                  onChange={e => setPaletteSearch(e.target.value)}
+                  placeholder="ブロック検索..."
+                  className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-slate-300 placeholder-slate-600 outline-none focus:border-sky-500/50"
+                />
+              </div>
               {/* Saved snippets */}
               {snippets.length > 0 && (
                 <div className="mb-4">
@@ -5081,22 +5314,53 @@ function BuilderContent() {
                   </button>
                 </div>
               )}
-              {BLOCK_PALETTE.map(group => (
+              {recentBlocks.length > 0 && (() => {
+                const allItems = BLOCK_PALETTE.flatMap(g => g.items);
+                return (
+                  <div className="mb-4">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">最近追加</div>
+                    <div className="space-y-1">
+                      {recentBlocks.map(type => {
+                        const item = allItems.find(i => i.type === type);
+                        if (!item) return null;
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => addBlock(type, selectedId || undefined)}
+                            className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-all text-left"
+                          >
+                            <span className="text-base leading-none">{item.icon}</span>
+                            <span className="truncate">{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+              {BLOCK_PALETTE.map(group => {
+                const filteredItems = paletteSearch
+                  ? group.items.filter(item => item.label.toLowerCase().includes(paletteSearch.toLowerCase()) || item.type.toLowerCase().includes(paletteSearch.toLowerCase()))
+                  : group.items;
+                if (filteredItems.length === 0) return null;
+                return (
                 <div key={group.group} className="mb-4">
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">{group.group}</div>
                   <div className="space-y-1">
-                    {group.items.map(item => (
+                    {filteredItems.map(item => (
                       <button
                         key={item.type}
                         onClick={() => addBlock(item.type, selectedId || undefined)}
                         className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-all text-left"
                       >
+                        <span className="text-base leading-none">{item.icon}</span>
                         <span className="truncate">{item.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -5223,7 +5487,13 @@ function BuilderContent() {
                 <div className="h-64 flex items-center justify-center text-gray-400 text-center">
                   <div>
                     <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                    <div className="font-medium">左のパレットからブロックを追加してください</div>
+                    <div className="font-medium mb-4">左のパレットからブロックを追加してください</div>
+                    <div className="flex flex-col gap-1 text-[11px] text-gray-400 items-start mx-auto w-fit">
+                      <span><kbd className="bg-gray-100 border border-gray-200 rounded px-1 font-mono">Ctrl+Z</kbd> 元に戻す</span>
+                      <span><kbd className="bg-gray-100 border border-gray-200 rounded px-1 font-mono">Ctrl+S</kbd> 保存</span>
+                      <span><kbd className="bg-gray-100 border border-gray-200 rounded px-1 font-mono">Ctrl+C</kbd> ブロックをコピー</span>
+                      <span><kbd className="bg-gray-100 border border-gray-200 rounded px-1 font-mono">Ctrl+V</kbd> 貼り付け</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -5259,6 +5529,7 @@ function BuilderContent() {
                     setDragOverId(null);
                   } : undefined}
                   onDragEnd={!preview ? () => { setDraggedId(null); setDragOverId(null); } : undefined}
+                  onContextMenu={!preview ? (e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, blockId: block.id }); setSelectedId(block.id); } : undefined}
                   style={!preview && draggedId === block.id ? { opacity: 0.45, cursor: 'grabbing' } : !preview ? { cursor: 'grab' } : undefined}
                 >
                   <BlockCanvas
@@ -5286,6 +5557,9 @@ function BuilderContent() {
                     }}
                     onDataChange={(data) => updateBlockData(block.id, data)}
                   />
+                  {!preview && block.memo && (
+                    <div className="absolute left-2 top-2 z-20 w-2.5 h-2.5 rounded-full bg-yellow-400 shadow-sm shadow-yellow-400/50" title={`メモ: ${block.memo}`} />
+                  )}
                   {!preview && (
                     <div className={`absolute right-2 flex flex-col gap-1 z-20 transition-opacity ${selectedId === block.id ? 'opacity-100 top-2' : 'opacity-0 group-hover:opacity-100 top-2'}`}>
                       <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0}
@@ -5413,6 +5687,7 @@ function BuilderContent() {
             sitePassword={site.sitePassword}
             onSitePasswordChange={v => setSite(prev => ({ ...prev, sitePassword: v }))}
             siteId={siteId}
+            onMemoChange={updateBlockMemo}
           />
         )}
       </div>

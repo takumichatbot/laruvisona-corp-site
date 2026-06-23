@@ -167,7 +167,10 @@ export default function AgencyPage() {
     <div className="min-h-screen bg-[#030712] text-white">
       <div className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/laruHP/dashboard" className="text-slate-400 hover:text-white text-sm">← ダッシュボード</Link>
+          <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            ダッシュボード
+          </Link>
           <h1 className="font-bold text-white">エージェンシー管理</h1>
           <div className="ml-auto flex items-center gap-3">
             <Link href="/laruHP/builder/new"

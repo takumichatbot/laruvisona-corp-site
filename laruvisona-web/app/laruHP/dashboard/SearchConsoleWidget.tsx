@@ -202,22 +202,42 @@ export default function SearchConsoleWidget() {
             </div>
           )}
 
-          {/* Top queries */}
-          {topQueries.length > 0 && (
-            <div className="mt-4">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">検索クエリ TOP {topQueries.length}</p>
-              <div className="space-y-1.5">
-                {topQueries.map((q, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="text-[10px] text-gray-400 font-mono w-4 flex-shrink-0">{i + 1}</span>
-                    <span className="text-xs text-gray-700 flex-1 truncate">{q.query}</span>
-                    <span className="text-[10px] text-green-600 font-semibold flex-shrink-0">{q.clicks}クリック</span>
-                    <span className="text-[10px] text-orange-500 flex-shrink-0">{q.position}位</span>
+          {/* Keyword ranking */}
+          {topQueries.length > 0 && (() => {
+            const maxImpr = Math.max(...topQueries.map(q => q.impressions), 1);
+            return (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">キーワードランキング TOP {topQueries.length}</p>
+                  <div className="flex items-center gap-3 text-[9px] text-gray-400">
+                    <span>クリック</span><span>表示</span><span>CTR</span><span className="w-8 text-right">順位</span>
                   </div>
-                ))}
+                </div>
+                <div className="space-y-1">
+                  {topQueries.map((q, i) => {
+                    const ctr = q.impressions > 0 ? ((q.clicks / q.impressions) * 100).toFixed(1) : '0.0';
+                    const pos = q.position;
+                    const posColor = pos <= 3 ? 'text-green-600 bg-green-50 border-green-200' : pos <= 10 ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-red-500 bg-red-50 border-red-200';
+                    const barPct = (q.impressions / maxImpr) * 100;
+                    return (
+                      <div key={i} className="relative bg-gray-50 rounded-lg px-3 py-2 overflow-hidden">
+                        <div className="absolute left-0 top-0 bottom-0 bg-sky-100/60 rounded-lg transition-all" style={{ width: `${barPct}%` }} />
+                        <div className="relative flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 font-mono w-4 flex-shrink-0">{i + 1}</span>
+                          <span className="text-xs text-gray-700 flex-1 truncate">{q.query}</span>
+                          <span className="text-[10px] text-green-600 font-bold flex-shrink-0 w-12 text-right">{q.clicks.toLocaleString()}</span>
+                          <span className="text-[10px] text-blue-500 flex-shrink-0 w-12 text-right">{q.impressions.toLocaleString()}</span>
+                          <span className="text-[10px] text-purple-500 flex-shrink-0 w-10 text-right">{ctr}%</span>
+                          <span className={`text-[10px] font-bold flex-shrink-0 w-10 text-right px-1.5 py-0.5 rounded border ${posColor}`}>{pos}位</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[9px] text-gray-300 mt-2 text-center">バーの長さ = 表示回数の相対量</p>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>

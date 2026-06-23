@@ -24,6 +24,7 @@ interface BusinessInfo {
   latitude: string;
   longitude: string;
   sameAs: string[];
+  ogImage?: string;
 }
 
 const SCHEMA_TYPES = [
@@ -55,6 +56,7 @@ const DEFAULT_HOURS = [
   'Mo-Fr 09:00-18:00',
   'Sa 10:00-17:00',
 ];
+const HOURS_PLACEHOLDER = 'Mo-Fr 09:00-18:00（月〜金 9時〜18時）';
 
 const DEFAULT_FORM: BusinessInfo = {
   type: 'LocalBusiness',
@@ -69,6 +71,7 @@ const DEFAULT_FORM: BusinessInfo = {
   latitude: '',
   longitude: '',
   sameAs: ['', '', ''],
+  ogImage: '',
 };
 
 export default function SeoPage() {
@@ -85,6 +88,7 @@ export default function SeoPage() {
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'success' | 'error'>('success');
   const [preview, setPreview] = useState(false);
+  const [needsRepublish, setNeedsRepublish] = useState(false);
 
   const showMsg = (text: string, type: 'success' | 'error' = 'success') => {
     setMsgType(type);
@@ -115,6 +119,8 @@ export default function SeoPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const REPUBLISH_KEY = (siteId: string) => `laruHP_seo_needs_republish_${siteId}`;
+
   const loadFormFromSite = (site: Site) => {
     const bi = (site.settings_json?.businessInfo as BusinessInfo | undefined);
     if (bi) {
@@ -127,6 +133,7 @@ export default function SeoPage() {
     } else {
       setForm({ ...DEFAULT_FORM, name: site.name });
     }
+    setNeedsRepublish(typeof window !== 'undefined' && !!localStorage.getItem(REPUBLISH_KEY(site.id)));
   };
 
   const handleSiteChange = (siteId: string) => {
@@ -143,6 +150,8 @@ export default function SeoPage() {
       const d = await res.json() as { error?: string; message?: string };
       if (res.ok) {
         showMsg('再公開しました。SEO設定が反映されました。');
+        setNeedsRepublish(false);
+        localStorage.removeItem(REPUBLISH_KEY(selectedSite.id));
       } else if (res.status === 403) {
         showMsg(d.message || 'サブスクリプションが必要です', 'error');
       } else {
@@ -175,6 +184,8 @@ export default function SeoPage() {
         ));
         setSelectedSite(prev => prev ? { ...prev, settings_json: { ...(prev.settings_json || {}), businessInfo } } : prev);
         showMsg('SEO情報を保存しました。次の公開時に反映されます。');
+        setNeedsRepublish(true);
+        localStorage.setItem(REPUBLISH_KEY(selectedSite.id), '1');
       } else {
         const d = await res.json().catch(() => ({}));
         showMsg((d as { error?: string }).error || '保存に失敗しました', 'error');
@@ -231,6 +242,16 @@ export default function SeoPage() {
   };
 
   const inputCls = 'w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 transition-colors';
+  const requiredInputCls = (val: string) => inputCls + (!val.trim() ? ' border-red-300 bg-red-50/30' : '');
+
+  const schemaHints = [
+    { ok: !!form.name.trim(), label: '店舗名', tip: 'Googleビジネスプロフィールと完全一致させると評価が上がります' },
+    { ok: form.description.length >= 50, label: '説明文（50文字以上）', tip: '短すぎる説明文はリッチリザルトに表示されにくいです' },
+    { ok: !!form.phone.trim(), label: '電話番号', tip: '電話番号があると地域検索での表示率が向上します' },
+    { ok: !!form.address.trim(), label: '住所', tip: 'ローカルSEOの最重要項目です' },
+    { ok: form.openingHours.some(Boolean), label: '営業時間', tip: 'Googleマップでの表示に影響します' },
+    { ok: form.sameAs.some(Boolean), label: 'SNSリンク', tip: 'Googleがビジネスを認識する際の補足情報になります' },
+  ];
 
   if (loading) return <div className="min-h-screen bg-sky-50 flex items-center justify-center"><div className="text-gray-500 text-sm">読み込み中...</div></div>;
   if (error) return (
@@ -245,7 +266,10 @@ export default function SeoPage() {
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 mx-auto">SEO・構造化データ設定</h1>
       </header>
 
@@ -260,6 +284,46 @@ export default function SeoPage() {
           </p>
         </div>
 
+        {/* JSON-LD validation badge */}
+        {(() => {
+          const checks = [
+            { label: '店舗名', ok: !!(form.name || selectedSite?.name) },
+            { label: '説明文', ok: form.description.length >= 50 },
+            { label: '電話番号', ok: !!form.phone },
+            { label: '住所', ok: !!(form.address || form.city) },
+            { label: '営業時間', ok: form.openingHours.filter(Boolean).length > 0 },
+          ];
+          const filled = checks.filter(c => c.ok).length;
+          const missing = checks.filter(c => !c.ok).map(c => c.label);
+          const isComplete = filled === checks.length;
+          return (
+            <div className={`flex items-center justify-between px-4 py-3 rounded-2xl border ${isComplete ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className={`text-xs font-bold ${isComplete ? 'text-green-700' : 'text-amber-700'}`}>
+                  {isComplete ? `✓ ${filled}項目すべて設定済み` : `${filled} / ${checks.length} 項目設定済み`}
+                </span>
+                {missing.length > 0 && (
+                  <span className="text-[10px] text-amber-600">未設定: {missing.join(' · ')}</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {checks.map(c => {
+                  const hint = schemaHints.find(h => h.label.startsWith(c.label.split('（')[0]));
+                  return (
+                    <span
+                      key={c.label}
+                      title={!c.ok && hint ? hint.tip : undefined}
+                      className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border cursor-default ${c.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200 underline decoration-dotted'}`}
+                    >
+                      {c.ok ? '✓' : '⚠'} {c.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Site picker */}
         {sites.length > 1 && (
           <select
@@ -269,6 +333,22 @@ export default function SeoPage() {
           >
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
+        )}
+
+        {needsRepublish && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="flex-shrink-0">🔄</span>
+              <span className="text-xs font-semibold text-amber-800">SEO設定を変更しました。Googleへの反映には再公開が必要です。</span>
+            </div>
+            <button
+              onClick={async () => { await handleSave(); await handleRepublish(); }}
+              disabled={saving || republishing}
+              className="flex-shrink-0 text-xs bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+            >
+              今すぐ公開
+            </button>
+          </div>
         )}
 
         {msg && (
@@ -282,19 +362,158 @@ export default function SeoPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-gray-600 mb-1.5 block">業種・Schema.org タイプ</label>
-              <select value={form.type} onChange={e => setField('type', e.target.value)} className={inputCls}>
-                {SCHEMA_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              <select
+                value={form.type}
+                onChange={e => {
+                  const next = e.target.value;
+                  if (next === form.type) return;
+                  const hasData = form.name || form.description || form.address || form.phone;
+                  if (hasData && !window.confirm(`業種を「${SCHEMA_TYPES.find(t => t.value === next)?.label || next}」に変更します。\n入力済みのフィールドはそのまま残ります。よろしいですか？`)) return;
+                  setField('type', next);
+                }}
+                className={inputCls}
+              >
+                <optgroup label="一般">
+                  <option value="LocalBusiness">一般（ローカルビジネス）</option>
+                </optgroup>
+                <optgroup label="飲食・宿泊">
+                  <option value="Restaurant">飲食店・カフェ</option>
+                  <option value="Hotel">ホテル・旅館</option>
+                  <option value="LodgingBusiness">宿泊施設</option>
+                </optgroup>
+                <optgroup label="美容・健康">
+                  <option value="HealthAndBeautyBusiness">美容室・エステ・サロン</option>
+                  <option value="HairSalon">美容室（ヘアサロン）</option>
+                  <option value="SpaOrBeautyBusiness">スパ・マッサージ</option>
+                  <option value="FitnessCenter">フィットネス・ジム</option>
+                </optgroup>
+                <optgroup label="医療・法律">
+                  <option value="MedicalBusiness">クリニック・医院</option>
+                  <option value="Dentist">歯科・デンタルクリニック</option>
+                  <option value="LegalService">士業・法律・会計</option>
+                </optgroup>
+                <optgroup label="小売・サービス">
+                  <option value="Store">小売店・ショップ</option>
+                  <option value="ClothingStore">アパレル・衣料品</option>
+                  <option value="PetStore">ペットサロン・ショップ</option>
+                </optgroup>
+                <optgroup label="不動産・建設">
+                  <option value="RealEstateAgent">不動産</option>
+                  <option value="HomeAndConstructionBusiness">建設・工務店・リフォーム</option>
+                </optgroup>
+                <optgroup label="教育・その他">
+                  <option value="EducationalOrganization">スクール・教育</option>
+                  <option value="AutoRepair">車・整備・修理</option>
+                  <option value="WeddingVenue">ウェディング</option>
+                  <option value="PhotographyBusiness">フォトスタジオ</option>
+                </optgroup>
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">店舗・事業所名</label>
-              <input type="text" value={form.name} onChange={e => setField('name', e.target.value)} className={inputCls} placeholder={selectedSite?.name || '店舗名'} />
+              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">店舗・事業所名 <span className="text-red-400">*</span></label>
+              <input type="text" value={form.name} onChange={e => setField('name', e.target.value)} className={requiredInputCls(form.name)} placeholder={selectedSite?.name || '店舗名'} />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">説明文（検索結果に表示）</label>
-            <textarea value={form.description} onChange={e => setField('description', e.target.value)} className={inputCls + ' h-20 resize-none'} placeholder="地域密着の○○サービスを提供しています..." />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-gray-600">説明文（検索結果に表示）<span className="text-red-400 ml-0.5">*</span></label>
+              <span className={`text-[10px] font-semibold ${
+                form.description.length === 0
+                  ? 'text-gray-400'
+                  : form.description.length >= 150 && form.description.length <= 160
+                  ? 'text-green-600'
+                  : form.description.length > 160
+                  ? 'text-red-500'
+                  : 'text-amber-500'
+              }`}>
+                {form.description.length} / 160文字
+                {form.description.length > 0 && form.description.length < 50 && ' （短すぎます）'}
+                {form.description.length > 160 && ' （長すぎます）'}
+                {form.description.length >= 150 && form.description.length <= 160 && ' ✓ 最適'}
+              </span>
+            </div>
+            {form.description.length > 0 && (
+              <div className="mb-1.5">
+                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      form.description.length >= 150 && form.description.length <= 160
+                        ? 'bg-green-500'
+                        : form.description.length > 160
+                        ? 'bg-red-500'
+                        : form.description.length >= 80
+                        ? 'bg-amber-400'
+                        : 'bg-gray-300'
+                    }`}
+                    style={{ width: `${Math.min(100, (form.description.length / 160) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[9px] text-gray-400 mt-0.5 px-0.5">
+                  <span>0</span>
+                  <span className="text-amber-500">80</span>
+                  <span className="text-green-600">150</span>
+                  <span className="text-red-500">160+</span>
+                </div>
+              </div>
+            )}
+            <textarea value={form.description} onChange={e => setField('description', e.target.value)} className={requiredInputCls(form.description) + ' h-20 resize-none'} placeholder="地域密着の○○サービスを提供しています..." />
+            {(form.name || form.description) && (
+              <div className="mt-2 space-y-3">
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <p className="text-[10px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">Google 検索結果プレビュー</p>
+                  <div className="text-[13px] text-[#1a0dab] font-medium leading-snug truncate">
+                    {form.name || selectedSite?.name || 'サイト名'}
+                  </div>
+                  <div className="text-[11px] text-[#006621] truncate mt-0.5">
+                    {selectedSite?.slug ? `https://laruvisona.com/hp/${selectedSite.slug}` : 'https://laruvisona.com/hp/...'}
+                  </div>
+                  <div className="text-[12px] text-[#545454] mt-1 leading-snug line-clamp-2">
+                    {form.description
+                      ? form.description.slice(0, 160)
+                      : <span className="text-gray-300">説明文を入力すると、ここに表示されます...</span>}
+                  </div>
+                </div>
+
+                {/* OGP Image input */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-gray-600">OGP画像URL（SNSシェア時のサムネイル）</label>
+                    <span className="text-[10px] text-gray-400">推奨: 1200×630px</span>
+                  </div>
+                  <input type="url" value={form.ogImage || ''} onChange={e => setField('ogImage', e.target.value)} className={inputCls} placeholder="https://..." />
+                </div>
+
+                {/* Twitter / LINE / OGP preview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Twitter card */}
+                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <p className="text-[10px] font-semibold text-gray-400 px-3 pt-3 mb-2 uppercase tracking-wider">X (Twitter) カードプレビュー</p>
+                    {form.ogImage && <img src={form.ogImage} alt="OGP" className="w-full h-28 object-cover" />}
+                    {!form.ogImage && <div className="w-full h-28 bg-gray-100 flex items-center justify-center text-xs text-gray-400">画像URL未設定</div>}
+                    <div className="px-3 py-2.5">
+                      <div className="text-[11px] font-bold text-gray-900 truncate">{form.name || selectedSite?.name || 'サイト名'}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{form.description.slice(0, 100) || '説明文...'}</div>
+                      <div className="text-[10px] text-gray-400 mt-1 truncate">laruvisona.com</div>
+                    </div>
+                  </div>
+                  {/* LINE share card */}
+                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <p className="text-[10px] font-semibold text-gray-400 px-3 pt-3 mb-2 uppercase tracking-wider">LINE シェアプレビュー</p>
+                    <div className="flex gap-2 px-3 pb-3">
+                      {form.ogImage
+                        ? <img src={form.ogImage} alt="OGP" className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                        : <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center text-xs text-gray-400">No img</div>}
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-bold text-gray-900 line-clamp-2">{form.name || selectedSite?.name || 'サイト名'}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{form.description.slice(0, 80) || '説明文...'}</div>
+                        <div className="text-[9px] text-green-600 font-bold mt-1">laruvisona.com</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -372,7 +591,7 @@ export default function SeoPage() {
                   value={h}
                   onChange={e => setHour(i, e.target.value)}
                   className={inputCls}
-                  placeholder="Mo-Fr 09:00-18:00"
+                  placeholder={HOURS_PLACEHOLDER}
                 />
                 <button
                   onClick={() => setForm(f => ({ ...f, openingHours: f.openingHours.filter((_, j) => j !== i) }))}
@@ -436,23 +655,35 @@ export default function SeoPage() {
         <div className="flex gap-3">
           <button
             onClick={handleSave}
-            disabled={saving || republishing}
+            disabled={saving || republishing || (!form.name.trim() && !selectedSite?.name) || !form.description.trim()}
             className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl text-sm transition-colors"
+            title={(!form.name.trim() && !selectedSite?.name) ? '店舗名を入力してください' : !form.description.trim() ? '説明文を入力してください' : ''}
           >
             {saving ? '保存中...' : 'SEO情報を保存'}
           </button>
           <button
             onClick={async () => { await handleSave(); if (!saving) await handleRepublish(); }}
-            disabled={saving || republishing}
+            disabled={saving || republishing || (!form.name.trim() && !selectedSite?.name) || !form.description.trim()}
             className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl text-sm transition-colors"
+            title={(!form.name.trim() && !selectedSite?.name) ? '店舗名を入力してください' : !form.description.trim() ? '説明文を入力してください' : '保存後すぐにサイトを再公開します'}
           >
-            {republishing ? '公開中...' : '保存して即座に公開'}
+            {republishing ? '公開中...' : '保存して公開'}
           </button>
         </div>
 
         <p className="text-[10px] text-gray-400 text-center">
           「保存して即座に公開」でビルダーに戻らずそのままGoogle に反映されます
         </p>
+        {selectedSite?.slug && (
+          <a
+            href={`https://www.google.com/search?q=site:laruvisona.jp/hp/${selectedSite.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 hover:text-sky-600 transition-colors"
+          >
+            🔍 Google でインデックス状況を確認 →
+          </a>
+        )}
 
       </div>
     </div>

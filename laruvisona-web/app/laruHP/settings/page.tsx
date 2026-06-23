@@ -318,6 +318,26 @@ export default function SettingsPage() {
 
   const inputCls = 'w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-sky-500 transition-colors';
 
+  const [igDisconnectConfirm, setIgDisconnectConfirm] = useState(false);
+
+  const handleIgDisconnectClick = () => setIgDisconnectConfirm(true);
+  const handleIgDisconnectCancel = () => setIgDisconnectConfirm(false);
+  const handleIgDisconnectConfirm = async () => {
+    setIgDisconnectConfirm(false);
+    await fetch('/api/instagram', { method: 'DELETE' });
+    setIgConnected(false);
+    setIgUsername('');
+    setIgMedia([]);
+    setIgMsg('連携を解除しました');
+  };
+
+  const pwStrength = (() => {
+    if (!newPw) return 0;
+    if (newPw.length < 8) return 1;
+    if (newPw.length < 12) return 2;
+    return 3;
+  })();
+
   type Tab = 'account' | 'domain' | 'integrations' | 'danger';
   const [activeTab, setActiveTab] = useState<Tab>('account');
 
@@ -325,25 +345,29 @@ export default function SettingsPage() {
     { id: 'account', label: 'アカウント' },
     { id: 'domain', label: '独自ドメイン' },
     { id: 'integrations', label: '外部連携' },
-    { id: 'danger', label: '危険な操作' },
+    { id: 'danger', label: '退会・削除' },
   ];
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 ml-auto mr-auto">アカウント設定</h1>
       </header>
 
       {/* Tabs */}
       <div className="border-b border-sky-100 bg-white/70 backdrop-blur-md">
-        <div className="max-w-xl mx-auto px-6 flex gap-1">
+        <div className="max-w-xl mx-auto px-6 flex gap-1 overflow-x-auto scrollbar-hide">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors ${activeTab === tab.id ? 'border-sky-600 text-sky-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              className={`px-4 py-3 text-xs font-bold border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === tab.id ? (tab.id === 'danger' ? 'border-red-500 text-red-600' : 'border-sky-600 text-sky-700') : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             >
+              {tab.id === 'danger' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-1.5 mb-0.5" />}
               {tab.label}
             </button>
           ))}
@@ -415,7 +439,21 @@ export default function SettingsPage() {
           <p className="text-gray-500 text-xs mb-5">8文字以上で設定してください。</p>
           <form onSubmit={handlePasswordChange} className="space-y-3">
             <input type="password" placeholder="現在のパスワード（確認用）" value={currentPw} onChange={e => setCurrentPw(e.target.value)} className={inputCls} />
-            <input type="password" placeholder="新しいパスワード（8文字以上）" value={newPw} onChange={e => setNewPw(e.target.value)} className={inputCls} required />
+            <div>
+              <input type="password" placeholder="新しいパスワード（8文字以上）" value={newPw} onChange={e => setNewPw(e.target.value)} className={inputCls} required />
+              {newPw && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden flex gap-0.5">
+                    {[1, 2, 3].map(level => (
+                      <div key={level} className={`flex-1 rounded-full transition-all ${pwStrength >= level ? (level === 1 ? 'bg-red-400' : level === 2 ? 'bg-amber-400' : 'bg-green-500') : 'bg-gray-100'}`} />
+                    ))}
+                  </div>
+                  <span className={`text-[10px] font-bold ${pwStrength === 1 ? 'text-red-500' : pwStrength === 2 ? 'text-amber-500' : 'text-green-600'}`}>
+                    {pwStrength === 1 ? '弱い' : pwStrength === 2 ? '普通' : '強い'}
+                  </span>
+                </div>
+              )}
+            </div>
             <input type="password" placeholder="新しいパスワード（確認）" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} className={inputCls} required />
             {pwMsg && <p className={`text-xs ${pwMsg.startsWith('エラー') || pwMsg.includes('一致') || pwMsg.includes('文字') ? 'text-red-600' : 'text-emerald-700'}`}>{pwMsg}</p>}
             <button type="submit" disabled={pwLoading} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">
@@ -559,10 +597,38 @@ export default function SettingsPage() {
         {/* ── Integrations tab ── */}
         {activeTab === 'integrations' && <>
 
+        {/* Integration status summary */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">連携ステータス</p>
+          <div className="flex flex-wrap gap-2">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${gscConnected ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${gscConnected ? 'bg-green-500' : 'bg-gray-300'}`} />
+              Search Console {gscConnected ? (gscSiteUrl ? `(${gscSiteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')})` : '接続済') : '未連携'}
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${gmbSaved ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${gmbSaved ? 'bg-green-500' : 'bg-gray-300'}`} />
+              Google マップ {gmbSaved ? '設定済' : '未設定'}
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${igConnected ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${igConnected ? 'bg-green-500' : 'bg-gray-300'}`} />
+              Instagram {igConnected ? `@${igUsername}` : '未連携'}
+            </div>
+          </div>
+        </div>
+
         {/* Google Search Console */}
         <section id="gsc" className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
           <h2 className="font-bold text-sm mb-1 text-gray-900">Google Search Console 連携</h2>
-          <p className="text-gray-500 text-xs mb-5">サイトの検索クリック数・表示回数・平均順位をダッシュボードで確認できます。</p>
+          <p className="text-gray-500 text-xs mb-3">サイトの検索クリック数・表示回数・平均順位をダッシュボードで確認できます。</p>
+          <details className="mb-4">
+            <summary className="text-xs text-sky-600 hover:text-sky-500 cursor-pointer font-semibold select-none">設定方法を見る ›</summary>
+            <ol className="mt-2 ml-4 space-y-1.5 list-decimal text-xs text-gray-600">
+              <li><a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">Google Search Console</a> を開き、サイトを追加してください</li>
+              <li>「URLプレフィックス」を選択し、公開中のサイトURLを入力</li>
+              <li>所有権を確認（HTMLファイルのアップロード or メタタグ推奨）</li>
+              <li>確認完了後、下の「Googleアカウントで連携する」をクリック</li>
+            </ol>
+          </details>
           {gscMsg && (
             <p className={`text-xs mb-4 px-3 py-2 rounded-lg border ${gscMsg.startsWith('error:') ? 'text-red-600 bg-red-50 border-red-200' : 'text-green-700 bg-green-50 border-green-200'}`}>
               {gscMsg.replace('error:', '')}
@@ -664,7 +730,14 @@ export default function SettingsPage() {
                   <div className="font-semibold text-sm text-gray-900">@{igUsername}</div>
                   <div className="text-xs text-gray-500">連携済み</div>
                 </div>
-                <button onClick={handleIgDisconnect} className="text-xs text-gray-400 hover:text-red-500 transition-colors">解除</button>
+                {igDisconnectConfirm ? (
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={handleIgDisconnectConfirm} className="text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg transition-colors">解除する</button>
+                    <button onClick={handleIgDisconnectCancel} className="text-[10px] text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg border border-gray-200 transition-colors">戻る</button>
+                  </div>
+                ) : (
+                  <button onClick={handleIgDisconnectClick} className="text-xs text-gray-400 hover:text-red-500 transition-colors">解除</button>
+                )}
               </div>
 
               {igMedia.length > 0 && (
@@ -691,9 +764,18 @@ export default function SettingsPage() {
                   className={inputCls}
                 />
                 <p className="text-[10px] text-gray-400 mt-1">
-                  Meta Developer Console で「Instagram Basic Display API」のトークンを取得してください。
-                  長期トークン（60日）を推奨します。
+                  Meta Developer Console で取得したアクセストークンを入力してください（長期トークン推奨）。
                 </p>
+                <details className="mt-2">
+                  <summary className="text-[10px] text-sky-600 hover:text-sky-500 cursor-pointer font-semibold select-none">トークン取得方法 ›</summary>
+                  <ol className="mt-2 ml-3 space-y-1 list-decimal text-[10px] text-gray-500">
+                    <li><a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">Meta for Developers</a> でアプリを作成</li>
+                    <li>「Instagram Basic Display」を追加してアプリに紐付け</li>
+                    <li>テストユーザーに自分のアカウントを追加</li>
+                    <li>「ユーザートークンを生成」でトークンを取得 → 上のフォームに貼り付け</li>
+                    <li>長期トークン（60日）への交換は API で自動延長可能</li>
+                  </ol>
+                </details>
               </div>
 
               {igMsg && (
@@ -752,6 +834,15 @@ export default function SettingsPage() {
                 <a href="https://developers.google.com/maps/documentation/javascript/place-id" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">Place ID Finder</a>
                 でPlace IDを確認できます
               </p>
+              <details className="mt-2">
+                <summary className="text-[10px] text-sky-600 hover:text-sky-500 cursor-pointer font-semibold select-none">Place IDの調べ方 ›</summary>
+                <ol className="mt-2 ml-3 space-y-1 list-decimal text-[10px] text-gray-500">
+                  <li>上のリンク「Place ID Finder」を開く</li>
+                  <li>検索ボックスに店舗名または住所を入力して選択</li>
+                  <li>地図上のピンをクリックすると「Place ID: ChIJ...」が表示される</li>
+                  <li>その文字列（ChIJ〜）をコピーして上のフォームに貼り付け</li>
+                </ol>
+              </details>
             </div>
 
             {gmbMsg && (
@@ -896,7 +987,7 @@ export default function SettingsPage() {
               placeholder="「削除する」と入力してください"
               value={deleteConfirm}
               onChange={e => setDeleteConfirm(e.target.value)}
-              className={inputCls}
+              className={`${inputCls} ${deleteConfirm === '削除する' ? 'border-red-500 bg-red-50 text-red-900 focus:border-red-500' : ''}`}
             />
             {deleteMsg && <p className="text-xs text-red-600">{deleteMsg}</p>}
             <button

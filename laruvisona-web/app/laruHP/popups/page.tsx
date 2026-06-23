@@ -16,6 +16,8 @@ interface PopupConfig {
   textColor: string;
   enabled: boolean;
   createdAt: string;
+  maxShows?: number;    // 0 = unlimited
+  hideForDays?: number; // 0 = no cooldown
 }
 
 interface Site {
@@ -40,6 +42,8 @@ const DEFAULT_POPUP: Omit<PopupConfig, 'id' | 'createdAt' | 'enabled'> = {
   triggerValue: 10,
   bgColor: '#0c1a3a',
   textColor: '#ffffff',
+  maxShows: 0,
+  hideForDays: 7,
 };
 
 export default function PopupsPage() {
@@ -55,6 +59,7 @@ export default function PopupsPage() {
 
   // Form state
   const [form, setForm] = useState<Omit<PopupConfig, 'id' | 'createdAt' | 'enabled'>>(DEFAULT_POPUP);
+  const [triggerInlineError, setTriggerInlineError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
@@ -97,6 +102,14 @@ export default function PopupsPage() {
   };
 
   const handleAdd = async () => {
+    if (form.trigger === 'scroll' && (form.triggerValue < 1 || form.triggerValue > 100)) {
+      setMsg('⚠ スクロール値は1〜100%の範囲で入力してください');
+      return;
+    }
+    if (form.trigger === 'timer' && (form.triggerValue < 1 || form.triggerValue > 120)) {
+      setMsg('⚠ タイマー値は1〜120秒の範囲で入力してください');
+      return;
+    }
     const newPopup: PopupConfig = {
       ...form,
       id: Date.now().toString(),
@@ -128,7 +141,10 @@ export default function PopupsPage() {
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 mx-auto">ポップアップ/バナービルダー</h1>
       </header>
 
@@ -151,11 +167,24 @@ export default function PopupsPage() {
 
         {/* Create form */}
         <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
             <div>
               <h2 className="font-bold text-sm text-gray-900">新しいポップアップを作成</h2>
               <p className="text-xs text-gray-500 mt-0.5">Exit Intent / スクロール / タイマーで表示</p>
             </div>
+            {popups.length > 0 && (
+              <button
+                onClick={() => {
+                  const last = popups[popups.length - 1];
+                  const { id: _id, createdAt: _c, enabled: _e, ...rest } = last;
+                  setForm(rest);
+                }}
+                className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 bg-sky-50 px-3 py-1.5 rounded-lg font-semibold transition-all"
+                title="最後に作成したポップアップの設定を引き継ぐ"
+              >
+                前回から複製
+              </button>
+            )}
             <button
               onClick={() => setShowPreview(v => !v)}
               className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-3 py-1.5 rounded-lg transition-colors"
@@ -165,7 +194,7 @@ export default function PopupsPage() {
           </div>
 
           {showPreview ? (
-            <div className="relative rounded-xl overflow-hidden border border-gray-200" style={{ background: '#e2e8f0', minHeight: '200px' }}>
+            <div className="relative rounded-xl overflow-hidden border border-gray-200" style={{ background: 'linear-gradient(to bottom, #e2e8f0, #d1d8e0)', minHeight: '200px' }}>
               <div className="absolute inset-0 flex items-center justify-center p-4">
                 <div
                   className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
@@ -186,7 +215,13 @@ export default function PopupsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">トリガー</label>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <label className="text-xs font-semibold text-gray-600">トリガー</label>
+                    <span
+                      className="w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[9px] font-bold flex items-center justify-center cursor-help flex-shrink-0"
+                      title={form.trigger === 'exit' ? '離脱検知: マウスがウィンドウ上部に移動したとき表示します' : form.trigger === 'scroll' ? 'スクロール到達: 設定した割合ページをスクロールしたとき表示します' : 'タイマー: ページを開いてから指定秒数後に表示します'}
+                    >?</span>
+                  </div>
                   <select
                     value={form.trigger}
                     onChange={e => setForm(f => ({ ...f, trigger: e.target.value as PopupConfig['trigger'] }))}
@@ -204,11 +239,25 @@ export default function PopupsPage() {
                   <input
                     type="number"
                     value={form.triggerValue}
-                    onChange={e => setForm(f => ({ ...f, triggerValue: parseInt(e.target.value) || 0 }))}
-                    min="0"
+                    onChange={e => {
+                      const v = parseInt(e.target.value) || 0;
+                      setForm(f => ({ ...f, triggerValue: v }));
+                      if (form.trigger === 'scroll') {
+                        setTriggerInlineError(v < 1 || v > 100 ? 'スクロール率は1〜100%で入力してください' : '');
+                      } else if (form.trigger === 'timer') {
+                        setTriggerInlineError(v < 1 || v > 120 ? 'タイマーは1〜120秒で入力してください' : '');
+                      } else {
+                        setTriggerInlineError('');
+                      }
+                    }}
+                    min={form.trigger === 'exit' ? 0 : 1}
+                    max={form.trigger === 'scroll' ? 100 : form.trigger === 'timer' ? 120 : undefined}
                     disabled={form.trigger === 'exit'}
-                    className={inputCls + ' disabled:opacity-40'}
+                    className={inputCls + ' disabled:opacity-40 disabled:bg-gray-100 disabled:cursor-not-allowed' + (triggerInlineError ? ' border-red-400' : '')}
                   />
+                  {triggerInlineError && (
+                    <p className="text-[10px] text-red-500 mt-1">{triggerInlineError}</p>
+                  )}
                 </div>
               </div>
 
@@ -218,7 +267,7 @@ export default function PopupsPage() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600 mb-1.5 block">本文</label>
-                <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} className={inputCls + ' h-20 resize-none'} placeholder="お気軽にご連絡ください..." />
+                <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} className={inputCls + ' h-20 resize-none'} placeholder="最大500文字。改行やHTMLタグは使用できません。" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -230,6 +279,29 @@ export default function PopupsPage() {
                   <input type="text" value={form.buttonUrl} onChange={e => setForm(f => ({ ...f, buttonUrl: e.target.value }))} className={inputCls} placeholder="#contact" />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">最大表示回数（0=無制限）</label>
+                  <input
+                    type="number"
+                    value={form.maxShows ?? 0}
+                    onChange={e => setForm(f => ({ ...f, maxShows: parseInt(e.target.value) || 0 }))}
+                    min="0"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">非表示期間（日）</label>
+                  <input
+                    type="number"
+                    value={form.hideForDays ?? 7}
+                    onChange={e => setForm(f => ({ ...f, hideForDays: parseInt(e.target.value) || 0 }))}
+                    min="0"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-1.5 block">背景色</label>
@@ -263,6 +335,30 @@ export default function PopupsPage() {
         {/* List */}
         <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
           <h2 className="font-bold text-sm text-gray-900 mb-4">設定済みポップアップ ({popups.length}件)</h2>
+
+          {/* Trigger breakdown */}
+          {popups.length >= 2 && (() => {
+            const total = popups.length;
+            const breakdown = (['exit', 'scroll', 'timer'] as const).map(t => ({
+              label: TRIGGER_LABELS[t],
+              count: popups.filter(p => p.trigger === t).length,
+              enabled: popups.filter(p => p.trigger === t && p.enabled).length,
+            })).filter(b => b.count > 0);
+            return (
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {breakdown.map(b => (
+                  <div key={b.label} className="flex-1 min-w-[80px] bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-center">
+                    <p className="text-lg font-bold text-gray-800">{b.count}</p>
+                    <p className="text-[10px] text-gray-500">{b.label}</p>
+                    <div className="w-full bg-gray-200 rounded-full h-1 mt-1 overflow-hidden">
+                      <div className="bg-sky-500 h-1 rounded-full" style={{ width: `${(b.count / total) * 100}%` }} />
+                    </div>
+                    <p className="text-[9px] text-gray-400 mt-0.5">有効 {b.enabled}/{b.count}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {popups.length === 0 ? (
             <div className="text-center py-8">

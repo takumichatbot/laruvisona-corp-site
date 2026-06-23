@@ -159,7 +159,12 @@ export default function PlansPage() {
             </button>
           </div>
           {annual && (
-            <p className="text-emerald-600 text-xs font-medium mt-1">年間一括払いで2ヶ月分お得</p>
+            <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-xs text-emerald-700 space-y-0.5">
+              <div className="font-semibold">年払いの節約額（プラン例）</div>
+              <div className="text-emerald-600">HP単体: 月払い¥11,988 → 年払い¥9,990 <span className="font-bold text-emerald-700">（¥1,998 節約 ≈ 約2ヶ月無料）</span></div>
+              <div className="text-emerald-600">HP+Bot: 月払い¥59,760 → 年払い¥49,800 <span className="font-bold text-emerald-700">（¥9,960 節約 ≈ 約2ヶ月無料）</span></div>
+              <p className="text-emerald-500 mt-1">※ 月額 × 12ヶ月との比較。年払いは一括請求、途中解約の場合の日割り返金はありません。</p>
+            </div>
           )}
 
           <p className="text-gray-500 text-base font-normal mt-3">全プラン 初月無料・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>

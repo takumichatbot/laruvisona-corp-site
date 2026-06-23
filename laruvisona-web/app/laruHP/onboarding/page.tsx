@@ -792,10 +792,14 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                 style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
               />
             </div>
+            <div className="flex items-center justify-between mt-1.5">
+              <span className="text-[10px] text-gray-400">目安: <span className="font-semibold text-gray-500">{STEP_TIMES[step - 1]}</span></span>
+              {step > 1 && <span className="text-[10px] text-gray-400">残り約{['4分30秒', '4分', '3分', '2分', '30秒'][step - 1]}</span>}
+            </div>
           </div>
-          <div className="text-center text-[11px] text-gray-500 mt-2">
-            このステップの目安: <span className="text-gray-600 font-semibold">{STEP_TIMES[step - 1]}</span>
-            {step > 1 && <span className="ml-3">合計残り約{['4分30秒', '4分', '3分', '2分', '30秒'][step - 1]}</span>}
+          <div className="hidden sm:flex items-center justify-between text-[10px] text-gray-400 mt-1.5">
+            <span>目安: <span className="font-semibold text-gray-500">{STEP_TIMES[step - 1]}</span></span>
+            {step > 1 && <span>残り約{['4分30秒', '4分', '3分', '2分', '30秒'][step - 1]}</span>}
           </div>
         </div>
 
@@ -884,7 +888,8 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                     onChange={e => updateForm('website', e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleScanUrl()}
                     placeholder="https://your-shop.com"
-                    className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                    disabled={scanning}
+                    className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors disabled:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                   <button
                     onClick={handleScanUrl}
@@ -1035,10 +1040,16 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                 </div>
               </div>
               {/* Color combo preview */}
-              <div className="mt-4 h-8 rounded-xl overflow-hidden flex">
-                <div className="flex-1" style={{ background: form.primaryColor }} />
-                <div className="w-[30%]" style={{ background: form.accentColor }} />
-                <div className="w-[15%] bg-gray-100" />
+              <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
+                <div className="px-4 py-3 flex items-center justify-between" style={{ background: form.primaryColor }}>
+                  <span className="text-white text-sm font-bold opacity-90">見出しテキスト</span>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full" style={{ background: form.accentColor, color: '#fff' }}>ボタン</span>
+                </div>
+                <div className="h-2 flex">
+                  <div className="flex-1" style={{ background: form.primaryColor }} />
+                  <div className="w-[30%]" style={{ background: form.accentColor }} />
+                  <div className="w-[15%] bg-gray-100" />
+                </div>
               </div>
             </div>
 
@@ -1065,7 +1076,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                         <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       </div>
                     )}
-                    <div className="font-bold text-sm text-gray-900">{f.label}</div>
+                    <div className="font-bold text-sm text-gray-900" style={{ fontFamily: FONT_MAP[f.id] }}>{f.label}</div>
                     <div className="text-gray-500 text-[11px] mt-0.5">{f.sub}</div>
                   </button>
                 ))}
@@ -1768,8 +1779,9 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {step < 5 && !generating && (
           <div className="flex justify-between mt-10">
             {step === 1 ? (
-              <Link href="/laruHP" className="px-6 py-3 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-sky-300 bg-white transition-all text-sm">
-                ← トップへ戻る
+              <Link href="/laruHP" className="flex items-center gap-1.5 px-6 py-3 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-sky-300 bg-white transition-all text-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                トップへ戻る
               </Link>
             ) : (
               <button
@@ -1779,13 +1791,19 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                 ← 戻る
               </button>
             )}
-            <button
-              onClick={() => goStep(Math.min(5, step + 1))}
-              disabled={!canNext()}
-              className="px-8 py-3 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-500 hover:scale-105 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              次へ →
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:flex items-center gap-1 text-[10px] text-gray-400">
+                <kbd className="bg-gray-100 border border-gray-300 rounded px-1.5 py-0.5 font-mono text-[9px]">Enter ↵</kbd>
+                でも進む
+              </span>
+              <button
+                onClick={() => goStep(Math.min(5, step + 1))}
+                disabled={!canNext()}
+                className="px-8 py-3 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-500 hover:scale-105 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                次へ →
+              </button>
+            </div>
           </div>
         )}
         </div>{/* /left column */}

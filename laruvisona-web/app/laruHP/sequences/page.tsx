@@ -51,6 +51,7 @@ export default function SequencesPage() {
   const [msgType, setMsgType] = useState<'success' | 'error'>('success');
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [form, setForm] = useState<{ name: string; trigger: Sequence['trigger']; steps: SequenceStep[] }>({
     name: '',
@@ -142,16 +143,25 @@ export default function SequencesPage() {
   };
 
   const handleDelete = async (seqId: string) => {
-    if (!selectedSite || !confirm('このシーケンスを削除しますか？')) return;
+    if (!selectedSite) return;
+    setDeleteConfirmId(seqId);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedSite || !deleteConfirmId) return;
     try {
-      const res = await fetch(`/api/sequences?sequenceId=${seqId}&siteId=${selectedSite.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/sequences?sequenceId=${deleteConfirmId}&siteId=${selectedSite.id}`, { method: 'DELETE' });
       if (res.ok) {
-        setSequences(prev => prev.filter(s => s.id !== seqId));
+        setSequences(prev => prev.filter(s => s.id !== deleteConfirmId));
+        setDeleteConfirmId(null);
+        setExpandedId(null);
       } else {
         showMsg('削除に失敗しました', 'error');
+        setDeleteConfirmId(null);
       }
     } catch {
       showMsg('ネットワークエラーが発生しました', 'error');
+      setDeleteConfirmId(null);
     }
   };
 
@@ -175,10 +185,30 @@ export default function SequencesPage() {
     </div>
   );
 
+  const deleteTarget = sequences.find(s => s.id === deleteConfirmId);
+
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
+      {/* Delete confirm modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4 text-2xl">🗑️</div>
+            <h3 className="font-bold text-gray-900 mb-1">シーケンスを削除しますか？</h3>
+            <p className="text-sm text-gray-500 mb-5">「{deleteTarget?.name}」を削除します。この操作は取り消せません。</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 py-2.5 rounded-xl transition-colors">キャンセル</button>
+              <button onClick={confirmDelete} className="flex-1 text-sm bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl transition-all">削除する</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 mx-auto">メールシーケンス</h1>
       </header>
 
@@ -216,7 +246,9 @@ export default function SequencesPage() {
           <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-sm text-gray-900">メールシーケンスを作成</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -309,11 +341,18 @@ export default function SequencesPage() {
 
         {/* Sequences list */}
         <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-          <h2 className="font-bold text-sm text-gray-900 mb-4">シーケンス一覧（{sequences.length}件）</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="font-bold text-sm text-gray-900">シーケンス一覧</h2>
+            {sequences.length > 0 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                {sequences.filter(s => s.active).length}件有効 / {sequences.length}件
+              </span>
+            )}
+          </div>
 
           {sequences.length === 0 ? (
             <div className="text-center py-10">
-              <div className="text-4xl mb-3">✉️</div>
+              <div className="text-5xl mb-4">✉️</div>
               <p className="text-sm text-gray-500">まだシーケンスがありません</p>
               <p className="text-xs text-gray-400 mt-1">問い合わせやメール登録後の自動フォローアップを設定しましょう</p>
             </div>
@@ -348,11 +387,20 @@ export default function SequencesPage() {
 
                   {expandedId === seq.id && (
                     <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
-                      <div className="space-y-2 mb-4">
+                      {seq.enrolledCount > 0 && (
+                        <div className="text-[11px] text-gray-500 mb-3 flex items-center gap-1.5">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                          登録済み: <span className="font-bold text-gray-700">{seq.enrolledCount}件</span>
+                        </div>
+                      )}
+                      <div className="space-y-0 mb-4">
                         {seq.steps.map((step, i) => (
                           <div key={i} className="flex items-start gap-2 text-xs">
-                            <div className="w-5 h-5 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5">{i + 1}</div>
-                            <div>
+                            <div className="flex flex-col items-center flex-shrink-0">
+                              <div className="w-5 h-5 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-[10px] mt-0.5">{i + 1}</div>
+                              {i < seq.steps.length - 1 && <div className="w-0.5 h-4 bg-gray-200 mt-0.5" />}
+                            </div>
+                            <div className="pb-3">
                               <span className="font-semibold text-gray-700">{step.subject}</span>
                               <span className="text-gray-400 ml-2">{i === 0 ? '即時' : `${step.delay}時間後`}</span>
                             </div>

@@ -46,6 +46,7 @@ export default function ShopPage() {
   const [msgType, setMsgType] = useState<'success' | 'error'>('success');
   const [form, setForm] = useState(DEFAULT_FORM);
   const [showForm, setShowForm] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const showMsg = (text: string, type: 'success' | 'error' = 'success') => {
     setMsgType(type);
@@ -138,17 +139,24 @@ export default function ShopPage() {
     }
   };
 
-  const handleDelete = async (productId: string) => {
-    if (!selectedSite || !confirm('この商品を削除しますか？')) return;
+  const handleDelete = (productId: string) => {
+    setDeleteConfirmId(productId);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedSite || !deleteConfirmId) return;
     try {
-      const res = await fetch(`/api/products?productId=${productId}&siteId=${selectedSite.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/products?productId=${deleteConfirmId}&siteId=${selectedSite.id}`, { method: 'DELETE' });
       if (res.ok) {
-        setProducts(prev => prev.filter(p => p.id !== productId));
+        setProducts(prev => prev.filter(p => p.id !== deleteConfirmId));
+        setDeleteConfirmId(null);
       } else {
         showMsg('削除に失敗しました', 'error');
+        setDeleteConfirmId(null);
       }
     } catch {
       showMsg('ネットワークエラーが発生しました', 'error');
+      setDeleteConfirmId(null);
     }
   };
 
@@ -164,10 +172,29 @@ export default function ShopPage() {
     </div>
   );
 
+  const deleteTarget = products.find(p => p.id === deleteConfirmId);
+
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4 text-2xl">🗑️</div>
+            <h3 className="font-bold text-gray-900 mb-1">商品を削除しますか？</h3>
+            <p className="text-sm text-gray-500 mb-5">「{deleteTarget?.name}」を削除します。この操作は取り消せません。</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 text-sm text-gray-500 border border-gray-200 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">キャンセル</button>
+              <button onClick={confirmDelete} className="flex-1 text-sm bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl transition-all">削除する</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">← ダッシュボード</Link>
+        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ダッシュボード
+        </Link>
         <h1 className="text-sm font-bold text-gray-900 mx-auto">ショップ管理</h1>
       </header>
 
@@ -222,7 +249,9 @@ export default function ShopPage() {
           <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-sm text-gray-900">新しい商品を追加</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
 
             <div>
@@ -273,7 +302,7 @@ export default function ShopPage() {
 
           {products.length === 0 ? (
             <div className="text-center py-10">
-              <div className="text-4xl mb-3">🛍️</div>
+              <div className="text-5xl mb-4">🛍️</div>
               <p className="text-sm text-gray-500">まだ商品がありません</p>
               <p className="text-xs text-gray-400 mt-1">「商品・サービスを追加」から登録してください</p>
             </div>
