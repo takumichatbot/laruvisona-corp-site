@@ -1026,7 +1026,7 @@ export default function DashboardPage() {
                 <button
                   onClick={handlePortal}
                   disabled={portalLoading}
-                  className={`flex items-center gap-1.5 text-xs border px-3.5 py-2 rounded-lg transition-all disabled:opacity-50 ${
+                  className={`flex items-center gap-1.5 text-xs border px-3.5 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     effectiveStatus === 'past_due'
                       ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
                       : 'border-gray-200 hover:border-gray-300 text-gray-600'
@@ -1252,7 +1252,7 @@ export default function DashboardPage() {
                 <div className="font-semibold text-sm text-gray-900 mb-0.5">LARUbot AI チャットボット</div>
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">24時間対応のAIチャットが問い合わせ数を平均2.3倍に増加。</p>
                 <button onClick={() => handleUpgrade('hp-bot')} disabled={upgradeLoading === 'hp-bot'}
-                  className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50">
+                  className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {upgradeLoading === 'hp-bot' ? '処理中...' : 'HP + Bot プランへアップグレード →'}
                 </button>
               </div>
@@ -1263,7 +1263,7 @@ export default function DashboardPage() {
                 <div className="font-semibold text-sm text-gray-900 mb-0.5">LARU SEO AIブログ自動生成</div>
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">毎週AIがSEO記事を自動公開。検索流入を継続的に獲得。</p>
                 <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
-                  className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50">
+                  className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
                 </button>
               </div>
@@ -1277,7 +1277,7 @@ export default function DashboardPage() {
               <div className="font-semibold text-sm text-gray-900 mb-0.5">LARU SEO — AIブログで検索流入を自動化</div>
               <p className="text-gray-500 text-xs leading-relaxed mb-2">毎週AIがSEO最適化記事を自動公開。放置するだけで検索順位が上がります。</p>
               <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
-                className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50">
+                className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
               </button>
             </div>
@@ -1291,7 +1291,7 @@ export default function DashboardPage() {
                 <div className="font-semibold text-sm text-gray-900 mb-0.5">LARU SEO AIブログ自動生成</div>
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">毎週AIがSEO記事を自動公開。検索流入を継続的に獲得。</p>
                 <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
-                  className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50">
+                  className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
                 </button>
               </div>
@@ -1302,7 +1302,7 @@ export default function DashboardPage() {
                 <div className="font-semibold text-sm text-gray-900 mb-0.5">エージェンシープラン</div>
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">複数クライアントのサイトを一元管理。サブアカウント・ホワイトラベル対応。</p>
                 <button onClick={() => handleUpgrade('agency')} disabled={upgradeLoading === 'agency'}
-                  className="text-purple-600 hover:text-purple-500 text-xs font-semibold transition-colors disabled:opacity-50">
+                  className="text-purple-600 hover:text-purple-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {upgradeLoading === 'agency' ? '処理中...' : 'エージェンシープランへアップグレード →'}
                 </button>
               </div>
@@ -1593,7 +1593,7 @@ export default function DashboardPage() {
                       <button
                         onClick={() => handlePublish(site.id)}
                         disabled={publishing === site.id}
-                        className="absolute bottom-2.5 right-2.5 flex items-center gap-1 text-[9px] bg-sky-600 hover:bg-sky-500 disabled:opacity-50 px-2.5 py-1.5 rounded-md transition-all text-white font-bold shadow-sm"
+                        className="absolute bottom-2.5 right-2.5 flex items-center gap-1 text-[9px] bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed px-2.5 py-1.5 rounded-md transition-all text-white font-bold shadow-sm"
                       >
                         🚀 {publishing === site.id ? '公開中...' : '公開する'}
                       </button>
@@ -1617,7 +1617,7 @@ export default function DashboardPage() {
                               autoFocus
                               placeholder="my-site"
                             />
-                            <button onClick={() => handleSaveSlug(site.id)} disabled={savingSlug} className="text-[9px] bg-sky-600 hover:bg-sky-500 px-1.5 py-0.5 rounded text-white font-bold disabled:opacity-50 flex-shrink-0">{savingSlug ? '…' : '保存'}</button>
+                            <button onClick={() => handleSaveSlug(site.id)} disabled={savingSlug} className="text-[9px] bg-sky-600 hover:bg-sky-500 px-1.5 py-0.5 rounded text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0">{savingSlug ? '…' : '保存'}</button>
                             <button onClick={() => setEditingSlug(null)} className="text-[9px] text-gray-400 hover:text-gray-600 flex-shrink-0">✕</button>
                             {slugError && <span className="text-[9px] text-red-600 flex-shrink-0">{slugError}</span>}
                           </div>
@@ -1765,14 +1765,14 @@ export default function DashboardPage() {
                             <button
                               onClick={() => handleAbWinner(site.id, 'a')}
                               disabled={abWinnerLoading === site.id}
-                              className="text-[9px] px-2 py-0.5 rounded bg-sky-100 text-sky-700 hover:bg-sky-200 font-bold disabled:opacity-50 transition-all"
+                              className="text-[9px] px-2 py-0.5 rounded bg-sky-100 text-sky-700 hover:bg-sky-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                               A を選ぶ
                             </button>
                             <button
                               onClick={() => handleAbWinner(site.id, 'b')}
                               disabled={abWinnerLoading === site.id}
-                              className="text-[9px] px-2 py-0.5 rounded bg-purple-100 text-purple-700 hover:bg-purple-200 font-bold disabled:opacity-50 transition-all"
+                              className="text-[9px] px-2 py-0.5 rounded bg-purple-100 text-purple-700 hover:bg-purple-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                               B を選ぶ
                             </button>
@@ -1829,7 +1829,7 @@ export default function DashboardPage() {
                       <button
                         onClick={() => handleSaveDomain(site.id)}
                         disabled={savingDomain === site.id}
-                        className="text-[10px] bg-sky-50 hover:bg-sky-100 border border-gray-200 hover:border-sky-200 px-3 py-1.5 rounded-md transition-all disabled:opacity-50 flex-shrink-0 text-gray-600"
+                        className="text-[10px] bg-sky-50 hover:bg-sky-100 border border-gray-200 hover:border-sky-200 px-3 py-1.5 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 text-gray-600"
                       >
                         {savingDomain === site.id ? '...' : '保存'}
                       </button>
@@ -1842,7 +1842,7 @@ export default function DashboardPage() {
                           <button
                             onClick={() => handleCheckDns(site.id)}
                             disabled={dnsStatus[site.id]?.checking}
-                            className="text-[10px] bg-sky-50 hover:bg-sky-100 border border-gray-200 px-2.5 py-1.5 rounded-md transition-all disabled:opacity-50 text-gray-500 flex-shrink-0"
+                            className="text-[10px] bg-sky-50 hover:bg-sky-100 border border-gray-200 px-2.5 py-1.5 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-500 flex-shrink-0"
                           >
                             {dnsStatus[site.id]?.checking ? '確認中...' : 'DNS確認'}
                           </button>
@@ -1955,7 +1955,7 @@ export default function DashboardPage() {
                                 setMemberLoading(null);
                               }}
                               disabled={memberLoading === site.id}
-                              className="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2.5 py-1.5 rounded-md transition-all disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+                              className="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2.5 py-1.5 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
                             >
                               {memberLoading === site.id ? '...' : '招待'}
                             </button>
@@ -2165,7 +2165,7 @@ export default function DashboardPage() {
                                   <button
                                     onClick={() => handleSnapshotRestore(site.id, v.id, v.label)}
                                     disabled={snapshotRestoring === v.id}
-                                    className="text-[9px] bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 px-2 py-0.5 rounded transition-all disabled:opacity-50 flex-shrink-0 font-bold"
+                                    className="text-[9px] bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 px-2 py-0.5 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 font-bold"
                                   >
                                     {snapshotRestoring === v.id ? '...' : '復元'}
                                   </button>
@@ -2209,7 +2209,7 @@ export default function DashboardPage() {
                             <button
                               onClick={() => setUnpublishSiteId(site.id)}
                               disabled={publishing === site.id}
-                              className="flex-1 flex items-center justify-center text-[11px] border border-gray-200 hover:border-red-200 hover:text-red-600 py-2 rounded-lg transition-all disabled:opacity-50 text-gray-500"
+                              className="flex-1 flex items-center justify-center text-[11px] border border-gray-200 hover:border-red-200 hover:text-red-600 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-500"
                             >
                               {publishing === site.id ? '...' : '非公開'}
                             </button>
@@ -2218,7 +2218,7 @@ export default function DashboardPage() {
                           <button
                             onClick={() => handlePublish(site.id)}
                             disabled={publishing === site.id}
-                            className="flex-1 flex items-center justify-center gap-1 text-[11px] bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 py-2 rounded-lg transition-all disabled:opacity-50"
+                            className="flex-1 flex items-center justify-center gap-1 text-[11px] bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {publishing === site.id ? '処理中...' : '公開する'}
                           </button>
@@ -2228,7 +2228,7 @@ export default function DashboardPage() {
                           disabled={duplicating === site.id}
                           title="複製"
                           aria-label="サイトを複製"
-                          className="flex items-center justify-center text-[11px] text-gray-400 hover:text-gray-600 border border-gray-200 hover:border-gray-300 py-2 px-3 rounded-lg transition-all disabled:opacity-50"
+                          className="flex items-center justify-center text-[11px] text-gray-400 hover:text-gray-600 border border-gray-200 hover:border-gray-300 py-2 px-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {duplicating === site.id ? '...' : <IcDuplicate />}
                         </button>

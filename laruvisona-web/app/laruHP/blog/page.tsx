@@ -227,7 +227,7 @@ export default function BlogPage() {
                 <button
                   onClick={handleAiGenerate}
                   disabled={aiGenerating || !selectedSiteId}
-                  className={`text-xs bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1.5 ${aiGenerating ? 'opacity-70' : ''}`}
+                  className={`text-xs bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 ${aiGenerating ? 'opacity-70' : ''}`}
                   title="AIがSEO最適化された記事を自動生成して下書き保存します"
                 >
                   {aiGenerating ? (
@@ -468,7 +468,7 @@ export default function BlogPage() {
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={() => setShowModal(false)} className="flex-1 text-sm text-slate-400 hover:text-slate-200 border border-white/10 py-2.5 rounded-lg transition-colors">キャンセル</button>
-              <button onClick={handleSave} disabled={saving || !form.title.trim()} className="flex-1 text-sm bg-white text-black font-bold py-2.5 rounded-lg hover:bg-blue-50 transition-all disabled:opacity-50">
+              <button onClick={handleSave} disabled={saving || !form.title.trim()} className="flex-1 text-sm bg-white text-black font-bold py-2.5 rounded-lg hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                 {saving ? '保存中...' : editingPost ? '更新する' : '投稿する'}
               </button>
             </div>

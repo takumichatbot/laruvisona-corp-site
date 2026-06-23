@@ -254,7 +254,7 @@ export default function ShopPage() {
           <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-sm text-gray-900">新しい商品を追加</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors">
+              <button onClick={() => setShowForm(false)} aria-label="フォームを閉じる" className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -293,7 +293,7 @@ export default function ShopPage() {
               <button
                 onClick={handleCreate}
                 disabled={saving || !form.name || form.price <= 0}
-                className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
               >
                 {saving ? '保存中...' : '商品を追加'}
               </button>
@@ -352,6 +352,7 @@ export default function ShopPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(product.id)}
+                        aria-label={`${product.name}を削除`}
                         className="text-gray-400 hover:text-red-500 transition-colors p-1.5"
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>

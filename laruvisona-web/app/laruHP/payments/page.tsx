@@ -255,7 +255,7 @@ export default function PaymentsPage() {
             <button
               type="submit"
               disabled={creating || !amount || !description}
-              className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+              className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
             >
               {creating ? '作成中...' : '決済リンクを作成'}
             </button>
@@ -408,8 +408,9 @@ export default function PaymentsPage() {
                     </button>
                     <button
                       onClick={() => handleDelete(link.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
+                      aria-label={`「${link.description}」の決済リンクを削除`}
                       title="この決済リンクを削除"
+                      className="text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
                     </button>

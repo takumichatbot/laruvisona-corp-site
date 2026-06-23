@@ -191,7 +191,7 @@ export default function TranslatePage() {
                   <button
                     onClick={() => handleTranslate(locale.code)}
                     disabled={isTranslating || !!translating}
-                    className={`flex-shrink-0 text-sm font-bold px-4 py-2 rounded-xl transition-colors disabled:opacity-50 ${
+                    className={`flex-shrink-0 text-sm font-bold px-4 py-2 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                       info
                         ? 'border border-sky-200 text-sky-700 hover:bg-sky-50'
                         : 'bg-sky-600 hover:bg-sky-500 text-white'

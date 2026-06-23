@@ -291,7 +291,7 @@ export default function AnalyticsPage() {
             <button
               onClick={() => loadData(true)}
               disabled={refreshing}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-xl px-3 py-2 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-xl px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="データを再取得"
             >
               <svg className={refreshing ? 'animate-spin' : ''} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -360,7 +360,7 @@ export default function AnalyticsPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 border border-sky-200 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition-colors"
                 >
-                  🔍 Google Search Console に登録してインデックスを促進 →
+                  🔍 Google Search Consoleに登録してインデックスを促進 →
                 </a>
               )}
             </div>

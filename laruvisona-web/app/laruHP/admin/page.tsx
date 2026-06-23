@@ -373,7 +373,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => changePlan(user.id)}
                         disabled={planChanging === user.id || !planSelects[user.id] || planSelects[user.id] === user.plan}
-                        className="text-xs px-2.5 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 transition-all disabled:opacity-40"
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 hover:bg-blue-500/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {planChanging === user.id ? '...' : '変更'}
                       </button>
@@ -389,7 +389,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => toggleSuspend(user)}
                         disabled={saving === user.id}
-                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${user.is_suspended ? 'border-green-500/30 text-green-400 hover:bg-green-500/10' : 'border-amber-500/20 text-amber-400/70 hover:text-amber-400 hover:border-amber-500/40'}`}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${user.is_suspended ? 'border-green-500/30 text-green-400 hover:bg-green-500/10' : 'border-amber-500/20 text-amber-400/70 hover:text-amber-400 hover:border-amber-500/40'}`}
                       >
                         {saving === user.id ? '...' : user.is_suspended ? '停止解除' : '停止'}
                       </button>
@@ -397,7 +397,7 @@ export default function AdminPage() {
                         <button
                           onClick={() => forceCancel(user.id, user.email)}
                           disabled={canceling === user.id}
-                          className="text-xs px-2.5 py-1.5 rounded-lg border border-red-500/20 text-red-400/70 hover:text-red-400 hover:border-red-500/40 transition-all disabled:opacity-50"
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-red-500/20 text-red-400/70 hover:text-red-400 hover:border-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {canceling === user.id ? '...' : '強制解約'}
                         </button>

@@ -199,7 +199,7 @@ export default function HeatmapPage() {
           <button
             onClick={loadData}
             disabled={loading || !selectedSiteId}
-            className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-sm rounded-lg transition-colors flex-shrink-0"
+            className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded-lg transition-colors flex-shrink-0"
           >
             {loading ? '読み込み中...' : '更新'}
           </button>

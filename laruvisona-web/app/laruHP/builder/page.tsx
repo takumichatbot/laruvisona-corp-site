@@ -1187,7 +1187,7 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="mt-1 w-full flex items-center gap-1.5 text-[10px] text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded px-2 py-1.5 transition-all">
+      <button onClick={() => setOpen(true)} className="mt-1 w-full flex items-center gap-1.5 text-[10px] text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded px-2 py-1.5 transition-all focus:outline-none focus:ring-1 focus:ring-purple-400/60">
         ✨ AI画像生成
       </button>
     );
@@ -1211,14 +1211,14 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
         value={prompt}
         onChange={e => setPrompt(e.target.value)}
         placeholder="例: 美容サロンの明るくおしゃれな内装"
-        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] resize-none mb-1.5"
+        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] resize-none mb-1.5 focus:outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/40"
       />
       <div className="flex gap-1">
         <button onClick={generate} disabled={generating || !prompt.trim()}
-          className="flex-1 text-[10px] bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded px-2 py-1.5 font-bold transition-all">
+          className="flex-1 text-[10px] bg-purple-500 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded px-2 py-1.5 font-bold transition-all">
           {generating ? '生成中...' : '生成'}
         </button>
-        <button onClick={() => { setOpen(false); setGenError(''); }} className="text-[10px] text-slate-500 hover:text-slate-300 px-2">✕</button>
+        <button onClick={() => { setOpen(false); setGenError(''); }} aria-label="閉じる" className="text-[10px] text-slate-500 hover:text-slate-300 px-2">✕</button>
       </div>
       {genError && <p className="text-red-400 text-[10px] mt-1">{genError}</p>}
     </div>
@@ -1267,7 +1267,7 @@ function GoogleReviewsPanel({ d, blockId, onDataChange }: { d: Record<string, un
         </select>
       </label>
       <button onClick={fetchReviews} disabled={fetching || !(d.placeId as string)?.trim()}
-        className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-300 text-xs py-2 rounded-lg transition-all disabled:opacity-40">
+        className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-300 text-xs py-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed">
         {fetching ? '取得中...' : '⭐ 口コミを取得'}
       </button>
       {error && <p className="text-red-400 text-xs">{error}</p>}
@@ -1319,17 +1319,17 @@ function UrlImportModal({ onImport, onClose }: {
             <h2 className="font-bold text-white">🔗 既存サイトからインポート</h2>
             <p className="text-slate-500 text-[11px] mt-0.5">URLを入力すると、AIが情報を自動抽出してサイトに反映します</p>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white text-xl">✕</button>
+          <button onClick={onClose} aria-label="URLインポートを閉じる" className="text-slate-500 hover:text-white text-xl focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
         </div>
         <div className="p-5 space-y-4">
           <div className="flex gap-2">
             <input type="url" value={url} onChange={e => setUrl(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleScan()}
               placeholder="https://example.com"
-              className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+              className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 font-mono"
             />
             <button onClick={handleScan} disabled={scanning || !url.trim()}
-              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all whitespace-nowrap">
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold px-4 py-2 rounded-lg transition-all whitespace-nowrap">
               {scanning ? 'スキャン中...' : 'スキャン'}
             </button>
           </div>
@@ -1422,22 +1422,22 @@ function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => v
       <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col" style={{ maxHeight: '85vh' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 flex-shrink-0">
           <h2 className="font-bold text-white">画像ライブラリ</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-white text-xl leading-none">✕</button>
+          <button onClick={onClose} aria-label="画像ライブラリを閉じる" className="text-slate-500 hover:text-white text-xl leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
         </div>
         <div className="px-4 py-3 border-b border-white/10 flex gap-2 flex-shrink-0">
           <input
             type="text" value={query} placeholder="Unsplashで検索（例: cafe interior, office, nature）"
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && search(query)}
-            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40"
           />
           <button onClick={() => search(query)} disabled={loading}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all disabled:opacity-50">
+            className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
             {loading ? '...' : '検索'}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
-            className="bg-white/10 hover:bg-white/20 border border-white/20 text-slate-300 text-sm font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-50">
+            className="bg-white/10 hover:bg-white/20 border border-white/20 text-slate-300 text-sm font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
             {uploading ? '...' : '↑ アップロード'}
           </button>
         </div>
@@ -1519,7 +1519,7 @@ function AiChatSidebar({ open, onClose, blocks, selectedBlockId, onApplyActions,
           <span className="text-lg">✨</span>
           <span className="font-bold text-white text-sm">AIアシスタント</span>
         </div>
-        <button onClick={onClose} className="text-slate-500 hover:text-white text-lg leading-none">✕</button>
+        <button onClick={onClose} aria-label="AIアシスタントを閉じる" className="text-slate-500 hover:text-white text-lg leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {messages.map((m, i) => (
@@ -1542,10 +1542,10 @@ function AiChatSidebar({ open, onClose, blocks, selectedBlockId, onApplyActions,
         <input value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
           placeholder="指示を入力..."
-          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 resize-none"
         />
         <button onClick={send} disabled={loading || !input.trim()}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all flex-shrink-0">
+          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-3 py-2 rounded-xl transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-sky-400">
           送信
         </button>
       </div>
@@ -1698,7 +1698,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
       <div className="flex border-b border-white/10">
         {(['block', 'seo', 'integrations'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-xs font-bold transition-colors ${tab === t ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'}`}>
+            className={`flex-1 py-3 text-xs font-bold transition-colors focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-500/50 ${tab === t ? 'text-white border-b-2 border-blue-500' : 'text-slate-500 hover:text-slate-300'}`}>
             {t === 'block' ? 'ブロック' : t === 'seo' ? 'SEO' : '連携'}
           </button>
         ))}
@@ -1744,6 +1744,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                             onChange={e => { const nl = [...links]; nl[i] = { ...l, href: e.target.value }; onDataChange(block.id, { ...d, links: nl }); }}
                             className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[11px]" />
                           <button onClick={() => onDataChange(block.id, { ...d, links: links.filter((_, j) => j !== i) })}
+                            aria-label="リンクを削除"
                             className="text-red-400 hover:text-red-300 text-xs px-1">✕</button>
                         </div>
                       ))}
@@ -2948,7 +2949,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 <button
                   onClick={handleAiCopy}
                   disabled={aiCopyLoading}
-                  className="w-full text-xs bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold py-2.5 rounded-lg transition-all disabled:opacity-50"
+                  className="w-full text-xs bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white font-bold py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {aiCopyLoading ? '生成中...' : 'AIで文章を自動生成'}
                 </button>
@@ -3051,7 +3052,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                   value={block.memo || ''}
                   onChange={e => onMemoChange(block.id, e.target.value)}
                   placeholder="このブロックへのメモ..."
-                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-xs text-slate-300 placeholder-slate-600 resize-none outline-none focus:border-yellow-400/40"
+                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-2.5 py-2 text-xs text-slate-300 placeholder-slate-600 resize-none outline-none focus:border-yellow-400/40 focus:ring-1 focus:ring-yellow-400/20"
                 />
               </div>
             )}
@@ -3231,7 +3232,9 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       {canUse && (
                         <button
                           onClick={() => onLarubotChange(!larubot)}
-                          className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 mt-1 ${larubot ? 'bg-indigo-500' : 'bg-white/15'}`}
+                          aria-label={larubot ? 'LARUbotを無効にする' : 'LARUbotを有効にする'}
+                          aria-pressed={larubot}
+                          className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 mt-1 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:ring-offset-transparent ${larubot ? 'bg-indigo-500' : 'bg-white/15'}`}
                         >
                           <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-[3px] transition-all shadow ${larubot ? 'left-[23px]' : 'left-[3px]'}`} />
                         </button>
@@ -3261,7 +3264,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                           value={larubotPublicId}
                           onChange={e => onLarubotPublicIdChange(e.target.value)}
-                          className="w-full bg-white/10 border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-[10px] font-mono focus:outline-none focus:border-indigo-400/50"
+                          className="w-full bg-white/10 border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-[10px] font-mono focus:outline-none focus:border-indigo-400/50 focus:ring-1 focus:ring-indigo-400/30"
                         />
                       </div>
                     ) : (
@@ -3307,7 +3310,9 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       {canUse && (
                         <button
                           onClick={() => onLaruseoChange(!laruseo)}
-                          className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 mt-1 ${laruseo ? 'bg-emerald-500' : 'bg-white/15'}`}
+                          aria-label={laruseo ? 'LARUSEOを無効にする' : 'LARUSEOを有効にする'}
+                          aria-pressed={laruseo}
+                          className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 mt-1 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 focus:ring-offset-transparent ${laruseo ? 'bg-emerald-500' : 'bg-white/15'}`}
                         >
                           <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-[3px] transition-all shadow ${laruseo ? 'left-[23px]' : 'left-[3px]'}`} />
                         </button>
@@ -3337,7 +3342,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                           value={laruseoPublicId}
                           onChange={e => onLaruseoPublicIdChange(e.target.value)}
-                          className="w-full bg-white/10 border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-[10px] font-mono focus:outline-none focus:border-emerald-400/50"
+                          className="w-full bg-white/10 border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-[10px] font-mono focus:outline-none focus:border-emerald-400/50 focus:ring-1 focus:ring-emerald-400/30"
                         />
                       </div>
                     ) : (
@@ -3508,7 +3513,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               <select
                 value={fontFamily}
                 onChange={e => onFontFamilyChange(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20"
               >
                 <option value="noto">Noto Sans JP（標準）</option>
                 <option value="zen">Zen Kaku Gothic New（モダン）</option>
@@ -5036,8 +5041,9 @@ function BuilderContent() {
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => isDirty ? setShowLeaveConfirm(true) : router.push('/laruHP/dashboard')}
-            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors flex-shrink-0 group"
+            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors flex-shrink-0 group focus:outline-none focus:ring-1 focus:ring-sky-400/60 rounded"
             title="ダッシュボードへ戻る"
+            aria-label="ダッシュボードへ戻る"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-0.5 transition-transform"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
             {brandLogoUrl ? (
@@ -5146,13 +5152,15 @@ function BuilderContent() {
               onClick={undo}
               disabled={!canUndo}
               title="元に戻す (Cmd+Z)"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 text-sm"
+              aria-label="元に戻す"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed text-sm focus:outline-none focus:ring-1 focus:ring-sky-400/60"
             >↩</button>
             <button
               onClick={redo}
               disabled={!canRedo}
               title="やり直す (Cmd+Shift+Z)"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 text-sm"
+              aria-label="やり直す"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed text-sm focus:outline-none focus:ring-1 focus:ring-sky-400/60"
             >↪</button>
           </div>
           {dbSiteId && (
@@ -5209,20 +5217,20 @@ function BuilderContent() {
           </button>
           {preview && (
             <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
-              <button onClick={() => setPreviewDevice('desktop')} title="デスクトップ"
-                className={`px-2 py-1.5 rounded transition-all ${previewDevice === 'desktop' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+              <button onClick={() => setPreviewDevice('desktop')} title="デスクトップ" aria-label="デスクトップ表示"
+                className={`px-2 py-1.5 rounded transition-all focus:outline-none focus:ring-1 focus:ring-sky-400/60 ${previewDevice === 'desktop' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
                 </svg>
               </button>
-              <button onClick={() => setPreviewDevice('tablet')} title="タブレット"
-                className={`px-2 py-1.5 rounded transition-all ${previewDevice === 'tablet' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+              <button onClick={() => setPreviewDevice('tablet')} title="タブレット" aria-label="タブレット表示"
+                className={`px-2 py-1.5 rounded transition-all focus:outline-none focus:ring-1 focus:ring-sky-400/60 ${previewDevice === 'tablet' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
                 </svg>
               </button>
-              <button onClick={() => setPreviewDevice('mobile')} title="スマートフォン"
-                className={`px-2 py-1.5 rounded transition-all ${previewDevice === 'mobile' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+              <button onClick={() => setPreviewDevice('mobile')} title="スマートフォン" aria-label="スマートフォン表示"
+                className={`px-2 py-1.5 rounded transition-all focus:outline-none focus:ring-1 focus:ring-sky-400/60 ${previewDevice === 'mobile' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
                 </svg>
@@ -5238,8 +5246,9 @@ function BuilderContent() {
           {dbSiteId && (
             <button
               onClick={() => setShowPreviewLink(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white/10 text-slate-300 hover:bg-white/20"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white/10 text-slate-300 hover:bg-white/20 focus:outline-none focus:ring-1 focus:ring-sky-400/60"
               title="閲覧専用プレビューリンクを発行"
+              aria-label="閲覧専用プレビューリンクを発行"
             >
               🔗
             </button>
@@ -5256,7 +5265,7 @@ function BuilderContent() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 ${saved ? 'bg-green-500 text-white' : isDirty ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-sky-400/60 ${saved ? 'bg-green-500 text-white' : isDirty ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30' : 'bg-white/10 text-slate-300 hover:bg-white/20'}`}
           >
             {isDirty && !saving && !saved && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
             {saving ? '保存中...' : saved ? '保存済み ✓' : isDirty ? '未保存' : '保存'}
@@ -5265,7 +5274,7 @@ function BuilderContent() {
             <button
               onClick={handlePageSpeed}
               title="サイト速度チェック"
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all text-slate-300"
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all text-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-400/60"
             >
               ⚡ 速度
             </button>
@@ -5273,7 +5282,7 @@ function BuilderContent() {
           <button
             onClick={handlePublish}
             disabled={publishing}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition-all text-white disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-400"
           >
             {publishing ? '公開中...' : published ? '再公開' : '公開する'}
           </button>
@@ -5292,7 +5301,7 @@ function BuilderContent() {
                   value={paletteSearch}
                   onChange={e => setPaletteSearch(e.target.value)}
                   placeholder="ブロック検索..."
-                  className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-slate-300 placeholder-slate-600 outline-none focus:border-sky-500/50"
+                  className="w-full bg-white/[0.05] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-slate-300 placeholder-slate-600 outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/30"
                 />
               </div>
               {/* Saved snippets */}
@@ -5387,7 +5396,7 @@ function BuilderContent() {
             <div className="bg-[#0f172a] border-t border-white/10 rounded-t-2xl max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-4 pt-4 pb-2">
                 <span className="text-xs font-bold text-white">ブロックを追加</span>
-                <button onClick={() => setShowMobileBlocks(false)} className="text-slate-500 hover:text-white text-lg leading-none">✕</button>
+                <button onClick={() => setShowMobileBlocks(false)} aria-label="ブロックパレットを閉じる" className="text-slate-500 hover:text-white text-lg leading-none">✕</button>
               </div>
               <div className="px-3 pb-6">
                 {BLOCK_PALETTE.map(group => (
@@ -5579,15 +5588,15 @@ function BuilderContent() {
                   )}
                   {!preview && (
                     <div className={`absolute right-2 flex flex-col gap-1 z-20 transition-opacity ${selectedId === block.id ? 'opacity-100 top-2' : 'opacity-0 group-hover:opacity-100 top-2'}`}>
-                      <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0}
-                        className="w-6 h-6 bg-blue-500 text-white rounded text-xs flex items-center justify-center disabled:opacity-30 hover:bg-blue-600">↑</button>
-                      <button onClick={() => moveBlock(block.id, 1)} disabled={index === currentPage.blocks.length - 1}
-                        className="w-6 h-6 bg-blue-500 text-white rounded text-xs flex items-center justify-center disabled:opacity-30 hover:bg-blue-600">↓</button>
-                      <button onClick={() => duplicateBlock(block.id)}
+                      <button onClick={() => moveBlock(block.id, -1)} disabled={index === 0} aria-label="ブロックを上へ移動"
+                        className="w-6 h-6 bg-blue-500 text-white rounded text-xs flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600">↑</button>
+                      <button onClick={() => moveBlock(block.id, 1)} disabled={index === currentPage.blocks.length - 1} aria-label="ブロックを下へ移動"
+                        className="w-6 h-6 bg-blue-500 text-white rounded text-xs flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-blue-600">↓</button>
+                      <button onClick={() => duplicateBlock(block.id)} aria-label="ブロックを複製"
                         className="w-6 h-6 bg-slate-600 text-white rounded text-xs flex items-center justify-center hover:bg-slate-500" title="複製">⧉</button>
-                      <button onClick={() => { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }}
+                      <button onClick={() => { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }} aria-label="ブロックをコピー"
                         className="w-6 h-6 bg-slate-700 text-white rounded text-xs flex items-center justify-center hover:bg-slate-600" title="コピー (Ctrl+C)">📋</button>
-                      <button onClick={() => deleteBlock(block.id)}
+                      <button onClick={() => deleteBlock(block.id)} aria-label="ブロックを削除"
                         className="w-6 h-6 bg-red-500 text-white rounded text-xs flex items-center justify-center hover:bg-red-600">✕</button>
                     </div>
                   )}
@@ -5758,7 +5767,7 @@ function BuilderContent() {
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-bold text-base">閲覧専用プレビューリンク</h2>
-              <button onClick={() => setShowPreviewLink(false)} className="text-slate-500 hover:text-white text-xl">✕</button>
+              <button onClick={() => setShowPreviewLink(false)} aria-label="プレビューリンクを閉じる" className="text-slate-500 hover:text-white text-xl focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
             </div>
             <p className="text-slate-400 text-xs mb-4">公開前に関係者へ共有できるリンクです。URLを知っている人だけが閲覧できます。</p>
             {previewToken ? (
@@ -5783,7 +5792,7 @@ function BuilderContent() {
                       setPreviewTokenLoading(false);
                     }}
                     disabled={previewTokenLoading}
-                    className="flex-1 text-xs bg-white/10 hover:bg-white/20 text-slate-300 px-3 py-2 rounded-lg disabled:opacity-50">
+                    className="flex-1 text-xs bg-white/10 hover:bg-white/20 text-slate-300 px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     {previewTokenLoading ? '...' : '再発行（URLを変更）'}
                   </button>
                   <button
@@ -5806,7 +5815,7 @@ function BuilderContent() {
                   setPreviewTokenLoading(false);
                 }}
                 disabled={previewTokenLoading}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-3 rounded-xl disabled:opacity-50">
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
                 {previewTokenLoading ? '発行中...' : 'プレビューリンクを発行'}
               </button>
             )}
@@ -5821,7 +5830,7 @@ function BuilderContent() {
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div className="font-bold text-white text-base flex items-center gap-2">⚡ サイト速度チェック</div>
-              <button onClick={() => setShowPageSpeed(false)} className="text-slate-400 hover:text-white text-xl leading-none">×</button>
+              <button onClick={() => setShowPageSpeed(false)} aria-label="速度チェックを閉じる" className="text-slate-400 hover:text-white text-xl leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">×</button>
             </div>
             {pageSpeedLoading ? (
               <div className="text-center py-10">
@@ -5873,7 +5882,7 @@ function BuilderContent() {
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-white font-bold text-lg">デザインテンプレート</h2>
-              <button onClick={() => setShowTemplateModal(false)} className="text-slate-500 hover:text-white text-xl leading-none">✕</button>
+              <button onClick={() => setShowTemplateModal(false)} aria-label="テンプレートを閉じる" className="text-slate-500 hover:text-white text-xl leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
             </div>
             <p className="text-slate-500 text-xs mb-5">選択するとブロック構成とカラーが変わります（現在の内容は置き換えられます）</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -5929,7 +5938,7 @@ function BuilderContent() {
               <button onClick={() => setRestoreConfirmVersionId(null)} className="flex-1 text-sm text-slate-400 hover:text-slate-200 border border-white/10 py-2.5 rounded-lg transition-colors">
                 キャンセル
               </button>
-              <button onClick={confirmRestoreVersion} disabled={!!restoringVersion} className="flex-1 text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold py-2.5 rounded-lg transition-all">
+              <button onClick={confirmRestoreVersion} disabled={!!restoringVersion} className="flex-1 text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold py-2.5 rounded-lg transition-all">
                 {restoringVersion ? '復元中...' : '復元する'}
               </button>
             </div>
@@ -5981,7 +5990,7 @@ function BuilderContent() {
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-white font-bold text-lg">バージョン履歴</h2>
-              <button onClick={() => setShowHistoryPanel(false)} className="text-slate-500 hover:text-white text-xl leading-none">✕</button>
+              <button onClick={() => setShowHistoryPanel(false)} aria-label="バージョン履歴を閉じる" className="text-slate-500 hover:text-white text-xl leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
             </div>
             {versions.length === 0 ? (
               <p className="text-slate-500 text-sm text-center py-6">履歴がありません。公開すると自動保存されます。</p>
@@ -5996,7 +6005,7 @@ function BuilderContent() {
                     <button
                       onClick={() => handleRestoreVersion(v.id)}
                       disabled={restoringVersion === v.id}
-                      className="text-xs bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 text-slate-300"
+                      className="text-xs bg-white/10 hover:bg-white/20 border border-white/10 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-slate-300"
                     >
                       {restoringVersion === v.id ? '復元中...' : '復元'}
                     </button>

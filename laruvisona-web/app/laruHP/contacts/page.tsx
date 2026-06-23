@@ -329,7 +329,7 @@ export default function ContactsPage() {
         <div className="flex-1" />
         <div className="relative flex-shrink-0">
           <button onClick={exportCsv} disabled={filtered.length === 0}
-            className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-30 flex items-center gap-1 ${exportDone ? 'bg-green-500/20 border-green-500/30 text-green-300' : 'bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]'}`}>
+            className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 ${exportDone ? 'bg-green-500/20 border-green-500/30 text-green-300' : 'bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.1]'}`}>
             {exportDone ? '✓ DL完了' : filtered.length < contacts.length ? `絞込み結果CSV (${filtered.length}件)` : 'CSV出力'}
           </button>
           {exportOverdue && !exportDone && (
@@ -631,7 +631,7 @@ export default function ContactsPage() {
                           <button
                             onClick={() => handleAiSummarize(selected.message!)}
                             disabled={aiSummarizing}
-                            className="text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                            className="text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {aiSummarizing ? (
                               <><svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>要約中...</>

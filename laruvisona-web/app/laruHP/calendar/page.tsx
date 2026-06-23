@@ -151,7 +151,7 @@ export default function CalendarPage() {
           {/* Calendar */}
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <button onClick={prevMonth} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
+              <button onClick={prevMonth} aria-label="前の月" className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
               <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ export default function CalendarPage() {
                   </button>
                 )}
               </div>
-              <button onClick={nextMonth} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
+              <button onClick={nextMonth} aria-label="次の月" className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-all">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
@@ -258,7 +258,7 @@ export default function CalendarPage() {
                         type="date"
                         disabled={scheduling === post.id}
                         onChange={e => handleSchedule(post.id, e.target.value)}
-                        className="w-full bg-sky-50 border border-sky-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                        className="w-full bg-sky-50 border border-sky-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="公開日を設定"
                       />
                       {scheduling === post.id && (

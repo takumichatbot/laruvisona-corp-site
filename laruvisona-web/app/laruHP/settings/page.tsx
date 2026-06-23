@@ -403,7 +403,7 @@ export default function SettingsPage() {
                     <button
                       onClick={openBillingPortal}
                       disabled={portalLoading}
-                      className="text-xs text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
+                      className="text-xs text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {portalLoading ? '読み込み中...' : 'サブスクリプション管理'}
                     </button>
@@ -518,7 +518,7 @@ export default function SettingsPage() {
                       setBrandLogoLoading(false);
                     }}
                     disabled={brandLogoLoading}
-                    className="border border-gray-200 text-gray-600 hover:text-gray-900 disabled:opacity-50 py-2.5 px-4 rounded-lg text-sm transition-colors"
+                    className="border border-gray-200 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 px-4 rounded-lg text-sm transition-colors"
                   >
                     リセット
                   </button>
@@ -566,7 +566,7 @@ export default function SettingsPage() {
                     </button>
                     {site.custom_domain && (
                       <button onClick={() => handleDomainCheck(site.id)} disabled={domainChecking === site.id}
-                        className="flex-shrink-0 text-xs border border-gray-200 hover:border-sky-300 text-gray-600 px-3 py-2.5 rounded-lg transition-all disabled:opacity-50">
+                        className="flex-shrink-0 text-xs border border-gray-200 hover:border-sky-300 text-gray-600 px-3 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         {domainChecking === site.id ? '確認中...' : 'DNS確認'}
                       </button>
                     )}
@@ -705,7 +705,7 @@ export default function SettingsPage() {
                   setGscSaving(false);
                 }}
                 disabled={gscSaving}
-                className="text-xs text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                className="text-xs text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 連携を解除する
               </button>
@@ -935,7 +935,7 @@ export default function SettingsPage() {
                     <button
                       onClick={() => handleReviewReply(idx, review)}
                       disabled={reviewReplyLoading === idx}
-                      className="w-full text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-bold py-2 rounded-lg transition-all disabled:opacity-50"
+                      className="w-full text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-bold py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {reviewReplyLoading === idx ? 'AIが生成中...' : '✨ AI返信案を生成する'}
                     </button>

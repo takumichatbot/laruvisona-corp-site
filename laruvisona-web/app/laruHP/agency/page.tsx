@@ -319,7 +319,7 @@ export default function AgencyPage() {
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-bold text-white">LARUbot プラン設定</h2>
-              <button onClick={() => setLarubotTarget(null)} className="text-slate-400 hover:text-white text-xl">×</button>
+              <button onClick={() => setLarubotTarget(null)} aria-label="LARUbotプラン設定を閉じる" className="text-slate-400 hover:text-white text-xl">×</button>
             </div>
             <p className="text-slate-400 text-xs mb-5">
               {larubotTarget.data?.clientName || larubotTarget.name} に適用するLARUbotのプランを選択してください。
@@ -359,7 +359,7 @@ export default function AgencyPage() {
               <button
                 onClick={setupLarubot}
                 disabled={larubotLoading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {larubotLoading ? '設定中...' : '設定する'}
               </button>
@@ -381,7 +381,7 @@ export default function AgencyPage() {
                 {selected.data?.clientName && <div className="text-slate-400 text-xs">{selected.data.clientName}</div>}
                 <h2 className="font-bold text-white text-lg">{selected.name}</h2>
               </div>
-              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-white text-xl">×</button>
+              <button onClick={() => setSelected(null)} aria-label="サイト詳細を閉じる" className="text-slate-400 hover:text-white text-xl">×</button>
             </div>
 
             {editMode ? (
@@ -413,7 +413,7 @@ export default function AgencyPage() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={saveClientInfo} disabled={saving}
-                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50">
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                     {saving ? '保存中...' : '保存'}
                   </button>
                   <button onClick={() => setEditMode(false)}

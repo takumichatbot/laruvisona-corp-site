@@ -745,7 +745,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                   リアルタイムプレビュー
                 </div>
-                <button onClick={() => setShowMobilePreview(false)} className="text-gray-400 hover:text-gray-900 text-xl leading-none">✕</button>
+                <button onClick={() => setShowMobilePreview(false)} aria-label="プレビューを閉じる" className="text-gray-400 hover:text-gray-900 text-xl leading-none">✕</button>
               </div>
               <div className="p-4">
                 <LivePreview form={form} />
@@ -1516,10 +1516,10 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                   <div key={i} className={`flex items-center gap-3 sm:gap-4 px-4 py-3 ${i < form.hours.length - 1 ? 'border-b border-gray-100' : ''} ${hour.closed ? 'opacity-50' : ''}`}>
                     <span className="w-14 text-sm text-gray-500 flex-shrink-0">{hour.day}</span>
                     <input type="time" value={hour.open} onChange={e => updateHour(i, 'open', e.target.value)} disabled={hour.closed}
-                      className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-900 text-sm focus:outline-none focus:border-sky-500 disabled:opacity-30 w-24" />
+                      className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-900 text-sm focus:outline-none focus:border-sky-500 disabled:opacity-30 disabled:cursor-not-allowed w-24" />
                     <span className="text-gray-400 text-sm">〜</span>
                     <input type="time" value={hour.close} onChange={e => updateHour(i, 'close', e.target.value)} disabled={hour.closed}
-                      className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-900 text-sm focus:outline-none focus:border-sky-500 disabled:opacity-30 w-24" />
+                      className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-900 text-sm focus:outline-none focus:border-sky-500 disabled:opacity-30 disabled:cursor-not-allowed w-24" />
                     <label className="flex items-center gap-2 ml-auto cursor-pointer">
                       <input type="checkbox" checked={hour.closed} onChange={e => updateHour(i, 'closed', e.target.checked)} className="w-4 h-4 accent-red-500" />
                       <span className="text-sm text-gray-500 whitespace-nowrap">定休日</span>

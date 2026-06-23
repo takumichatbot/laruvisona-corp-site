@@ -271,7 +271,7 @@ export default function AbTestPage() {
                                 <button
                                   onClick={() => handleWinner(site.id, sig.winner!)}
                                   disabled={winnerLoading === site.id}
-                                  className="text-xs px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg disabled:opacity-50 transition-all flex-shrink-0"
+                                  className="text-xs px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0"
                                 >
                                   {sig.winner.toUpperCase()} を採用
                                 </button>
@@ -341,6 +341,7 @@ export default function AbTestPage() {
                               <span className="text-[10px] text-gray-500">効果量: <span className="font-bold text-gray-700">{effectSize}%</span></span>
                             </div>
                             <input type="range" min={5} max={50} step={1} value={effectSize} onChange={e => setEffectSize(Number(e.target.value))}
+                              aria-label={`効果量: ${effectSize}%`}
                               className="w-full h-1.5 rounded-full accent-sky-500 mb-1.5" />
                             <div className="flex justify-between text-[9px] text-gray-400 mb-2"><span>5%</span><span>10%</span><span>20%</span><span>30%</span><span>50%</span></div>
                             {(() => {
@@ -414,7 +415,7 @@ export default function AbTestPage() {
                               <button
                                 onClick={() => handleWinner(site.id, sig.winner!)}
                                 disabled={winnerLoading === site.id}
-                                className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg disabled:opacity-50 transition-all flex-shrink-0"
+                                className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0"
                               >
                                 {sig.winner.toUpperCase()} を自動採用
                               </button>
@@ -430,21 +431,21 @@ export default function AbTestPage() {
                           <button
                             onClick={() => handleWinner(site.id, 'a')}
                             disabled={winnerLoading === site.id}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-sky-100 text-sky-700 hover:bg-sky-200 font-bold disabled:opacity-50 transition-all"
+                            className="text-xs px-3 py-1.5 rounded-lg bg-sky-100 text-sky-700 hover:bg-sky-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                           >
                             A に決定
                           </button>
                           <button
                             onClick={() => handleWinner(site.id, 'b')}
                             disabled={winnerLoading === site.id}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 font-bold disabled:opacity-50 transition-all"
+                            className="text-xs px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                           >
                             B に決定
                           </button>
                           <button
                             onClick={() => handleReset(site.id)}
                             disabled={resetLoading === site.id}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-all ml-auto"
+                            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all ml-auto"
                           >
                             {resetLoading === site.id ? '...' : 'リセット'}
                           </button>

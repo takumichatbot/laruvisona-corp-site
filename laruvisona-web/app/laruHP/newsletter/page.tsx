@@ -293,13 +293,12 @@ export default function NewsletterPage() {
         </div>
       )}
 
-      <header className="border-b border-gray-200 bg-white backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             ダッシュボード
           </Link>
-          <span className="text-gray-300">/</span>
           <h1 className="text-sm font-bold text-gray-900">メールニュースレター</h1>
         </div>
       </header>
@@ -333,7 +332,7 @@ export default function NewsletterPage() {
                     <button
                       onClick={handleExportCsv}
                       disabled={activeCount === 0}
-                      className={`text-xs px-3 py-2 rounded-lg transition-all disabled:opacity-40 ${lastExportAt && (Date.now() - new Date(lastExportAt).getTime()) > 30 * 86400000 ? 'border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100' : 'border border-gray-200 hover:border-gray-300 text-gray-600'}`}
+                      className={`text-xs px-3 py-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${lastExportAt && (Date.now() - new Date(lastExportAt).getTime()) > 30 * 86400000 ? 'border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100' : 'border border-gray-200 hover:border-gray-300 text-gray-600'}`}
                     >
                       {lastExportAt && (Date.now() - new Date(lastExportAt).getTime()) > 30 * 86400000 ? '⚠ ' : ''}CSV エクスポート
                     </button>
@@ -349,7 +348,7 @@ export default function NewsletterPage() {
                 <button
                   onClick={() => { setShowSendModal(true); setSendResult(null); }}
                   disabled={activeCount === 0}
-                  className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-sky-500 transition-all disabled:opacity-40"
+                  className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-sky-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   メール送信
                 </button>
@@ -745,14 +744,14 @@ export default function NewsletterPage() {
                     <button
                       onClick={() => setSendConfirming(false)}
                       disabled={sending}
-                      className="flex-1 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 py-2.5 rounded-lg transition-colors disabled:opacity-40"
+                      className="flex-1 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       戻る
                     </button>
                     <button
                       onClick={handleSend}
                       disabled={sending}
-                      className="flex-1 text-sm bg-red-600 text-white font-bold py-2.5 rounded-lg hover:bg-red-500 transition-all disabled:opacity-50"
+                      className="flex-1 text-sm bg-red-600 text-white font-bold py-2.5 rounded-lg hover:bg-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {sending ? `送信中 (${segmentCount}件)` : '送信を確定する'}
                     </button>
@@ -763,14 +762,14 @@ export default function NewsletterPage() {
                   <button
                     onClick={() => { setShowSendModal(false); setSendConfirming(false); }}
                     disabled={sending}
-                    className="flex-1 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 py-2.5 rounded-lg transition-colors disabled:opacity-40"
+                    className="flex-1 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     キャンセル
                   </button>
                   <button
                     onClick={() => setSendConfirming(true)}
                     disabled={sending || !subject.trim() || !body.trim()}
-                    className="flex-1 text-sm bg-sky-600 text-white font-bold py-2.5 rounded-lg hover:bg-sky-500 transition-all disabled:opacity-50"
+                    className="flex-1 text-sm bg-sky-600 text-white font-bold py-2.5 rounded-lg hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     送信する →
                   </button>

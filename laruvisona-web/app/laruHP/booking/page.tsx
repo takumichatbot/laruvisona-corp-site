@@ -354,7 +354,7 @@ export default function BookingPage() {
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-white">{detailBooking.name}</h2>
-              <button onClick={() => setDetailBooking(null)} className="text-slate-400 hover:text-white text-xl">×</button>
+              <button onClick={() => setDetailBooking(null)} aria-label="予約詳細を閉じる" className="text-slate-400 hover:text-white text-xl">×</button>
             </div>
             <div className="space-y-2 text-sm mb-4">
               <div className="flex gap-2"><span className="text-slate-500 w-20">メール</span><a href={`mailto:${detailBooking.email}`} className="text-blue-400 hover:underline">{detailBooking.email}</a></div>

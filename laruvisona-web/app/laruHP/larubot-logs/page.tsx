@@ -142,13 +142,12 @@ export default function LarubotLogsPage() {
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="border-b border-gray-200 bg-white backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             ダッシュボード
           </Link>
-          <span className="text-gray-300">/</span>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded bg-indigo-100 flex items-center justify-center text-indigo-700 text-[9px] font-bold">LB</div>
             <h1 className="text-sm font-bold text-gray-900">LARUbot 会話ログ</h1>
@@ -182,7 +181,7 @@ export default function LarubotLogsPage() {
                   disabled={analysisLoading}
                   aria-busy={analysisLoading}
                   aria-label={analysisLoading ? 'AI分析中' : 'AI分析（FAQ・課題抽出）'}
-                  className="flex items-center gap-2 text-xs bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl transition-all"
+                  className="flex items-center gap-2 text-xs bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-4 py-2 rounded-xl transition-all"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
                   {analysisLoading ? 'AI分析中...' : 'AI分析（FAQ・課題抽出）'}
@@ -192,7 +191,7 @@ export default function LarubotLogsPage() {
                   disabled={leadLoading}
                   aria-busy={leadLoading}
                   aria-label={leadLoading ? 'スコアリング中' : 'リードスコア分析'}
-                  className="flex items-center gap-2 text-xs bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl transition-all"
+                  className="flex items-center gap-2 text-xs bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-4 py-2 rounded-xl transition-all"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                   {leadLoading ? 'スコアリング中...' : 'リードスコア分析'}

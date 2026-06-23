@@ -344,7 +344,7 @@ export default function SeoPage() {
             <button
               onClick={async () => { await handleSave(); await handleRepublish(); }}
               disabled={saving || republishing}
-              className="flex-shrink-0 text-xs bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+              className="flex-shrink-0 text-xs bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="SEO設定を保存してサイトを再公開します（Googleへの反映に必要）"
             >
               {republishing ? '公開中...' : '保存して再公開'}

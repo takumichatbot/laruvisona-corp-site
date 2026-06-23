@@ -256,7 +256,7 @@ export default function PopupsPage() {
                       min={form.trigger === 'exit' ? 0 : 1}
                       max={form.trigger === 'scroll' ? 100 : form.trigger === 'timer' ? 120 : undefined}
                       disabled={form.trigger === 'exit'}
-                      className={inputCls + ' pr-10 disabled:opacity-40 disabled:bg-gray-100 disabled:cursor-not-allowed' + (triggerInlineError ? ' border-red-400' : '')}
+                      className={inputCls + ' pr-10 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-100' + (triggerInlineError ? ' border-red-400' : '')}
                     />
                     {form.trigger !== 'exit' && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-semibold pointer-events-none">
@@ -333,7 +333,7 @@ export default function PopupsPage() {
               <button
                 onClick={handleAdd}
                 disabled={saving || !form.title}
-                className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
               >
                 {saving ? '保存中...' : 'ポップアップを追加'}
               </button>
@@ -400,6 +400,7 @@ export default function PopupsPage() {
                     </button>
                     <button
                       onClick={() => handleDelete(popup.id)}
+                      aria-label={`「${popup.title}」を削除`}
                       className="text-gray-400 hover:text-red-500 transition-colors p-1"
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>

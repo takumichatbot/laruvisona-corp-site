@@ -214,7 +214,7 @@ export default function LoyaltyPage() {
                 <input type="text" value={config.reward} onChange={e => setConfig(c => ({ ...c, reward: e.target.value }))} className={inputCls} placeholder="次回10%オフ・無料サービスなど" />
               </div>
               {configMsg && <p className={`text-xs font-semibold ${configMsg.startsWith('エラー') ? 'text-red-600' : 'text-green-600'}`}>{configMsg}</p>}
-              <button onClick={handleSaveConfig} disabled={savingConfig} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors">
+              <button onClick={handleSaveConfig} disabled={savingConfig} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors">
                 {savingConfig ? '保存中...' : '設定を保存'}
               </button>
             </div>
@@ -234,7 +234,7 @@ export default function LoyaltyPage() {
                 <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className={inputCls} placeholder="090-0000-0000" />
               </div>
               {issueMsg && <p className={`text-xs font-semibold ${issueMsg.startsWith('エラー') ? 'text-red-600' : 'text-green-600'}`}>{issueMsg}</p>}
-              <button onClick={handleIssue} disabled={issuing || !customerName.trim()} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors">
+              <button onClick={handleIssue} disabled={issuing || !customerName.trim()} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors">
                 {issuing ? '発行中...' : 'カードを発行する'}
               </button>
 
@@ -315,7 +315,7 @@ export default function LoyaltyPage() {
                     <button
                       onClick={() => handleStamp(card.id)}
                       disabled={stamping === card.id || isComplete}
-                      className="flex-shrink-0 text-xs bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white font-bold px-3 py-2 rounded-xl transition-all"
+                      className="flex-shrink-0 text-xs bg-sky-600 hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-3 py-2 rounded-xl transition-all"
                     >
                       {stamping === card.id ? '...' : isComplete ? '完了' : 'スタンプ'}
                     </button>

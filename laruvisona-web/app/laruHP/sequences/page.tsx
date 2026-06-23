@@ -247,7 +247,7 @@ export default function SequencesPage() {
           <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-sm text-gray-900">メールシーケンスを作成</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors">
+              <button onClick={() => setShowForm(false)} aria-label="フォームを閉じる" className="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -307,6 +307,7 @@ export default function SequencesPage() {
                       {form.steps.length > 1 && (
                         <button
                           onClick={() => setForm(f => ({ ...f, steps: f.steps.filter((_, j) => j !== i) }))}
+                          aria-label={`ステップ ${i + 1} を削除`}
                           className="text-gray-300 hover:text-red-400 transition-colors text-xs flex-shrink-0"
                         >
                           ×
@@ -342,7 +343,7 @@ export default function SequencesPage() {
               <button
                 onClick={handleCreate}
                 disabled={saving || !form.name || !form.steps.length}
-                className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                className="flex-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
               >
                 {saving ? '保存中...' : 'シーケンスを作成'}
               </button>
