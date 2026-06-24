@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
@@ -11,24 +11,68 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [existingEmail, setExistingEmail] = useState<string | null>(null);
+
+  // OTP state
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/laruHP/dashboard';
+  const redirectTo = searchParams.get('redirectTo') || searchParams.get('next') || '/laruHP/dashboard';
   const supabase = createClient();
+  const codeRef = useRef<HTMLInputElement>(null);
 
-  // Check if already logged in so user can see who and choose to switch
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) setExistingEmail(user.email);
     });
   }, [supabase]);
 
+  // ── OTP: send code ──────────────────────────────────────────────
+  const handleSendOtp = async () => {
+    if (!email.trim()) { setError('メールアドレスを入力してください'); return; }
+    setOtpLoading(true);
+    setError('');
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: false },
+    });
+    if (error) {
+      setError('送信できませんでした。メールアドレスを確認してください。');
+    } else {
+      setOtpSent(true);
+      setTimeout(() => codeRef.current?.focus(), 100);
+    }
+    setOtpLoading(false);
+  };
+
+  // ── OTP: verify code ────────────────────────────────────────────
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim()) return;
+    setOtpLoading(true);
+    setError('');
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: otpCode.trim(),
+      type: 'email',
+    });
+    if (error) {
+      setError('コードが正しくないか期限切れです');
+      setOtpLoading(false);
+    } else {
+      router.push(redirectTo);
+    }
+  };
+
+  // ── Password login ──────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email.trim()) { setError('メールアドレスを入力してください'); return; }
     setLoading(true);
     setError('');
-
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) {
       setError('メールアドレスまたはパスワードが正しくありません');
@@ -36,23 +80,6 @@ function LoginForm() {
     } else {
       router.push(redirectTo);
     }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError('');
-    await supabase.auth.signOut();
-    const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/dashboard';
-    const queryParams: Record<string, string> = { prompt: 'select_account' };
-    // メールが入力済みの場合は login_hint でそのアカウントを Google が強調表示する
-    if (email.trim()) queryParams.login_hint = email.trim();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
-        queryParams,
-      },
-    });
-    if (error) setError('Googleログインに失敗しました');
   };
 
   const signupHref = redirectTo !== '/laruHP/dashboard'
@@ -73,10 +100,7 @@ function LoginForm() {
           {existingEmail && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl mb-6 flex items-center justify-between gap-3">
               <span><span className="font-bold">{existingEmail}</span> でログイン中</span>
-              <button
-                onClick={() => router.push(redirectTo)}
-                className="text-xs font-bold text-amber-700 underline underline-offset-2 whitespace-nowrap"
-              >
+              <button onClick={() => router.push(redirectTo)} className="text-xs font-bold text-amber-700 underline underline-offset-2 whitespace-nowrap">
                 そのまま続ける →
               </button>
             </div>
@@ -88,63 +112,90 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Step 1: email — shared between Google and password login */}
-          <div className="mb-4">
+          {/* ── Email field (shared) ── */}
+          <div className="mb-5">
             <label className="block text-sm font-bold text-gray-900 mb-2">メールアドレス</label>
             <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={e => { setEmail(e.target.value); setOtpSent(false); setOtpCode(''); }}
               placeholder="your@email.com"
-              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+              disabled={otpSent}
+              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
             />
-            {!email.trim() && (
-              <p className="text-xs text-gray-400 mt-1.5">メールを入力してからGoogleログインを押すと確実に正しいアカウントが選ばれます</p>
-            )}
           </div>
 
-          {/* Step 2: Google login (uses login_hint when email is filled) */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 py-3.5 rounded-xl font-bold text-sm transition-all mb-5"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-            </svg>
-            {email.trim() ? <><span className="font-normal text-gray-500 text-xs mr-1">Google:</span>{email.trim()}</> : 'Googleでログイン'}
-          </button>
-
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-gray-400 text-xs">または パスワードでログイン</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">パスワード</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-              />
-            </div>
-            <input type="hidden" value={email} />
+          {/* ── OTP flow ── */}
+          {!otpSent ? (
             <button
-              type="submit"
-              disabled={loading || !email.trim()}
-              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              onClick={handleSendOtp}
+              disabled={otpLoading || !email.trim()}
+              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-4"
             >
-              {loading ? 'ログイン中...' : 'ログイン'}
+              {otpLoading ? '送信中...' : 'ログインコードをメールに送る'}
             </button>
-          </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="mb-4">
+              <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 mb-4 text-sm text-sky-800">
+                <strong>{email}</strong> に 6 桁のコードを送りました
+              </div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">確認コード（6桁）</label>
+              <input
+                ref={codeRef}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={otpCode}
+                onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="123456"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-center text-xl tracking-widest font-mono placeholder-gray-300 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors mb-3"
+              />
+              <button
+                type="submit"
+                disabled={otpLoading || otpCode.length < 6}
+                className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-2"
+              >
+                {otpLoading ? '確認中...' : 'ログイン'}
+              </button>
+              <button type="button" onClick={() => { setOtpSent(false); setOtpCode(''); setError(''); }} className="w-full text-sm text-gray-500 hover:text-gray-700 py-1">
+                メールアドレスを変更 / 再送する
+              </button>
+            </form>
+          )}
+
+          {/* ── Password login (secondary) ── */}
+          <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px bg-gray-200" />
+            <button type="button" onClick={() => setShowPassword(v => !v)} className="text-gray-400 text-xs hover:text-gray-600 whitespace-nowrap">
+              {showPassword ? '▲ パスワードを隠す' : 'パスワードでログイン'}
+            </button>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          {showPassword && (
+            <form onSubmit={handleLogin} className="space-y-3">
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-2">パスワード</label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || !email.trim()}
+                className="w-full bg-gray-800 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'ログイン中...' : 'パスワードでログイン'}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="mt-6 space-y-3 text-center">
