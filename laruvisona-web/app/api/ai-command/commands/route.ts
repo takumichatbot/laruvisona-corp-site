@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
-
-async function isAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.email === process.env.ADMIN_EMAIL;
-}
+import { createServiceClient } from '@/lib/supabase/server';
+import { isAdminRequest } from '@/lib/adminAuth';
 
 export async function GET(req: Request) {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get('session_id');
   if (!sessionId) return NextResponse.json({ error: 'session_id が必要です' }, { status: 400 });
@@ -23,7 +18,7 @@ export async function GET(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get('session_id');
   if (!sessionId) return NextResponse.json({ error: 'session_id が必要です' }, { status: 400 });
@@ -33,7 +28,7 @@ export async function DELETE(req: Request) {
 }
 
 export async function POST(req: Request) {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await req.json();
   if (!body.session_id || !body.message) return NextResponse.json({ error: 'session_id, message が必要です' }, { status: 400 });
   const service = await createServiceClient();

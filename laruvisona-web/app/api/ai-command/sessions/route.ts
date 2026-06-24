@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
-
-async function isAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.email === process.env.ADMIN_EMAIL;
-}
+import { createServiceClient } from '@/lib/supabase/server';
+import { isAdminRequest } from '@/lib/adminAuth';
 
 export async function GET() {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const service = await createServiceClient();
   const { data, error } = await service.from('ai_sessions').select('*').order('created_at');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -16,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await req.json();
   if (!body.id || !body.name || !body.cwd) return NextResponse.json({ error: 'id, name, cwd が必要です' }, { status: 400 });
   const service = await createServiceClient();
@@ -30,7 +25,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id が必要です' }, { status: 400 });

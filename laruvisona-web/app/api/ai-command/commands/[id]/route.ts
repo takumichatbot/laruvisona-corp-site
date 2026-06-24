@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
-
-async function isAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.email === process.env.ADMIN_EMAIL;
-}
+import { createServiceClient } from '@/lib/supabase/server';
+import { isAdminRequest } from '@/lib/adminAuth';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { id } = await params;
   const body = await req.json();
   const service = await createServiceClient();

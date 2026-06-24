@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -104,8 +103,13 @@ const CSS = `
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function AiCommandPage() {
-  const router = useRouter();
   const supabase = createClient();
+
+  // PIN auth
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput]       = useState('');
+  const [pinError, setPinError]       = useState('');
+  const [pinLoading, setPinLoading]   = useState(false);
 
   // Core data
   const [ready, setReady]             = useState(false);
@@ -182,19 +186,45 @@ export default function AiCommandPage() {
     if (typeof window !== 'undefined' && 'Notification' in window) setNotifGranted(Notification.permission === 'granted');
   }, []);
 
+  // Check PIN cookie by probing the sessions API on first load
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/laruHP/auth/login'); return; }
-      const res = await fetch('/api/ai-command/sessions');
-      if (res.status === 403) { router.replace('/laruHP/dashboard'); return; }
-      const data: Session[] = await res.json();
-      setSessions(data);
-      if (data.length > 0) setActiveId(data[0].id);
-      setReady(true);
-    })();
+    fetch('/api/ai-command/sessions').then(r => {
+      if (r.ok) {
+        r.json().then((data: Session[]) => {
+          setSessions(data);
+          if (data.length > 0) setActiveId(data[0].id);
+          setPinVerified(true);
+          setReady(true);
+        });
+      }
+      // 403 means PIN not verified yet — show PIN screen
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPinLoading(true);
+    setPinError('');
+    const res = await fetch('/api/admin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: pinInput }),
+    });
+    if (res.ok) {
+      const sessRes = await fetch('/api/ai-command/sessions');
+      if (sessRes.ok) {
+        const data: Session[] = await sessRes.json();
+        setSessions(data);
+        if (data.length > 0) setActiveId(data[0].id);
+      }
+      setPinVerified(true);
+      setReady(true);
+    } else {
+      setPinError('PINが正しくありません');
+    }
+    setPinLoading(false);
+  };
 
   useEffect(() => {
     if (!activeId) return;
@@ -473,6 +503,37 @@ export default function AiCommandPage() {
   };
 
   // ── Loading ───────────────────────────────────────────────────────
+
+  if (!ready && !pinVerified) {
+    return (
+      <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020408' }}>
+        <style>{CSS}</style>
+        <form onSubmit={handlePinSubmit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, width: 280 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🤖</div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>AI司令室</div>
+            <div style={{ fontSize: 11, color: '#475569' }}>管理者PINを入力してください</div>
+          </div>
+          <input
+            type="password"
+            value={pinInput}
+            onChange={e => setPinInput(e.target.value)}
+            placeholder="PIN"
+            autoFocus
+            style={{ width: '100%', background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '12px 16px', color: '#f1f5f9', fontSize: 14, outline: 'none', textAlign: 'center', letterSpacing: '0.2em', boxSizing: 'border-box' }}
+          />
+          {pinError && <div style={{ fontSize: 12, color: '#f87171' }}>{pinError}</div>}
+          <button
+            type="submit"
+            disabled={pinLoading || !pinInput}
+            style={{ width: '100%', background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', border: 'none', borderRadius: 10, padding: '12px', color: 'white', fontSize: 14, fontWeight: 700, cursor: pinLoading ? 'wait' : 'pointer', opacity: (!pinInput || pinLoading) ? 0.5 : 1 }}
+          >
+            {pinLoading ? '確認中...' : 'アクセス'}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   if (!ready) {
     return (
