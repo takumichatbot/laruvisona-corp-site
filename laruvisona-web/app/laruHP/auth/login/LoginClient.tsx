@@ -31,11 +31,14 @@ function LoginForm() {
 
   const handleGoogleLogin = async () => {
     setError('');
+    // 古いセッションを完全にクリアしてから OAuth を開始
+    await supabase.auth.signOut();
     const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/dashboard';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
+        queryParams: { prompt: 'select_account' },
       },
     });
     if (error) setError('Googleログインに失敗しました');

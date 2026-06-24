@@ -44,6 +44,9 @@ export async function POST(req: Request) {
       message: body.message,
       image_urls: body.image_urls ?? [],
       auto_approve: body.auto_approve ?? true,
+      auto_retry: body.auto_retry ?? false,
+      context_output: body.context_output ?? null,
+      parent_id: body.parent_id ?? null,
       status: 'pending',
     })
     .select()
