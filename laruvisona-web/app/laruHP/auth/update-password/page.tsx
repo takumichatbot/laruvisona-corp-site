@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 function UpdatePasswordContent() {
   const [password, setPassword] = useState('');
@@ -10,10 +11,12 @@ function UpdatePasswordContent() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
-  const [tokenValid, setTokenValid] = useState<boolean | null>(null); // null = checking
+  const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [token, setToken] = useState('');
+  const [tokenEmail, setTokenEmail] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createClient();
 
   useEffect(() => {
     const t = searchParams.get('token');
@@ -23,7 +26,12 @@ function UpdatePasswordContent() {
       return;
     }
     setToken(t);
-    // トークンは submit 時にサーバーで検証するだけでよい
+    // トークンから email を取り出して表示用に使う（base64url デコード）
+    try {
+      const decoded = atob(t.replace(/-/g, '+').replace(/_/g, '/'));
+      const email = decoded.split(':')[0];
+      if (email) setTokenEmail(email);
+    } catch { /* ignore */ }
     setTokenValid(true);
   }, [searchParams]);
 
@@ -43,10 +51,16 @@ function UpdatePasswordContent() {
     if (!res.ok) {
       setError(data.error || 'パスワードの更新に失敗しました');
       setLoading(false);
-    } else {
-      setDone(true);
-      setTimeout(() => router.push('/laruHP/auth/login'), 2000);
+      return;
     }
+
+    // パスワード更新成功 → 既存セッションを消してから新しいパスワードで自動ログイン
+    await supabase.auth.signOut();
+    if (tokenEmail) {
+      await supabase.auth.signInWithPassword({ email: tokenEmail, password });
+    }
+    setDone(true);
+    setTimeout(() => router.push('/laruHP/dashboard'), 1500);
   };
 
   return (
@@ -66,7 +80,7 @@ function UpdatePasswordContent() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
               <p className="text-emerald-700 font-bold">パスワードを更新しました</p>
-              <p className="text-gray-600 text-sm mt-2">ログイン画面に移動します...</p>
+              <p className="text-gray-600 text-sm mt-2">{tokenEmail} でログイン中... ダッシュボードに移動します</p>
             </div>
           ) : tokenValid === null ? (
             <div className="text-center py-8 text-gray-500 text-sm">確認中...</div>
