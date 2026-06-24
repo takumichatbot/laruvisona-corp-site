@@ -1310,6 +1310,83 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── Quick Access Cards ── */}
+        {!loading && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {[
+              {
+                title: 'ビルダー',
+                desc: 'AIでサイトを作成・編集',
+                cta: 'ビルダーはこちら',
+                href: sites.length > 0 ? `/laruHP/builder?siteId=${sites[0]?.id}` : '/laruHP/onboarding',
+                iconColor: 'bg-sky-50 text-sky-600',
+                borderHover: 'hover:border-sky-300',
+                ctaColor: 'text-sky-600',
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                ),
+              },
+              {
+                title: '問い合わせ',
+                desc: '顧客からの連絡を一括管理',
+                cta: '問い合わせはこちら',
+                href: '/laruHP/contacts',
+                iconColor: 'bg-emerald-50 text-emerald-600',
+                borderHover: 'hover:border-emerald-300',
+                ctaColor: 'text-emerald-600',
+                badge: contacts.filter(c => !c.read).length,
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                ),
+              },
+              {
+                title: 'AIブログ',
+                desc: 'SEO記事を自動生成・公開',
+                cta: 'ブログはこちら',
+                href: '/laruHP/blog',
+                iconColor: 'bg-indigo-50 text-indigo-600',
+                borderHover: 'hover:border-indigo-300',
+                ctaColor: 'text-indigo-600',
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                ),
+              },
+              {
+                title: 'SEO設定',
+                desc: '検索エンジン最適化を管理',
+                cta: 'SEO設定はこちら',
+                href: '/laruHP/seo',
+                iconColor: 'bg-violet-50 text-violet-600',
+                borderHover: 'hover:border-violet-300',
+                ctaColor: 'text-violet-600',
+                icon: (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                ),
+              },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group bg-white border border-gray-200 ${item.borderHover} hover:shadow-sm rounded-xl p-4 flex flex-col transition-all relative`}
+              >
+                {item.badge != null && item.badge > 0 && (
+                  <span className="absolute top-3 right-3 w-5 h-5 bg-sky-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {item.badge}
+                  </span>
+                )}
+                <div className={`w-9 h-9 rounded-lg ${item.iconColor} flex items-center justify-center mb-3 transition-colors`}>
+                  {item.icon}
+                </div>
+                <div className="text-xs font-bold text-gray-900 mb-0.5">{item.title}</div>
+                <div className="text-[10px] text-gray-400 leading-relaxed mb-3 flex-1">{item.desc}</div>
+                <div className={`text-[11px] font-semibold ${item.ctaColor} group-hover:opacity-80 transition-opacity`}>
+                  {item.cta} →
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
         {/* ── New site error ── */}
         {newSiteError && (
           <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-600">
