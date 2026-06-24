@@ -75,29 +75,102 @@ const STATUS_DOT: Record<Command['status'], string>   = { pending: '#f59e0b', ru
 // ── Global CSS ─────────────────────────────────────────────────────────────────
 
 const CSS = `
-  @keyframes msgSlideR { from{opacity:0;transform:translateX(14px)} to{opacity:1;transform:translateX(0)} }
-  @keyframes msgSlideL { from{opacity:0;transform:translateX(-14px)} to{opacity:1;transform:translateX(0)} }
-  @keyframes fadeUp    { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes scaleIn   { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
-  @keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0} }
-  @keyframes rippleRing{ 0%{transform:scale(1);opacity:.5} 100%{transform:scale(2.2);opacity:0} }
-  @keyframes spin      { to{transform:rotate(360deg)} }
-  @keyframes gradFlow  { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-  @keyframes orbDrift  { 0%,100%{transform:translate(0,0)} 33%{transform:translate(24px,-18px)} 66%{transform:translate(-12px,12px)} }
-  @keyframes recPulse  { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.5)} 60%{box-shadow:0 0 0 10px rgba(248,113,113,0)} }
-  .msg-r   { animation: msgSlideR .22s cubic-bezier(.2,.8,.4,1) both }
-  .msg-l   { animation: msgSlideL .22s cubic-bezier(.2,.8,.4,1) both }
-  .msg-e   { animation: fadeUp    .18s ease-out both }
-  .scale-in{ animation: scaleIn   .18s ease-out both }
-  .cursor::after { content:'▊'; animation:blink 1s step-end infinite; color:#38bdf8; margin-left:2px; font-size:.9em }
-  .rec-btn { animation: recPulse  1.4s ease-in-out infinite }
-  .orb     { animation: orbDrift  14s ease-in-out infinite; will-change:transform }
-  .orb2    { animation: orbDrift  18s ease-in-out infinite reverse }
-  .spin    { animation: spin .8s linear infinite }
-  .watcher-ripple { position:absolute; inset:-4px; border-radius:13px; border:1px solid #4ade80; animation:rippleRing 2s ease-out infinite }
-  ::-webkit-scrollbar { width:2px; height:2px }
-  ::-webkit-scrollbar-track { background:transparent }
-  ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px }
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar{width:3px;height:3px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:linear-gradient(#0ea5e9,#8b5cf6);border-radius:3px}
+
+  /* ── Keyframes ── */
+  @keyframes gridDrift{0%{background-position:0 0}100%{background-position:60px 60px}}
+  @keyframes aurora{0%,100%{background-position:0% 50%;opacity:.08}50%{background-position:100% 50%;opacity:.14}}
+  @keyframes orbDrift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(32px,-22px) scale(1.05)}66%{transform:translate(-18px,16px) scale(.96)}}
+  @keyframes orbDrift2{0%,100%{transform:translate(0,0)}33%{transform:translate(-28px,20px)}66%{transform:translate(22px,-16px)}}
+  @keyframes sphereBreath{0%,100%{box-shadow:0 0 14px rgba(74,222,128,.35),0 0 28px rgba(74,222,128,.15),0 0 56px rgba(74,222,128,.05)}50%{box-shadow:0 0 24px rgba(74,222,128,.6),0 0 48px rgba(74,222,128,.25),0 0 90px rgba(74,222,128,.08)}}
+  @keyframes sphereBreathOff{0%,100%{box-shadow:0 0 8px rgba(239,68,68,.3),0 0 16px rgba(239,68,68,.1)}50%{box-shadow:0 0 14px rgba(239,68,68,.5),0 0 28px rgba(239,68,68,.15)}}
+  @keyframes rippleRing{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.6);opacity:0}}
+  @keyframes rippleRing2{0%{transform:scale(1);opacity:.3}100%{transform:scale(3.2);opacity:0}}
+  @keyframes runnerPulse{0%,100%{border-color:rgba(14,165,233,.22);box-shadow:0 1px 20px rgba(14,165,233,.06),0 0 0 0 rgba(14,165,233,.08)}50%{border-color:rgba(14,165,233,.5);box-shadow:0 2px 32px rgba(14,165,233,.14),0 0 0 5px rgba(14,165,233,.04)}}
+  @keyframes errorPulse{0%,100%{border-color:rgba(239,68,68,.18);box-shadow:0 1px 16px rgba(239,68,68,.05)}50%{border-color:rgba(239,68,68,.42);box-shadow:0 2px 24px rgba(239,68,68,.1)}}
+  @keyframes msgSlideR{from{opacity:0;transform:translateX(14px) scale(.98)}to{opacity:1;transform:translateX(0) scale(1)}}
+  @keyframes msgSlideL{from{opacity:0;transform:translateX(-14px) scale(.98)}to{opacity:1;transform:translateX(0) scale(1)}}
+  @keyframes cardRise{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @keyframes scaleIn{from{opacity:0;transform:scale(.93) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  @keyframes dissolveIn{from{opacity:0;filter:blur(8px);transform:scale(.96)}to{opacity:1;filter:blur(0);transform:scale(1)}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.45)}60%{box-shadow:0 0 0 12px rgba(248,113,113,0)}}
+  @keyframes gradText{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  @keyframes tabHolo{0%,100%{background-position:0% 50%;box-shadow:0 0 16px rgba(14,165,233,.24),inset 0 1px 0 rgba(255,255,255,.14)}50%{background-position:100% 50%;box-shadow:0 0 28px rgba(99,102,241,.34),inset 0 1px 0 rgba(255,255,255,.2)}}
+  @keyframes glassSweep{0%{transform:translateX(-180%) skewX(-18deg);opacity:0}5%{opacity:1}95%{opacity:1}100%{transform:translateX(380%) skewX(-18deg);opacity:0}}
+  @keyframes progShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+  @keyframes btnCharge{0%,100%{box-shadow:0 0 8px rgba(14,165,233,.28)}50%{box-shadow:0 0 22px rgba(14,165,233,.6),0 0 40px rgba(14,165,233,.18)}}
+  @keyframes btnChargeBroad{0%,100%{box-shadow:0 0 8px rgba(251,146,60,.3)}50%{box-shadow:0 0 22px rgba(251,146,60,.6),0 0 40px rgba(251,146,60,.15)}}
+  @keyframes inputRing{0%{opacity:0;transform:scale(.95)}100%{opacity:1;transform:scale(1)}}
+  @keyframes headerShimmer{0%{opacity:0;transform:translateX(-100%)}6%{opacity:.6}94%{opacity:.6}100%{opacity:0;transform:translateX(200%)}}
+  @keyframes floatChip{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+  /* ── Layout classes ── */
+  .msg-r    { animation: msgSlideR .24s cubic-bezier(.2,.8,.4,1) both }
+  .msg-l    { animation: msgSlideL .24s cubic-bezier(.2,.8,.4,1) both }
+  .msg-e    { animation: cardRise  .3s  cubic-bezier(.2,.8,.4,1) both }
+  .scale-in { animation: scaleIn   .24s cubic-bezier(.2,.8,.4,1) both }
+  .dissolve { animation: dissolveIn .35s cubic-bezier(.2,.8,.4,1) both }
+  .spin     { animation: spin .8s linear infinite }
+  .rec-btn  { animation: recPulse 1.4s ease-in-out infinite }
+
+  /* Ambient orbs */
+  .orb  { animation: orbDrift  18s ease-in-out infinite; will-change:transform }
+  .orb2 { animation: orbDrift2 24s ease-in-out infinite; will-change:transform }
+  .orb3 { animation: orbDrift  32s ease-in-out 6s infinite; will-change:transform }
+
+  /* Watcher indicator */
+  .watcher-sphere-on  { animation: sphereBreath    2.8s ease-in-out infinite }
+  .watcher-sphere-off { animation: sphereBreathOff 3.2s ease-in-out infinite }
+  .watcher-ripple  { position:absolute;border-radius:50%;border:1.5px solid rgba(74,222,128,.5);animation:rippleRing  2s ease-out infinite }
+  .watcher-ripple2 { position:absolute;border-radius:50%;border:1px   solid rgba(74,222,128,.28);animation:rippleRing2 2s ease-out .55s infinite }
+
+  /* Command cards */
+  .cmd-card { transition:transform .3s cubic-bezier(.2,.8,.4,1),box-shadow .3s ease;transform-style:preserve-3d }
+  .cmd-card:hover { transform:perspective(1000px) rotateX(-1.2deg) translateY(-3px) }
+  .cmd-running { animation: runnerPulse 2.4s ease-in-out infinite }
+  .cmd-error   { animation: errorPulse  2.8s ease-in-out infinite }
+
+  /* Terminal cursor */
+  .cursor::after { content:'▊';animation:blink 1s step-end infinite;color:#38bdf8;margin-left:2px;font-size:.9em }
+
+  /* Session tab */
+  .tab-active { animation:tabHolo 4.5s ease-in-out infinite;background-size:220% 220% !important }
+
+  /* Send button */
+  .btn-charged      { animation: btnCharge      2.2s ease-in-out infinite }
+  .btn-charged-broad{ animation: btnChargeBroad 2s   ease-in-out infinite }
+
+  /* Glass card highlight sweep */
+  .glass-card { position:relative;overflow:hidden }
+  .glass-card::after { content:'';position:absolute;inset:0;background:linear-gradient(108deg,transparent 38%,rgba(255,255,255,.035) 50%,transparent 62%);animation:glassSweep 6s ease-in-out infinite;pointer-events:none;border-radius:inherit }
+
+  /* Gradient text */
+  .grad-text { background:linear-gradient(90deg,#f8fafc,#94a3b8,#38bdf8,#a78bfa,#f8fafc);background-size:280%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gradText 7s ease infinite }
+
+  /* Status badges */
+  .st-running  { background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.28);color:#38bdf8;box-shadow:0 0 10px rgba(14,165,233,.12) }
+  .st-pending  { background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.22);color:#fbbf24 }
+  .st-done     { background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);color:#34d399 }
+  .st-error    { background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.22);color:#f87171;box-shadow:0 0 10px rgba(239,68,68,.1) }
+  .st-cancelled{ background:rgba(100,116,139,.06);border:1px solid rgba(100,116,139,.14);color:#64748b }
+
+  /* Grid background */
+  .grid-bg { animation:gridDrift 24s linear infinite }
+
+  /* Progress shimmer */
+  .prog-shimmer { animation:progShimmer 2.2s ease-in-out infinite }
+
+  /* Floating chip */
+  .float-chip { animation:floatChip 3s ease-in-out infinite }
+
+  /* Header shimmer */
+  .header-shimmer { position:relative;overflow:hidden }
+  .header-shimmer::before { content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(14,165,233,.4),rgba(139,92,246,.4),transparent);animation:headerShimmer 8s ease-in-out infinite }
 `;
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -610,78 +683,111 @@ export default function AiCommandPage() {
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#020408', color: '#e2e8f0', overflow: 'hidden', position: 'relative', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
       <style>{CSS}</style>
 
-      {/* Ambient orbs */}
+      {/* ── AMBIENT DEPTH LAYER ── */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-        <div className="orb"  style={{ position: 'absolute', top: '-20%', left: '-10%', width: 380, height: 380, background: 'radial-gradient(circle, rgba(14,165,233,.065) 0%, transparent 65%)', borderRadius: '50%' }} />
-        <div className="orb2" style={{ position: 'absolute', bottom: '5%', right: '-12%', width: 440, height: 440, background: 'radial-gradient(circle, rgba(99,102,241,.055) 0%, transparent 65%)', borderRadius: '50%' }} />
+        {/* Animated grid */}
+        <div className="grid-bg" style={{ position: 'absolute', inset: '-60px', backgroundImage: 'linear-gradient(rgba(14,165,233,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(14,165,233,.025) 1px,transparent 1px)', backgroundSize: '60px 60px', opacity: 1 }} />
+        {/* Aurora gradient */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(14,165,233,.06),rgba(99,102,241,.04),rgba(139,92,246,.06))', backgroundSize: '400% 400%', animation: 'aurora 12s ease infinite' }} />
+        {/* Orbs */}
+        <div className="orb"  style={{ position: 'absolute', top: '-22%', left: '-12%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(14,165,233,.07) 0%, transparent 65%)', borderRadius: '50%' }} />
+        <div className="orb2" style={{ position: 'absolute', bottom: '2%', right: '-15%', width: 560, height: 560, background: 'radial-gradient(circle, rgba(99,102,241,.06) 0%, transparent 65%)', borderRadius: '50%' }} />
+        <div className="orb3" style={{ position: 'absolute', top: '40%', left: '42%', width: 300, height: 300, background: 'radial-gradient(circle, rgba(139,92,246,.04) 0%, transparent 65%)', borderRadius: '50%' }} />
+        {/* Vignette */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 80% at 50% 50%, transparent 30%, rgba(2,4,8,.55) 100%)' }} />
       </div>
 
       {/* ── HEADER ──────────────────────────────────────────────────── */}
-      <header style={{ flexShrink: 0, background: 'rgba(2,4,8,.88)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(255,255,255,.05)', position: 'relative', zIndex: 10 }}>
+      <header className="header-shimmer" style={{ flexShrink: 0, background: 'rgba(3,6,16,.92)', backdropFilter: 'blur(32px) saturate(180%)', borderBottom: '1px solid rgba(255,255,255,.06)', position: 'relative', zIndex: 10, boxShadow: '0 1px 0 rgba(14,165,233,.06),0 4px 24px rgba(0,0,0,.4)' }}>
 
         {/* Top row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px 9px' }}>
           {/* Brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}>
-              <svg width="30" height="30" viewBox="0 0 30 30" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(14,165,233,.3))' }}>
-                <rect width="30" height="30" rx="9" fill="url(#hg)"/>
-                <path d="M6 10l7 5-7 5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                <rect x="16" y="18" width="8" height="1.8" rx=".9" fill="rgba(255,255,255,.9)"/>
-                <defs><linearGradient id="hg" x1="0" y1="0" x2="30" y2="30"><stop stopColor="#0ea5e9"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
-              </svg>
-              {watcherOnline && <div className="watcher-ripple" />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            {/* Watcher indicator orb */}
+            <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className={watcherOnline ? 'watcher-sphere-on' : 'watcher-sphere-off'} style={{ width: 34, height: 34, borderRadius: 11, background: watcherOnline ? 'linear-gradient(135deg,rgba(74,222,128,.18),rgba(34,197,94,.08))' : 'linear-gradient(135deg,rgba(239,68,68,.15),rgba(185,28,28,.06))', border: `1px solid ${watcherOnline ? 'rgba(74,222,128,.3)' : 'rgba(239,68,68,.25)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 30 30" fill="none">
+                  <rect width="30" height="30" rx="9" fill="url(#hg2)"/>
+                  <path d="M6 10l7 5-7 5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <rect x="16" y="18" width="8" height="2" rx="1" fill="rgba(255,255,255,.85)"/>
+                  <defs><linearGradient id="hg2" x1="0" y1="0" x2="30" y2="30"><stop stopColor="#0ea5e9"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
+                </svg>
+              </div>
+              {watcherOnline && <>
+                <div className="watcher-ripple"  style={{ inset: -6 }} />
+                <div className="watcher-ripple2" style={{ inset: -10 }} />
+              </>}
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-0.03em', background: 'linear-gradient(90deg,#f1f5f9 60%,#64748b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>AI司令室</div>
-              <div style={{ fontSize: 9, letterSpacing: '.07em', fontWeight: 700, marginTop: 1, color: watcherOnline ? '#22d3ee' : '#ef4444' }}>
-                {watcherOnline ? '● ONLINE' : '● OFFLINE'}
-                {watcherLastSeen && !watcherOnline ? <span style={{ opacity: .5 }}> · {ago(watcherLastSeen)}</span> : ''}
-                {(hasRunning || hasPending) ? <span style={{ color: '#38bdf8', marginLeft: 6 }}>· {commands.filter(c => c.status === 'running').length} RUNNING</span> : ''}
+              <div className="grad-text" style={{ fontWeight: 900, fontSize: 15, letterSpacing: '-0.04em' }}>AI司令室</div>
+              <div style={{ fontSize: 9, letterSpacing: '.1em', fontWeight: 700, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: watcherOnline ? '#4ade80' : '#f87171', textShadow: watcherOnline ? '0 0 8px rgba(74,222,128,.5)' : '0 0 8px rgba(248,113,113,.4)' }}>
+                  {watcherOnline ? '◉ ONLINE' : '◎ OFFLINE'}
+                </span>
+                {watcherLastSeen && !watcherOnline && <span style={{ opacity: .35, color: '#64748b' }}>{ago(watcherLastSeen)}</span>}
+                {hasRunning && <span style={{ color: '#38bdf8', textShadow: '0 0 6px rgba(56,189,248,.4)' }}>· {commands.filter(c => c.status === 'running').length} RUN</span>}
               </div>
             </div>
           </div>
 
           {/* Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button type="button" onClick={() => setBroadcastMode(v => !v)} title="全プロジェクト一斉送信" style={{ padding: '0 8px', height: 26, borderRadius: 7, border: broadcastMode ? '1px solid rgba(251,146,60,.5)' : '1px solid rgba(255,255,255,.07)', background: broadcastMode ? 'rgba(251,146,60,.12)' : 'rgba(255,255,255,.03)', color: broadcastMode ? '#fb923c' : '#2d3748', fontSize: 9, fontWeight: 800, letterSpacing: '.04em', cursor: 'pointer', transition: 'all .15s' }}>
-              📡{broadcastMode ? ' BROAD' : ''}
-            </button>
-            <button type="button" onClick={() => { setShowPalette(true); setTimeout(() => paletteInputRef.current?.focus(), 50); }} title="コマンドパレット (⌘K)" style={{ padding: '0 8px', height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.03)', color: '#2d3748', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>⌘K</button>
-            <button type="button" onClick={() => setAutoApprove(v => !v)} title="自動承認" style={{ padding: '0 7px', height: 26, borderRadius: 7, border: autoApprove ? '1px solid rgba(251,191,36,.4)' : '1px solid rgba(255,255,255,.07)', background: autoApprove ? 'rgba(251,191,36,.1)' : 'rgba(255,255,255,.03)', color: autoApprove ? '#fbbf24' : '#2d3748', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>
-              {autoApprove ? '⚡AUTO' : 'MAN'}
-            </button>
-            <button type="button" onClick={() => setAutoRetry(v => !v)} title="自動リトライ" style={{ width: 26, height: 26, borderRadius: 7, border: autoRetry ? '1px solid rgba(139,92,246,.4)' : '1px solid rgba(255,255,255,.07)', background: autoRetry ? 'rgba(139,92,246,.12)' : 'rgba(255,255,255,.03)', color: autoRetry ? '#a78bfa' : '#2d3748', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔄</button>
-            <button type="button" onClick={() => setShowSettings(true)} aria-label="設定" style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.03)', color: '#2d3748', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙️</button>
-            <button type="button" onClick={() => setShowHelp(v => !v)} aria-label="ヘルプ" title="使い方ガイド" style={{ width: 26, height: 26, borderRadius: 7, border: showHelp ? '1px solid rgba(14,165,233,.5)' : '1px solid rgba(255,255,255,.07)', background: showHelp ? 'rgba(14,165,233,.12)' : 'rgba(255,255,255,.03)', color: showHelp ? '#38bdf8' : '#475569', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>?</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {[
+              { label: broadcastMode ? '📡 BROAD' : '📡', active: broadcastMode, color: '#fb923c', activeStyle: { border: '1px solid rgba(251,146,60,.45)', background: 'rgba(251,146,60,.1)', color: '#fb923c' }, onClick: () => setBroadcastMode(v => !v), title: '全プロジェクト一斉送信', w: broadcastMode ? 70 : 26 },
+              { label: '⌘K', active: false, color: '#475569', onClick: () => { setShowPalette(true); setTimeout(() => paletteInputRef.current?.focus(), 50); }, title: 'コマンドパレット', w: 30 },
+              { label: autoApprove ? '⚡' : '○', active: autoApprove, color: '#fbbf24', activeStyle: { border: '1px solid rgba(251,191,36,.38)', background: 'rgba(251,191,36,.08)', color: '#fbbf24', textShadow: '0 0 8px rgba(251,191,36,.4)' }, onClick: () => setAutoApprove(v => !v), title: '自動承認', w: 26 },
+              { label: '↩', active: autoRetry, color: '#a78bfa', activeStyle: { border: '1px solid rgba(139,92,246,.38)', background: 'rgba(139,92,246,.1)', color: '#a78bfa', textShadow: '0 0 8px rgba(167,139,250,.35)' }, onClick: () => setAutoRetry(v => !v), title: '自動リトライ', w: 26 },
+              { label: '⚙', active: false, color: '#475569', onClick: () => setShowSettings(true), title: '設定', w: 26 },
+              { label: '?', active: showHelp, color: '#38bdf8', activeStyle: { border: '1px solid rgba(14,165,233,.45)', background: 'rgba(14,165,233,.1)', color: '#38bdf8', textShadow: '0 0 8px rgba(14,165,233,.4)' }, onClick: () => setShowHelp(v => !v), title: '使い方ガイド', w: 26 },
+            ].map(({ label, active, activeStyle, onClick, title, w }) => (
+              <button key={label} type="button" onClick={onClick} title={title} style={{
+                flexShrink: 0, height: 28, width: w, borderRadius: 8, fontSize: label === '?' ? 12 : 11, fontWeight: 800, cursor: 'pointer', transition: 'all .18s', letterSpacing: '.02em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+                ...(active && activeStyle ? activeStyle : { border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.03)', color: '#334155' }),
+              }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'rgba(255,255,255,.14)'; e.currentTarget.style.color = '#64748b'; } }}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; e.currentTarget.style.color = '#334155'; } }}>
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Project tabs */}
-        <div style={{ display: 'flex', gap: 5, overflowX: 'auto', scrollbarWidth: 'none', padding: '0 14px 8px' }}>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', padding: '0 16px 10px' }}>
           {sessions.map(s => {
             const active = activeId === s.id;
             const sh = health[s.id];
             const rCount = commands.filter(c => c.session_id === s.id && c.status === 'running').length;
             const pCount = commands.filter(c => c.session_id === s.id && c.status === 'pending').length;
+            const colors: Record<string, string> = { sky: '#0ea5e9', violet: '#8b5cf6', emerald: '#10b981', amber: '#f59e0b', rose: '#f43f5e', cyan: '#06b6d4', indigo: '#6366f1', slate: '#64748b' };
+            const accent = colors[s.color ?? 'sky'] ?? '#0ea5e9';
             return (
-              <button key={s.id} type="button" onClick={() => setActiveId(s.id)} style={{
-                flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 9, cursor: 'pointer', position: 'relative',
-                border: active ? 'none' : '1px solid rgba(255,255,255,.05)',
-                background: active ? 'linear-gradient(135deg,#0369a1,#4338ca)' : 'rgba(255,255,255,.03)',
-                color: active ? '#fff' : '#2d3748', transition: 'all .15s',
-                boxShadow: active ? '0 0 16px rgba(14,165,233,.28),inset 0 1px 0 rgba(255,255,255,.15)' : 'none',
-              }}>
-                {s.name}
-                {sh?.git_branch && <span style={{ marginLeft: 5, fontSize: 9, opacity: .5 }}>{sh.git_branch}</span>}
-                {sh && sh.uncommitted_count > 0 && <span style={{ marginLeft: 3, color: '#fbbf24', fontSize: 9 }}>·{sh.uncommitted_count}</span>}
+              <button key={s.id} type="button" onClick={() => setActiveId(s.id)} className={active ? 'tab-active' : ''} style={{
+                flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '6px 14px', borderRadius: 10, cursor: 'pointer', position: 'relative',
+                border: active ? `1px solid ${accent}55` : '1px solid rgba(255,255,255,.06)',
+                background: active ? `linear-gradient(135deg,${accent}22,${accent}0d,rgba(99,102,241,.12))` : 'rgba(255,255,255,.025)',
+                color: active ? '#f1f5f9' : '#334155', transition: 'all .2s',
+              }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)'; e.currentTarget.style.color = '#64748b'; } }}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = 'rgba(255,255,255,.06)'; e.currentTarget.style.color = '#334155'; } }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {active && <span style={{ width: 5, height: 5, borderRadius: '50%', background: accent, boxShadow: `0 0 6px ${accent}`, display: 'inline-block', flexShrink: 0 }} />}
+                  {s.name}
+                  {sh?.git_branch && <span style={{ fontSize: 9, opacity: .4, fontFamily: 'monospace' }}>{sh.git_branch}</span>}
+                  {sh && sh.uncommitted_count > 0 && <span style={{ color: '#fbbf24', fontSize: 9, textShadow: '0 0 6px rgba(251,191,36,.4)' }}>·{sh.uncommitted_count}</span>}
+                </span>
                 {(rCount > 0 || pCount > 0) && (
-                  <span style={{ position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: '50%', background: rCount > 0 ? '#38bdf8' : '#fbbf24', border: '1.5px solid #020408', boxShadow: rCount > 0 ? '0 0 4px #38bdf8' : 'none' }} />
+                  <span style={{ position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: '50%', background: rCount > 0 ? '#38bdf8' : '#fbbf24', border: '1.5px solid #030610', boxShadow: rCount > 0 ? '0 0 5px #38bdf8' : '0 0 5px #fbbf24' }} />
                 )}
               </button>
             );
           })}
-          <button type="button" onClick={() => { setEditForm(EMPTY_EDIT); setShowSettings(true); }} style={{ flexShrink: 0, fontSize: 10, color: '#1e293b', border: '1px dashed #1e293b', background: 'transparent', padding: '5px 10px', borderRadius: 9, cursor: 'pointer' }}>＋</button>
+          <button type="button" onClick={() => { setEditForm(EMPTY_EDIT); setShowSettings(true); }} style={{ flexShrink: 0, fontSize: 12, color: '#1e293b', border: '1px dashed rgba(255,255,255,.08)', background: 'transparent', padding: '5px 12px', borderRadius: 10, cursor: 'pointer', transition: 'all .15s', letterSpacing: '.04em' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(14,165,233,.3)'; e.currentTarget.style.color = '#0ea5e9'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)'; e.currentTarget.style.color = '#1e293b'; }}>
+            ＋
+          </button>
         </div>
 
         {/* Stats + filter row */}
@@ -783,22 +889,34 @@ export default function AiCommandPage() {
       <main ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '14px 13px 8px', display: 'flex', flexDirection: 'column', gap: 18, position: 'relative', zIndex: 1 }}>
 
         {filteredCommands.length === 0 && (
-          <div className="msg-e" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, paddingTop: 60, paddingBottom: 40 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,rgba(14,165,233,.1),rgba(99,102,241,.1))', border: '1px solid rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-              {activeView === 'starred' ? '★' : filterStatus !== 'all' ? { running: '◉', pending: '○', done: '✓', error: '✕' }[filterStatus as 'running'|'pending'|'done'|'error'] : '🤖'}
+          <div className="msg-e" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 16, paddingTop: 60, paddingBottom: 40 }}>
+            {/* Hero icon with rings */}
+            <div style={{ position: 'relative', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'absolute', inset: -12, borderRadius: '50%', border: '1px solid rgba(14,165,233,.1)', animation: 'rippleRing 3s ease-out infinite' }} />
+              <div style={{ position: 'absolute', inset: -6, borderRadius: '50%', border: '1px solid rgba(14,165,233,.15)', animation: 'rippleRing 3s ease-out .8s infinite' }} />
+              <div style={{ width: 72, height: 72, borderRadius: 22, background: 'linear-gradient(135deg,rgba(14,165,233,.1),rgba(99,102,241,.08))', border: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(16px)', boxShadow: '0 0 32px rgba(14,165,233,.08),inset 0 1px 0 rgba(255,255,255,.06)' }}>
+                <svg width="32" height="32" viewBox="0 0 30 30" fill="none" style={{ opacity: .6 }}>
+                  <rect width="30" height="30" rx="9" fill="url(#eg)"/>
+                  <path d="M6 10l7 5-7 5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <rect x="16" y="18" width="8" height="2" rx="1" fill="rgba(255,255,255,.8)"/>
+                  <defs><linearGradient id="eg" x1="0" y1="0" x2="30" y2="30"><stop stopColor="#0ea5e9"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
+                </svg>
+              </div>
             </div>
             {activeView === 'starred' ? (
-              <div style={{ textAlign: 'center', color: '#1e293b', fontSize: 12 }}>スターを付けたメッセージはありません</div>
+              <div style={{ textAlign: 'center', color: '#1e293b', fontSize: 12 }}>スター付きのコマンドはありません</div>
             ) : filterStatus !== 'all' ? (
               <div style={{ textAlign: 'center', color: '#1e293b', fontSize: 12 }}>{filterStatus.toUpperCase()} のコマンドはありません</div>
             ) : (
-              <>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 600 }}>Ready</div>
-                  {h && <div style={{ fontSize: 10, color: '#0f172a', marginTop: 3 }}>🌿 {h.git_branch}{h.last_commit_msg ? ` · ${h.last_commit_msg.slice(0, 36)}` : ''}</div>}
-                </div>
-                {!watcherOnline && <div style={{ fontSize: 10, color: 'rgba(239,68,68,.5)', padding: '4px 10px', borderRadius: 20, border: '1px solid rgba(239,68,68,.12)', background: 'rgba(239,68,68,.04)' }}>⚠ watcher offline</div>}
-              </>
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 700, letterSpacing: '-.01em' }}>Ready</div>
+                {h && <div style={{ fontSize: 10, color: '#0f172a', fontFamily: 'monospace' }}>🌿 {h.git_branch}{h.last_commit_msg ? ` · ${h.last_commit_msg.slice(0, 40)}` : ''}</div>}
+                {!watcherOnline && (
+                  <div style={{ fontSize: 10, color: 'rgba(239,68,68,.5)', padding: '4px 12px', borderRadius: 20, border: '1px solid rgba(239,68,68,.12)', background: 'rgba(239,68,68,.04)', backdropFilter: 'blur(8px)' }}>
+                    ⚠ Watcher がオフラインです
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -815,21 +933,21 @@ export default function AiCommandPage() {
           const statusDot   = STATUS_DOT[cmd.status];
 
           return (
-            <div key={cmd.id} className="msg-e" style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: isThread ? 14 : 0, borderLeft: isThread ? '2px solid rgba(14,165,233,.18)' : 'none' }}>
+            <div key={cmd.id} className={`msg-e cmd-card ${cmd.status === 'running' ? 'cmd-running' : cmd.status === 'error' ? 'cmd-error' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 7, paddingLeft: isThread ? 16 : 0, borderLeft: isThread ? '2px solid rgba(14,165,233,.2)' : 'none' }}>
 
               {/* User message */}
               <div className="msg-r" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div style={{ maxWidth: '90%' }}>
+                <div style={{ maxWidth: '88%' }}>
                   {cmd.image_urls?.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, marginBottom: 6, justifyContent: 'flex-end' }}>
-                      {cmd.image_urls.map((url, i) => <img key={i} src={url} alt="" style={{ height: 52, width: 'auto', borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(14,165,233,.15)' }} />)}
+                      {cmd.image_urls.map((url, i) => <img key={i} src={url} alt="" style={{ height: 56, width: 'auto', borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(14,165,233,.2)', boxShadow: '0 2px 12px rgba(14,165,233,.1)' }} />)}
                     </div>
                   )}
-                  <div style={{ background: 'linear-gradient(135deg,rgba(3,105,161,.32),rgba(67,56,202,.22))', border: '1px solid rgba(14,165,233,.13)', borderRadius: '14px 14px 3px 14px', padding: '9px 13px', fontSize: 13, color: '#bae6fd', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.55 }}>
+                  <div style={{ background: 'linear-gradient(135deg,rgba(3,105,161,.28),rgba(67,56,202,.18))', border: '1px solid rgba(14,165,233,.16)', borderRadius: '16px 16px 4px 16px', padding: '10px 14px', fontSize: 13, color: '#bae6fd', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6, backdropFilter: 'blur(8px)', boxShadow: '0 2px 16px rgba(14,165,233,.08),inset 0 1px 0 rgba(255,255,255,.05)' }}>
                     {cmd.message}
                   </div>
-                  <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 3, paddingRight: 2 }}>
-                    {cmd.auto_retry && <span style={{ fontSize: 8, color: '#a78bfa', opacity: .7 }}>retry↩</span>}
+                  <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginTop: 4, paddingRight: 2 }}>
+                    {cmd.auto_retry && <span style={{ fontSize: 8, color: '#a78bfa', opacity: .7, textShadow: '0 0 6px rgba(167,139,250,.3)' }}>↩retry</span>}
                     <span style={{ fontSize: 9, color: '#1e293b' }}>{ago(cmd.created_at)}</span>
                   </div>
                 </div>
@@ -838,76 +956,74 @@ export default function AiCommandPage() {
               {/* AI response */}
               <div className="msg-l" style={{ maxWidth: '97%' }}>
                 {/* Status row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, paddingLeft: 2, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusDot, boxShadow: cmd.status === 'running' ? `0 0 5px ${statusDot}` : 'none', flexShrink: 0 }} />
-                    <span style={{ fontSize: 9, fontWeight: 800, color: statusDot, letterSpacing: '.07em' }}>{STATUS_LABEL[cmd.status]}</span>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, paddingLeft: 2, flexWrap: 'wrap' }}>
+                  <span className={`st-${cmd.status}`} style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.08em', borderRadius: 20, padding: '2px 8px' }}>
+                    {STATUS_LABEL[cmd.status]}
+                  </span>
                   {cmd.status === 'running' && elapsedSec > 0 && (
-                    <span style={{ fontSize: 9, color: '#1e293b', fontVariantNumeric: 'tabular-nums' }}>{fmt(elapsedSec)}{eta ? ` · ~${fmt(eta)}` : ''}</span>
+                    <span style={{ fontSize: 9, color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{fmt(elapsedSec)}{eta ? <span style={{ color: '#1e293b' }}> · ETA {fmt(eta)}</span> : ''}</span>
                   )}
                   {cmd.started_at && cmd.completed_at && (
-                    <span style={{ fontSize: 9, color: '#1e293b' }}>{fmt(Math.round((new Date(cmd.completed_at).getTime() - new Date(cmd.started_at).getTime()) / 1000))}</span>
+                    <span style={{ fontSize: 9, color: '#1e293b', fontVariantNumeric: 'tabular-nums' }}>{fmt(Math.round((new Date(cmd.completed_at).getTime() - new Date(cmd.started_at).getTime()) / 1000))}</span>
                   )}
                   {cmd.git_diff_stat && (
-                    <button type="button" onClick={() => setShowDiff(cmd)} style={{ fontSize: 9, color: '#34d399', background: 'rgba(52,211,153,.07)', border: '1px solid rgba(52,211,153,.18)', borderRadius: 20, padding: '1px 7px', cursor: 'pointer' }}>
+                    <button type="button" onClick={() => setShowDiff(cmd)} style={{ fontSize: 9, color: '#34d399', background: 'rgba(52,211,153,.07)', border: '1px solid rgba(52,211,153,.2)', borderRadius: 20, padding: '2px 8px', cursor: 'pointer', boxShadow: '0 0 8px rgba(52,211,153,.08)' }}>
                       ∆ {cmd.git_diff_stat.split('\n').pop()?.trim()}
                     </button>
                   )}
-                  {/* Right side actions */}
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <button type="button" onClick={() => toggleStar(cmd.id)} style={{ fontSize: 11, color: isStarred ? '#fbbf24' : '#1e293b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, transition: 'color .15s' }}>{isStarred ? '★' : '☆'}</button>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center' }}>
+                    <button type="button" onClick={() => toggleStar(cmd.id)} style={{ fontSize: 12, color: isStarred ? '#fbbf24' : '#1e293b', background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, transition: 'all .15s', textShadow: isStarred ? '0 0 8px rgba(251,191,36,.5)' : 'none' }}>{isStarred ? '★' : '☆'}</button>
                     {(cmd.status === 'pending' || cmd.status === 'running') && (
-                      <button type="button" onClick={() => cancelCommand(cmd.id)} style={{ fontSize: 9, color: '#f87171', background: 'rgba(248,113,113,.07)', border: '1px solid rgba(248,113,113,.18)', borderRadius: 20, padding: '1px 7px', cursor: 'pointer' }}>STOP</button>
+                      <button type="button" onClick={() => cancelCommand(cmd.id)} style={{ fontSize: 9, color: '#f87171', background: 'rgba(248,113,113,.06)', border: '1px solid rgba(248,113,113,.2)', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}>STOP</button>
                     )}
                     {(cmd.status === 'error' || cmd.status === 'cancelled') && (
-                      <button type="button" onClick={() => retryCommand(cmd)} style={{ fontSize: 9, color: '#fbbf24', background: 'rgba(251,191,36,.07)', border: '1px solid rgba(251,191,36,.18)', borderRadius: 20, padding: '1px 7px', cursor: 'pointer' }}>RETRY</button>
+                      <button type="button" onClick={() => retryCommand(cmd)} style={{ fontSize: 9, color: '#fbbf24', background: 'rgba(251,191,36,.06)', border: '1px solid rgba(251,191,36,.2)', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}>↩ RETRY</button>
                     )}
                     {cmd.status === 'done' && (
-                      <button type="button" onClick={() => setContinueFrom(cmd)} style={{ fontSize: 9, color: '#38bdf8', background: 'rgba(56,189,248,.05)', border: '1px solid rgba(56,189,248,.18)', borderRadius: 20, padding: '1px 7px', cursor: 'pointer' }}>→</button>
+                      <button type="button" onClick={() => setContinueFrom(cmd)} style={{ fontSize: 9, color: '#38bdf8', background: 'rgba(56,189,248,.05)', border: '1px solid rgba(56,189,248,.2)', borderRadius: 20, padding: '2px 8px', cursor: 'pointer' }}>続き →</button>
                     )}
                   </div>
                 </div>
 
                 {/* Progress bar while running */}
                 {cmd.status === 'running' && (
-                  <div style={{ marginBottom: 6, height: 2, background: 'rgba(255,255,255,.05)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ marginBottom: 7, height: 2, background: 'rgba(255,255,255,.04)', borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
                     <div style={{
                       height: '100%', borderRadius: 2, transition: 'width 1s linear',
-                      background: eta ? 'linear-gradient(90deg,#0ea5e9,#6366f1)' : undefined,
-                      backgroundImage: eta ? undefined : 'linear-gradient(90deg,#0ea5e9,#6366f1,#0ea5e9)',
-                      backgroundSize: '200% 100%',
-                      animation: eta ? 'none' : 'gradFlow 1.5s linear infinite',
+                      background: 'linear-gradient(90deg,#0ea5e9,#6366f1,#8b5cf6)',
+                      backgroundSize: eta ? '100% 100%' : '200% 100%',
+                      animation: eta ? 'none' : 'gradText 1.8s linear infinite',
                       width: eta ? `${Math.min(90, (elapsedSec / (elapsedSec + eta)) * 100)}%` : '100%',
                     }} />
+                    {!eta && <div className="prog-shimmer" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent)', width: '30%' }} />}
                   </div>
                 )}
 
                 {/* Output block */}
                 {(cmd.output || cmd.error_message) ? (
-                  <div style={{ background: '#030710', border: `1px solid ${cmd.status === 'error' ? 'rgba(248,113,113,.12)' : 'rgba(255,255,255,.05)'}`, borderRadius: '0 12px 12px 12px', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.02)' }}>
-                    <pre style={{ margin: 0, padding: '10px 12px', fontSize: 11, fontFamily: '"JetBrains Mono","Fira Code",ui-monospace,monospace', lineHeight: 1, overflowX: 'auto' }}>
+                  <div className="glass-card" style={{ background: 'rgba(2,6,18,.85)', border: `1px solid ${cmd.status === 'error' ? 'rgba(248,113,113,.14)' : cmd.status === 'done' ? 'rgba(16,185,129,.1)' : 'rgba(255,255,255,.06)'}`, borderRadius: '4px 14px 14px 14px', overflow: 'hidden', backdropFilter: 'blur(16px)', boxShadow: `0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.03)` }}>
+                    <pre style={{ margin: 0, padding: '11px 13px', fontSize: 11, fontFamily: '"JetBrains Mono","Fira Code",ui-monospace,monospace', lineHeight: 1.55, overflowX: 'auto' }}>
                       {cmd.output ? renderOutput(displayOutput) : <span style={{ color: '#fca5a5' }}>{cmd.error_message}</span>}
                       {cmd.status === 'running' && <span className="cursor" />}
                     </pre>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 12px 6px', borderTop: '1px solid rgba(255,255,255,.03)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 13px 7px', borderTop: '1px solid rgba(255,255,255,.03)' }}>
                       {isLong ? (
                         <button type="button" onClick={() => toggleExpand(cmd.id)} style={{ fontSize: 9, color: '#0ea5e9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                          {isExp ? '▲ collapse' : `▼ +${outputLines - 30} lines`}
+                          {isExp ? '▲ 折りたたむ' : `▼ +${outputLines - 30} 行`}
                         </button>
                       ) : <span />}
-                      <button type="button" onClick={() => copyOutput(cmd)} style={{ fontSize: 9, color: copied === cmd.id ? '#4ade80' : '#1e293b', background: 'none', border: 'none', cursor: 'pointer', transition: 'color .2s' }}>
+                      <button type="button" onClick={() => copyOutput(cmd)} style={{ fontSize: 9, color: copied === cmd.id ? '#4ade80' : '#1e293b', background: 'none', border: 'none', cursor: 'pointer', transition: 'color .2s', textShadow: copied === cmd.id ? '0 0 8px rgba(74,222,128,.4)' : 'none' }}>
                         {copied === cmd.id ? '✓ copied' : 'copy'}
                       </button>
                     </div>
                   </div>
                 ) : cmd.status === 'running' ? (
-                  <div style={{ background: '#030710', border: '1px solid rgba(56,189,248,.1)', borderRadius: '0 12px 12px 12px', padding: '10px 12px' }}>
+                  <div className="glass-card" style={{ background: 'rgba(2,6,18,.85)', border: '1px solid rgba(14,165,233,.12)', borderRadius: '4px 14px 14px 14px', padding: '11px 13px', backdropFilter: 'blur(16px)' }}>
                     <span className="cursor" style={{ fontSize: 11, color: '#0c2a4a', fontFamily: 'monospace' }}>executing</span>
                   </div>
                 ) : cmd.status === 'pending' ? (
-                  <div style={{ background: '#030710', border: '1px solid rgba(251,191,36,.07)', borderRadius: '0 12px 12px 12px', padding: '10px 12px' }}>
-                    <span style={{ fontSize: 11, color: '#1a1006', fontFamily: 'monospace' }}>waiting in queue...</span>
+                  <div style={{ background: 'rgba(2,6,18,.6)', border: '1px solid rgba(251,191,36,.08)', borderRadius: '4px 14px 14px 14px', padding: '11px 13px' }}>
+                    <span style={{ fontSize: 11, color: '#0f0900', fontFamily: 'monospace' }}>queue で待機中...</span>
                   </div>
                 ) : null}
               </div>
@@ -923,7 +1039,7 @@ export default function AiCommandPage() {
       )}
 
       {/* ── INPUT BAR ─────────────────────────────────────────────── */}
-      <div style={{ flexShrink: 0, background: 'rgba(2,4,8,.94)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,.04)', padding: '9px 12px', paddingBottom: `calc(9px + env(safe-area-inset-bottom,0px))`, position: 'relative', zIndex: 10 }}>
+      <div style={{ flexShrink: 0, background: 'rgba(3,6,16,.95)', backdropFilter: 'blur(40px) saturate(180%)', borderTop: '1px solid rgba(255,255,255,.06)', padding: '10px 14px', paddingBottom: `calc(10px + env(safe-area-inset-bottom,0px))`, position: 'relative', zIndex: 10, boxShadow: '0 -1px 0 rgba(14,165,233,.05),0 -8px 32px rgba(0,0,0,.3)' }}>
 
         {/* Sub controls row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
@@ -949,25 +1065,30 @@ export default function AiCommandPage() {
         )}
 
         {/* Main input row */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 7 }}>
-          <button type="button" onClick={startVoice} aria-label="音声入力" className={isRecording ? 'rec-btn' : ''} style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 10, background: isRecording ? 'rgba(248,113,113,.12)' : 'rgba(255,255,255,.03)', border: isRecording ? '1px solid rgba(248,113,113,.35)' : '1px solid rgba(255,255,255,.06)', color: isRecording ? '#f87171' : '#1e293b', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s' }}>🎤</button>
-          <button type="button" onClick={() => fileRef.current?.click()} aria-label="画像" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', color: '#1e293b', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📎</button>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+          <button type="button" onClick={startVoice} aria-label="音声入力" className={isRecording ? 'rec-btn' : ''} style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 11, background: isRecording ? 'rgba(248,113,113,.1)' : 'rgba(255,255,255,.03)', border: isRecording ? '1px solid rgba(248,113,113,.4)' : '1px solid rgba(255,255,255,.07)', color: isRecording ? '#f87171' : '#334155', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s', backdropFilter: 'blur(8px)' }}>🎤</button>
+          <button type="button" onClick={() => fileRef.current?.click()} aria-label="画像添付" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', color: '#334155', fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', transition: 'all .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.14)'; e.currentTarget.style.color = '#64748b'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; e.currentTarget.style.color = '#334155'; }}>📎</button>
           <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleImageChange} />
           <textarea
             ref={textareaRef} value={input} onChange={autoResize} onKeyDown={handleTextareaKeyDown}
-            placeholder={broadcastMode ? `全${sessions.length}プロジェクトに送信... (↑ 履歴)` : continueFrom ? '続きを入力...' : activeId ? 'Claude Codeへの指示... (↑ 履歴)' : 'プロジェクトを選択してください'}
+            placeholder={broadcastMode ? `📡 全${sessions.length}プロジェクトに一斉送信...` : continueFrom ? '続きの指示を入力...' : activeId ? 'Claude Code に指示する... (↑ 履歴)' : 'プロジェクトを選択してください'}
             disabled={!activeId}
             rows={1}
-            style={{ flex: 1, background: 'rgba(255,255,255,.035)', border: `1px solid ${continueFrom ? 'rgba(14,165,233,.25)' : broadcastMode ? 'rgba(251,146,60,.25)' : 'rgba(255,255,255,.07)'}`, color: '#e2e8f0', borderRadius: 11, padding: '8px 11px', fontSize: 13, resize: 'none', outline: 'none', minHeight: 34, lineHeight: 1.5, fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color .2s' }}
+            style={{ flex: 1, background: 'rgba(255,255,255,.04)', border: `1px solid ${continueFrom ? 'rgba(14,165,233,.3)' : broadcastMode ? 'rgba(251,146,60,.3)' : 'rgba(255,255,255,.09)'}`, color: '#e2e8f0', borderRadius: 12, padding: '9px 13px', fontSize: 13, resize: 'none', outline: 'none', minHeight: 36, lineHeight: 1.55, fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color .2s,box-shadow .2s', backdropFilter: 'blur(16px)', boxShadow: continueFrom ? 'inset 0 0 0 1px rgba(14,165,233,.1)' : broadcastMode ? 'inset 0 0 0 1px rgba(251,146,60,.1)' : 'none' }}
+            onFocus={e => { e.currentTarget.style.borderColor = broadcastMode ? 'rgba(251,146,60,.5)' : 'rgba(14,165,233,.4)'; e.currentTarget.style.boxShadow = broadcastMode ? '0 0 0 3px rgba(251,146,60,.08)' : '0 0 0 3px rgba(14,165,233,.08)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = continueFrom ? 'rgba(14,165,233,.3)' : broadcastMode ? 'rgba(251,146,60,.3)' : 'rgba(255,255,255,.09)'; e.currentTarget.style.boxShadow = 'none'; }}
           />
-          <button type="button" onClick={sendCommand} disabled={!input.trim() || !activeId || sending} style={{
-            flexShrink: 0, width: 34, height: 34, borderRadius: 10, border: 'none',
-            background: !input.trim() || !activeId || sending ? 'rgba(255,255,255,.03)' : broadcastMode ? 'linear-gradient(135deg,#c2410c,#b45309)' : 'linear-gradient(135deg,#0369a1,#4338ca)',
-            color: !input.trim() || !activeId || sending ? '#1e293b' : '#fff',
-            fontSize: 16, cursor: !input.trim() || !activeId || sending ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s', fontWeight: 700,
-            boxShadow: !input.trim() || !activeId || sending ? 'none' : broadcastMode ? '0 0 12px rgba(251,146,60,.3)' : '0 0 12px rgba(14,165,233,.22)',
-          }}>
+          <button type="button" onClick={sendCommand} disabled={!input.trim() || !activeId || sending}
+            className={(!input.trim() || !activeId || sending) ? '' : broadcastMode ? 'btn-charged-broad' : 'btn-charged'}
+            style={{
+              flexShrink: 0, width: 36, height: 36, borderRadius: 11, border: 'none',
+              background: !input.trim() || !activeId || sending ? 'rgba(255,255,255,.04)' : broadcastMode ? 'linear-gradient(135deg,#ea580c,#b45309)' : 'linear-gradient(135deg,#0369a1,#4338ca)',
+              color: !input.trim() || !activeId || sending ? '#1e293b' : '#fff',
+              fontSize: 16, cursor: !input.trim() || !activeId || sending ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s', fontWeight: 800,
+            }}>
             {sending ? <span className="spin" style={{ display: 'inline-block', fontSize: 13 }}>◌</span> : '↑'}
           </button>
         </div>
