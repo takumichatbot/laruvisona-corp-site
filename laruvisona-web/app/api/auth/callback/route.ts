@@ -1,22 +1,39 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { Resend } from 'resend';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const requestHeaders = Object.fromEntries(request.headers.entries());
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/laruHP/dashboard';
 
-  // Use NEXT_PUBLIC_APP_URL or forwarded host to get the real public origin
-  // (Render serves internally on localhost:10000, not the public domain)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const forwardedHost = requestHeaders['x-forwarded-host'];
   const forwardedProto = requestHeaders['x-forwarded-proto'] || 'https';
   const origin = appUrl || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : new URL(request.url).origin);
 
   if (code) {
-    const supabase = await createClient();
+    // Build the redirect response FIRST so we can attach cookies to it directly.
+    // Using cookies().set() + NextResponse.redirect() loses the Set-Cookie headers.
+    const redirectTo = `${origin}${next}`;
+    const response = NextResponse.redirect(redirectTo);
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll(); },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
     const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       // Send welcome email once on first login
@@ -65,13 +82,12 @@ export async function GET(request: Request) {
 </body>
 </html>`,
           });
-          // Mark welcome email as sent in user metadata
           await supabase.auth.updateUser({ data: { welcome_sent: true } });
         } catch {
-          // Non-fatal: don't block redirect on email failure
+          // Non-fatal
         }
       }
-      return NextResponse.redirect(`${origin}${next}`);
+      return response;
     }
   }
 
