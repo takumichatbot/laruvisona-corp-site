@@ -90,7 +90,10 @@ function LoginForm() {
 
           {/* Step 1: email — shared between Google and password login */}
           <div className="mb-4">
-            <label className="block text-sm font-bold text-gray-900 mb-2">メールアドレス</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-bold text-gray-900">メールアドレス</label>
+              <Link href="/laruHP/auth/reset-password" className="text-xs text-sky-600 hover:text-sky-500">パスワードをリセット</Link>
+            </div>
             <input
               type="email"
               value={email}
