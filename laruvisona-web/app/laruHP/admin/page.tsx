@@ -181,8 +181,8 @@ export default function AdminPage() {
     return matchSearch && matchSub;
   });
 
-  // PIN 未認証 or ロード完了後も未認証
-  if (!loading && !pinVerified) {
+  // PIN 未認証（loading 中でも表示）
+  if (!pinVerified) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center px-6">
         <div className="w-full max-w-sm">
