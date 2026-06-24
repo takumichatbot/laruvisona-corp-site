@@ -1,5 +1,5 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
@@ -10,10 +10,18 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [existingEmail, setExistingEmail] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/laruHP/dashboard';
   const supabase = createClient();
+
+  // Check if already logged in so user can see who and choose to switch
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setExistingEmail(user.email);
+    });
+  }, [supabase]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,6 +66,18 @@ function LoginForm() {
         <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">ログイン</h1>
           <p className="text-gray-600 text-sm mb-8">アカウントにアクセスしてサイトを管理します</p>
+
+          {existingEmail && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl mb-6 flex items-center justify-between gap-3">
+              <span><span className="font-bold">{existingEmail}</span> でログイン中</span>
+              <button
+                onClick={() => router.push(redirectTo)}
+                className="text-xs font-bold text-amber-700 underline underline-offset-2 whitespace-nowrap"
+              >
+                そのまま続ける →
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">

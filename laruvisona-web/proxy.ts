@@ -78,11 +78,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect authenticated users away from auth pages
-  const isAuthPage = AUTH_PAGES.some(p => pathname.startsWith(p));
-  if (isAuthPage && user) {
-    return NextResponse.redirect(new URL('/laruHP/dashboard', request.url));
-  }
+  // Auth pages are always accessible so users can switch accounts
+  // The login page itself handles already-logged-in state
 
   return supabaseResponse;
 }
