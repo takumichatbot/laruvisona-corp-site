@@ -725,7 +725,8 @@ export default function DashboardPage() {
     }
   };
 
-  const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && userEmail === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const isAdmin = adminEmails.length > 0 && adminEmails.includes(userEmail.toLowerCase());
   const effectiveStatus: string = isAdmin ? 'active' : (profile?.subscription_status || 'inactive');
   const rawPlan = profile?.plan || null;
   const effectivePlan = isAdmin ? 'hp-bot-seo' : (rawPlan === 'agency' ? 'hp-bot-seo' : rawPlan);
