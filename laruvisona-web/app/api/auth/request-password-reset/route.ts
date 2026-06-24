@@ -29,7 +29,8 @@ export async function POST(req: Request) {
   const origin = appUrl || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : 'https://laruvisona.com');
 
   const token = makeToken(email);
-  const link = `${origin}/laruHP/auth/update-password?token=${token}`;
+  // email を URL param にも乗せる（ページ側で atob デコードせずに済む）
+  const link = `${origin}/laruHP/auth/update-password?token=${token}&email=${encodeURIComponent(email)}`;
 
   if (process.env.RESEND_API_KEY) {
     try {

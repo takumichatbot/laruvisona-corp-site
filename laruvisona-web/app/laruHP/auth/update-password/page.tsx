@@ -26,12 +26,9 @@ function UpdatePasswordContent() {
       return;
     }
     setToken(t);
-    // トークンから email を取り出して表示用に使う（base64url デコード）
-    try {
-      const decoded = atob(t.replace(/-/g, '+').replace(/_/g, '/'));
-      const email = decoded.split(':')[0];
-      if (email) setTokenEmail(email);
-    } catch { /* ignore */ }
+    // URL param から email を直接読む（base64url デコード不要）
+    const emailParam = searchParams.get('email');
+    if (emailParam) setTokenEmail(emailParam);
     setTokenValid(true);
   }, [searchParams]);
 
@@ -56,11 +53,28 @@ function UpdatePasswordContent() {
 
     // パスワード更新成功 → 既存セッションを消してから新しいパスワードで自動ログイン
     await supabase.auth.signOut();
+
+    let signedIn = false;
     if (tokenEmail) {
-      await supabase.auth.signInWithPassword({ email: tokenEmail, password });
+      // Supabase の反映を待って最大2回試みる
+      for (let i = 0; i < 2; i++) {
+        if (i > 0) await new Promise(r => setTimeout(r, 800));
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email: tokenEmail, password });
+        if (!signInErr) { signedIn = true; break; }
+      }
     }
+
     setDone(true);
-    setTimeout(() => router.push('/laruHP/dashboard'), 1500);
+    if (signedIn) {
+      // window.location.href でフルリロード → Cookie が確実にサーバーへ届く
+      setTimeout(() => { window.location.href = '/laruHP/dashboard'; }, 1200);
+    } else {
+      // ログイン失敗でも、パスワードは設定済み → 手動ログイン画面へ（メール pre-fill）
+      const loginUrl = tokenEmail
+        ? `/laruHP/auth/login?prefill=${encodeURIComponent(tokenEmail)}`
+        : '/laruHP/auth/login';
+      setTimeout(() => { window.location.href = loginUrl; }, 1500);
+    }
   };
 
   return (

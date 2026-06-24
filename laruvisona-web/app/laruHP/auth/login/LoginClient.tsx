@@ -18,10 +18,14 @@ function LoginForm() {
 
   // Check if already logged in so user can see who and choose to switch
   useEffect(() => {
+    // パスワードリセット後の自動 prefill
+    const prefill = searchParams.get('prefill');
+    if (prefill) setEmail(prefill);
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) setExistingEmail(user.email);
     });
-  }, [supabase]);
+  }, [supabase, searchParams]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,7 +38,8 @@ function LoginForm() {
       setError('メールアドレスまたはパスワードが正しくありません');
       setLoading(false);
     } else {
-      router.push(redirectTo);
+      // window.location.href でフルリロード → Cookie がサーバーに確実に届く
+      window.location.href = redirectTo;
     }
   };
 
