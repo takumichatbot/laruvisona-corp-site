@@ -2,24 +2,25 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
-  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/laruHP/auth/update-password`,
+    const res = await fetch('/api/auth/request-password-reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     });
-    if (error) {
-      setError('エラーが発生しました。メールアドレスをご確認ください。');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || 'エラーが発生しました。メールアドレスをご確認ください。');
     } else {
       setSent(true);
     }

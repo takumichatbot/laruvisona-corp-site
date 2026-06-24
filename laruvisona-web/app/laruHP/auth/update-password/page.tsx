@@ -16,11 +16,21 @@ function UpdatePasswordContent() {
   const supabase = createClient();
 
   useEffect(() => {
+    // Admin generateLink はハッシュフラグメント形式で返ってくる
+    // supabase ブラウザクライアントが #access_token=...&type=recovery を自動処理
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setReady(true);
+      } else if (event === 'SIGNED_IN' && session) {
+        // hash flow で SIGNED_IN が先に来る場合
+        setReady(true);
+      }
+    });
+
+    // PKCE flow フォールバック: ?code= が URL にある場合
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
-
     if (code) {
-      // PKCE flow: ブラウザクライアント自身が保持している検証トークンで交換する
       supabase.auth.exchangeCodeForSession(code).then(({ error: err }) => {
         if (err) {
           setError('リンクが無効か期限切れです。再度パスワードリセットをお試しください。');
@@ -29,16 +39,13 @@ function UpdatePasswordContent() {
           window.history.replaceState({}, '', window.location.pathname);
         }
       });
-      return;
+    } else {
+      // 既にセッションがある場合
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) setReady(true);
+      });
     }
 
-    // Implicit / hash flow フォールバック
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
     return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
