@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
 interface UserFeatures { builder: boolean; publish: boolean; ai: boolean; }
@@ -85,31 +84,44 @@ export default function AdminPage() {
   const [canceling, setCanceling] = useState<string | null>(null);
   const [notesUser, setNotesUser] = useState<string | null>(null);
   const [notesText, setNotesText] = useState('');
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinLoading, setPinLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/laruHP/auth/login'); return; }
+  const loadData = async () => {
+    const [statsRes, usersRes] = await Promise.all([
+      fetch('/api/admin/stats'),
+      fetch('/api/admin/users'),
+    ]);
+    if (statsRes.status === 403) { setPinVerified(false); setLoading(false); return; }
+    const statsData = await statsRes.json();
+    const usersData = await usersRes.json();
+    setStats(statsData);
+    setUsers(usersData.users || []);
+    setLoading(false);
+    setPinVerified(true);
+  };
 
-      const [statsRes, usersRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/users'),
-      ]);
+  useEffect(() => { loadData(); }, []);
 
-      if (statsRes.status === 403 || usersRes.status === 403) {
-        router.push('/laruHP/dashboard');
-        return;
-      }
-
-      const statsData = await statsRes.json();
-      const usersData = await usersRes.json();
-      setStats(statsData);
-      setUsers(usersData.users || []);
-      setLoading(false);
-    })();
-  }, []);
+  const handlePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPinLoading(true);
+    setPinError('');
+    const res = await fetch('/api/admin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: pinInput }),
+    });
+    if (res.ok) {
+      await loadData();
+    } else {
+      setPinError('PINが正しくありません');
+      setPinLoading(false);
+    }
+  };
 
   const updateUser = async (userId: string, patch: Partial<Pick<AdminUser, 'features' | 'is_suspended' | 'admin_notes'>>) => {
     setSaving(userId);
@@ -168,6 +180,36 @@ export default function AdminPage() {
     const matchSub = filterSub === 'all' || u.subscription_status === filterSub;
     return matchSearch && matchSub;
   });
+
+  // PIN 未認証 or ロード完了後も未認証
+  if (!loading && !pinVerified) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-6">
+        <div className="w-full max-w-sm">
+          <h1 className="text-white font-bold text-2xl mb-2 text-center">管理者ページ</h1>
+          <p className="text-slate-400 text-sm text-center mb-8">ADMIN PIN を入力してください</p>
+          <form onSubmit={handlePin} className="space-y-4">
+            <input
+              type="password"
+              value={pinInput}
+              onChange={e => setPinInput(e.target.value)}
+              placeholder="PIN"
+              autoFocus
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-center text-2xl tracking-widest"
+            />
+            {pinError && <p className="text-red-400 text-sm text-center">{pinError}</p>}
+            <button
+              type="submit"
+              disabled={pinLoading || !pinInput}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-500 transition disabled:opacity-50"
+            >
+              {pinLoading ? '確認中...' : 'ログイン'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#030712] text-white">
