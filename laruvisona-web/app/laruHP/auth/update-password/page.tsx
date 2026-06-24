@@ -2,8 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 function UpdatePasswordContent() {
   const [password, setPassword] = useState('');
@@ -11,58 +10,22 @@ function UpdatePasswordContent() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
-  const [ready, setReady] = useState(false);
+  const [tokenValid, setTokenValid] = useState<boolean | null>(null); // null = checking
+  const [token, setToken] = useState('');
   const router = useRouter();
-  const supabase = createClient();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-
-    const code = searchParams.get('code');
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token') ?? '';
-    const tokenType = hashParams.get('type'); // 'recovery' or 'signup' etc.
-
-    if (accessToken) {
-      // Hash fragment flow (Admin generateLink が返す形式)
-      // @supabase/ssr は PKCE モードではハッシュを自動処理しないため手動でセット
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error: err }) => {
-          if (err) {
-            setError('リンクが無効か期限切れです。再度パスワードリセットをお試しください。');
-          } else {
-            setReady(true);
-            // ハッシュを URL から消す
-            window.history.replaceState({}, '', window.location.pathname);
-          }
-        });
+    const t = searchParams.get('token');
+    if (!t) {
+      setTokenValid(false);
+      setError('リンクが無効です。パスワードリセットをやり直してください。');
       return;
     }
-
-    if (code) {
-      // PKCE flow フォールバック
-      supabase.auth.exchangeCodeForSession(code).then(({ error: err }) => {
-        if (err) {
-          setError('リンクが無効か期限切れです。再度パスワードリセットをお試しください。');
-        } else {
-          setReady(true);
-          window.history.replaceState({}, '', window.location.pathname);
-        }
-      });
-      return;
-    }
-
-    // 既存セッション確認 + PASSWORD_RECOVERY イベント待ち
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') setReady(true);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
-    return () => subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setToken(t);
+    // トークンは submit 時にサーバーで検証するだけでよい
+    setTokenValid(true);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,14 +33,20 @@ function UpdatePasswordContent() {
     if (password.length < 8) { setError('パスワードは8文字以上で入力してください'); return; }
     setLoading(true);
     setError('');
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) {
-      setError('パスワードの更新に失敗しました。リセットリンクが期限切れかもしれません。');
+
+    const res = await fetch('/api/auth/do-password-reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || 'パスワードの更新に失敗しました');
+      setLoading(false);
     } else {
       setDone(true);
-      setTimeout(() => router.push('/laruHP/dashboard'), 2000);
+      setTimeout(() => router.push('/laruHP/auth/login'), 2000);
     }
-    setLoading(false);
   };
 
   return (
@@ -93,14 +62,20 @@ function UpdatePasswordContent() {
 
           {done ? (
             <div className="text-center py-4">
-              <div className="text-5xl mb-4">✅</div>
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
               <p className="text-emerald-700 font-bold">パスワードを更新しました</p>
-              <p className="text-gray-600 text-sm mt-2">ダッシュボードに移動します...</p>
+              <p className="text-gray-600 text-sm mt-2">ログイン画面に移動します...</p>
             </div>
-          ) : !ready ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="text-3xl mb-3 animate-spin">⏳</div>
-              リンクを確認中...
+          ) : tokenValid === null ? (
+            <div className="text-center py-8 text-gray-500 text-sm">確認中...</div>
+          ) : tokenValid === false ? (
+            <div className="text-center py-4">
+              <p className="text-red-600 text-sm mb-4">{error}</p>
+              <Link href="/laruHP/auth/reset-password" className="text-sky-600 hover:text-sky-500 text-sm">
+                パスワードリセットをやり直す →
+              </Link>
             </div>
           ) : (
             <>
