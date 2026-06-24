@@ -35,6 +35,13 @@ export async function GET(request: NextRequest) {
     );
 
     const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      // recovery コードが切れていた場合 → ログイン画面でなく再リセット画面へ誘導
+      if (next.startsWith('/laruHP/auth/update-password')) {
+        return NextResponse.redirect(`${origin}/laruHP/auth/reset-password?expired=1`);
+      }
+      return NextResponse.redirect(`${origin}/laruHP/auth/login?error=auth`);
+    }
     if (!error) {
       // Send welcome email once on first login
       const user = sessionData?.user;

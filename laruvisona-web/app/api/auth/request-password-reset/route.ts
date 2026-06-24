@@ -32,14 +32,17 @@ export async function POST(req: Request) {
   // email を URL param にも乗せる（ページ側で atob デコードせずに済む）
   const link = `${origin}/laruHP/auth/update-password?token=${token}&email=${encodeURIComponent(email)}`;
 
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
-        from: 'LARU HP <noreply@laruvisona.jp>',
-        to: email,
-        subject: '【LARU HP】パスワードリセット',
-        html: `
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json({ error: 'メール送信が設定されていません（RESEND_API_KEY未設定）' }, { status: 500 });
+  }
+
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const sendResult = await resend.emails.send({
+      from: 'LARU HP <noreply@laruvisona.jp>',
+      to: email,
+      subject: '【LARU HP】パスワードリセット',
+      html: `
 <!DOCTYPE html>
 <html lang="ja">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -65,10 +68,14 @@ export async function POST(req: Request) {
   </div>
 </body>
 </html>`,
-      });
-    } catch {
-      // メール送信失敗は非致命的
+    });
+    if (sendResult.error) {
+      console.error('[password-reset] Resend error:', sendResult.error);
+      return NextResponse.json({ error: 'メールの送信に失敗しました。しばらく経ってから再試行してください。' }, { status: 500 });
     }
+  } catch (err) {
+    console.error('[password-reset] Resend exception:', err);
+    return NextResponse.json({ error: 'メールの送信に失敗しました。しばらく経ってから再試行してください。' }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
