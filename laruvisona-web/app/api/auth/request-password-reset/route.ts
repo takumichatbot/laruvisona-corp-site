@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const forwardedHost = requestHeaders['x-forwarded-host'];
   const forwardedProto = requestHeaders['x-forwarded-proto'] || 'https';
-  const origin = appUrl || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : 'https://laruvisona.com');
+  const origin = appUrl || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : 'https://laruvisona.jp');
 
   const token = makeToken(email);
   // email を URL param にも乗せる（ページ側で atob デコードせずに済む）
