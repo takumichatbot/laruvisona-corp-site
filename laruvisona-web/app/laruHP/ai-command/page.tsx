@@ -111,6 +111,9 @@ export default function AiCommandPage() {
   const [pinError, setPinError]       = useState('');
   const [pinLoading, setPinLoading]   = useState(false);
 
+  // Help concierge
+  const [showHelp, setShowHelp]       = useState(false);
+
   // Core data
   const [ready, setReady]             = useState(false);
   const [sessions, setSessions]       = useState<Session[]>([]);
@@ -222,6 +225,25 @@ export default function AiCommandPage() {
       setReady(true);
     } else {
       setPinError('PINが正しくありません');
+    }
+    setPinLoading(false);
+  };
+
+  const handleLaruHPLogin = async () => {
+    setPinLoading(true);
+    setPinError('');
+    const res = await fetch('/api/admin/issue-from-session', { method: 'POST' });
+    if (res.ok) {
+      const sessRes = await fetch('/api/ai-command/sessions');
+      if (sessRes.ok) {
+        const data: Session[] = await sessRes.json();
+        setSessions(data);
+        if (data.length > 0) setActiveId(data[0].id);
+      }
+      setPinVerified(true);
+      setReady(true);
+    } else {
+      setPinError('laruHPで管理者アカウントにログインしてから試してください');
     }
     setPinLoading(false);
   };
@@ -508,29 +530,64 @@ export default function AiCommandPage() {
     return (
       <div style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020408' }}>
         <style>{CSS}</style>
-        <form onSubmit={handlePinSubmit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, width: 280 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🤖</div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>AI司令室</div>
-            <div style={{ fontSize: 11, color: '#475569' }}>管理者PINを入力してください</div>
+        {/* ambient */}
+        <div style={{ position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)', width: 360, height: 360, background: 'radial-gradient(circle, rgba(14,165,233,.07) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24, width: 300 }}>
+          {/* icon */}
+          <div style={{ position: 'relative' }}>
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ filter: 'drop-shadow(0 0 18px rgba(14,165,233,.35))' }}>
+              <rect width="64" height="64" rx="18" fill="url(#pg)"/>
+              <path d="M14 22l14 10-14 10" stroke="white" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="34" y="36" width="16" height="2.8" rx="1.4" fill="rgba(255,255,255,.9)"/>
+              <defs>
+                <linearGradient id="pg" x1="0" y1="0" x2="64" y2="64">
+                  <stop stopColor="#0ea5e9"/>
+                  <stop offset="1" stopColor="#8b5cf6"/>
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
-          <input
-            type="password"
-            value={pinInput}
-            onChange={e => setPinInput(e.target.value)}
-            placeholder="PIN"
-            autoFocus
-            style={{ width: '100%', background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '12px 16px', color: '#f1f5f9', fontSize: 14, outline: 'none', textAlign: 'center', letterSpacing: '0.2em', boxSizing: 'border-box' }}
-          />
-          {pinError && <div style={{ fontSize: 12, color: '#f87171' }}>{pinError}</div>}
-          <button
-            type="submit"
-            disabled={pinLoading || !pinInput}
-            style={{ width: '100%', background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', border: 'none', borderRadius: 10, padding: '12px', color: 'white', fontSize: 14, fontWeight: 700, cursor: pinLoading ? 'wait' : 'pointer', opacity: (!pinInput || pinLoading) ? 0.5 : 1 }}
+
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.03em', marginBottom: 6 }}>AI司令室</div>
+            <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>Claude Code をリモート操作する管理パネル</div>
+          </div>
+
+          {/* PIN form */}
+          <form onSubmit={handlePinSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input
+              type="password"
+              value={pinInput}
+              onChange={e => setPinInput(e.target.value)}
+              placeholder="PIN コードを入力"
+              autoFocus
+              style={{ width: '100%', background: '#0a1628', border: '1px solid #1e293b', borderRadius: 12, padding: '14px 18px', color: '#f1f5f9', fontSize: 15, outline: 'none', textAlign: 'center', letterSpacing: '0.25em', boxSizing: 'border-box', transition: 'border-color .15s' }}
+              onFocus={e => { e.currentTarget.style.borderColor = '#0ea5e9'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#1e293b'; }}
+            />
+            {pinError && <div style={{ fontSize: 12, color: '#f87171', textAlign: 'center' }}>{pinError}</div>}
+            <button type="submit" disabled={pinLoading || !pinInput} style={{ width: '100%', background: 'linear-gradient(135deg,#0ea5e9,#8b5cf6)', border: 'none', borderRadius: 12, padding: '14px', color: 'white', fontSize: 14, fontWeight: 800, cursor: (pinLoading || !pinInput) ? 'not-allowed' : 'pointer', opacity: (!pinInput || pinLoading) ? 0.45 : 1, letterSpacing: '0.04em', transition: 'opacity .15s' }}>
+              {pinLoading ? '確認中...' : 'アクセス →'}
+            </button>
+          </form>
+
+          {/* divider */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, height: 1, background: '#1e293b' }} />
+            <span style={{ fontSize: 11, color: '#334155' }}>または</span>
+            <div style={{ flex: 1, height: 1, background: '#1e293b' }} />
+          </div>
+
+          {/* laruHP login */}
+          <button type="button" onClick={handleLaruHPLogin} disabled={pinLoading} style={{ width: '100%', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: '13px', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: pinLoading ? 'wait' : 'pointer', letterSpacing: '0.01em', transition: 'all .15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.15)'; e.currentTarget.style.color = '#e2e8f0'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)'; e.currentTarget.style.color = '#94a3b8'; }}
           >
-            {pinLoading ? '確認中...' : 'アクセス'}
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="4" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="8" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3 2.686-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            laruHPアカウントでアクセス
           </button>
-        </form>
+          <div style={{ fontSize: 10, color: '#1e293b', textAlign: 'center' }}>laruHPに管理者アカウントでログイン済みの場合のみ有効</div>
+        </div>
       </div>
     );
   }
@@ -567,7 +624,12 @@ export default function AiCommandPage() {
           {/* Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <div style={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 9, background: 'linear-gradient(135deg,#0ea5e9,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, boxShadow: '0 0 16px rgba(14,165,233,.22)' }}>🤖</div>
+              <svg width="30" height="30" viewBox="0 0 30 30" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(14,165,233,.3))' }}>
+                <rect width="30" height="30" rx="9" fill="url(#hg)"/>
+                <path d="M6 10l7 5-7 5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <rect x="16" y="18" width="8" height="1.8" rx=".9" fill="rgba(255,255,255,.9)"/>
+                <defs><linearGradient id="hg" x1="0" y1="0" x2="30" y2="30"><stop stopColor="#0ea5e9"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
+              </svg>
               {watcherOnline && <div className="watcher-ripple" />}
             </div>
             <div>
@@ -591,6 +653,7 @@ export default function AiCommandPage() {
             </button>
             <button type="button" onClick={() => setAutoRetry(v => !v)} title="自動リトライ" style={{ width: 26, height: 26, borderRadius: 7, border: autoRetry ? '1px solid rgba(139,92,246,.4)' : '1px solid rgba(255,255,255,.07)', background: autoRetry ? 'rgba(139,92,246,.12)' : 'rgba(255,255,255,.03)', color: autoRetry ? '#a78bfa' : '#2d3748', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔄</button>
             <button type="button" onClick={() => setShowSettings(true)} aria-label="設定" style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.03)', color: '#2d3748', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙️</button>
+            <button type="button" onClick={() => setShowHelp(v => !v)} aria-label="ヘルプ" title="使い方ガイド" style={{ width: 26, height: 26, borderRadius: 7, border: showHelp ? '1px solid rgba(14,165,233,.5)' : '1px solid rgba(255,255,255,.07)', background: showHelp ? 'rgba(14,165,233,.12)' : 'rgba(255,255,255,.03)', color: showHelp ? '#38bdf8' : '#475569', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>?</button>
           </div>
         </div>
 
@@ -1108,6 +1171,95 @@ export default function AiCommandPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── HELP CONCIERGE ──────────────────────────────────────────── */}
+      {showHelp && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', justifyContent: 'flex-end' }} onClick={() => setShowHelp(false)}>
+          <div style={{ width: Math.min(340, window.innerWidth), height: '100%', background: '#080f1e', borderLeft: '1px solid rgba(255,255,255,.07)', overflowY: 'auto', padding: '20px 18px 32px', display: 'flex', flexDirection: 'column', gap: 20, animation: 'msgSlideR .2s ease' }}
+            onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#f1f5f9' }}>使い方ガイド</div>
+                <div style={{ fontSize: 11, color: '#334155', marginTop: 2 }}>AI司令室 コンシェルジュ</div>
+              </div>
+              <button type="button" onClick={() => setShowHelp(false)} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,.07)', background: 'rgba(255,255,255,.03)', color: '#475569', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
+
+            {/* Overview */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(14,165,233,.08), rgba(139,92,246,.08))', border: '1px solid rgba(14,165,233,.15)', borderRadius: 12, padding: '14px' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#38bdf8', marginBottom: 8 }}>AI司令室とは？</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.7 }}>
+                スマホやブラウザから Mac 上の Claude Code を操作できる「リモートコントロールパネル」です。Mac を直接触らずにコードの生成・修正・実行を指示できます。
+              </div>
+            </div>
+
+            {/* Flow */}
+            <div>
+              <div style={{ fontSize: 10, color: '#334155', letterSpacing: '.1em', fontWeight: 700, marginBottom: 10 }}>基本の流れ</div>
+              {[
+                ['1', '#0ea5e9', 'セッションを作成', 'Mac のプロジェクトディレクトリを登録します'],
+                ['2', '#8b5cf6', 'Watcher を起動', 'Mac 側でスクリプトを起動します（下記参照）'],
+                ['3', '#10b981', 'コマンドを送信', 'テキストを入力して送信するだけ'],
+                ['4', '#f59e0b', '結果を確認', 'リアルタイムで出力が表示されます'],
+              ].map(([n, color, title, desc]) => (
+                <div key={n} style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: color, color: 'white', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>{n}</div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0', marginBottom: 2 }}>{title}</div>
+                    <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.5 }}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Watcher */}
+            <div style={{ background: 'rgba(251,191,36,.04)', border: '1px solid rgba(251,191,36,.1)', borderRadius: 12, padding: '14px' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#fbbf24', marginBottom: 8 }}>Watcher について</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.7, marginBottom: 10 }}>
+                Watcher は Mac で動くスクリプトで、司令室からのコマンドを受け取って Claude Code に渡す「橋渡し役」です。
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>セッション1つにつき1つ必要です</div>
+              <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.7 }}>
+                複数のプロジェクトで同時に作業したい場合は、それぞれのプロジェクトで Watcher を別ウィンドウで起動してください。
+              </div>
+              <pre style={{ fontSize: 10, color: 'rgba(251,191,36,.5)', background: 'rgba(0,0,0,.3)', borderRadius: 8, padding: '8px 10px', marginTop: 10, fontFamily: 'monospace', overflow: 'auto' }}>
+{`cd scripts/ai-watcher
+node ai-watcher.js`}
+              </pre>
+            </div>
+
+            {/* Features */}
+            <div>
+              <div style={{ fontSize: 10, color: '#334155', letterSpacing: '.1em', fontWeight: 700, marginBottom: 10 }}>機能一覧</div>
+              {[
+                ['⚡ AUTO', '#fbbf24', '自動承認モード。ON にすると Claude が確認ダイアログを出さずに自動で進めます'],
+                ['🔄 リトライ', '#a78bfa', 'エラー時に自動で再試行します'],
+                ['📡 BROAD', '#fb923c', '全セッションに同じコマンドを同時送信します。複数プロジェクトへの一斉指示に便利'],
+                ['⌘K パレット', '#38bdf8', '過去に送ったコマンドを検索・再実行できます'],
+                ['プリセット', '#34d399', '設定パネル（⚙️）からよく使うコマンドを登録して素早く呼び出せます'],
+                ['↑↓ キー', '#64748b', '入力欄で上下キーを押すと過去の入力履歴を遡れます'],
+              ].map(([name, color, desc]) => (
+                <div key={name as string} style={{ display: 'flex', gap: 10, marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,.04)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: color as string, whiteSpace: 'nowrap', minWidth: 70, paddingTop: 1 }}>{name}</div>
+                  <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.6 }}>{desc}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Keyboard shortcuts */}
+            <div>
+              <div style={{ fontSize: 10, color: '#334155', letterSpacing: '.1em', fontWeight: 700, marginBottom: 10 }}>キーボードショートカット</div>
+              {[['⌘K', 'コマンドパレット'], ['Enter', '送信'], ['Shift+Enter', '改行'], ['↑ / ↓', '入力履歴'], ['Esc', 'モーダルを閉じる']].map(([k, d]) => (
+                <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, color: '#475569' }}>{d}</span>
+                  <kbd style={{ fontSize: 10, fontFamily: 'monospace', color: '#38bdf8', background: '#0a0f1e', border: '1px solid rgba(56,189,248,.2)', borderRadius: 5, padding: '2px 8px' }}>{k}</kbd>
+                </div>
+              ))}
             </div>
           </div>
         </div>
