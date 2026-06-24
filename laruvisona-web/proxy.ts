@@ -13,6 +13,7 @@ const PROTECTED = [
   '/laruHP/larubot-logs',
   '/laruHP/agency',
   '/laruHP/onboarding',
+  '/laruHP/bridge',
   // /laruHP/admin は PIN 認証のみ（Supabase auth 不要）
 ];
 const AUTH_PAGES = ['/laruHP/auth/login', '/laruHP/auth/signup'];
