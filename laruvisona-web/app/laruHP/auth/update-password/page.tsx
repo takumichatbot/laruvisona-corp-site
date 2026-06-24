@@ -16,10 +16,26 @@ function UpdatePasswordContent() {
   const supabase = createClient();
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    if (code) {
+      // PKCE flow: ブラウザクライアント自身が保持している検証トークンで交換する
+      supabase.auth.exchangeCodeForSession(code).then(({ error: err }) => {
+        if (err) {
+          setError('リンクが無効か期限切れです。再度パスワードリセットをお試しください。');
+        } else {
+          setReady(true);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      });
+      return;
+    }
+
+    // Implicit / hash flow フォールバック
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true);
     });
-    // Also check if already has session (page refreshed)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true);
     });

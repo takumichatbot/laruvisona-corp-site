@@ -16,7 +16,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
     setError('');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/api/auth/callback?next=/laruHP/auth/update-password`,
+      redirectTo: `${window.location.origin}/laruHP/auth/update-password`,
     });
     if (error) {
       setError('エラーが発生しました。メールアドレスをご確認ください。');
