@@ -93,25 +93,7 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Step 1: email — shared between Google and password login */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-bold text-gray-900">メールアドレス</label>
-              <Link href="/laruHP/auth/reset-password" className="text-xs text-sky-600 hover:text-sky-500">パスワードをリセット</Link>
-            </div>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-            />
-            {!email.trim() && (
-              <p className="text-xs text-gray-400 mt-1.5">メールを入力してからGoogleログインを押すと確実に正しいアカウントが選ばれます</p>
-            )}
-          </div>
-
-          {/* Step 2: Google login (uses login_hint when email is filled) */}
+          {/* Google ログイン */}
           <button
             type="button"
             onClick={handleGoogleLogin}
@@ -123,16 +105,31 @@ function LoginForm() {
               <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
               <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
             </svg>
-            {email.trim() ? <><span className="font-normal text-gray-500 text-xs mr-1">Google:</span>{email.trim()}</> : 'Googleでログイン'}
+            Googleでログイン
           </button>
 
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-gray-400 text-xs">または パスワードでログイン</span>
+            <span className="text-gray-400 text-xs">または メール／パスワードでログイン</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
+          {/* メール＋パスワードフォーム（email を内包） */}
           <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-bold text-gray-900">メールアドレス</label>
+                <Link href="/laruHP/auth/reset-password" className="text-xs text-sky-600 hover:text-sky-500">パスワードをリセット</Link>
+              </div>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+              />
+            </div>
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">パスワード</label>
               <input
@@ -144,10 +141,9 @@ function LoginForm() {
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
               />
             </div>
-            <input type="hidden" value={email} />
             <button
               type="submit"
-              disabled={loading || !email.trim()}
+              disabled={loading}
               className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'ログイン中...' : 'ログイン'}
