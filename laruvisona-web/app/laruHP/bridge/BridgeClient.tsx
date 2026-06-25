@@ -5,6 +5,7 @@ import GeminiLive from './GeminiLive';
 import SchedulePanel, { type Schedule } from './SchedulePanel';
 import ToolsPanel from './ToolsPanel';
 import GitHubPanel from './GitHubPanel';
+import TeamPanel, { type TaskStatus } from './TeamPanel';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -232,7 +233,7 @@ export default function BridgeClient() {
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   // モード切り替え: code / chat / git / files
-  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github'>('code');
+  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team'>('code');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
@@ -278,6 +279,13 @@ export default function BridgeClient() {
   const [parallelTasks, setParallelTasks] = useState(['', '']);
   const [agentOutputs, setAgentOutputs] = useState<Record<string, string>>({});
   const [agentRunning, setAgentRunning] = useState(false);
+  // AI Software Team (オーケストレーター)
+  const [orchestrateRunning, setOrchestrateRunning] = useState(false);
+  const [orchestratePhase, setOrchestratePhase] = useState('');
+  const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
+  const [taskOutputsMap, setTaskOutputsMap] = useState<Record<string, string>>({});
+  const [orchestrateComplete, setOrchestrateComplete] = useState(false);
+  const [fileTree, setFileTree] = useState('');
   // 複数Mac
   const [macList, setMacList] = useState<{ id: string; name: string }[]>([]);
   const [selectedMacId, setSelectedMacId] = useState('');
@@ -437,6 +445,33 @@ export default function BridgeClient() {
         setAgentOutputs(prev => ({ ...prev, [r.agent_id]: (prev[r.agent_id] || '') + '\n✓ 完了' }));
       }
       if (m.type === 'parallel_done') setAgentRunning(false);
+      // Orchestrate
+      if (m.type === 'orchestrate_phase_start') {
+        const r = (m as unknown) as { name: string };
+        setOrchestratePhase(r.name);
+      }
+      if (m.type === 'orchestrate_task_start') {
+        const r = (m as unknown) as { task_id: string };
+        setTaskStatuses(prev => ({ ...prev, [r.task_id]: 'running' }));
+      }
+      if (m.type === 'orchestrate_task_output') {
+        const r = (m as unknown) as { task_id: string; content: string };
+        setTaskOutputsMap(prev => ({ ...prev, [r.task_id]: ((prev[r.task_id] || '') + r.content).slice(-3000) }));
+      }
+      if (m.type === 'orchestrate_task_done') {
+        const r = (m as unknown) as { task_id: string };
+        setTaskStatuses(prev => ({ ...prev, [r.task_id]: 'done' }));
+      }
+      if (m.type === 'orchestrate_task_failed') {
+        const r = (m as unknown) as { task_id: string };
+        setTaskStatuses(prev => ({ ...prev, [r.task_id]: 'failed' }));
+      }
+      if (m.type === 'orchestrate_complete') { setOrchestrateRunning(false); setOrchestrateComplete(true); }
+      if (m.type === 'orchestrate_stopped') { setOrchestrateRunning(false); }
+      if (m.type === 'file_tree_result') {
+        const r = (m as unknown) as { tree?: string };
+        if (r.tree) setFileTree(r.tree);
+      }
       if (m.type === 'git_status_result') {
         setGitStatus(m as { status?: string; log?: string; error?: string });
         setGitLoading(false);
@@ -987,11 +1022,13 @@ export default function BridgeClient() {
               { id: 'schedule', label: 'Sched',    activeStyle: { background: 'rgba(251,146,60,0.12)',  border: '1px solid rgba(251,146,60,0.4)',  color: '#fdba74' } },
               { id: 'tools',    label: 'Tools',    activeStyle: { background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.4)', color: '#fca5a5' } },
               { id: 'github',   label: 'GH',       activeStyle: { background: 'rgba(124,58,237,0.12)',  border: '1px solid rgba(124,58,237,0.4)',  color: '#c4b5fd' } },
+              { id: 'team',     label: '🤖 Team',  activeStyle: { background: 'rgba(79,70,229,0.18)',   border: '1px solid rgba(79,70,229,0.5)',   color: '#a5b4fc' } },
             ] as const).map(t => (
               <button key={t.id} onClick={() => {
                 setMode(t.id);
                 if (t.id === 'git' && macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); }
                 if (t.id === 'files' && fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); }
+                if (t.id === 'team' && !fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined });
               }}
                 className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
                 style={mode === t.id ? t.activeStyle : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
@@ -1180,6 +1217,37 @@ export default function BridgeClient() {
             <GitHubPanel githubRepo={currentProject?.githubRepo ?? null} />
           )}
 
+          {/* AI Software Team */}
+          {mode === 'team' && currentProject && (
+            <TeamPanel
+              macOnline={macOnline}
+              projectName={currentProject.name}
+              fileTree={fileTree}
+              onSend={(msg) => {
+                if (msg.type === 'orchestrate_start') {
+                  setOrchestrateRunning(true);
+                  setOrchestrateComplete(false);
+                  setOrchestratePhase('');
+                  setTaskStatuses({});
+                  setTaskOutputsMap({});
+                }
+                send(msg);
+              }}
+              orchestrateRunning={orchestrateRunning}
+              orchestratePhase={orchestratePhase}
+              taskStatuses={taskStatuses}
+              taskOutputs={taskOutputsMap}
+              orchestrateComplete={orchestrateComplete}
+              onResetOrchestrate={() => {
+                setOrchestrateRunning(false);
+                setOrchestrateComplete(false);
+                setOrchestratePhase('');
+                setTaskStatuses({});
+                setTaskOutputsMap({});
+              }}
+            />
+          )}
+
           {/* スケジュール */}
           {mode === 'schedule' && (
             <SchedulePanel
@@ -1282,7 +1350,7 @@ export default function BridgeClient() {
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
               const dx = e.changedTouches[0].clientX - touchStartX.current;
-              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'files', 'schedule', 'tools', 'github'];
+              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'files', 'schedule', 'tools', 'github', 'team'];
               if (Math.abs(dx) > 70) {
                 const cur = TAB_ORDER.indexOf(mode);
                 const next = dx < 0 ? Math.min(cur + 1, TAB_ORDER.length - 1) : Math.max(cur - 1, 0);
