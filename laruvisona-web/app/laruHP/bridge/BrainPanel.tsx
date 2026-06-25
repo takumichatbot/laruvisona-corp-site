@@ -15,6 +15,22 @@ interface Props {
   brainProgress: { count: number; total: number } | null;
 }
 
+function IndexProgressRing({ count, total }: { count: number; total: number }) {
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const pct = total > 0 ? count / total : 0;
+  const offset = circ - pct * circ;
+  return (
+    <svg width="70" height="70" viewBox="0 0 70 70">
+      <circle cx="35" cy="35" r={r} fill="none" stroke="rgba(99,102,241,0.12)" strokeWidth="7" />
+      <circle cx="35" cy="35" r={r} fill="none" stroke="#818cf8" strokeWidth="7"
+        strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+        transform="rotate(-90 35 35)" style={{ transition: 'stroke-dashoffset 0.4s ease' }} />
+      <text x="35" y="38" textAnchor="middle" fill="#a5b4fc" fontSize="13" fontWeight="bold" fontFamily="sans-serif">{count}</text>
+    </svg>
+  );
+}
+
 export default function BrainPanel({ projectName, macOnline, onSend, brainStatus, brainSearchResults, brainIndexing, brainProgress }: Props) {
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -59,41 +75,47 @@ export default function BrainPanel({ projectName, macOnline, onSend, brainStatus
       </div>
 
       {/* Status card */}
-      <div className="rounded-2xl p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {brainStatus?.exists ? (
-              <CheckCircle size={14} className="text-emerald-400" />
-            ) : (
-              <Clock size={14} className="text-gray-600" />
-            )}
-            <p className="text-white text-sm font-semibold">
-              {brainStatus?.exists ? `${brainStatus.count} ファイルをインデックス済み` : 'インデックス未作成'}
-            </p>
+      <div className="rounded-2xl p-4 space-y-3" style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.15)' }}>
+        <div className="flex items-center gap-4">
+          {brainIndexing && brainProgress ? (
+            <IndexProgressRing count={brainProgress.count} total={brainProgress.total} />
+          ) : (
+            <div className="flex-shrink-0 flex flex-col items-center gap-1">
+              <div className="w-[70px] h-[70px] rounded-2xl flex items-center justify-center"
+                style={{ background: brainStatus?.exists ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <p className="text-indigo-300 font-bold text-xl">{brainStatus?.count ?? 0}</p>
+              </div>
+              <p className="text-gray-600 text-xs">files</p>
+            </div>
+          )}
+          <div className="flex-1 min-w-0 space-y-2">
+            <div>
+              <p className="text-white text-sm font-semibold">
+                {brainIndexing ? '解析中...' : brainStatus?.exists ? 'インデックス済み' : '未インデックス'}
+              </p>
+              {brainStatus?.indexed_at && !brainIndexing && (
+                <p className="text-gray-700 text-xs mt-0.5">{new Date(brainStatus.indexed_at).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+              )}
+              {brainIndexing && brainProgress && (
+                <div className="mt-1.5">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-500 text-xs">解析中</span>
+                    <span className="text-indigo-400 text-xs">{brainProgress.count}/{brainProgress.total}</span>
+                  </div>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${brainProgress.total > 0 ? brainProgress.count / brainProgress.total * 100 : 0}%`, background: 'linear-gradient(90deg,#6366f1,#a855f7)' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+            <button onClick={() => macOnline && onSend({ type: 'brain_index' })} disabled={!macOnline || brainIndexing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold active:scale-95 disabled:opacity-40 transition-all"
+              style={{ background: brainIndexing ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
+              <RefreshCw size={10} className={brainIndexing ? 'animate-spin' : ''} />
+              {brainIndexing ? '解析中...' : brainStatus?.exists ? '再インデックス' : 'インデックス作成'}
+            </button>
           </div>
-          <button onClick={() => macOnline && onSend({ type: 'brain_index' })} disabled={!macOnline || brainIndexing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold active:scale-95 disabled:opacity-40 transition-all"
-            style={{ background: brainIndexing ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
-            <RefreshCw size={11} className={brainIndexing ? 'animate-spin' : ''} />
-            {brainIndexing ? '解析中...' : brainStatus?.exists ? '再インデックス' : 'インデックス作成'}
-          </button>
         </div>
-
-        {brainIndexing && brainProgress && (
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-500 text-xs">解析中...</span>
-              <span className="text-indigo-400 text-xs">{brainProgress.count}/{brainProgress.total}</span>
-            </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-              <div className="h-full rounded-full transition-all" style={{ width: `${brainProgress.total > 0 ? brainProgress.count / brainProgress.total * 100 : 0}%`, background: 'linear-gradient(90deg,#6366f1,#a855f7)' }} />
-            </div>
-          </div>
-        )}
-
-        {brainStatus?.indexed_at && (
-          <p className="text-gray-700 text-xs">最終インデックス: {new Date(brainStatus.indexed_at).toLocaleString('ja-JP')}</p>
-        )}
       </div>
 
       {/* Auto-inject toggle */}

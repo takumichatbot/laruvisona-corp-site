@@ -18,6 +18,67 @@ interface HistoryEntry { directive: string; planTitle: string; success: boolean;
 
 export interface MacInfo { id: string; name: string; }
 
+// ── SVG chart components ──────────────────────────────────────────────────────
+
+function CircularProgress({ percent, done, total, failed }: { percent: number; done: number; total: number; failed: number }) {
+  const r = 40;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (percent / 100) * circ;
+  const color = failed > 0 ? '#f87171' : percent === 100 ? '#34d399' : '#818cf8';
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+        <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="8"
+          strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+          transform="rotate(-90 50 50)" style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
+        <text x="50" y="46" textAnchor="middle" fill="white" fontSize="20" fontWeight="bold" fontFamily="sans-serif">{percent}%</text>
+        <text x="50" y="62" textAnchor="middle" fill="#6b7280" fontSize="11" fontFamily="sans-serif">{done}/{total}</text>
+      </svg>
+      <p className="text-xs" style={{ color: failed > 0 ? '#fca5a5' : percent === 100 ? '#6ee7b7' : '#a5b4fc' }}>
+        {failed > 0 ? `${failed}件失敗` : percent === 100 ? '完了' : '実行中'}
+      </p>
+    </div>
+  );
+}
+
+function PhaseTimeline({ phases, currentPhase, taskStatuses, checkpoints }: {
+  phases: OrchestratePhase[];
+  currentPhase: string;
+  taskStatuses: Record<string, TaskStatus>;
+  checkpoints: Record<string, { success: boolean; message: string }>;
+}) {
+  return (
+    <div className="flex items-start gap-0 px-1">
+      {phases.map((phase, i) => {
+        const allDone = phase.tasks.length > 0 && phase.tasks.every(t => taskStatuses[t.id] === 'done' || taskStatuses[t.id] === 'failed');
+        const hasFailed = phase.tasks.some(t => taskStatuses[t.id] === 'failed');
+        const isCurrent = currentPhase === phase.name || phase.tasks.some(t => taskStatuses[t.id] === 'running');
+        const cp = checkpoints[phase.name];
+        const dotColor = hasFailed ? '#f87171' : allDone ? '#34d399' : isCurrent ? '#818cf8' : '#374151';
+        return (
+          <div key={phase.id} className="flex items-start flex-1 min-w-0">
+            <div className="flex flex-col items-center flex-shrink-0">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold relative"
+                style={{ background: allDone ? 'rgba(52,211,153,0.15)' : isCurrent ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)', border: `2px solid ${dotColor}`, color: dotColor }}>
+                {hasFailed ? '✗' : allDone ? '✓' : isCurrent ? <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: dotColor }} /> : i + 1}
+                {cp?.success && <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400" />}
+              </div>
+              <p className="text-center leading-tight mt-1 w-12" style={{ fontSize: '9px', color: isCurrent ? '#a5b4fc' : allDone ? '#4b5563' : '#374151' }}>
+                {phase.name.slice(0, 8)}
+              </p>
+            </div>
+            {i < phases.length - 1 && (
+              <div className="flex-1 h-0.5 mt-3 mx-0.5 rounded-full"
+                style={{ background: allDone ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.06)' }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // O: Plan templates
 const PLAN_TEMPLATES = [
   { icon: '🔐', title: '認証追加', directive: 'NextAuth v5でGoogle/GitHub認証を追加。middleware.tsで保護ルート実装、ログイン/ログアウトUI、セッション管理。' },
@@ -524,18 +585,38 @@ export default function TeamPanel({
           )}
         </div>
 
-        {/* Progress */}
-        <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-500 text-xs">{step === 'done' ? '完了' : '進捗'}</span>
-            <span className="text-xs font-semibold" style={{ color: failedTasks > 0 ? '#fca5a5' : step === 'done' ? '#34d399' : '#a5b4fc' }}>
-              {doneTasks}/{totalWithReview} {failedTasks > 0 ? `(${failedTasks}失敗)` : ''}
-            </span>
+        {/* Progress — circular ring + phase timeline */}
+        <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center gap-4">
+            <CircularProgress percent={progress} done={doneTasks} total={totalWithReview} failed={failedTasks} />
+            <div className="flex-1 min-w-0 space-y-3">
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 text-xs">実行済タスク</span>
+                  <span className="text-xs font-bold text-white">{doneTasks - failedTasks}</span>
+                </div>
+                {failedTasks > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-xs">失敗</span>
+                    <span className="text-xs font-bold text-red-400">{failedTasks}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600 text-xs">残り</span>
+                  <span className="text-xs font-bold text-gray-400">{totalWithReview - doneTasks}</span>
+                </div>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${progress}%`, background: failedTasks > 0 ? 'linear-gradient(90deg,#dc2626,#f97316)' : progress === 100 ? 'linear-gradient(90deg,#059669,#34d399)' : 'linear-gradient(90deg,#4f46e5,#7c3aed)' }} />
+              </div>
+            </div>
           </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${progress}%`, background: failedTasks > 0 ? 'linear-gradient(90deg,#dc2626,#f97316)' : step === 'done' ? 'linear-gradient(90deg,#059669,#34d399)' : 'linear-gradient(90deg,#4f46e5,#7c3aed)' }} />
-          </div>
+          {plan.phases.length > 1 && (
+            <div className="mt-4 pt-3 border-t border-white/5">
+              <PhaseTimeline phases={plan.phases} currentPhase={orchestratePhase} taskStatuses={taskStatuses} checkpoints={checkpoints} />
+            </div>
+          )}
         </div>
 
         {/* F: Live Terminal — 実行中タスクのリアルタイム出力 */}
