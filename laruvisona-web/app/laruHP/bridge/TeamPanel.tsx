@@ -1,80 +1,105 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Users, Play, Square, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Zap, RotateCcw, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Users, Play, Square, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Zap, RotateCcw, AlertCircle, MessageSquare, Send, FlaskConical, Eye } from 'lucide-react';
 
 export interface OrchestrateTask {
-  id: string;
-  agent_name: string;
-  title: string;
-  instruction: string;
-  files_to_create: string[];
-  files_to_modify: string[];
+  id: string; agent_name: string; title: string; instruction: string;
+  files_to_create: string[]; files_to_modify: string[];
 }
-
 export interface OrchestratePhase {
-  id: string;
-  name: string;
-  description: string;
-  parallel: boolean;
-  tasks: OrchestrateTask[];
+  id: string; name: string; description: string; parallel: boolean; tasks: OrchestrateTask[];
 }
-
 export interface OrchestratePlan {
-  title: string;
-  description: string;
-  phases: OrchestratePhase[];
+  title: string; description: string; phases: OrchestratePhase[];
 }
-
 export type TaskStatus = 'pending' | 'running' | 'done' | 'failed';
 
+interface HistoryEntry { directive: string; planTitle: string; success: boolean; ts: number; }
+
 interface Props {
-  macOnline: boolean;
-  projectName: string;
-  fileTree: string;
+  macOnline: boolean; projectName: string; fileTree: string;
   onSend: (msg: Record<string, unknown>) => void;
-  orchestrateRunning: boolean;
-  orchestratePhase: string;
-  taskStatuses: Record<string, TaskStatus>;
-  taskOutputs: Record<string, string>;
-  orchestrateComplete: boolean;
+  orchestrateRunning: boolean; orchestratePhase: string;
+  taskStatuses: Record<string, TaskStatus>; taskOutputs: Record<string, string>;
+  orchestrateComplete: boolean; orchestrateReviewResult: string;
+  orchestrateTestResult: { output: string; passed: boolean } | null;
   onResetOrchestrate: () => void;
 }
 
 const EXAMPLES = [
-  '月額¥999のサブスクリプション機能をStripe決済で追加。Proプランはフル機能、Freeは制限あり。',
-  'ユーザー認証をNextAuth v5に移行し、Google・GitHubログインを追加',
-  'APIレート制限をRedisで実装。1時間100リクエストまで。',
-  'ダッシュボードページを追加。統計グラフとアクティビティログを表示。',
+  '月額¥999のサブスクリプション機能をStripe決済で追加。ProはAPI使い放題、Freeは月10回まで。',
+  'ユーザー認証をNextAuth v5に移行し、Google・GitHubログインを追加する。',
+  'APIレート制限をRedisで実装。IPごとに1時間100リクエスト上限。',
+  'ダッシュボードページを追加。統計グラフ・アクティビティログ・KPIカードを表示。',
 ];
 
-const PHASE_COLORS = ['#6366f1', '#0ea5e9', '#8b5cf6', '#f59e0b'];
+const PHASE_COLORS = ['#6366f1', '#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'];
+
+function estimateCost(plan: OrchestratePlan) {
+  const tasks = plan.phases.reduce((s, p) => s + p.tasks.length, 0) + 1; // +1 review agent
+  const avgInstrTokens = plan.phases.reduce((s, p) =>
+    s + p.tasks.reduce((ts, t) => ts + Math.ceil(t.instruction.length / 4), 0), 0
+  ) / Math.max(1, tasks - 1);
+  const inputPerAgent = avgInstrTokens + 3000;
+  const outputPerAgent = 2500;
+  const usd = (inputPerAgent * tasks * 3 + outputPerAgent * tasks * 15) / 1_000_000;
+  return { usd, jpy: Math.round(usd * 150), tokens: Math.round((inputPerAgent + outputPerAgent) * tasks / 1000) };
+}
+
+const HIST_KEY = 'bridge_orch_history';
+function loadHistory(): HistoryEntry[] {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch { return []; }
+}
+function saveHistory(entry: HistoryEntry) {
+  const h = loadHistory();
+  localStorage.setItem(HIST_KEY, JSON.stringify([entry, ...h].slice(0, 6)));
+}
 
 export default function TeamPanel({
   macOnline, projectName, fileTree, onSend,
   orchestrateRunning, orchestratePhase, taskStatuses, taskOutputs,
-  orchestrateComplete, onResetOrchestrate,
+  orchestrateComplete, orchestrateReviewResult, orchestrateTestResult,
+  onResetOrchestrate,
 }: Props) {
   const [step, setStep] = useState<'input' | 'planning' | 'review' | 'executing' | 'done'>('input');
   const [directive, setDirective] = useState('');
   const [plan, setPlan] = useState<OrchestratePlan | null>(null);
   const [planError, setPlanError] = useState('');
-  const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [planModel, setPlanModel] = useState('claude-sonnet-4-6');
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [svInput, setSvInput] = useState('');
+  const [svMessages, setSvMessages] = useState<string[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showReview, setShowReview] = useState(false);
+  const [showTestOutput, setShowTestOutput] = useState(false);
+  const svRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setHistory(loadHistory()); }, []);
 
   useEffect(() => {
     if (orchestrateRunning && step !== 'executing') setStep('executing');
-    if (orchestrateComplete && step === 'executing') setStep('done');
-  }, [orchestrateRunning, orchestrateComplete, step]);
+  }, [orchestrateRunning, step]);
+
+  useEffect(() => {
+    if (orchestrateComplete && step === 'executing') {
+      setStep('done');
+      if (plan) {
+        const failed = Object.values(taskStatuses).filter(s => s === 'failed').length;
+        saveHistory({ directive, planTitle: plan.title, success: failed === 0, ts: Date.now() });
+        setHistory(loadHistory());
+      }
+    }
+  }, [orchestrateComplete, step, plan, directive, taskStatuses]);
 
   const totalTasks = plan?.phases.reduce((s, p) => s + p.tasks.length, 0) ?? 0;
+  const totalWithReview = totalTasks + 1;
   const doneTasks = Object.values(taskStatuses).filter(s => s === 'done' || s === 'failed').length;
   const failedTasks = Object.values(taskStatuses).filter(s => s === 'failed').length;
-  const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  const progress = totalWithReview > 0 ? Math.round((doneTasks / totalWithReview) * 100) : 0;
 
   const generatePlan = async () => {
     if (!directive.trim()) return;
-    setStep('planning');
-    setPlanError('');
+    setStep('planning'); setPlanError('');
     try {
       const res = await fetch('/api/bridge/orchestrate', {
         method: 'POST',
@@ -95,15 +120,21 @@ export default function TeamPanel({
   const startExecution = () => {
     if (!plan || !macOnline) return;
     onResetOrchestrate();
+    setSvMessages([]);
     onSend({ type: 'orchestrate_start', plan });
     setStep('executing');
   };
 
+  const sendSupervisor = () => {
+    if (!svInput.trim()) return;
+    onSend({ type: 'orchestrate_inject', context: svInput.trim() });
+    setSvMessages(prev => [...prev, svInput.trim()]);
+    setSvInput('');
+  };
+
   const reset = () => {
-    setStep('input');
-    setPlan(null);
-    setDirective('');
-    setPlanError('');
+    setStep('input'); setPlan(null); setDirective(''); setPlanError('');
+    setSvMessages([]); setShowReview(false); setShowTestOutput(false);
     onResetOrchestrate();
   };
 
@@ -111,43 +142,56 @@ export default function TeamPanel({
   if (step === 'input' || step === 'planning') {
     return (
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Header */}
         <div className="text-center pb-2">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-            style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', boxShadow: '0 0 30px rgba(79,70,229,0.4)' }}>
+            style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', boxShadow: '0 0 30px rgba(79,70,229,0.35)' }}>
             <Users size={24} className="text-white" />
           </div>
           <p className="text-white font-bold text-base">AI Software Team</p>
-          <p className="text-gray-500 text-xs mt-1">高レベルの指示を入力するとAIチームが分析・実装します</p>
+          <p className="text-gray-500 text-xs mt-1">{projectName} · 指示ひとつで設計→実装→レビューまで</p>
         </div>
+
+        {/* History */}
+        {history.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-gray-700 text-xs px-1">最近のプラン</p>
+            {history.slice(0, 3).map((h, i) => (
+              <button key={i} onClick={() => setDirective(h.directive)}
+                className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 active:opacity-70 transition-all"
+                style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="text-xs">{h.success ? '✅' : '⚠️'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-400 text-xs font-medium truncate">{h.planTitle}</p>
+                  <p className="text-gray-700 text-xs truncate">{h.directive}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Directive input */}
         <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <textarea
-            value={directive}
-            onChange={e => setDirective(e.target.value)}
-            placeholder="例: 月額¥999のサブスクリプション機能を追加して。ProプランはAPI使い放題、Freeは月10回まで。Stripeで決済。"
+          <textarea value={directive} onChange={e => setDirective(e.target.value)}
+            placeholder="例: 月額¥999のサブスクリプション機能を追加して。Stripeで決済、ProはAPI使い放題、Freeは月10回まで。"
             className="w-full text-sm text-white resize-none outline-none leading-relaxed placeholder-gray-700"
-            style={{ background: 'transparent', minHeight: '100px' }}
-          />
-          <div className="flex items-center justify-between pt-3 border-t border-white/5 mt-3">
+            style={{ background: 'transparent', minHeight: '90px' }} />
+          <div className="flex items-center justify-between pt-3 border-t border-white/5 mt-2">
             <select value={planModel} onChange={e => setPlanModel(e.target.value)}
               className="h-7 px-2 rounded-lg text-xs outline-none"
               style={{ background: 'rgba(255,255,255,0.06)', color: '#9ca3af' }}>
-              <option value="claude-haiku-4-5-20251001" style={{ background: '#111' }}>Haiku (速い)</option>
-              <option value="claude-sonnet-4-6" style={{ background: '#111' }}>Sonnet (推奨)</option>
-              <option value="claude-opus-4-8" style={{ background: '#111' }}>Opus (高品質)</option>
+              <option value="claude-haiku-4-5-20251001" style={{ background: '#111' }}>Haiku — 速い</option>
+              <option value="claude-sonnet-4-6" style={{ background: '#111' }}>Sonnet — 推奨</option>
+              <option value="claude-opus-4-8" style={{ background: '#111' }}>Opus — 最高品質</option>
             </select>
             <span className="text-gray-700 text-xs">{directive.length}文字</span>
           </div>
         </div>
 
-        {/* Examples */}
         <div className="space-y-1.5">
           <p className="text-gray-700 text-xs px-1">例文</p>
           {EXAMPLES.map(ex => (
             <button key={ex} onClick={() => setDirective(ex)}
-              className="w-full text-left px-3 py-2.5 rounded-xl text-xs text-gray-500 active:opacity-70 transition-all"
+              className="w-full text-left px-3 py-2.5 rounded-xl text-xs text-gray-500 active:opacity-70"
               style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
               {ex}
             </button>
@@ -162,13 +206,12 @@ export default function TeamPanel({
         )}
 
         <button onClick={generatePlan} disabled={!directive.trim() || step === 'planning' || !macOnline}
-          className="w-full py-4 rounded-2xl font-semibold text-white text-sm active:scale-98 transition-all disabled:opacity-40 flex items-center justify-center gap-3"
-          style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', boxShadow: '0 0 30px rgba(79,70,229,0.3)' }}>
+          className="w-full py-4 rounded-2xl font-bold text-white text-sm active:scale-98 transition-all disabled:opacity-40 flex items-center justify-center gap-3"
+          style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', boxShadow: '0 0 30px rgba(79,70,229,0.25)' }}>
           {step === 'planning'
             ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />AIが計画を立案中...</>
-            : <><Zap size={16} />プランを生成</>}
+            : <><Zap size={15} />プランを生成</>}
         </button>
-
         {!macOnline && <p className="text-center text-gray-600 text-xs">Mac エージェントがオフラインです</p>}
       </div>
     );
@@ -176,6 +219,7 @@ export default function TeamPanel({
 
   // ── Review ────────────────────────────────────────────────────────────────
   if (step === 'review' && plan) {
+    const cost = estimateCost(plan);
     return (
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         <div className="rounded-2xl p-4" style={{ background: 'rgba(79,70,229,0.1)', border: '1px solid rgba(79,70,229,0.3)' }}>
@@ -184,52 +228,59 @@ export default function TeamPanel({
             <p className="text-white font-bold text-sm">{plan.title}</p>
           </div>
           <p className="text-gray-400 text-xs leading-relaxed">{plan.description}</p>
-          <div className="flex gap-3 mt-3">
+          <div className="flex flex-wrap gap-3 mt-3">
             <span className="text-indigo-400 text-xs">{plan.phases.length} フェーズ</span>
             <span className="text-gray-600 text-xs">·</span>
             <span className="text-indigo-400 text-xs">{totalTasks} タスク</span>
             <span className="text-gray-600 text-xs">·</span>
-            <span className="text-indigo-400 text-xs">{plan.phases.filter(p => p.parallel).length} 並列フェーズ</span>
+            <span className="text-indigo-400 text-xs">+1 コードレビュー</span>
+          </div>
+        </div>
+
+        {/* Cost estimate */}
+        <div className="rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex-1">
+            <p className="text-gray-500 text-xs">推定コスト ({planModel.split('-').slice(-2).join('-')})</p>
+            <p className="text-white text-sm font-semibold mt-0.5">¥{cost.jpy} <span className="text-gray-600 font-normal text-xs">(${cost.usd.toFixed(3)})</span></p>
+          </div>
+          <div className="text-right">
+            <p className="text-gray-500 text-xs">推定トークン</p>
+            <p className="text-gray-300 text-sm font-semibold">{cost.tokens}K</p>
           </div>
         </div>
 
         {plan.phases.map((phase, pi) => (
           <div key={phase.id} className="rounded-xl overflow-hidden"
             style={{ border: `1px solid ${PHASE_COLORS[pi % PHASE_COLORS.length]}22` }}>
-            <div className="px-4 py-3 flex items-center gap-2"
-              style={{ background: `${PHASE_COLORS[pi % PHASE_COLORS.length]}10` }}>
+            <div className="px-4 py-2.5 flex items-center gap-2"
+              style={{ background: `${PHASE_COLORS[pi % PHASE_COLORS.length]}0d` }}>
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ background: PHASE_COLORS[pi % PHASE_COLORS.length] }}>{pi + 1}</span>
               <div className="flex-1">
-                <p className="text-white text-sm font-medium">{phase.name}</p>
-                <p className="text-gray-500 text-xs">{phase.description}</p>
+                <p className="text-white text-sm font-semibold">{phase.name}</p>
+                <p className="text-gray-500 text-xs truncate">{phase.description}</p>
               </div>
-              <span className="text-xs rounded-full px-2 py-0.5"
-                style={{ background: 'rgba(255,255,255,0.06)', color: '#6b7280' }}>
+              <span className="text-xs rounded-full px-2 py-0.5" style={{ background: 'rgba(255,255,255,0.06)', color: '#6b7280' }}>
                 {phase.parallel ? '並列' : '順次'}
               </span>
             </div>
-            <div className="px-3 py-2 space-y-1.5">
+            <div className="px-3 py-2 space-y-1">
               {phase.tasks.map(task => (
-                <div key={task.id} className="rounded-lg px-3 py-2"
+                <div key={task.id} className="flex items-start gap-2 rounded-lg px-3 py-2"
                   style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">🤖</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-gray-300 text-xs font-medium">{task.agent_name}</p>
-                        <span className="text-gray-600 text-xs">—</span>
-                        <p className="text-gray-500 text-xs truncate">{task.title}</p>
-                      </div>
-                      {(task.files_to_create.length > 0 || task.files_to_modify.length > 0) && (
-                        <p className="text-gray-700 text-xs font-mono mt-0.5 truncate">
-                          {[
-                            ...task.files_to_create.map(f => `+${f.split('/').pop()}`),
-                            ...task.files_to_modify.map(f => `~${f.split('/').pop()}`),
-                          ].slice(0, 4).join('  ')}
-                        </p>
-                      )}
+                  <span className="text-sm mt-0.5">🤖</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-gray-300 text-xs font-semibold">{task.agent_name}</p>
+                      <span className="text-gray-600 text-xs">—</span>
+                      <p className="text-gray-500 text-xs truncate">{task.title}</p>
                     </div>
+                    {(task.files_to_create.length > 0 || task.files_to_modify.length > 0) && (
+                      <p className="text-gray-700 text-xs font-mono mt-0.5 truncate">
+                        {[...task.files_to_create.map(f => `+${f.split('/').pop()}`),
+                          ...task.files_to_modify.map(f => `~${f.split('/').pop()}`)].slice(0, 4).join('  ')}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -238,14 +289,11 @@ export default function TeamPanel({
         ))}
 
         <div className="flex gap-2 pt-1">
-          <button onClick={reset}
-            className="px-4 py-3 rounded-xl text-sm text-gray-500 active:scale-98 transition-all"
-            style={{ background: 'rgba(255,255,255,0.05)' }}>
-            やり直す
-          </button>
+          <button onClick={reset} className="px-4 py-3 rounded-xl text-sm text-gray-500 active:scale-98"
+            style={{ background: 'rgba(255,255,255,0.05)' }}>やり直す</button>
           <button onClick={startExecution} disabled={!macOnline}
             className="flex-1 py-3 rounded-xl text-sm font-bold text-white active:scale-98 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #059669, #0284c7)', boxShadow: '0 0 25px rgba(5,150,105,0.35)' }}>
+            style={{ background: 'linear-gradient(135deg, #059669, #0284c7)', boxShadow: '0 0 25px rgba(5,150,105,0.3)' }}>
             <Play size={14} fill="white" />
             AIチームを起動
           </button>
@@ -271,106 +319,74 @@ export default function TeamPanel({
           </div>
           {step === 'executing' ? (
             <button onClick={() => onSend({ type: 'orchestrate_stop' })}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold active:scale-90 transition-all"
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold active:scale-90"
               style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
-              <Square size={10} fill="currentColor" />
-              中断
+              <Square size={10} fill="currentColor" />中断
             </button>
           ) : (
-            <button onClick={reset}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs active:scale-90 transition-all text-gray-500"
+            <button onClick={reset} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-gray-500 active:scale-90"
               style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <RotateCcw size={10} />
-              新しい指示
+              <RotateCcw size={10} />新しい指示
             </button>
           )}
         </div>
 
-        {/* Progress bar */}
+        {/* Progress */}
         <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex justify-between mb-2">
             <span className="text-gray-500 text-xs">{step === 'done' ? '完了' : '進捗'}</span>
             <span className="text-xs font-semibold" style={{ color: failedTasks > 0 ? '#fca5a5' : step === 'done' ? '#34d399' : '#a5b4fc' }}>
-              {doneTasks}/{totalTasks} タスク{failedTasks > 0 ? ` (${failedTasks} 失敗)` : ''}
+              {doneTasks}/{totalWithReview} {failedTasks > 0 ? `(${failedTasks}失敗)` : ''}
             </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
             <div className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${progress}%`,
-                background: failedTasks > 0
-                  ? 'linear-gradient(90deg, #dc2626, #f97316)'
-                  : step === 'done'
-                  ? 'linear-gradient(90deg, #059669, #34d399)'
-                  : 'linear-gradient(90deg, #4f46e5, #7c3aed)',
-              }} />
+              style={{ width: `${progress}%`, background: failedTasks > 0 ? 'linear-gradient(90deg,#dc2626,#f97316)' : step === 'done' ? 'linear-gradient(90deg,#059669,#34d399)' : 'linear-gradient(90deg,#4f46e5,#7c3aed)' }} />
           </div>
         </div>
 
-        {/* Phases */}
+        {/* Phases + Tasks */}
         {plan.phases.map((phase, pi) => {
           const allDone = phase.tasks.every(t => taskStatuses[t.id] === 'done' || taskStatuses[t.id] === 'failed');
           const isRunning = !allDone && phase.tasks.some(t => taskStatuses[t.id] === 'running');
           const hasFailed = phase.tasks.some(t => taskStatuses[t.id] === 'failed');
           const phaseColor = allDone ? (hasFailed ? '#ef4444' : '#34d399') : isRunning ? PHASE_COLORS[pi % PHASE_COLORS.length] : '#374151';
-
           return (
-            <div key={phase.id} className="rounded-xl overflow-hidden transition-all"
-              style={{ border: `1px solid ${phaseColor}33` }}>
-              <div className="px-4 py-2.5 flex items-center gap-2.5"
-                style={{ background: `${phaseColor}0d` }}>
+            <div key={phase.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${phaseColor}30` }}>
+              <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: `${phaseColor}0a` }}>
                 {allDone && !hasFailed ? <CheckCircle size={13} className="text-emerald-400" />
                   : allDone && hasFailed ? <XCircle size={13} className="text-red-400" />
                   : isRunning ? <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: phaseColor }} />
                   : <Clock size={13} className="text-gray-700" />}
-                <span className="text-sm font-semibold" style={{ color: phaseColor }}>
-                  フェーズ {pi + 1}: {phase.name}
-                </span>
-                <span className="text-xs text-gray-600 ml-auto">{phase.parallel ? '並列' : '順次'}</span>
+                <span className="flex-1 text-sm font-semibold" style={{ color: phaseColor }}>フェーズ {pi + 1}: {phase.name}</span>
+                <span className="text-xs text-gray-600">{phase.parallel ? '並列' : '順次'}</span>
               </div>
-
               <div className="p-2 grid grid-cols-2 gap-1.5">
                 {phase.tasks.map(task => {
                   const st = taskStatuses[task.id] ?? 'pending';
                   const out = taskOutputs[task.id] ?? '';
                   const expanded = expandedTask === task.id;
                   const tColor = st === 'running' ? '#818cf8' : st === 'done' ? '#34d399' : st === 'failed' ? '#f87171' : '#374151';
-
                   return (
                     <div key={task.id}>
                       <button onClick={() => setExpandedTask(expanded ? null : task.id)}
                         className="w-full rounded-xl p-2.5 text-left transition-all active:scale-97"
-                        style={{
-                          background: st === 'running' ? 'rgba(99,102,241,0.12)'
-                            : st === 'done' ? 'rgba(52,211,153,0.08)'
-                            : st === 'failed' ? 'rgba(239,68,68,0.08)'
-                            : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${tColor}33`,
-                        }}>
+                        style={{ background: st === 'running' ? 'rgba(99,102,241,0.12)' : st === 'done' ? 'rgba(52,211,153,0.08)' : st === 'failed' ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${tColor}33` }}>
                         <div className="flex items-start gap-1.5">
-                          <span className="text-sm flex-shrink-0 mt-0.5" style={{ filter: st === 'pending' ? 'grayscale(1)' : 'none' }}>
+                          <span className="text-sm flex-shrink-0 mt-0.5">
                             {st === 'running' ? '⚡' : st === 'done' ? '✅' : st === 'failed' ? '❌' : '🤖'}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold leading-tight truncate" style={{ color: tColor }}>
-                              {task.agent_name}
-                            </p>
+                            <p className="text-xs font-semibold truncate" style={{ color: tColor }}>{task.agent_name}</p>
                             <p className="text-gray-600 text-xs mt-0.5 truncate">{task.title}</p>
                           </div>
                           {out && (expanded ? <ChevronUp size={9} className="text-gray-700 mt-1 flex-shrink-0" /> : <ChevronDown size={9} className="text-gray-700 mt-1 flex-shrink-0" />)}
                         </div>
-                        {st === 'running' && (
-                          <div className="mt-1.5 h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                            <div className="h-full rounded-full animate-pulse" style={{ width: '60%', background: '#818cf8' }} />
-                          </div>
-                        )}
+                        {st === 'running' && <div className="mt-1.5 h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}><div className="h-full rounded-full animate-pulse" style={{ width: '65%', background: '#818cf8' }} /></div>}
                       </button>
                       {expanded && out && (
-                        <div className="mt-1 rounded-xl p-2.5 max-h-40 overflow-y-auto"
-                          style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <pre className="text-gray-400 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed">
-                            {out.slice(-1500)}
-                          </pre>
+                        <div className="mt-1 rounded-xl p-2.5 max-h-40 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <pre className="text-gray-400 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed">{out.slice(-1500)}</pre>
                         </div>
                       )}
                     </div>
@@ -381,19 +397,86 @@ export default function TeamPanel({
           );
         })}
 
+        {/* Review agent card */}
+        {(taskStatuses['review_agent'] || step === 'done') && (
+          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${taskStatuses['review_agent'] === 'done' ? 'rgba(52,211,153,0.25)' : taskStatuses['review_agent'] === 'failed' ? 'rgba(239,68,68,0.25)' : 'rgba(99,102,241,0.25)'}` }}>
+            <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: 'rgba(99,102,241,0.08)' }}>
+              {taskStatuses['review_agent'] === 'running' ? <div className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                : taskStatuses['review_agent'] === 'done' ? <CheckCircle size={13} className="text-emerald-400" />
+                : <Eye size={13} className="text-indigo-400" />}
+              <span className="flex-1 text-sm font-semibold text-indigo-300">AIコードレビュー</span>
+              {orchestrateReviewResult && (
+                <button onClick={() => setShowReview(v => !v)} className="text-xs text-indigo-400 active:opacity-70">
+                  {showReview ? '折りたたむ' : '表示'}
+                </button>
+              )}
+            </div>
+            {showReview && orchestrateReviewResult && (
+              <div className="px-4 pb-3 pt-1">
+                <pre className="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap break-words max-h-48 overflow-y-auto">{orchestrateReviewResult}</pre>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Test result */}
+        {orchestrateTestResult && (
+          <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${orchestrateTestResult.passed ? 'rgba(52,211,153,0.25)' : 'rgba(239,68,68,0.25)'}` }}>
+            <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: orchestrateTestResult.passed ? 'rgba(52,211,153,0.06)' : 'rgba(239,68,68,0.06)' }}>
+              {orchestrateTestResult.passed ? <CheckCircle size={13} className="text-emerald-400" /> : <XCircle size={13} className="text-red-400" />}
+              <span className="flex-1 text-sm font-semibold" style={{ color: orchestrateTestResult.passed ? '#6ee7b7' : '#fca5a5' }}>
+                <FlaskConical size={12} className="inline mr-1" />
+                テスト {orchestrateTestResult.passed ? '通過' : '失敗'}
+              </span>
+              <button onClick={() => setShowTestOutput(v => !v)} className="text-xs text-gray-500 active:opacity-70">
+                {showTestOutput ? '折りたたむ' : '出力表示'}
+              </button>
+            </div>
+            {showTestOutput && (
+              <pre className="px-4 pb-3 pt-1 text-gray-400 text-xs font-mono whitespace-pre-wrap break-words max-h-36 overflow-y-auto">{orchestrateTestResult.output}</pre>
+            )}
+          </div>
+        )}
+
+        {/* Completion */}
         {step === 'done' && (
-          <div className="rounded-2xl p-5 text-center space-y-2"
-            style={{
-              background: failedTasks > 0 ? 'rgba(239,68,68,0.06)' : 'rgba(52,211,153,0.06)',
-              border: `1px solid ${failedTasks > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(52,211,153,0.25)'}`,
-            }}>
-            <p className="text-2xl">{failedTasks > 0 ? '⚠️' : '🎉'}</p>
-            <p className="font-bold text-white">{failedTasks > 0 ? '一部失敗' : 'チーム完了'}</p>
-            <p className="text-gray-500 text-xs">
-              {failedTasks > 0
-                ? `${doneTasks - failedTasks} 成功 / ${failedTasks} 失敗`
-                : `${doneTasks} タスクが完了しました`}
-            </p>
+          <div className="rounded-2xl p-4 text-center space-y-1.5"
+            style={{ background: failedTasks > 0 ? 'rgba(239,68,68,0.06)' : 'rgba(52,211,153,0.06)', border: `1px solid ${failedTasks > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(52,211,153,0.2)'}` }}>
+            <p className="text-xl">{failedTasks > 0 ? '⚠️' : '🎉'}</p>
+            <p className="font-bold text-white text-sm">{failedTasks > 0 ? '一部失敗' : 'チーム完了'}</p>
+            <p className="text-gray-500 text-xs">{failedTasks > 0 ? `${doneTasks - failedTasks} 成功 / ${failedTasks} 失敗` : `全${doneTasks}タスク完了`}</p>
+          </div>
+        )}
+
+        {/* Supervisor Chat */}
+        {step === 'executing' && (
+          <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.25)', background: 'rgba(99,102,241,0.04)' }}>
+            <div className="px-4 py-2.5 flex items-center gap-2">
+              <MessageSquare size={12} className="text-indigo-400" />
+              <p className="text-indigo-300 text-xs font-semibold">スーパーバイザー — 実行中のエージェントに追加指示</p>
+            </div>
+            {svMessages.length > 0 && (
+              <div className="px-4 pb-2 space-y-1">
+                {svMessages.slice(-3).map((m, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs">
+                    <span className="text-indigo-500">→</span>
+                    <p className="text-gray-400">{m}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 px-3 pb-3">
+              <input ref={svRef} value={svInput} onChange={e => setSvInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendSupervisor()}
+                placeholder="例: Tailwindを使って。MUIは使わないで。"
+                className="flex-1 h-8 px-3 rounded-lg text-xs text-white outline-none"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(99,102,241,0.3)' }} />
+              <button onClick={sendSupervisor} disabled={!svInput.trim()}
+                className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90 disabled:opacity-40"
+                style={{ background: 'rgba(99,102,241,0.2)' }}>
+                <Send size={12} className="text-indigo-400" />
+              </button>
+            </div>
           </div>
         )}
       </div>

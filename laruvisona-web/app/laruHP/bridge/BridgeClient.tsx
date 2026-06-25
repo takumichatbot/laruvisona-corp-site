@@ -285,6 +285,8 @@ export default function BridgeClient() {
   const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
   const [taskOutputsMap, setTaskOutputsMap] = useState<Record<string, string>>({});
   const [orchestrateComplete, setOrchestrateComplete] = useState(false);
+  const [orchestrateReviewResult, setOrchestrateReviewResult] = useState('');
+  const [orchestrateTestResult, setOrchestrateTestResult] = useState<{ output: string; passed: boolean } | null>(null);
   const [fileTree, setFileTree] = useState('');
   // 複数Mac
   const [macList, setMacList] = useState<{ id: string; name: string }[]>([]);
@@ -468,6 +470,14 @@ export default function BridgeClient() {
       }
       if (m.type === 'orchestrate_complete') { setOrchestrateRunning(false); setOrchestrateComplete(true); }
       if (m.type === 'orchestrate_stopped') { setOrchestrateRunning(false); }
+      if (m.type === 'orchestrate_review_result') {
+        const r = (m as unknown) as { content: string };
+        setOrchestrateReviewResult(r.content || '');
+      }
+      if (m.type === 'orchestrate_test_result') {
+        const r = (m as unknown) as { output?: string; passed: boolean; error?: string };
+        setOrchestrateTestResult({ output: r.output || r.error || '', passed: r.passed });
+      }
       if (m.type === 'file_tree_result') {
         const r = (m as unknown) as { tree?: string };
         if (r.tree) setFileTree(r.tree);
@@ -1238,12 +1248,16 @@ export default function BridgeClient() {
               taskStatuses={taskStatuses}
               taskOutputs={taskOutputsMap}
               orchestrateComplete={orchestrateComplete}
+              orchestrateReviewResult={orchestrateReviewResult}
+              orchestrateTestResult={orchestrateTestResult}
               onResetOrchestrate={() => {
                 setOrchestrateRunning(false);
                 setOrchestrateComplete(false);
                 setOrchestratePhase('');
                 setTaskStatuses({});
                 setTaskOutputsMap({});
+                setOrchestrateReviewResult('');
+                setOrchestrateTestResult(null);
               }}
             />
           )}
