@@ -243,6 +243,8 @@ export default function BridgeClient() {
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   // モード切り替え: code / chat / git / files / team / pm / brain / production
   const [mode, setMode] = useState<'home' | 'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team' | 'pm' | 'brain' | 'production' | 'concierge' | 'prompts' | 'history'>('home');
+  const [modeStack, setModeStack] = useState<(typeof mode)[]>([]);
+  const prevModeRef = useRef<typeof mode>('home');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
@@ -513,8 +515,25 @@ export default function BridgeClient() {
     if (savedMode && savedMode !== 'home') setMode(savedMode);
   }, []);
 
-  // セッション保存
-  useEffect(() => { sessionStorage.setItem('bridge_mode', mode); }, [mode]);
+  // セッション保存 + ナビ履歴更新
+  useEffect(() => {
+    sessionStorage.setItem('bridge_mode', mode);
+    if (prevModeRef.current !== mode) {
+      const prev = prevModeRef.current;
+      setModeStack(s => [...s.slice(-9), prev]);
+      prevModeRef.current = mode;
+    }
+  }, [mode]);
+
+  const goBack = () => {
+    setModeStack(s => {
+      if (s.length === 0) return s;
+      const prev = s[s.length - 1];
+      prevModeRef.current = prev;
+      setMode(prev);
+      return s.slice(0, -1);
+    });
+  };
 
   // セッション復元: project (projects 読込後)
   useEffect(() => {
@@ -1219,16 +1238,25 @@ export default function BridgeClient() {
       style={{ background: 'radial-gradient(ellipse at 50% 0%, #050d1a 0%, #000 60%)' }}>
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5"
-        style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5"
+        style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
         {view === 'chat' && (
-          <button onClick={() => setMode('home')}
-            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
-            style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <Home size={16} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {modeStack.length > 0 && (
+              <button onClick={goBack}
+                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+                style={{ background: 'rgba(255,255,255,0.08)' }}>
+                <ArrowLeft size={16} />
+              </button>
+            )}
+            <button onClick={() => setMode('home')}
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+              style={{ background: mode === 'home' ? 'rgba(196,181,253,0.15)' : 'rgba(255,255,255,0.06)', border: mode === 'home' ? '1px solid rgba(196,181,253,0.25)' : 'none' }}>
+              <Home size={15} style={{ color: mode === 'home' ? '#c4b5fd' : '#6b7280' }} />
+            </button>
+          </div>
         )}
-        <span className="flex-1 font-semibold text-sm tracking-wide"
+        <span className="flex-1 font-semibold text-sm tracking-wide truncate"
           style={{ background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           {view === 'chat' && currentProject ? currentProject.name : 'Claude Bridge'}
         </span>
@@ -2013,7 +2041,7 @@ export default function BridgeClient() {
       {/* ─── ボトムナビゲーション ─── */}
       {view === 'chat' && (
         <div className="flex-shrink-0 border-t border-white/5"
-          style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(24px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(24px)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}>
           <div className="flex">
             {([
               { id: 'home',  label: 'Home',  icon: Home,               color: '#c4b5fd' },
@@ -2111,7 +2139,7 @@ export default function BridgeClient() {
       {visualCapturing && visualPreview && (
         <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.85)' }} onClick={() => { setVisualCapturing(false); setVisualPreview(null); }}>
           <div className="w-full rounded-t-3xl overflow-hidden"
-            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.1)', paddingBottom: 'env(safe-area-inset-bottom, 16px)', animation: 'slideUp 0.22s ease' }}
+            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.1)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease' }}
             onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-3"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
             <div className="px-4 pb-2">
@@ -2141,7 +2169,7 @@ export default function BridgeClient() {
       {showMoreMenu && (
         <div className="fixed inset-0 z-50" onClick={() => setShowMoreMenu(false)}>
           <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl overflow-hidden"
-            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'env(safe-area-inset-bottom, 16px)', animation: 'slideUp 0.22s ease' }}
+            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease' }}
             onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-5"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
             <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-4">その他のパネル</p>
@@ -2178,7 +2206,7 @@ export default function BridgeClient() {
       {showToolSheet && (
         <div className="fixed inset-0 z-50" onClick={() => setShowToolSheet(false)}>
           <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl overflow-hidden"
-            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'env(safe-area-inset-bottom, 16px)', animation: 'slideUp 0.22s ease' }}
+            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease' }}
             onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-4"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
             <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-4">ツール設定</p>
