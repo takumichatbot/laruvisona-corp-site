@@ -342,6 +342,7 @@ export default function BridgeClient() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [relayWs, setRelayWs] = useState('');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [showToolSheet, setShowToolSheet] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -1254,76 +1255,80 @@ export default function BridgeClient() {
       style={{ background: 'radial-gradient(ellipse at 50% 0%, #050d1a 0%, #000 60%)' }}>
 
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5"
-        style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
-        {view === 'chat' && (
-          <div className="flex items-center gap-1.5">
-            {modeStack.length > 0 && (
-              <button onClick={goBack}
-                className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
-                style={{ background: 'rgba(255,255,255,0.08)' }}>
-                <ArrowLeft size={16} />
-              </button>
-            )}
-            <button onClick={() => setMode('home')}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
-              style={{ background: mode === 'home' ? 'rgba(196,181,253,0.15)' : 'rgba(255,255,255,0.06)', border: mode === 'home' ? '1px solid rgba(196,181,253,0.25)' : 'none' }}>
-              <Home size={15} style={{ color: mode === 'home' ? '#c4b5fd' : '#6b7280' }} />
+      <div className="relative flex items-center gap-2 px-4 border-b border-white/5 flex-shrink-0"
+        style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingBottom: 10 }}>
+
+        {/* 左: 戻る or ホーム */}
+        {view === 'chat' && modeStack.length > 0 ? (
+          <button onClick={goBack}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
+            style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <ArrowLeft size={16} className="text-gray-400" />
+          </button>
+        ) : view === 'chat' && mode !== 'home' ? (
+          <button onClick={() => setMode('home')}
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
+            style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <Home size={15} className="text-gray-500" />
+          </button>
+        ) : null}
+
+        {/* 中: タイトル */}
+        <span className="flex-1 font-bold text-sm tracking-wide truncate"
+          style={{ background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          {view === 'chat' && currentProject ? currentProject.name : 'Bridge'}
+        </span>
+
+        {/* 右: 実行中は中断ボタン、それ以外はステータスドット + ⋯ */}
+        {running ? (
+          <button onClick={() => send({ type: 'abort' })}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-400 transition-all active:scale-90 flex-shrink-0"
+            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <Square size={10} fill="currentColor" />
+            中断
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            {/* ステータスドット1つ（WS + Mac状態を合成） */}
+            <div className="relative w-6 h-6 flex items-center justify-center" title={!connected ? '未接続' : !macOnline ? 'Mac オフライン' : 'Mac オンライン'}>
+              <div className="w-2 h-2 rounded-full" style={{
+                background: !connected ? '#374151' : !macOnline ? '#f59e0b' : '#38bdf8',
+                boxShadow: connected && macOnline ? '0 0 6px #38bdf8' : 'none',
+              }} />
+              {connected && macOnline && <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: '#38bdf8' }} />}
+            </div>
+
+            {/* ⋯ メニューボタン */}
+            <button onClick={() => setShowHeaderMenu(v => !v)}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 transition-all active:scale-90 flex-shrink-0"
+              style={{ background: showHeaderMenu ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
+              <MoreHorizontal size={16} />
             </button>
           </div>
         )}
-        <span className="flex-1 font-semibold text-sm tracking-wide truncate"
-          style={{ background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          {view === 'chat' && currentProject ? currentProject.name : 'Claude Bridge'}
-        </span>
-        <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all ${connected ? 'text-emerald-400' : 'text-gray-600'}`}
-            style={{ background: connected ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${connected ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.08)'}` }}>
-            {connected ? <Wifi size={10} /> : <WifiOff size={10} />}
-            <span>{connected ? 'ON' : 'OFF'}</span>
-          </div>
-          <div className={`w-2 h-2 rounded-full transition-all ${macOnline ? '' : 'bg-gray-700'}`}
-            style={macOnline ? { background: '#38bdf8', boxShadow: '0 0 6px #38bdf8' } : {}} />
-        </div>
-        {view === 'chat' && continuing && !running && (
-          <span className="text-xs px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
-            継続中
-          </span>
-        )}
-        {view === 'chat' && !running && (
-          <button onClick={newConversation}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
-            style={{ background: 'rgba(255,255,255,0.05)' }} title="新しい会話">
-            <RotateCcw size={14} />
-          </button>
-        )}
-        {view === 'chat' && !running && messages.length > 0 && (
-          <button onClick={clearHistory}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
-            style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <Trash2 size={14} />
-          </button>
-        )}
-        {'Notification' in (typeof window !== 'undefined' ? window : {}) && Notification.permission !== 'granted' && (
-          <button onClick={registerPush}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-yellow-500 active:scale-90 transition-all"
-            style={{ background: 'rgba(234,179,8,0.1)' }} title="通知を有効化">
-            <span className="text-xs">🔔</span>
-          </button>
-        )}
-        <button onClick={handleLock}
-          className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
-          style={{ background: 'rgba(255,255,255,0.05)' }}>
-          <Lock size={14} />
-        </button>
-        {running && (
-          <button onClick={() => send({ type: 'abort' })}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-red-400 transition-all active:scale-90"
-            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-            <Square size={10} fill="currentColor" />
-            <span>中断</span>
-          </button>
+
+        {/* ヘッダーメニュードロップダウン */}
+        {showHeaderMenu && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowHeaderMenu(false)} />
+            <div className="absolute top-full right-3 mt-1 z-50 rounded-2xl overflow-hidden shadow-2xl"
+              style={{ background: 'rgba(12,12,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', minWidth: 180 }}>
+              {[
+                { icon: <RotateCcw size={15} />, label: '新しい会話',    action: () => { newConversation(); setShowHeaderMenu(false); }, show: view === 'chat' },
+                { icon: <Trash2 size={15} />,    label: '履歴をクリア',  action: () => { clearHistory(); setShowHeaderMenu(false); }, show: view === 'chat' && messages.length > 0 },
+                { icon: <span className="text-sm">🔔</span>, label: '通知を有効化', action: () => { registerPush(); setShowHeaderMenu(false); },
+                  show: typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' },
+                { icon: <Lock size={15} />,      label: 'ロック',        action: () => { handleLock(); setShowHeaderMenu(false); }, show: true },
+              ].filter(item => item.show).map((item, i, arr) => (
+                <button key={i} onClick={item.action}
+                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-white/5 transition-colors text-left"
+                  style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                  <span className="text-gray-500">{item.icon}</span>
+                  <span className="text-sm text-gray-300">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
