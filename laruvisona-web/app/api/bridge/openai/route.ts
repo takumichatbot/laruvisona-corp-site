@@ -57,22 +57,30 @@ export async function POST(req: Request) {
     // ── V: Realtime API セッショントークン ──────────────────────────────────
     if (action === 'realtime_session') {
       const { projectName } = body;
-      const openai = getClient();
-      const session = await (openai.beta as unknown as {
-        realtime: {
-          sessions: {
-            create: (params: Record<string, unknown>) => Promise<{ client_secret: { value: string } }>;
-          };
-        };
-      }).realtime.sessions.create({
-        model: 'gpt-4o-realtime-preview',
-        voice: 'shimmer',
-        instructions: `あなたは「Bridge」というAIコーディングアシスタントです。プロジェクト: ${projectName || '不明'}。
-日本語で会話し、ユーザーの開発意図を把握して具体的な実装指示に変換してください。
-タスクが明確になったら "→ AI Team に送信できます: [指示文]" の形式で提案してください。`,
-        input_audio_transcription: { model: 'gpt-4o-transcribe' },
-        turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 },
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) throw new Error('OPENAI_API_KEY が未設定です');
+
+      // SDK の beta.realtime はバージョン依存のため直接 REST で取得
+      const resp = await fetch('https://api.openai.com/v1/realtime/sessions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-realtime-preview',
+          voice: 'shimmer',
+          instructions: `あなたは「Bridge」というAIコーディングアシスタントです。プロジェクト: ${projectName || '不明'}。日本語で会話し、ユーザーの開発意図を把握して具体的な実装指示に変換してください。タスクが明確になったら "→ AI Team に送信できます: [指示文]" の形式で提案してください。`,
+          input_audio_transcription: { model: 'whisper-1' },
+          turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 },
+        }),
       });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`Realtime sessions ${resp.status}: ${errText.slice(0, 200)}`);
+      }
+      const session = await resp.json() as { client_secret: { value: string } };
       return NextResponse.json({ client_secret: session.client_secret });
     }
 
