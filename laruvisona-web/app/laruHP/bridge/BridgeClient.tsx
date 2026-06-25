@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2 } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock } from 'lucide-react';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -13,7 +13,7 @@ const PROJECT_ICONS: Record<string, React.ReactNode> = {
 };
 
 interface Project { id: string; name: string; }
-interface Message { role: 'user' | 'assistant' | 'system'; content: string; streaming?: boolean; }
+interface Message { role: 'user' | 'assistant' | 'system'; content: string; streaming?: boolean; ts?: number; }
 
 function getRelayWsUrl() {
   if (typeof window === 'undefined') return '';
@@ -272,7 +272,7 @@ export default function BridgeClient() {
         setRunning(false);
         setMessages(prev => {
           const last = prev[prev.length - 1];
-          return last?.streaming ? [...prev.slice(0, -1), { ...last, streaming: false }] : prev;
+          return last?.streaming ? [...prev.slice(0, -1), { ...last, streaming: false, ts: Date.now() }] : prev;
         });
       }
       if (m.type === 'aborted') { setRunning(false); setMessages(prev => [...prev, { role: 'system', content: '処理を中断しました' }]); }
@@ -300,12 +300,20 @@ export default function BridgeClient() {
     setMessages([]);
   };
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const handleSend = () => {
     const text = input.trim();
     if (!text || running) return;
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    setMessages(prev => [...prev, { role: 'user', content: text, ts: Date.now() }]);
     send({ type: 'message', content: text });
     setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = '44px';
+  };
+
+  const handleLock = () => {
+    sessionStorage.removeItem('bridge_unlocked');
+    setUnlocked(false);
   };
 
   if (!unlocked) return <PinScreen onUnlock={() => setUnlocked(true)} />;
@@ -345,11 +353,16 @@ export default function BridgeClient() {
         </div>
         {view === 'chat' && !running && messages.length > 0 && (
           <button onClick={clearHistory}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:text-red-400 transition-all active:scale-90"
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
             style={{ background: 'rgba(255,255,255,0.05)' }}>
             <Trash2 size={14} />
           </button>
         )}
+        <button onClick={handleLock}
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
+          style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <Lock size={14} />
+        </button>
         {running && (
           <button onClick={() => send({ type: 'abort' })}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-red-400 transition-all active:scale-90"
@@ -405,14 +418,21 @@ export default function BridgeClient() {
                     {m.content}
                   </span>
                 ) : (
-                  <div className="max-w-[88%] rounded-2xl px-4 py-3"
-                    style={m.role === 'user'
-                      ? { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', borderBottomRightRadius: 4 }
-                      : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderBottomLeftRadius: 4 }}>
-                    <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed">{m.content}</pre>
-                    {m.streaming && (
-                      <span className="inline-block w-2 h-4 ml-0.5 align-middle"
-                        style={{ background: '#38bdf8', animation: 'blink 0.7s step-end infinite' }} />
+                  <div className="max-w-[88%]">
+                    <div className="rounded-2xl px-4 py-3"
+                      style={m.role === 'user'
+                        ? { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', borderBottomRightRadius: 4 }
+                        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderBottomLeftRadius: 4 }}>
+                      <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed">{m.content}</pre>
+                      {m.streaming && (
+                        <span className="inline-block w-2 h-4 ml-0.5 align-middle"
+                          style={{ background: '#38bdf8', animation: 'blink 0.7s step-end infinite' }} />
+                      )}
+                    </div>
+                    {m.ts && !m.streaming && (
+                      <p className={`text-gray-700 text-xs mt-1 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                        {new Date(m.ts).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     )}
                   </div>
                 )}
@@ -436,14 +456,19 @@ export default function BridgeClient() {
             style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
             <div className="flex gap-2 items-end">
               <textarea
+                ref={textareaRef}
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={e => {
+                  setInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                }}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                 placeholder="指示を入力..."
-                rows={2}
+                rows={1}
                 disabled={running || !macOnline}
                 className="flex-1 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 resize-none outline-none transition-all disabled:opacity-30"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '44px', maxHeight: '120px' }}
               />
               <button
                 onClick={handleSend}
