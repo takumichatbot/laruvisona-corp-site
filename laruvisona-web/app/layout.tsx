@@ -17,6 +17,7 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata = {
+  metadataBase: new URL('https://laruvisona.jp'),
   title: 'LARUVisona | 「想像」を「実装」する',
   description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
   openGraph: {
