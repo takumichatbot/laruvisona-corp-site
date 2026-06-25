@@ -1,69 +1,68 @@
-const CACHE_NAME = 'laruhp-v1';
-const STATIC_ASSETS = [
-  '/laruHP/dashboard',
-  '/manifest.json',
-  '/laruhp_logo.png',
-];
+const CACHE_NAME = 'bridge-v3';
+const STATIC_ASSETS = ['/manifest.json', '/laruhp_logo.png'];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  // Network-first for API calls
-  if (event.request.url.includes('/api/')) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
+self.addEventListener('fetch', e => {
+  if (e.request.url.includes('/api/') || e.request.url.includes('/relay')) {
+    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
     return;
   }
-  // Cache-first for static assets
-  event.respondWith(
-    caches.match(event.request).then((cached) =>
-      cached || fetch(event.request).then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      const networkFetch = fetch(e.request).then(res => {
+        if (res.ok && res.type !== 'opaque') caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
         return res;
-      })
-    )
+      }).catch(() => cached);
+      return cached || networkFetch;
+    })
   );
 });
 
 // Push notifications
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
-  const options = {
-    body: data.body || '新しいお知らせがあります',
-    icon: '/laruhp_logo.png',
-    badge: '/laruhp_logo.png',
-    data: { url: data.url || '/laruHP/dashboard' },
-    vibrate: [200, 100, 200],
-  };
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'LARU HP', options)
+self.addEventListener('push', e => {
+  const data = e.data?.json() ?? {};
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'Bridge', {
+      body: data.body || 'タスクが完了しました',
+      icon: '/laruhp_logo.png',
+      badge: '/laruhp_logo.png',
+      tag: data.tag || 'bridge',
+      data: { url: data.url || '/laruHP/bridge' },
+      vibrate: [100, 50, 200],
+    })
   );
 });
 
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/laruHP/dashboard';
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
-      const found = wins.find((w) => w.url.includes('/laruHP/'));
-      if (found) { found.focus(); found.navigate(url); }
-      else clients.openWindow(url);
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/laruHP/bridge';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(wins => {
+      const match = wins.find(w => w.url.includes('/laruHP'));
+      if (match) { match.focus(); match.postMessage({ type: 'notification_click', url }); }
+      else self.clients.openWindow(url);
     })
   );
+});
+
+// Background sync
+self.addEventListener('sync', e => {
+  if (e.tag === 'bridge-sync') {
+    e.waitUntil(
+      self.clients.matchAll().then(clients =>
+        clients.forEach(c => c.postMessage({ type: 'bg_sync' }))
+      )
+    );
+  }
 });

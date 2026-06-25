@@ -1,11 +1,11 @@
 {
-  "name": "LARU HP",
-  "short_name": "LARU HP",
-  "description": "AIホームページビルダー - 月額999円〜",
-  "start_url": "/laruHP/dashboard",
+  "name": "Bridge — AI Coding Assistant",
+  "short_name": "Bridge",
+  "description": "Mac 上で Claude Code を操作する AI コーディングアシスタント",
+  "start_url": "/laruHP/bridge",
   "display": "standalone",
   "background_color": "#030712",
-  "theme_color": "#0ea5e9",
+  "theme_color": "#6366f1",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -21,6 +21,31 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity"],
-  "lang": "ja"
+  "shortcuts": [
+    {
+      "name": "コードを書く",
+      "short_name": "Code",
+      "description": "Claude Code に指示を送信",
+      "url": "/laruHP/bridge?mode=code",
+      "icons": [{ "src": "/laruhp_logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "AI Team 起動",
+      "short_name": "Team",
+      "description": "AI Software Team でタスクを実行",
+      "url": "/laruHP/bridge?mode=team",
+      "icons": [{ "src": "/laruhp_logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Chat",
+      "short_name": "Chat",
+      "description": "Claude と会話",
+      "url": "/laruHP/bridge?mode=chat",
+      "icons": [{ "src": "/laruhp_logo.png", "sizes": "96x96" }]
+    }
+  ],
+  "categories": ["developer-tools", "productivity"],
+  "lang": "ja",
+  "dir": "ltr",
+  "prefer_related_applications": false
 }

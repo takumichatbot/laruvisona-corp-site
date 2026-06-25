@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle, Users, MoreHorizontal, SlidersHorizontal, Clock, Target, Brain, Activity, GitCommit } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle, Users, MoreHorizontal, SlidersHorizontal, Clock, Target, Brain, Activity, GitCommit, Star } from 'lucide-react';
 import GeminiLive from './GeminiLive';
 import SchedulePanel, { type Schedule } from './SchedulePanel';
 import ToolsPanel from './ToolsPanel';
@@ -11,6 +11,10 @@ import BrainPanel from './BrainPanel';
 import ProductionPanel from './ProductionPanel';
 import RealtimeVoice from './RealtimeVoice';
 import ConciergePanel from './ConciergePanel';
+import HomePanel from './HomePanel';
+import PromptLibrary from './PromptLibrary';
+import { addRecord, getRecords } from './TaskHistoryStore';
+import { Home } from 'lucide-react';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -238,7 +242,7 @@ export default function BridgeClient() {
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   // モード切り替え: code / chat / git / files / team / pm / brain / production
-  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team' | 'pm' | 'brain' | 'production' | 'concierge'>('code');
+  const [mode, setMode] = useState<'home' | 'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team' | 'pm' | 'brain' | 'production' | 'concierge' | 'prompts' | 'history'>('home');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
@@ -395,6 +399,53 @@ export default function BridgeClient() {
     }).catch(() => {});
   }, [orchestrateComplete]);
 
+  // タスク履歴トラッキング
+  const taskStartRef = useRef<number>(0);
+  useEffect(() => { if (running) taskStartRef.current = Date.now(); }, [running]);
+  useEffect(() => {
+    if (!running && taskStartRef.current > 0 && currentProject && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      const input = messages.findLast(m => m.role === 'user')?.content ?? '';
+      if (input && last?.role === 'assistant') {
+        addRecord({
+          projectName: currentProject.name, type: 'code', input: input.slice(0, 100),
+          outputPreview: last.content.slice(0, 120), status: 'success',
+          ts: Date.now(), durationMs: Date.now() - taskStartRef.current,
+        });
+        taskStartRef.current = 0;
+      }
+    }
+  }, [running, currentProject]);
+
+  const chatStartRef = useRef<number>(0);
+  useEffect(() => { if (chatRunning) chatStartRef.current = Date.now(); }, [chatRunning]);
+  useEffect(() => {
+    if (!chatRunning && chatStartRef.current > 0 && currentProject && chatMessages.length > 0) {
+      const userMsg = chatMessages.findLast(m => m.role === 'user')?.content ?? '';
+      if (userMsg) {
+        addRecord({
+          projectName: currentProject.name, type: 'chat', input: userMsg.slice(0, 100),
+          outputPreview: '', status: 'success',
+          ts: Date.now(), durationMs: Date.now() - chatStartRef.current,
+        });
+        chatStartRef.current = 0;
+      }
+    }
+  }, [chatRunning, currentProject]);
+
+  useEffect(() => {
+    if (orchestrateComplete && currentProject) {
+      const failed = Object.values(taskStatuses as Record<string, string>).filter(s => s === 'failed').length;
+      const done = Object.values(taskStatuses as Record<string, string>).filter(s => s === 'done').length;
+      addRecord({
+        projectName: currentProject.name, type: 'team', input: `AI Team: ${done + failed}タスク`,
+        outputPreview: `完了 ${done}件 / 失敗 ${failed}件`,
+        status: failed === 0 ? 'success' : 'failed',
+        ts: Date.now(), durationMs: 0, taskCount: done + failed,
+      });
+    }
+  }, [orchestrateComplete, currentProject]);
+
   // H: Track phase start time & load stored estimates
   useEffect(() => {
     if (!orchestratePhase || !currentProject) return;
@@ -457,6 +508,36 @@ export default function BridgeClient() {
       const mem = JSON.parse(localStorage.getItem('bridge_memories') || '[]');
       if (Array.isArray(mem)) setMemories(mem);
     } catch { /* ignore */ }
+    // セッション復元: mode
+    const savedMode = sessionStorage.getItem('bridge_mode') as typeof mode;
+    if (savedMode && savedMode !== 'home') setMode(savedMode);
+  }, []);
+
+  // セッション保存
+  useEffect(() => { sessionStorage.setItem('bridge_mode', mode); }, [mode]);
+
+  // セッション復元: project (projects 読込後)
+  useEffect(() => {
+    if (projects.length > 0 && !currentProject) {
+      const savedName = sessionStorage.getItem('bridge_project');
+      if (savedName) {
+        const p = projects.find(pr => pr.name === savedName);
+        if (p) { setCurrentProject(p); setMessages(loadHistory(p.id)); setView('chat'); }
+      }
+    }
+  }, [projects]);
+
+  useEffect(() => {
+    if (currentProject) sessionStorage.setItem('bridge_project', currentProject.name);
+  }, [currentProject]);
+
+  // URL パラメータからの mode 起動 (PWA shortcuts)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const m = sp.get('mode') as typeof mode | null;
+      if (m) setMode(m);
+    }
   }, []);
 
   useEffect(() => { if (unlocked) setRelayWs(getRelayWsUrl()); }, [unlocked]);
@@ -1141,10 +1222,10 @@ export default function BridgeClient() {
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5"
         style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
         {view === 'chat' && (
-          <button onClick={() => setView('projects')}
+          <button onClick={() => setMode('home')}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
             style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <ArrowLeft size={16} />
+            <Home size={16} />
           </button>
         )}
         <span className="flex-1 font-semibold text-sm tracking-wide"
@@ -1463,6 +1544,35 @@ export default function BridgeClient() {
             />
           )}
 
+          {/* Home Dashboard */}
+          {mode === 'home' && (
+            <HomePanel
+              key="home-panel"
+              projects={projects}
+              currentProject={currentProject}
+              macOnline={macOnline}
+              macCount={macList.length || (macOnline ? 1 : 0)}
+              orchestrateRunning={orchestrateRunning}
+              orchestrateComplete={orchestrateComplete}
+              onSelectProject={(p) => { selectProject(p); setMode('code'); }}
+              onNavigate={(m) => setMode(m as typeof mode)}
+              onRunPrompt={(prompt, m) => {
+                setInput(prompt);
+                setMode(m);
+              }}
+            />
+          )}
+
+          {/* Prompt Library */}
+          {mode === 'prompts' && (
+            <PromptLibrary
+              onRunPrompt={(prompt, m) => {
+                setInput(prompt);
+                setMode(m);
+              }}
+            />
+          )}
+
           {/* Concierge */}
           {mode === 'concierge' && (
             <ConciergePanel
@@ -1619,7 +1729,7 @@ export default function BridgeClient() {
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
               const dx = e.changedTouches[0].clientX - touchStartX.current;
-              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'team'];
+              const TAB_ORDER: typeof mode[] = ['home', 'code', 'chat', 'team'];
               if (Math.abs(dx) > 70) {
                 const cur = TAB_ORDER.indexOf(mode);
                 const next = dx < 0 ? Math.min(cur + 1, TAB_ORDER.length - 1) : Math.max(cur - 1, 0);
@@ -1906,15 +2016,15 @@ export default function BridgeClient() {
           style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(24px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="flex">
             {([
-              { id: 'code',  label: 'Code',  icon: MonitorSmartphone, color: '#a5b4fc' },
+              { id: 'home',  label: 'Home',  icon: Home,               color: '#c4b5fd' },
+              { id: 'code',  label: 'Code',  icon: MonitorSmartphone,  color: '#a5b4fc' },
               { id: 'chat',  label: 'Chat',  icon: Bot,                color: '#fcd34d' },
-              { id: 'git',   label: 'Git',   icon: GitBranch,          color: '#6ee7b7' },
               { id: 'team',  label: 'Team',  icon: Users,              color: '#818cf8' },
               { id: 'more',  label: 'More',  icon: MoreHorizontal,     color: '#9ca3af' },
             ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string }[]).map(tab => {
               const isMore = tab.id === 'more';
               const isActive = isMore
-                ? (['files', 'schedule', 'tools', 'github', 'pm', 'brain', 'production', 'concierge'] as string[]).includes(mode)
+                ? (['git', 'files', 'schedule', 'tools', 'github', 'pm', 'brain', 'production', 'concierge', 'prompts', 'history'] as string[]).includes(mode)
                 : mode === tab.id;
               const Icon = tab.icon;
               return (
@@ -1923,7 +2033,6 @@ export default function BridgeClient() {
                     if (isMore) { setShowMoreMenu(true); return; }
                     const m = tab.id as typeof mode;
                     setMode(m);
-                    if (m === 'git' && macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); }
                     if (m === 'team' && !fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined });
                   }}
                   className="flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-all active:scale-90 relative select-none">
@@ -2044,8 +2153,10 @@ export default function BridgeClient() {
                 { id: 'github',     label: 'GitHub',    icon: GitBranch,  color: '#d8b4fe', onSelect: () => {} },
                 { id: 'pm',         label: 'AI PM',     icon: Target,     color: '#fb923c', onSelect: () => {} },
                 { id: 'brain',      label: 'Brain',     icon: Brain,      color: '#a78bfa', onSelect: () => { if (macOnline) send({ type: 'brain_status', mac_id: selectedMacId || undefined }); } },
+                { id: 'git',        label: 'Git',      icon: GitBranch,  color: '#6ee7b7', onSelect: () => { if (macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); } } },
                 { id: 'production', label: '本番監視',  icon: Activity,   color: '#34d399', onSelect: () => {} },
                 { id: 'concierge',  label: 'ガイド',    icon: Bot,        color: '#818cf8', onSelect: () => {} },
+                { id: 'prompts',    label: 'Prompts',  icon: Star,       color: '#fbbf24', onSelect: () => {} },
               ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string; onSelect: () => void }[]).map(item => {
                 const Icon = item.icon;
                 const isActive = mode === item.id;
@@ -2158,6 +2269,11 @@ export default function BridgeClient() {
           from { opacity:0; transform:translateY(6px); }
           to { opacity:1; transform:translateY(0); }
         }
+        @keyframes panelIn {
+          from { opacity:0; transform:translateY(10px) scale(0.99); }
+          to { opacity:1; transform:translateY(0) scale(1); }
+        }
+        .panel-enter { animation: panelIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
         @keyframes pulse {
           0%,100% { opacity:0.4; } 50% { opacity:0.8; }
         }
