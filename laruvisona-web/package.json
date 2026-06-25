@@ -33,6 +33,7 @@
     "sharp": "^0.35.1",
     "stripe": "^22.2.1",
     "three": "^0.183.2",
+    "web-push": "^3.6.7",
     "ws": "^8.21.0"
   },
   "devDependencies": {
@@ -41,6 +42,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",

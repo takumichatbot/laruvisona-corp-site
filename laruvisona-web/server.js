@@ -3,10 +3,22 @@ const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
 const jwt = require('jsonwebtoken');
+const webpush = require('web-push');
+const fs = require('fs');
+const path = require('path');
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '3000', 10);
 const SECRET_KEY = process.env.JWT_SECRET || 'change-me';
+const SUB_FILE = path.join('/tmp', 'bridge_push_sub.json');
+
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:' + (process.env.VAPID_EMAIL || 'admin@laruvisona.jp'),
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
 
 function verify(token) {
   try { jwt.verify(token, SECRET_KEY); return true; } catch { return false; }
@@ -14,6 +26,14 @@ function verify(token) {
 
 function safeSend(ws, data) {
   try { if (ws.readyState === 1) ws.send(JSON.stringify(data)); } catch {}
+}
+
+async function sendPushNotification(payload) {
+  if (!process.env.VAPID_PUBLIC_KEY) return;
+  try {
+    const sub = JSON.parse(fs.readFileSync(SUB_FILE, 'utf-8'));
+    await webpush.sendNotification(sub, JSON.stringify(payload));
+  } catch { /* no subscription or send failed */ }
 }
 
 const app = next({ dev });
@@ -60,6 +80,20 @@ app.prepare().then(() => {
         try {
           const msg = JSON.parse(data.toString());
           clients.forEach(c => safeSend(c, msg));
+
+          // Push notification when Claude Code finishes
+          if (msg.type === 'done') {
+            const activeClients = clients.filter(c => c.readyState === 1);
+            // Send push when no clients are connected (phone closed the app)
+            if (activeClients.length === 0) {
+              const ok = msg.exit_code === 0;
+              sendPushNotification({
+                title: ok ? 'Claude Code 完了' : 'Claude Code エラー',
+                body: ok ? '実行が正常に完了しました' : `終了コード: ${msg.exit_code}`,
+                url: '/laruHP/bridge',
+              });
+            }
+          }
         } catch {}
       });
       ws.on('close', () => {

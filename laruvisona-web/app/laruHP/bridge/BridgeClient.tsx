@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon } from 'lucide-react';
 import GeminiLive from './GeminiLive';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
@@ -233,6 +233,12 @@ export default function BridgeClient() {
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
+  // プリセット指示
+  const [presets, setPresets] = useState<string[]>([]);
+  const [showPresetAdd, setShowPresetAdd] = useState(false);
+  const [presetInput, setPresetInput] = useState('');
+  // Claude Code モデル選択
+  const [codeModel, setCodeModel] = useState('');
   // Gemini
   const [enhanceMode, setEnhanceMode] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
@@ -246,6 +252,11 @@ export default function BridgeClient() {
 
   useEffect(() => {
     if (sessionStorage.getItem('bridge_unlocked') === '1') setUnlocked(true);
+    // プリセット読み込み
+    try {
+      const saved = JSON.parse(localStorage.getItem('bridge_presets') || '[]');
+      if (Array.isArray(saved)) setPresets(saved);
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { if (unlocked) setRelayWs(getRelayWsUrl()); }, [unlocked]);
@@ -291,6 +302,15 @@ export default function BridgeClient() {
       }
       if (m.type === 'done') {
         setRunning(false);
+        // バイブレーション
+        if ('vibrate' in navigator) navigator.vibrate(m.exit_code === 0 ? [100, 50, 100] : [300]);
+        // フォアグラウンド通知
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          new Notification(m.exit_code === 0 ? 'Claude Code 完了' : 'Claude Code エラー', {
+            body: m.exit_code === 0 ? '実行が正常に完了しました' : `終了コード: ${m.exit_code}`,
+            icon: '/laruhp_logo.png',
+          });
+        }
         setMessages(prev => {
           const updated = (() => {
             const last = prev[prev.length - 1];
@@ -330,6 +350,38 @@ export default function BridgeClient() {
 
   const newConversation = () => {
     send({ type: 'new_conversation' });
+  };
+
+  // プリセット管理
+  const savePreset = (text: string) => {
+    if (!text.trim() || presets.includes(text.trim())) return;
+    const next = [...presets, text.trim()].slice(-10);
+    setPresets(next);
+    localStorage.setItem('bridge_presets', JSON.stringify(next));
+  };
+  const removePreset = (i: number) => {
+    const next = presets.filter((_, idx) => idx !== i);
+    setPresets(next);
+    localStorage.setItem('bridge_presets', JSON.stringify(next));
+  };
+
+  // Push 通知サブスクリプション登録
+  const registerPush = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      });
+      await fetch('/api/bridge/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub }),
+      });
+    } catch { /* vapid not set up */ }
   };
 
   const handleChatSend = async () => {
@@ -498,7 +550,7 @@ export default function BridgeClient() {
     }
 
     setMessages(prev => [...prev, { role: 'user', content: finalText, ts: Date.now() }]);
-    send({ type: 'message', content: finalText });
+    send({ type: 'message', content: finalText, model: codeModel || undefined });
   };
 
   const handleLock = () => {
@@ -570,6 +622,13 @@ export default function BridgeClient() {
             <Trash2 size={14} />
           </button>
         )}
+        {'Notification' in (typeof window !== 'undefined' ? window : {}) && Notification.permission !== 'granted' && (
+          <button onClick={registerPush}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-yellow-500 active:scale-90 transition-all"
+            style={{ background: 'rgba(234,179,8,0.1)' }} title="通知を有効化">
+            <span className="text-xs">🔔</span>
+          </button>
+        )}
         <button onClick={handleLock}
           className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
           style={{ background: 'rgba(255,255,255,0.05)' }}>
@@ -633,6 +692,42 @@ export default function BridgeClient() {
               Claude Chat
             </button>
           </div>
+
+          {/* プリセット指示バー */}
+          {(presets.length > 0 || showPresetAdd) && (
+            <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto border-b border-white/5"
+              style={{ background: 'rgba(0,0,0,0.3)', scrollbarWidth: 'none' }}>
+              {presets.map((p, i) => (
+                <div key={i} className="flex items-center gap-1 flex-shrink-0 group">
+                  <button onClick={() => setInput(p)}
+                    className="px-3 py-1 rounded-full text-xs text-gray-400 whitespace-nowrap transition-all active:scale-90 hover:text-white"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    {p.length > 20 ? p.slice(0, 20) + '…' : p}
+                  </button>
+                  <button onClick={() => removePreset(i)}
+                    className="w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ background: 'rgba(239,68,68,0.3)' }}>
+                    <XIcon size={8} className="text-red-400" />
+                  </button>
+                </div>
+              ))}
+              {showPresetAdd ? (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <input value={presetInput} onChange={e => setPresetInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { savePreset(presetInput); setPresetInput(''); setShowPresetAdd(false); }
+                      if (e.key === 'Escape') { setShowPresetAdd(false); setPresetInput(''); }
+                    }}
+                    placeholder="指示を入力..." autoFocus
+                    className="w-36 px-2 py-1 rounded-full text-xs text-white outline-none"
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)' }} />
+                  <button onClick={() => { savePreset(presetInput); setPresetInput(''); setShowPresetAdd(false); }}
+                    className="px-2 py-1 rounded-full text-xs text-emerald-400"
+                    style={{ background: 'rgba(52,211,153,0.1)' }}>追加</button>
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {/* メッセージリスト */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -740,14 +835,31 @@ export default function BridgeClient() {
                 {enhancing ? <div className="w-3 h-3 border border-indigo-400 border-t-transparent rounded-full animate-spin" /> : <Sparkles size={12} />}
                 <span>強化</span>
               </button>
-              {/* Codeモード: Gemini Live */}
+              {/* プリセット追加 */}
+              <button onClick={() => setShowPresetAdd(v => !v)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                style={{ background: showPresetAdd ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.05)', border: showPresetAdd ? '1px solid rgba(52,211,153,0.3)' : 'none' }}
+                title="プリセット追加">
+                <Plus size={14} className={showPresetAdd ? 'text-emerald-400' : 'text-gray-500'} />
+              </button>
+              {/* Codeモード: モデル選択 + Gemini Live */}
               {mode === 'code' && (
-                <button onClick={() => setLiveOpen(true)} disabled={!macOnline || running}
-                  className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40 ml-auto"
-                  style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#c4b5fd' }}>
-                  <Radio size={12} />
-                  <span>Live</span>
-                </button>
+                <div className="flex items-center gap-1 ml-auto">
+                  <select value={codeModel} onChange={e => setCodeModel(e.target.value)} disabled={running}
+                    className="h-8 px-2 rounded-lg text-xs outline-none transition-all"
+                    style={{ background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.2)', color: '#7dd3fc' }}>
+                    <option value="" style={{ background: '#111', color: '#fff' }}>デフォルト</option>
+                    <option value="claude-haiku-4-5-20251001" style={{ background: '#111', color: '#fff' }}>Haiku (速い)</option>
+                    <option value="claude-sonnet-4-6" style={{ background: '#111', color: '#fff' }}>Sonnet (賢い)</option>
+                    <option value="claude-opus-4-8" style={{ background: '#111', color: '#fff' }}>Opus (最高)</option>
+                  </select>
+                  <button onClick={() => setLiveOpen(true)} disabled={!macOnline || running}
+                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40"
+                    style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#c4b5fd' }}>
+                    <Radio size={12} />
+                    <span>Live</span>
+                  </button>
+                </div>
               )}
               {/* Chatモード: モデル選択 */}
               {mode === 'chat' && (
