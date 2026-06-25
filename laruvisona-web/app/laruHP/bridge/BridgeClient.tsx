@@ -10,6 +10,7 @@ import PMPanel from './PMPanel';
 import BrainPanel from './BrainPanel';
 import ProductionPanel from './ProductionPanel';
 import RealtimeVoice from './RealtimeVoice';
+import ConciergePanel from './ConciergePanel';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -237,7 +238,7 @@ export default function BridgeClient() {
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   // モード切り替え: code / chat / git / files / team / pm / brain / production
-  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team' | 'pm' | 'brain' | 'production'>('code');
+  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team' | 'pm' | 'brain' | 'production' | 'concierge'>('code');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
@@ -291,6 +292,7 @@ export default function BridgeClient() {
   const [orchestrateComplete, setOrchestrateComplete] = useState(false);
   const [orchestrateReviewResult, setOrchestrateReviewResult] = useState('');
   const [orchestrateTestResult, setOrchestrateTestResult] = useState<{ output: string; passed: boolean } | null>(null);
+  const [securityAuditResult, setSecurityAuditResult] = useState<{ score: number; issues: { severity: string; desc: string; fix: string }[]; summary: string } | null>(null);
   const [fileTree, setFileTree] = useState('');
   // 複数Mac
   const [macList, setMacList] = useState<{ id: string; name: string }[]>([]);
@@ -539,6 +541,20 @@ export default function BridgeClient() {
         setTestRunning(false);
         setTestPassed(r.error ? false : (r.passed ?? r.exit_code === 0));
         if (r.error) setTestOutput(prev => prev + '\n[エラー] ' + r.error);
+      }
+      // AA: generate_tests result → pass to TeamPanel via orchestrateTestResult
+      if (m.type === 'generate_tests_result') {
+        const r = m as unknown as { output: string; passed: boolean };
+        setOrchestrateTestResult({ output: r.output, passed: r.passed });
+      }
+      // AH: security_audit result
+      if (m.type === 'security_audit_result') {
+        setSecurityAuditResult((m as unknown) as { score: number; issues: { severity: string; desc: string; fix: string }[]; summary: string });
+      }
+      // AC: auto-debug retry notification
+      if (m.type === 'orchestrate_task_auto_retry') {
+        const r = m as unknown as { task_id: string; attempt: number };
+        setTaskStatuses(prev => ({ ...prev, [r.task_id]: 'running' }));
       }
       // トンネル
       if (m.type === 'tunnel_started') {
@@ -1443,6 +1459,20 @@ export default function BridgeClient() {
               phaseEstimates={phaseEstimates}
               checkpoints={checkpoints}
               orchestrateDiff={gitDiff}
+              securityAuditResult={securityAuditResult}
+            />
+          )}
+
+          {/* Concierge */}
+          {mode === 'concierge' && (
+            <ConciergePanel
+              macOnline={macOnline}
+              currentProject={currentProject}
+              currentMode={mode}
+              orchestrateRunning={orchestrateRunning}
+              orchestrateComplete={orchestrateComplete}
+              failedTasks={Object.values(taskStatuses).filter(s => s === 'failed').length}
+              onNavigate={(m) => setMode(m as typeof mode)}
             />
           )}
 
@@ -1884,7 +1914,7 @@ export default function BridgeClient() {
             ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string }[]).map(tab => {
               const isMore = tab.id === 'more';
               const isActive = isMore
-                ? (['files', 'schedule', 'tools', 'github', 'pm', 'brain', 'production'] as string[]).includes(mode)
+                ? (['files', 'schedule', 'tools', 'github', 'pm', 'brain', 'production', 'concierge'] as string[]).includes(mode)
                 : mode === tab.id;
               const Icon = tab.icon;
               return (
@@ -2015,6 +2045,7 @@ export default function BridgeClient() {
                 { id: 'pm',         label: 'AI PM',     icon: Target,     color: '#fb923c', onSelect: () => {} },
                 { id: 'brain',      label: 'Brain',     icon: Brain,      color: '#a78bfa', onSelect: () => { if (macOnline) send({ type: 'brain_status', mac_id: selectedMacId || undefined }); } },
                 { id: 'production', label: '本番監視',  icon: Activity,   color: '#34d399', onSelect: () => {} },
+                { id: 'concierge',  label: 'ガイド',    icon: Bot,        color: '#818cf8', onSelect: () => {} },
               ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string; onSelect: () => void }[]).map(item => {
                 const Icon = item.icon;
                 const isActive = mode === item.id;

@@ -5,13 +5,15 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    const { messages, projectName, model = 'claude-haiku-4-5-20251001', context } = await req.json();
+    const { messages, projectName, model = 'claude-haiku-4-5-20251001', context, systemOverride } = await req.json();
 
     const contextStr = context?.length
       ? `\n\n---\n以下はプロジェクトの関連コードです:\n${(context as { path: string; content: string }[]).map(c => `# ${c.path}\n\`\`\`\n${c.content.slice(0, 2000)}\n\`\`\``).join('\n\n')}\n---`
       : '';
 
-    const systemPrompt = `あなたは「Laru Bridge」のAIアシスタントです。
+    const systemPrompt = systemOverride
+      ? (systemOverride as string)
+      : `あなたは「Laru Bridge」のAIアシスタントです。
 ユーザーのプロジェクト「${projectName}」の開発をサポートしています。
 - 日本語で回答してください
 - コードに関する質問、設計相談、実装アドバイスが得意です
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
       async start(controller) {
         for await (const chunk of stream) {
           if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`));
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk.delta.text, delta: chunk.delta.text })}\n\n`));
           }
         }
         const finalMsg = await stream.finalMessage();

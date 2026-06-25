@@ -142,6 +142,7 @@ interface Props {
   phaseEstimates?: Record<string, number>;
   checkpoints?: Record<string, { success: boolean; message: string }>;
   orchestrateDiff?: string;
+  securityAuditResult?: { score: number; issues: { severity: string; desc: string; fix: string }[]; summary: string } | null;
 }
 
 const EXAMPLES = [
@@ -190,7 +191,7 @@ export default function TeamPanel({
   orchestrateRunning, orchestratePhase, taskStatuses, taskOutputs,
   orchestrateComplete, orchestrateReviewResult, orchestrateTestResult,
   onResetOrchestrate, initialDirective, macList = [],
-  phaseEstimates = {}, checkpoints = {}, orchestrateDiff = '',
+  phaseEstimates = {}, checkpoints = {}, orchestrateDiff = '', securityAuditResult: securityAuditProp = null,
 }: Props) {
   const [step, setStep] = useState<'input' | 'planning' | 'review' | 'executing' | 'done'>('input');
   const [directive, setDirective] = useState('');
@@ -213,11 +214,19 @@ export default function TeamPanel({
   // U: o4-mini plan verification
   const [verification, setVerification] = useState<{ valid: boolean; score: number; issues: { severity: string; desc: string }[]; suggestions: string[]; summary: string } | null>(null);
   const [verifying, setVerifying] = useState(false);
+  // AA: test generation
+  const [testResult, setTestResult] = useState<{ output: string; passed: boolean } | null>(orchestrateTestResult ?? null);
+  const [testRunning, setTestRunning] = useState(false);
+  // AH: security audit
+  const [securityResult, setSecurityResult] = useState<{ score: number; issues: { severity: string; desc: string; fix: string }[]; summary: string } | null>(securityAuditProp ?? null);
+  const [auditRunning, setAuditRunning] = useState(false);
   const svRef = useRef<HTMLInputElement>(null);
   const liveTermRef = useRef<HTMLDivElement>(null);
   const planStreamRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
+  useEffect(() => { if (orchestrateTestResult) { setTestResult(orchestrateTestResult); setTestRunning(false); } }, [orchestrateTestResult]);
+  useEffect(() => { if (securityAuditProp) { setSecurityResult(securityAuditProp); setAuditRunning(false); } }, [securityAuditProp]);
 
   useEffect(() => {
     const saved = localStorage.getItem(`bridge_agent_config_${projectName}`);
@@ -824,6 +833,61 @@ export default function TeamPanel({
               <p className="font-bold text-white text-sm">{failedTasks > 0 ? '一部失敗' : 'チーム完了！'}</p>
               <p className="text-gray-500 text-xs">{failedTasks > 0 ? `${doneTasks - failedTasks} 成功 / ${failedTasks} 失敗` : `全${doneTasks}タスク完了`}</p>
             </div>
+            {/* AA + AH: Post-completion actions */}
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => { setTestRunning(true); onSend({ type: 'generate_tests', plan, projectName }); }}
+                disabled={testRunning || !macOnline}
+                className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold active:scale-95 disabled:opacity-40 transition-all"
+                style={{ background: testRunning ? 'rgba(251,191,36,0.15)' : 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fcd34d' }}>
+                <FlaskConical size={11} className={testRunning ? 'animate-pulse' : ''} />
+                {testRunning ? 'テスト生成中...' : 'テスト自動生成'}
+              </button>
+              <button onClick={() => { setAuditRunning(true); onSend({ type: 'security_audit', plan, projectName }); }}
+                disabled={auditRunning || !macOnline}
+                className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold active:scale-95 disabled:opacity-40 transition-all"
+                style={{ background: auditRunning ? 'rgba(248,113,113,0.15)' : 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', color: '#fca5a5' }}>
+                <ShieldAlert size={11} className={auditRunning ? 'animate-pulse' : ''} />
+                {auditRunning ? '監査中...' : 'セキュリティ監査'}
+              </button>
+            </div>
+
+            {/* AA: Test results */}
+            {testResult && (
+              <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${testResult.passed ? 'rgba(52,211,153,0.25)' : 'rgba(239,68,68,0.25)'}` }}>
+                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: testResult.passed ? 'rgba(52,211,153,0.06)' : 'rgba(239,68,68,0.06)' }}>
+                  <FlaskConical size={12} style={{ color: testResult.passed ? '#34d399' : '#f87171' }} />
+                  <span className="text-xs font-semibold" style={{ color: testResult.passed ? '#34d399' : '#f87171' }}>
+                    テスト {testResult.passed ? 'パス ✓' : '失敗 ✗'}
+                  </span>
+                </div>
+                <div className="px-3 pb-3 max-h-48 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.4)' }}>
+                  <div className="text-xs font-mono leading-relaxed pt-2">{colorizeTerminal(testResult.output.slice(-3000))}</div>
+                </div>
+              </div>
+            )}
+
+            {/* AH: Security audit results */}
+            {securityResult && (
+              <div className="rounded-xl p-3 space-y-2" style={{ background: securityResult.score >= 80 ? 'rgba(52,211,153,0.05)' : 'rgba(239,68,68,0.05)', border: `1px solid ${securityResult.score >= 80 ? 'rgba(52,211,153,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                <div className="flex items-center gap-2">
+                  <ShieldAlert size={13} style={{ color: securityResult.score >= 80 ? '#34d399' : '#f87171' }} />
+                  <span className="text-xs font-semibold" style={{ color: securityResult.score >= 80 ? '#34d399' : '#f87171' }}>
+                    セキュリティスコア {securityResult.score}/100
+                  </span>
+                </div>
+                <p className="text-gray-400 text-xs">{securityResult.summary}</p>
+                {securityResult.issues.map((iss, i) => (
+                  <div key={i} className="rounded-lg p-2 space-y-1" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                    <div className="flex gap-2 text-xs">
+                      <span>{iss.severity === 'high' ? '🔴' : iss.severity === 'medium' ? '🟡' : '🔵'}</span>
+                      <span className="text-gray-300">{iss.desc}</span>
+                    </div>
+                    {iss.fix && <p className="text-gray-600 text-xs pl-5">→ {iss.fix}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* M: Diff viewer */}
             {orchestrateDiff && (
               <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
