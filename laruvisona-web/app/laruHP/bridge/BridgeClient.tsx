@@ -330,7 +330,7 @@ export default function BridgeClient() {
   const [showPresetAdd, setShowPresetAdd] = useState(false);
   const [presetInput, setPresetInput] = useState('');
   // Claude Code モデル選択
-  const [codeModel, setCodeModel] = useState('');
+  const [codeModel, setCodeModel] = useState('claude-haiku-4-5-20251001');
   // Gemini
   const [enhanceMode, setEnhanceMode] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
@@ -839,6 +839,15 @@ export default function BridgeClient() {
       }
       if (m.type === 'aborted') { setRunning(false); setMessages(prev => [...prev, { role: 'system', content: '処理を中断しました' }]); }
       if (m.type === 'error') { setRunning(false); setMessages(prev => [...prev, { role: 'system', content: m.message || 'エラー' }]); }
+      if (m.type === 'missed_output') {
+        const r = m as unknown as { output: string; exit_code: number; project: string };
+        setMessages(prev => [
+          ...prev,
+          { role: 'system', content: `📬 ページを閉じている間に完了しました（${r.exit_code === 0 ? '成功' : 'エラー'}）` },
+          { role: 'assistant', content: r.output, streaming: false, ts: Date.now() },
+        ]);
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+      }
     });
     return unsub;
   }, [addListener]);
@@ -2145,8 +2154,19 @@ export default function BridgeClient() {
               )}
               {showAttachMenu && <div className="fixed inset-0 z-40" onClick={() => setShowAttachMenu(false)} />}
 
-              {/* メイン入力行: [+] [textarea] [↑] */}
+              {/* メイン入力行: [model] [+] [textarea] [↑] */}
               <div className="flex gap-2 items-end px-3 py-2.5">
+                {/* モデル切り替え（code モードのみ） */}
+                {mode === 'code' && (
+                  <button
+                    onClick={() => setCodeModel(m => m === 'claude-haiku-4-5-20251001' ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001')}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-bold flex-shrink-0 transition-all active:scale-90"
+                    style={codeModel === 'claude-haiku-4-5-20251001'
+                      ? { background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.3)', color: '#34d399' }
+                      : { background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
+                    {codeModel === 'claude-haiku-4-5-20251001' ? '⚡' : '◑'}
+                  </button>
+                )}
                 {/* + ボタン */}
                 <button
                   onClick={() => setShowAttachMenu(v => !v)}
