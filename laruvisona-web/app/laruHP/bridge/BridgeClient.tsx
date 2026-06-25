@@ -1458,11 +1458,11 @@ export default function BridgeClient() {
 
   if (!unlocked) return <PinScreen onUnlock={() => setUnlocked(true)} />;
 
-  if (liveOpen && currentProject) return (
+  if (liveOpen) return (
     <GeminiLive
-      projectName={currentProject.name}
+      projectName={currentProject?.name || ''}
       recentHistory={messages.slice(-6).map(m => ({ role: m.role, content: m.content }))}
-      onInstruction={(text) => { setInput(text); }}
+      onInstruction={(text) => { setInput(text); setMode('code'); }}
       onClose={() => setLiveOpen(false)}
     />
   );
@@ -2697,7 +2697,7 @@ export default function BridgeClient() {
                       {macList.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   )}
-                  <button onClick={() => { setLiveOpen(true); setShowToolSheet(false); }} disabled={!macOnline || running}
+                  <button onClick={() => { setLiveOpen(true); setShowToolSheet(false); }} disabled={running}
                     className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium active:scale-95 disabled:opacity-40"
                     style={{ background: LC.skyLight, border: `1px solid ${LC.skyMid}`, color: LC.sky }}>
                     <Radio size={14} /><span>Gemini Live</span>
@@ -2705,25 +2705,41 @@ export default function BridgeClient() {
                 </div>
               )}
 
-              {/* 機能5: iOS ショートカット設定 */}
-              <div className="rounded-2xl p-4" style={{ background: LC.beige, border: `1px solid ${LC.border}` }}>
-                <p className="font-semibold text-sm mb-2" style={{ color: LC.text }}>iOS ショートカット連携</p>
-                <p className="text-xs mb-3" style={{ color: LC.textSub }}>
-                  ショートカットアプリから Bridge にタスクを送信できます。
-                </p>
-                <button
-                  onClick={() => {
-                    const url = `${window.location.origin}/api/bridge/quick`;
-                    navigator.clipboard.writeText(url).catch(() => {});
-                  }}
-                  className="w-full py-2.5 rounded-xl text-xs font-semibold text-white active:scale-95"
-                  style={{ background: `linear-gradient(135deg, ${LC.sky}, #0284C7)` }}>
-                  API URL をコピー
-                </button>
-                <p className="text-[10px] mt-2 text-center" style={{ color: LC.textMuted }}>
-                  {`POST: { "secret": "YOUR_PIN", "project": "...", "input": "..." }`}
-                </p>
-              </div>
+              {/* iOS ショートカット設定 */}
+              {(() => {
+                const apiUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/bridge/quick` : '';
+                const exampleBody = JSON.stringify({ secret: '(Bridge PIN)', project: currentProject?.id || '(project ID)', input: '(指示内容)' }, null, 2);
+                const [cpStep, setCpStep] = useState<number | null>(null);
+                const copyStep = (text: string, i: number) => { navigator.clipboard.writeText(text).catch(() => {}); setCpStep(i); setTimeout(() => setCpStep(null), 1500); };
+                return (
+                  <div className="rounded-2xl p-4 space-y-3" style={{ background: LC.beige, border: `1px solid ${LC.border}` }}>
+                    <p className="font-semibold text-sm" style={{ color: LC.text }}>📱 iOS ショートカット設定</p>
+                    <p className="text-xs" style={{ color: LC.textSub }}>Bridge を開かなくても iPhone からタスクを送れます。</p>
+                    {[
+                      { label: '① ショートカットアプリ → 新規 → 「URLの内容を取得」', copy: null },
+                      { label: '② URL（コピーして貼り付け）', copy: apiUrl },
+                      { label: '③ メソッド: POST　ヘッダー: Content-Type = application/json', copy: null },
+                      { label: '④ 本文 (JSON) をコピーして編集', copy: exampleBody },
+                    ].map((step, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <p className="text-[11px] leading-relaxed" style={{ color: LC.textSub }}>{step.label}</p>
+                        </div>
+                        {step.copy && (
+                          <button onClick={() => copyStep(step.copy!, i)}
+                            className="flex-shrink-0 text-[10px] px-2 py-1 rounded-lg active:scale-90 transition-all"
+                            style={{ background: cpStep === i ? 'rgba(16,185,129,0.15)' : LC.beigeAlt, color: cpStep === i ? LC.success : LC.textSub, border: `1px solid ${LC.border}` }}>
+                            {cpStep === i ? '✓' : 'コピー'}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <p className="text-[10px] pt-1" style={{ color: LC.textMuted }}>
+                      ※ 実行中は Bridge を開かなくてOK。完了後に Push 通知が届きます。
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
