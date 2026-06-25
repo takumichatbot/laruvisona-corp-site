@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio } from 'lucide-react';
+import GeminiLive from './GeminiLive';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -222,6 +223,14 @@ export default function BridgeClient() {
   const [continuing, setContinuing] = useState(false);
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
+  // Gemini
+  const [enhanceMode, setEnhanceMode] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [liveOpen, setLiveOpen] = useState(false);
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const voiceMediaRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const [summaries, setSummaries] = useState<Record<number, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const [relayWs, setRelayWs] = useState('');
 
@@ -273,8 +282,15 @@ export default function BridgeClient() {
       if (m.type === 'done') {
         setRunning(false);
         setMessages(prev => {
-          const last = prev[prev.length - 1];
-          return last?.streaming ? [...prev.slice(0, -1), { ...last, streaming: false, ts: Date.now() }] : prev;
+          const updated = (() => {
+            const last = prev[prev.length - 1];
+            return last?.streaming ? [...prev.slice(0, -1), { ...last, streaming: false, ts: Date.now() }] : prev;
+          })();
+          const lastMsg = updated[updated.length - 1];
+          if (lastMsg?.role === 'assistant' && lastMsg.content.length > 300) {
+            setTimeout(() => summarizeOutput(lastMsg.content, updated.length - 1), 300);
+          }
+          return updated;
         });
       }
       if (m.type === 'aborted') { setRunning(false); setMessages(prev => [...prev, { role: 'system', content: '処理を中断しました' }]); }
@@ -306,15 +322,103 @@ export default function BridgeClient() {
     send({ type: 'new_conversation' });
   };
 
+  const gemini = async (action: string, params: Record<string, unknown>) => {
+    const res = await fetch('/api/bridge/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...params }),
+    });
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    return d.result as string;
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      try {
+        const result = await gemini('image', { imageBase64: base64, mimeType: file.type });
+        setInput(result);
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+        }
+      } catch (err) {
+        console.error('Image analysis failed:', err);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleVoice = async () => {
+    if (voiceRecording) {
+      voiceMediaRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      voiceChunksRef.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        setVoiceRecording(false);
+        const blob = new Blob(voiceChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = (reader.result as string).split(',')[1];
+          try {
+            const text = await gemini('transcribe', { audioBase64: base64, mimeType: 'audio/webm' });
+            setInput(text);
+            if (textareaRef.current) {
+              textareaRef.current.style.height = 'auto';
+              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+            }
+          } catch (err) { console.error('Transcription failed:', err); }
+        };
+        reader.readAsDataURL(blob);
+      };
+      mr.start();
+      voiceMediaRef.current = mr;
+      setVoiceRecording(true);
+    } catch { console.error('Mic access denied'); }
+  };
+
+  const summarizeOutput = async (content: string, index: number) => {
+    if (!currentProject) return;
+    try {
+      const summary = await gemini('summarize', { content, projectName: currentProject.name });
+      setSummaries(prev => ({ ...prev, [index]: summary }));
+    } catch { /* サイレントフェイル */ }
+  };
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const text = input.trim();
     if (!text || running) return;
-    setMessages(prev => [...prev, { role: 'user', content: text, ts: Date.now() }]);
-    send({ type: 'message', content: text });
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = '44px';
+
+    let finalText = text;
+    if (enhanceMode && currentProject) {
+      setEnhancing(true);
+      try {
+        finalText = await gemini('enhance', {
+          input: text,
+          projectName: currentProject.name,
+          recentHistory: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
+        });
+      } catch { finalText = text; }
+      setEnhancing(false);
+    }
+
+    setMessages(prev => [...prev, { role: 'user', content: finalText, ts: Date.now() }]);
+    send({ type: 'message', content: finalText });
   };
 
   const handleLock = () => {
@@ -323,6 +427,15 @@ export default function BridgeClient() {
   };
 
   if (!unlocked) return <PinScreen onUnlock={() => setUnlocked(true)} />;
+
+  if (liveOpen && currentProject) return (
+    <GeminiLive
+      projectName={currentProject.name}
+      recentHistory={messages.slice(-6).map(m => ({ role: m.role, content: m.content }))}
+      onInstruction={(text) => { setInput(text); }}
+      onClose={() => setLiveOpen(false)}
+    />
+  );
 
   if (initError) return (
     <div className="fixed inset-0 bg-black flex items-center justify-center p-6">
@@ -453,6 +566,13 @@ export default function BridgeClient() {
                         {new Date(m.ts).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     )}
+                    {summaries[i] && (
+                      <div className="mt-2 rounded-xl px-3 py-2 text-xs leading-relaxed"
+                        style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
+                        <span className="text-violet-500 font-semibold mr-1">✦ Gemini要約</span>
+                        {summaries[i]}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -471,9 +591,42 @@ export default function BridgeClient() {
             <div ref={bottomRef} />
           </div>
 
-          <div className="px-3 py-3 border-t border-white/5"
+          <div className="border-t border-white/5"
             style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
-            <div className="flex gap-2 items-end">
+            {/* Gemini ツールバー */}
+            <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+              {/* 画像 */}
+              <label className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all active:scale-90 ${enhancing ? 'opacity-40 pointer-events-none' : ''}`}
+                style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <Camera size={14} className="text-gray-500" />
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+              </label>
+              {/* 音声 */}
+              <button onClick={handleVoice} disabled={enhancing}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-40"
+                style={{ background: voiceRecording ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)', border: voiceRecording ? '1px solid rgba(239,68,68,0.4)' : 'none' }}>
+                <Mic size={14} className={voiceRecording ? 'text-red-400' : 'text-gray-500'} />
+              </button>
+              {/* 強化モード */}
+              <button onClick={() => setEnhanceMode(v => !v)} disabled={enhancing}
+                className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40"
+                style={{
+                  background: enhanceMode ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
+                  border: enhanceMode ? '1px solid rgba(99,102,241,0.4)' : 'none',
+                  color: enhanceMode ? '#a5b4fc' : '#6b7280',
+                }}>
+                {enhancing ? <div className="w-3 h-3 border border-indigo-400 border-t-transparent rounded-full animate-spin" /> : <Sparkles size={12} />}
+                <span>強化</span>
+              </button>
+              {/* Gemini Live */}
+              <button onClick={() => setLiveOpen(true)} disabled={!macOnline || running}
+                className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40 ml-auto"
+                style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#c4b5fd' }}>
+                <Radio size={12} />
+                <span>Live</span>
+              </button>
+            </div>
+            <div className="flex gap-2 items-end px-3 pb-3">
               <textarea
                 ref={textareaRef}
                 value={input}
