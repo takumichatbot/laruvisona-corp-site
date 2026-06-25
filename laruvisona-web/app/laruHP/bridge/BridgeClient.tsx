@@ -1296,58 +1296,71 @@ export default function BridgeClient() {
     </div>
   );
 
+  // ライトテーマ カラーパレット
+  const LC = {
+    bg: '#F8F7F4', surface: '#FFFFFF', sky: '#0EA5E9', skyLight: '#E0F2FE', skyMid: '#38BDF8',
+    beige: '#F5EFE6', beigeAlt: '#EDE8DC', beigeStrong: '#D4CAB8',
+    text: '#1E293B', textSub: '#64748B', textMuted: '#94A3B8', border: '#E8E3DC',
+    success: '#10B981', warning: '#F59E0B', error: '#EF4444',
+  };
+
   return (
-    <div className="fixed inset-0 flex flex-col text-white"
-      style={{ background: 'radial-gradient(ellipse at 50% 0%, #050d1a 0%, #000 60%)' }}>
+    <div className="fixed inset-0 flex flex-col" style={{ background: LC.bg, color: LC.text }}>
 
       {/* Header */}
-      <div className="relative flex items-center gap-2 px-4 border-b border-white/5 flex-shrink-0"
-        style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingBottom: 10 }}>
+      <div className="relative flex items-center gap-2 px-4 flex-shrink-0"
+        style={{
+          backdropFilter: 'blur(20px)',
+          background: 'rgba(255,255,255,0.85)',
+          borderBottom: `1px solid ${LC.border}`,
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)',
+          paddingBottom: 10,
+        }}>
 
         {/* 左: 戻る or ホーム */}
         {view === 'chat' && modeStack.length > 0 ? (
           <button onClick={goBack}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
-            style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <ArrowLeft size={16} className="text-gray-400" />
+            style={{ background: LC.beigeAlt, border: `1px solid ${LC.border}` }}>
+            <ArrowLeft size={16} style={{ color: LC.textSub }} />
           </button>
         ) : view === 'chat' && mode !== 'home' ? (
           <button onClick={() => setMode('home')}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
-            style={{ background: 'rgba(255,255,255,0.06)' }}>
-            <Home size={15} className="text-gray-500" />
+            style={{ background: LC.beigeAlt, border: `1px solid ${LC.border}` }}>
+            <Home size={15} style={{ color: LC.textSub }} />
           </button>
         ) : null}
 
         {/* 中: タイトル */}
         <span className="flex-1 font-bold text-sm tracking-wide truncate"
-          style={{ background: 'linear-gradient(90deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          style={{ background: `linear-gradient(90deg, ${LC.sky}, #0284C7)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           {view === 'chat' && currentProject ? currentProject.name : 'Bridge'}
         </span>
 
         {/* 右: 実行中は中断ボタン、それ以外はステータスドット + ⋯ */}
         {running ? (
           <button onClick={() => send({ type: 'abort' })}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-400 transition-all active:scale-90 flex-shrink-0"
-            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-90 flex-shrink-0"
+            style={{ background: LC.surface, border: `1px solid rgba(239,68,68,0.3)`, color: LC.error }}>
             <Square size={10} fill="currentColor" />
             中断
           </button>
         ) : (
           <div className="flex items-center gap-2">
-            {/* ステータスドット1つ（WS + Mac状態を合成） */}
+            {/* ステータスドット */}
             <div className="relative w-6 h-6 flex items-center justify-center" title={!connected ? '未接続' : !macOnline ? 'Mac オフライン' : 'Mac オンライン'}>
               <div className="w-2 h-2 rounded-full" style={{
-                background: !connected ? '#374151' : !macOnline ? '#f59e0b' : '#38bdf8',
-                boxShadow: connected && macOnline ? '0 0 6px #38bdf8' : 'none',
+                background: !connected ? LC.textMuted : !macOnline ? LC.warning : LC.sky,
+                boxShadow: connected && macOnline ? `0 0 6px ${LC.sky}` : 'none',
               }} />
-              {connected && macOnline && <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: '#38bdf8' }} />}
+              {connected && macOnline && <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: LC.sky }} />}
             </div>
 
             {/* ⋯ メニューボタン */}
             <button onClick={() => setShowHeaderMenu(v => !v)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 transition-all active:scale-90 flex-shrink-0"
-              style={{ background: showHeaderMenu ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)' }}>
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
+              style={{ background: showHeaderMenu ? LC.skyLight : LC.surface, border: `1px solid ${LC.border}`, color: LC.textSub }}>
               <MoreHorizontal size={16} />
             </button>
           </div>
@@ -1357,8 +1370,8 @@ export default function BridgeClient() {
         {showHeaderMenu && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowHeaderMenu(false)} />
-            <div className="absolute top-full right-3 mt-1 z-50 rounded-2xl overflow-hidden shadow-2xl"
-              style={{ background: 'rgba(12,12,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', minWidth: 180 }}>
+            <div className="absolute top-full right-3 mt-1 z-50 rounded-2xl overflow-hidden"
+              style={{ background: LC.surface, border: `1px solid ${LC.border}`, boxShadow: '0 8px 30px rgba(0,0,0,0.12)', backdropFilter: 'blur(20px)', minWidth: 180 }}>
               {[
                 { icon: <RotateCcw size={15} />, label: '新しい会話',    action: () => { newConversation(); setShowHeaderMenu(false); }, show: view === 'chat' },
                 { icon: <Trash2 size={15} />,    label: '履歴をクリア',  action: () => { clearHistory(); setShowHeaderMenu(false); }, show: view === 'chat' && messages.length > 0 },
@@ -1367,10 +1380,12 @@ export default function BridgeClient() {
                 { icon: <Lock size={15} />,      label: 'ロック',        action: () => { handleLock(); setShowHeaderMenu(false); }, show: true },
               ].filter(item => item.show).map((item, i, arr) => (
                 <button key={i} onClick={item.action}
-                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-white/5 transition-colors text-left"
-                  style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                  <span className="text-gray-500">{item.icon}</span>
-                  <span className="text-sm text-gray-300">{item.label}</span>
+                  className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+                  style={{ borderBottom: i < arr.length - 1 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = LC.beigeAlt)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <span style={{ color: LC.textMuted }}>{item.icon}</span>
+                  <span className="text-sm" style={{ color: LC.text }}>{item.label}</span>
                 </button>
               ))}
             </div>
@@ -1381,7 +1396,7 @@ export default function BridgeClient() {
       {/* Mac offline banner */}
       {connected && !macOnline && (
         <div className="px-4 py-2 text-xs text-center"
-          style={{ background: 'rgba(234,179,8,0.1)', borderBottom: '1px solid rgba(234,179,8,0.2)', color: '#fbbf24' }}>
+          style={{ background: 'rgba(245,158,11,0.08)', borderBottom: `1px solid rgba(245,158,11,0.2)`, color: LC.warning }}>
           Mac エージェントがオフラインです
         </div>
       )}
@@ -1394,20 +1409,20 @@ export default function BridgeClient() {
           : '';
         return (
           <div className="px-4 py-2 flex items-center gap-2 overflow-hidden"
-            style={{ background: 'rgba(14,165,233,0.06)', borderBottom: '1px solid rgba(14,165,233,0.14)' }}>
+            style={{ background: LC.skyLight, borderBottom: `1px solid rgba(14,165,233,0.2)` }}>
             {/* プログレスバー */}
-            <div className="flex-shrink-0 w-20 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div className="flex-shrink-0 w-20 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(14,165,233,0.15)' }}>
               <div className="h-full rounded-full" style={{
-                background: 'linear-gradient(90deg, #0ea5e9, #6366f1)',
+                background: `linear-gradient(90deg, ${LC.sky}, #0284C7)`,
                 width: `${Math.min(95, (runElapsed / 120) * 100 + 5)}%`,
                 transition: 'width 1s linear',
               }} />
             </div>
-            <span className="text-sky-400 text-[11px] font-mono flex-shrink-0">{runElapsed}s</span>
+            <span className="text-[11px] font-mono flex-shrink-0" style={{ color: '#0369A1' }}>{runElapsed}s</span>
             {streamingLine ? (
-              <span className="text-gray-500 text-[11px] truncate">{streamingLine}</span>
+              <span className="text-[11px] truncate" style={{ color: LC.textSub }}>{streamingLine}</span>
             ) : (
-              <span className="text-gray-600 text-[11px]">
+              <span className="text-[11px]" style={{ color: '#0369A1' }}>
                 {runElapsed < 5 ? 'ファイルを読み込んでいます' :
                  runElapsed < 15 ? 'コードを分析しています' :
                  runElapsed < 30 ? '実装を計画しています' :
@@ -1420,15 +1435,15 @@ export default function BridgeClient() {
 
       {/* Projects view */}
       {view === 'projects' && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <p className="text-gray-600 text-xs text-center pt-2 pb-1 tracking-widest uppercase">プロジェクトを選択</p>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: LC.bg }}>
+          <p className="text-xs text-center pt-2 pb-1 tracking-widest uppercase" style={{ color: LC.textMuted }}>プロジェクトを選択</p>
           {projects.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(255,255,255,0.05)', animation: 'pulse 2s infinite' }}>
-                <MonitorSmartphone size={24} className="text-gray-600" />
+                style={{ background: LC.skyLight, animation: 'pulse 2s infinite' }}>
+                <MonitorSmartphone size={24} style={{ color: LC.sky }} />
               </div>
-              <p className="text-gray-600 text-sm">
+              <p className="text-sm" style={{ color: LC.textSub }}>
                 {connected && macOnline ? 'プロジェクトなし' : connected ? 'Mac 待機中...' : '接続中...'}
               </p>
             </div>
@@ -1443,12 +1458,12 @@ export default function BridgeClient() {
 
           {/* Ambient アラートバー */}
           {watchdogAlerts.length > 0 && (
-            <div className="px-3 py-1.5 space-y-1" style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.15)' }}>
+            <div className="px-3 py-1.5 space-y-1" style={{ background: 'rgba(239,68,68,0.06)', borderBottom: `1px solid rgba(239,68,68,0.15)` }}>
               {watchdogAlerts.slice(-2).map((a, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs">
-                  <span className={a.level === 'danger' ? 'text-red-400' : 'text-amber-400'}>⚠</span>
-                  <span className="text-gray-300 flex-1 truncate">{a.message}</span>
-                  <button onClick={() => setWatchdogAlerts(prev => prev.filter((_, j) => j !== i))} className="text-gray-600 active:opacity-50 flex-shrink-0">✕</button>
+                  <span style={{ color: a.level === 'danger' ? LC.error : LC.warning }}>⚠</span>
+                  <span className="flex-1 truncate" style={{ color: LC.text }}>{a.message}</span>
+                  <button onClick={() => setWatchdogAlerts(prev => prev.filter((_, j) => j !== i))} className="active:opacity-50 flex-shrink-0" style={{ color: LC.textMuted }}>✕</button>
                 </div>
               ))}
             </div>
@@ -1456,24 +1471,24 @@ export default function BridgeClient() {
 
           {/* マルチエージェント UI */}
           {parallelMode && (
-            <div className="px-3 py-2 space-y-2" style={{ background: 'rgba(99,102,241,0.06)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
+            <div className="px-3 py-2 space-y-2" style={{ background: LC.skyLight, borderBottom: `1px solid rgba(14,165,233,0.2)` }}>
               <div className="flex items-center justify-between">
-                <p className="text-indigo-400 text-xs font-semibold">Multi-Agent — 並列実行</p>
-                <button onClick={() => setParallelMode(false)} className="text-gray-600 text-xs active:opacity-50">✕ 閉じる</button>
+                <p className="text-xs font-semibold" style={{ color: '#0369A1' }}>Multi-Agent — 並列実行</p>
+                <button onClick={() => setParallelMode(false)} className="text-xs active:opacity-50" style={{ color: LC.textSub }}>✕ 閉じる</button>
               </div>
               {parallelTasks.map((t, i) => (
                 <div key={i} className="flex gap-2 items-center">
-                  <span className="text-gray-600 text-xs w-12 flex-shrink-0">Agent {i+1}</span>
+                  <span className="text-xs w-12 flex-shrink-0" style={{ color: LC.textMuted }}>Agent {i+1}</span>
                   <input value={t} onChange={e => setParallelTasks(prev => prev.map((v, j) => j === i ? e.target.value : v))}
                     placeholder={`タスク ${i+1}`}
-                    className="flex-1 h-8 px-2 rounded-lg text-xs text-white outline-none"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.3)' }} />
+                    className="flex-1 h-8 px-2 rounded-lg text-xs outline-none"
+                    style={{ background: LC.surface, border: `1px solid ${LC.border}`, color: LC.text }} />
                 </div>
               ))}
               <div className="flex gap-2">
                 <button onClick={() => setParallelTasks(prev => [...prev, ''])} disabled={parallelTasks.length >= 4}
-                  className="px-3 py-1.5 rounded-lg text-xs text-indigo-400 active:scale-90 disabled:opacity-40"
-                  style={{ background: 'rgba(99,102,241,0.1)' }}>+ 追加</button>
+                  className="px-3 py-1.5 rounded-lg text-xs active:scale-90 disabled:opacity-40"
+                  style={{ background: LC.surface, border: `1px solid ${LC.border}`, color: LC.sky }}>+ 追加</button>
                 <button onClick={() => {
                   const tasks = parallelTasks.filter(t => t.trim());
                   if (!tasks.length || !macOnline) return;
@@ -1481,16 +1496,16 @@ export default function BridgeClient() {
                   send({ type: 'parallel_exec', tasks, model: codeModel || undefined });
                 }} disabled={agentRunning || !macOnline || !parallelTasks.some(t => t.trim())}
                   className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white active:scale-98 transition-all disabled:opacity-40"
-                  style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
+                  style={{ background: `linear-gradient(135deg, ${LC.sky}, #0284C7)` }}>
                   {agentRunning ? '実行中...' : '並列実行'}
                 </button>
               </div>
               {Object.keys(agentOutputs).length > 0 && (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {Object.entries(agentOutputs).map(([id, out]) => (
-                    <div key={id} className="rounded-lg p-2" style={{ background: 'rgba(0,0,0,0.4)' }}>
-                      <p className="text-indigo-300 text-xs mb-1">{id}</p>
-                      <pre className="text-gray-400 text-xs font-mono whitespace-pre-wrap break-words">{out.slice(-500)}</pre>
+                    <div key={id} className="rounded-lg p-2" style={{ background: LC.beigeAlt }}>
+                      <p className="text-xs mb-1" style={{ color: LC.sky }}>{id}</p>
+                      <pre className="text-xs font-mono whitespace-pre-wrap break-words" style={{ color: LC.textSub }}>{out.slice(-500)}</pre>
                     </div>
                   ))}
                 </div>
@@ -1500,19 +1515,19 @@ export default function BridgeClient() {
 
           {/* プリセット指示バー */}
           {(presets.length > 0 || showPresetAdd) && (
-            <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto border-b border-white/5"
-              style={{ background: 'rgba(0,0,0,0.3)', scrollbarWidth: 'none' }}>
+            <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto"
+              style={{ background: LC.surface, borderBottom: `1px solid ${LC.border}`, scrollbarWidth: 'none' }}>
               {presets.map((p, i) => (
                 <div key={i} className="flex items-center gap-1 flex-shrink-0 group">
                   <button onClick={() => setInput(p)}
-                    className="px-3 py-1 rounded-full text-xs text-gray-400 whitespace-nowrap transition-all active:scale-90 hover:text-white"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    className="px-3 py-1 rounded-full text-xs whitespace-nowrap transition-all active:scale-90"
+                    style={{ background: LC.beigeAlt, border: `1px solid ${LC.border}`, color: LC.textSub }}>
                     {p.length > 20 ? p.slice(0, 20) + '…' : p}
                   </button>
                   <button onClick={() => removePreset(i)}
                     className="w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ background: 'rgba(239,68,68,0.3)' }}>
-                    <XIcon size={8} className="text-red-400" />
+                    style={{ background: 'rgba(239,68,68,0.15)' }}>
+                    <XIcon size={8} style={{ color: LC.error }} />
                   </button>
                 </div>
               ))}
@@ -1524,11 +1539,11 @@ export default function BridgeClient() {
                       if (e.key === 'Escape') { setShowPresetAdd(false); setPresetInput(''); }
                     }}
                     placeholder="指示を入力..." autoFocus
-                    className="w-36 px-2 py-1 rounded-full text-xs text-white outline-none"
-                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)' }} />
+                    className="w-36 px-2 py-1 rounded-full text-xs outline-none"
+                    style={{ background: LC.beigeAlt, border: `1px solid ${LC.border}`, color: LC.text }} />
                   <button onClick={() => { savePreset(presetInput); setPresetInput(''); setShowPresetAdd(false); }}
-                    className="px-2 py-1 rounded-full text-xs text-emerald-400"
-                    style={{ background: 'rgba(52,211,153,0.1)' }}>追加</button>
+                    className="px-2 py-1 rounded-full text-xs"
+                    style={{ background: 'rgba(16,185,129,0.1)', color: LC.success }}>追加</button>
                 </div>
               ) : null}
             </div>
@@ -1536,39 +1551,39 @@ export default function BridgeClient() {
 
           {/* Git status ビュー */}
           {mode === 'git' && (
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" style={{ background: LC.bg }}>
               <div className="flex items-center justify-between">
-                <p className="text-gray-600 text-xs tracking-widest uppercase">Git Status</p>
+                <p className="text-xs tracking-widest uppercase" style={{ color: LC.textMuted }}>Git Status</p>
                 <button onClick={() => { setGitLoading(true); send({ type: 'git_status' }); }}
                   className="w-7 h-7 rounded-lg flex items-center justify-center active:scale-90 transition-all"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}>
-                  <RotateCcw size={12} className={gitLoading ? 'text-emerald-400 animate-spin' : 'text-gray-600'} />
+                  style={{ background: LC.surface, border: `1px solid ${LC.border}` }}>
+                  <RotateCcw size={12} style={{ color: gitLoading ? LC.success : LC.textMuted, animation: gitLoading ? 'spin 1s linear infinite' : 'none' }} />
                 </button>
               </div>
-              {gitLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>}
-              {gitStatus?.error && <p className="text-red-400 text-xs">{gitStatus.error}</p>}
+              {gitLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${LC.success} transparent transparent transparent` }} /></div>}
+              {gitStatus?.error && <p className="text-xs" style={{ color: LC.error }}>{gitStatus.error}</p>}
               {gitStatus?.status !== undefined && (
-                <div className="rounded-xl p-4 space-y-1" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <p className="text-gray-600 text-xs mb-2">変更ファイル</p>
+                <div className="rounded-xl p-4 space-y-1" style={{ background: LC.surface, border: `1px solid ${LC.border}` }}>
+                  <p className="text-xs mb-2" style={{ color: LC.textMuted }}>変更ファイル</p>
                   {gitStatus.status ? (
                     gitStatus.status.trim().split('\n').map((line, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold w-5" style={{ color: line.startsWith('M') ? '#fbbf24' : line.startsWith('A') ? '#34d399' : line.startsWith('D') ? '#f87171' : '#a5b4fc' }}>
+                        <span className="font-mono text-xs font-bold w-5" style={{ color: line.startsWith('M') ? LC.warning : line.startsWith('A') ? LC.success : line.startsWith('D') ? LC.error : LC.sky }}>
                           {line.slice(0, 2).trim()}
                         </span>
-                        <span className="text-gray-300 text-xs font-mono truncate">{line.slice(3)}</span>
+                        <span className="text-xs font-mono truncate" style={{ color: LC.text }}>{line.slice(3)}</span>
                       </div>
                     ))
-                  ) : <p className="text-gray-600 text-xs">変更なし（クリーン）</p>}
+                  ) : <p className="text-xs" style={{ color: LC.textMuted }}>変更なし（クリーン）</p>}
                 </div>
               )}
               {gitStatus?.log && (
-                <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <p className="text-gray-600 text-xs mb-2">直近のコミット</p>
+                <div className="rounded-xl p-4" style={{ background: LC.surface, border: `1px solid ${LC.border}` }}>
+                  <p className="text-xs mb-2" style={{ color: LC.textMuted }}>直近のコミット</p>
                   {gitStatus.log.trim().split('\n').map((line, i) => (
                     <div key={i} className="flex items-start gap-2 py-0.5">
-                      <span className="text-sky-500 text-xs font-mono flex-shrink-0">{line.slice(0, 7)}</span>
-                      <span className="text-gray-400 text-xs">{line.slice(8)}</span>
+                      <span className="text-xs font-mono flex-shrink-0" style={{ color: LC.sky }}>{line.slice(0, 7)}</span>
+                      <span className="text-xs" style={{ color: LC.textSub }}>{line.slice(8)}</span>
                     </div>
                   ))}
                 </div>
@@ -1577,12 +1592,12 @@ export default function BridgeClient() {
                 <div className="flex gap-2">
                   <button onClick={() => { setInput('現在のgit diffを説明して'); setMode('chat'); }}
                     className="flex-1 py-2 rounded-xl text-xs active:scale-98 transition-all"
-                    style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#6ee7b7' }}>
+                    style={{ background: 'rgba(16,185,129,0.06)', border: `1px solid rgba(16,185,129,0.2)`, color: LC.success }}>
                     差分を説明
                   </button>
                   <button onClick={() => setMode('tools')}
                     className="flex-1 py-2 rounded-xl text-xs active:scale-98 transition-all"
-                    style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)', color: '#c4b5fd' }}>
+                    style={{ background: LC.skyLight, border: `1px solid rgba(14,165,233,0.3)`, color: LC.sky }}>
                     コミット生成 →
                   </button>
                 </div>
@@ -1775,37 +1790,37 @@ export default function BridgeClient() {
 
           {/* ファイルビューワー */}
           {mode === 'files' && (
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto" style={{ background: LC.bg }}>
               {/* パンくず */}
-              <div className="flex items-center gap-1 px-4 py-2 border-b border-white/5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto" style={{ borderBottom: `1px solid ${LC.border}`, scrollbarWidth: 'none' }}>
                 <button onClick={() => { setFilePath(''); setFileContent(''); setFileHistory([]); setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); }}
-                  className="text-xs text-sky-400 flex-shrink-0 active:opacity-70">root</button>
+                  className="text-xs flex-shrink-0 active:opacity-70" style={{ color: LC.sky }}>root</button>
                 {fileHistory.map((seg, i) => (
                   <span key={i} className="flex items-center gap-1 flex-shrink-0">
-                    <ChevronDown size={10} className="text-gray-700 -rotate-90" />
+                    <ChevronDown size={10} style={{ color: LC.textMuted }} className="-rotate-90" />
                     <button onClick={() => {
                       const newPath = fileHistory.slice(0, i + 1).join('/');
                       setFilePath(newPath); setFileContent(''); setFileHistory(fileHistory.slice(0, i + 1));
                       setFileLoading(true); send({ type: 'file_list', path: newPath });
-                    }} className="text-xs text-sky-400 active:opacity-70">{seg}</button>
+                    }} className="text-xs active:opacity-70" style={{ color: LC.sky }}>{seg}</button>
                   </span>
                 ))}
               </div>
-              <label className="ml-auto flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer active:scale-90 transition-all" style={{ background: 'rgba(167,139,250,0.1)' }}>
-                <Upload size={13} className="text-violet-400" />
+              <label className="ml-auto flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer active:scale-90 transition-all" style={{ background: LC.skyLight }}>
+                <Upload size={13} style={{ color: LC.sky }} />
                 <input type="file" className="hidden" onChange={handleFileUpload} />
               </label>
-              {fileLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>}
+              {fileLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${LC.sky} transparent transparent transparent` }} /></div>}
               {/* ファイルコンテンツ表示 */}
               {fileContent ? (
                 <div className="px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-gray-500 text-xs font-mono">{filePath}</p>
+                    <p className="text-xs font-mono" style={{ color: LC.textSub }}>{filePath}</p>
                     <button onClick={() => setInput(`${filePath} を参照して: `)}
-                      className="text-xs text-violet-400 px-2 py-1 rounded-lg active:scale-90 transition-all"
-                      style={{ background: 'rgba(139,92,246,0.1)' }}>Codeに送る</button>
+                      className="text-xs px-2 py-1 rounded-lg active:scale-90 transition-all"
+                      style={{ background: LC.skyLight, color: LC.sky }}>Codeに送る</button>
                   </div>
-                  <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words leading-relaxed overflow-x-auto">{fileContent}</pre>
+                  <pre className="text-xs font-mono whitespace-pre-wrap break-words leading-relaxed overflow-x-auto" style={{ color: LC.text }}>{fileContent}</pre>
                 </div>
               ) : (
                 /* ディレクトリリスト */
@@ -1821,11 +1836,11 @@ export default function BridgeClient() {
                       }
                     }}
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-all active:scale-98"
-                      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      style={{ background: LC.surface, border: `1px solid ${LC.border}` }}>
                       {entry.is_dir
-                        ? <FolderOpen size={14} className="text-sky-400 flex-shrink-0" />
-                        : <FileText size={14} className="text-gray-600 flex-shrink-0" />}
-                      <span className="text-sm text-gray-300 truncate">{entry.name}</span>
+                        ? <FolderOpen size={14} style={{ color: LC.sky, flexShrink: 0 }} />
+                        : <FileText size={14} style={{ color: LC.textMuted, flexShrink: 0 }} />}
+                      <span className="text-sm truncate" style={{ color: LC.text }}>{entry.name}</span>
                     </button>
                   ))}
                 </div>
@@ -1835,17 +1850,17 @@ export default function BridgeClient() {
 
           {/* 確認ダイアログ */}
           {pendingInstruction && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: 'rgba(0,0,0,0.8)' }}>
-              <div className="w-full rounded-2xl p-5 space-y-4" style={{ background: '#0f0f1a', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(8px)' }}>
+              <div className="w-full rounded-2xl p-5 space-y-4" style={{ background: LC.surface, border: `1px solid rgba(239,68,68,0.3)`, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
                 <div className="flex items-center gap-2">
-                  <AlertTriangle size={16} className="text-red-400" />
-                  <p className="text-white font-semibold text-sm">実行確認</p>
+                  <AlertTriangle size={16} style={{ color: LC.error }} />
+                  <p className="font-semibold text-sm" style={{ color: LC.text }}>実行確認</p>
                 </div>
-                <p className="text-gray-300 text-sm rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>{pendingInstruction}</p>
+                <p className="text-sm rounded-xl px-3 py-2" style={{ background: LC.beigeAlt, color: LC.textSub }}>{pendingInstruction}</p>
                 <div className="flex gap-2">
                   <button onClick={() => setPendingInstruction(null)}
-                    className="flex-1 py-3 rounded-xl text-sm text-gray-400 active:scale-95"
-                    style={{ background: 'rgba(255,255,255,0.05)' }}>キャンセル</button>
+                    className="flex-1 py-3 rounded-xl text-sm active:scale-95"
+                    style={{ background: LC.beigeAlt, color: LC.textSub }}>キャンセル</button>
                   <button onClick={() => { const t = pendingInstruction; setPendingInstruction(null); handleSend(t); }}
                     className="flex-1 py-3 rounded-xl text-sm font-semibold text-white active:scale-95"
                     style={{ background: 'linear-gradient(135deg, #dc2626, #f97316)' }}>実行</button>
@@ -1868,19 +1883,20 @@ export default function BridgeClient() {
             }}
             ref={chatScrollRef}
             onScroll={handleChatScroll}
-            className={`overflow-y-auto px-4 py-4 space-y-3 ${mode === 'code' || mode === 'chat' ? 'flex-1' : 'hidden'}`}>
+            className={`overflow-y-auto px-4 py-4 space-y-3 ${mode === 'code' || mode === 'chat' ? 'flex-1' : 'hidden'}`}
+            style={{ background: LC.bg }}>
             {mode === 'code' && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-2">
-                <p className="text-gray-700 text-sm">Claude Code に指示を送信</p>
+                <p className="text-sm" style={{ color: LC.textMuted }}>Claude Code に指示を送信</p>
               </div>
             )}
             {mode === 'chat' && memories.length > 0 && chatMessages.length === 0 && (
-              <div className="rounded-xl p-3 mb-2" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-                <p className="text-indigo-400 text-xs mb-2">記憶 ({memories.length}件)</p>
+              <div className="rounded-xl p-3 mb-2" style={{ background: LC.skyLight, border: `1px solid rgba(14,165,233,0.2)` }}>
+                <p className="text-xs mb-2" style={{ color: '#0369A1' }}>記憶 ({memories.length}件)</p>
                 {memories.slice(-3).map(m => (
                   <div key={m.id} className="flex items-start gap-2 py-1">
-                    <p className="flex-1 text-gray-500 text-xs truncate">{m.content}</p>
-                    <button onClick={() => deleteMemory(m.id)} className="flex-shrink-0 text-gray-700 active:opacity-50 text-xs">✕</button>
+                    <p className="flex-1 text-xs truncate" style={{ color: LC.textSub }}>{m.content}</p>
+                    <button onClick={() => deleteMemory(m.id)} className="flex-shrink-0 active:opacity-50 text-xs" style={{ color: LC.textMuted }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -1888,19 +1904,19 @@ export default function BridgeClient() {
             {mode === 'chat' && chatMessages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.1))', border: '1px solid rgba(245,158,11,0.2)' }}>
-                  <Bot size={22} className="text-amber-400" />
+                  style={{ background: LC.beige, border: `1px solid ${LC.beigeStrong}` }}>
+                  <Bot size={22} style={{ color: LC.warning }} />
                 </div>
-                <p className="text-gray-600 text-sm">Claude と直接会話</p>
-                <p className="text-gray-700 text-xs text-center">コード質問・設計相談・なんでも</p>
+                <p className="text-sm" style={{ color: LC.textSub }}>Claude と直接会話</p>
+                <p className="text-xs text-center" style={{ color: LC.textMuted }}>コード質問・設計相談・なんでも</p>
               </div>
             )}
             {(mode === 'code' ? messages : chatMessages).map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : m.role === 'system' ? 'justify-center' : 'justify-start'}`}
-                style={{ animation: 'fadeSlide 0.2s ease forwards' }}>
+                style={{ animation: 'fadeSlideUp 0.25s cubic-bezier(0.16,1,0.3,1) both' }}>
                 {m.role === 'system' ? (
-                  <span className="text-gray-600 text-xs px-3 py-1 rounded-full"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span className="text-xs px-3 py-1 rounded-full"
+                    style={{ background: LC.beige, color: LC.textSub }}>
                     {m.content}
                   </span>
                 ) : (
@@ -1908,34 +1924,34 @@ export default function BridgeClient() {
                     {/* assistant + code モード + 折りたたみ対象 → ファイルサマリーカード表示 */}
                     {m.role === 'assistant' && mode === 'code' && fileSummaries[i] && !m.streaming && (
                       <div className="mb-2 rounded-2xl px-3.5 py-3"
-                        style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}>
-                        <p className="text-emerald-400 text-xs font-semibold mb-2">✅ 変更ファイル ({fileSummaries[i].length}件)</p>
+                        style={{ background: '#F0FDF4', border: `1px solid #BBF7D0` }}>
+                        <p className="text-xs font-semibold mb-2" style={{ color: LC.success }}>✅ 変更ファイル ({fileSummaries[i].length}件)</p>
                         {fileSummaries[i].map((f, fi) => (
-                          <p key={fi} className="text-gray-400 text-xs font-mono truncate leading-relaxed">{f}</p>
+                          <p key={fi} className="text-xs font-mono truncate leading-relaxed" style={{ color: '#059669' }}>{f}</p>
                         ))}
                       </div>
                     )}
                     <div className="rounded-2xl px-4 py-3"
                       style={m.role === 'user'
-                        ? { background: mode === 'chat' ? 'linear-gradient(135deg, #d97706, #dc2626)' : 'linear-gradient(135deg, #0ea5e9, #6366f1)', borderBottomRightRadius: 4 }
-                        : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderBottomLeftRadius: 4 }}>
+                        ? { background: mode === 'chat' ? 'linear-gradient(135deg, #F59E0B, #EF4444)' : `linear-gradient(135deg, ${LC.sky}, #0284C7)`, borderBottomRightRadius: 4, color: 'white' }
+                        : { background: LC.surface, border: `1px solid ${LC.border}`, borderBottomLeftRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                       {/* 折りたたみ表示 */}
                       {m.role === 'assistant' && mode === 'code' && collapsedOutputs.has(i) && !m.streaming ? (
                         <>
-                          <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed text-gray-500 line-clamp-3">
+                          <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed line-clamp-3" style={{ color: LC.textSub }}>
                             {m.content.split('\n').slice(0, 3).join('\n')}
                           </pre>
                           <button onClick={() => setCollapsedOutputs(prev => { const s = new Set(prev); s.delete(i); return s; })}
-                            className="mt-2 text-xs text-sky-400 active:opacity-60">
+                            className="mt-2 text-xs active:opacity-60" style={{ color: LC.sky }}>
                             全文を見る ({m.content.split('\n').length}行) ↓
                           </button>
                         </>
                       ) : (
                         <>
-                          <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed">{m.content}</pre>
+                          <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed" style={{ color: m.role === 'user' ? 'white' : LC.text }}>{m.content}</pre>
                           {m.role === 'assistant' && mode === 'code' && !m.streaming && m.content.split('\n').length > 6 && !collapsedOutputs.has(i) && (
                             <button onClick={() => setCollapsedOutputs(prev => new Set([...prev, i]))}
-                              className="mt-2 text-xs text-gray-600 active:opacity-60">
+                              className="mt-2 text-xs active:opacity-60" style={{ color: LC.textMuted }}>
                               折りたたむ ↑
                             </button>
                           )}
@@ -1943,18 +1959,18 @@ export default function BridgeClient() {
                       )}
                       {m.streaming && (
                         <span className="inline-block w-2 h-4 ml-0.5 align-middle"
-                          style={{ background: mode === 'chat' ? '#fbbf24' : '#38bdf8', animation: 'blink 0.7s step-end infinite' }} />
+                          style={{ background: mode === 'chat' ? LC.warning : LC.sky, animation: 'blink 0.7s step-end infinite' }} />
                       )}
                     </div>
                     {m.ts && !m.streaming && (
-                      <p className={`text-gray-700 text-xs mt-1 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <p className={`text-xs mt-1 ${m.role === 'user' ? 'text-right' : 'text-left'}`} style={{ color: LC.textMuted }}>
                         {new Date(m.ts).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     )}
                     {mode === 'code' && summaries[i] && (
                       <div className="mt-2 rounded-xl px-3 py-2 text-xs leading-relaxed"
-                        style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
-                        <span className="text-violet-500 font-semibold mr-1">✦ Gemini要約</span>
+                        style={{ background: LC.skyLight, border: `1px solid rgba(14,165,233,0.25)`, color: '#0369A1' }}>
+                        <span className="font-semibold mr-1">✦ Gemini要約</span>
                         {summaries[i]}
                       </div>
                     )}
@@ -1963,15 +1979,15 @@ export default function BridgeClient() {
                         {ttsEnabled && (
                           <button onClick={() => speakText(m.content)}
                             className="w-6 h-6 rounded-lg flex items-center justify-center active:scale-90 opacity-40 hover:opacity-100 transition-opacity"
-                            style={{ background: 'rgba(255,255,255,0.05)' }}>
-                            <Volume2 size={10} className="text-gray-500" />
+                            style={{ background: LC.beigeAlt }}>
+                            <Volume2 size={10} style={{ color: LC.textSub }} />
                           </button>
                         )}
                         <button onClick={() => saveMemory(m.content.slice(0, 200))}
                           title="メモリに保存"
                           className="w-6 h-6 rounded-lg flex items-center justify-center active:scale-90 opacity-40 hover:opacity-100 transition-opacity"
-                          style={{ background: 'rgba(255,255,255,0.05)' }}>
-                          <Plus size={10} className="text-gray-500" />
+                          style={{ background: LC.beigeAlt }}>
+                          <Plus size={10} style={{ color: LC.textSub }} />
                         </button>
                       </div>
                     )}
@@ -1982,23 +1998,23 @@ export default function BridgeClient() {
             {mode === 'code' && running && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex justify-start">
                 <div className="rounded-2xl rounded-bl-sm px-4 py-3 max-w-[88%]"
-                  style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.18)' }}>
+                  style={{ background: LC.surface, border: `1px solid ${LC.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                   {/* フェーズヒント */}
-                  <p className="text-sky-400 text-xs font-semibold mb-1.5">
-                    {runElapsed < 5 ? '📂 コードベースを読んでいます...' :
-                     runElapsed < 15 ? '🧠 問題を分析しています...' :
-                     runElapsed < 30 ? '✏️ 実装を計画しています...' :
-                     runElapsed < 60 ? '⚡ ファイルを書き換えています...' :
-                     '🔍 動作確認しています...'}
+                  <p className="text-xs font-semibold mb-1.5" style={{ color: LC.sky }}>
+                    {runElapsed < 5 ? 'コードベースを読んでいます...' :
+                     runElapsed < 15 ? '問題を分析しています...' :
+                     runElapsed < 30 ? '実装を計画しています...' :
+                     runElapsed < 60 ? 'ファイルを書き換えています...' :
+                     '動作確認しています...'}
                   </p>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       {[0, 0.15, 0.3].map((d, i) => (
                         <div key={i} className="w-1.5 h-1.5 rounded-full"
-                          style={{ background: '#38bdf8', animation: `bounce 1s ease ${d}s infinite` }} />
+                          style={{ background: LC.sky, animation: `bounce 1s ease ${d}s infinite` }} />
                       ))}
                     </div>
-                    <span className="text-gray-600 text-[11px]">{runElapsed}s 経過</span>
+                    <span className="text-[11px]" style={{ color: LC.textMuted }}>{runElapsed}s 経過</span>
                   </div>
                 </div>
               </div>
@@ -2019,7 +2035,7 @@ export default function BridgeClient() {
                     if (data.result) { setTeamInitialDirective(data.result.trim()); setMode('team'); if (!fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined }); }
                   } catch { /* ignore */ }
                 }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all"
-                  style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
+                  style={{ background: LC.skyLight, border: `1px solid rgba(14,165,233,0.3)`, color: '#0369A1' }}>
                   <Users size={11} />この会話を AI Team に渡す
                 </button>
               </div>
@@ -2027,10 +2043,10 @@ export default function BridgeClient() {
             {mode === 'chat' && chatRunning && chatMessages[chatMessages.length - 1]?.role !== 'assistant' && (
               <div className="flex justify-start">
                 <div className="flex gap-1.5 px-4 py-3 rounded-2xl rounded-bl-sm"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  style={{ background: LC.surface, border: `1px solid ${LC.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                   {[0, 0.15, 0.3].map((d, i) => (
                     <div key={i} className="w-2 h-2 rounded-full"
-                      style={{ background: '#fbbf24', animation: `bounce 1s ease ${d}s infinite` }} />
+                      style={{ background: LC.warning, animation: `bounce 1s ease ${d}s infinite` }} />
                   ))}
                 </div>
               </div>
@@ -2038,33 +2054,33 @@ export default function BridgeClient() {
             <div ref={bottomRef} />
           </div>
 
-          {/* ↓ 新着ボタン（スクロールが上に離れているとき） */}
+          {/* ↓ 新着ボタン */}
           {newMsgPending && (mode === 'code' || mode === 'chat') && (
             <button
               onClick={() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); setNewMsgPending(false); setIsAtBottom(true); }}
               className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-lg active:scale-95 transition-all"
-              style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 120px)', background: 'rgba(99,102,241,0.9)', backdropFilter: 'blur(8px)' }}>
+              style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 120px)', background: LC.sky, backdropFilter: 'blur(8px)' }}>
               ↓ 新着メッセージ
             </button>
           )}
 
           {/* コード検索パネル (Chat モード) */}
           {mode === 'chat' && searchQuery !== '' && (
-            <div className="border-t border-white/5 px-3 py-3 space-y-2" style={{ background: 'rgba(0,0,0,0.5)' }}>
+            <div className="px-3 py-3 space-y-2" style={{ borderTop: `1px solid ${LC.border}`, background: LC.surface }}>
               <div className="flex gap-2">
                 <input value={searchQuery.trim()} onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleCodeSearch(); if (e.key === 'Escape') { setSearchQuery(''); setSearchResults([]); } }}
                   placeholder="キーワードで検索..."
-                  className="flex-1 h-8 px-3 rounded-lg text-xs text-white outline-none"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                  className="flex-1 h-8 px-3 rounded-lg text-xs outline-none"
+                  style={{ background: LC.beigeAlt, border: `1px solid ${LC.border}`, color: LC.text }} />
                 <button onClick={handleCodeSearch} disabled={searching || !macOnline}
-                  className="px-3 h-8 rounded-lg text-xs text-emerald-400 active:scale-90 disabled:opacity-40 transition-all"
-                  style={{ background: 'rgba(52,211,153,0.1)' }}>
+                  className="px-3 h-8 rounded-lg text-xs active:scale-90 disabled:opacity-40 transition-all"
+                  style={{ background: 'rgba(16,185,129,0.1)', color: LC.success }}>
                   {searching ? '検索中...' : '検索'}
                 </button>
                 <button onClick={() => { setSearchQuery(''); setSearchResults([]); }}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 active:scale-90"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  className="w-8 h-8 rounded-lg flex items-center justify-center active:scale-90"
+                  style={{ background: LC.beigeAlt, color: LC.textMuted }}>
                   <XIcon size={12} />
                 </button>
               </div>
@@ -2072,11 +2088,11 @@ export default function BridgeClient() {
                 <div className="space-y-1 max-h-40 overflow-y-auto">
                   {searchResults.map((r, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg"
-                      style={{ background: attachedContext.some(c => c.path === r.path) ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.03)' }}>
-                      <span className="text-xs text-gray-400 font-mono truncate flex-1">{r.path}</span>
+                      style={{ background: attachedContext.some(c => c.path === r.path) ? '#F0FDF4' : LC.beigeAlt }}>
+                      <span className="text-xs font-mono truncate flex-1" style={{ color: LC.textSub }}>{r.path}</span>
                       <button onClick={() => setAttachedContext(prev => prev.some(c => c.path === r.path) ? prev.filter(c => c.path !== r.path) : [...prev, r])}
                         className="flex-shrink-0 text-xs px-2 py-0.5 rounded-lg transition-all active:scale-90"
-                        style={{ background: attachedContext.some(c => c.path === r.path) ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.06)', color: attachedContext.some(c => c.path === r.path) ? '#6ee7b7' : '#6b7280' }}>
+                        style={{ background: attachedContext.some(c => c.path === r.path) ? 'rgba(16,185,129,0.15)' : LC.surface, color: attachedContext.some(c => c.path === r.path) ? LC.success : LC.textSub }}>
                         {attachedContext.some(c => c.path === r.path) ? '添付中' : '添付'}
                       </button>
                     </div>
@@ -2088,10 +2104,10 @@ export default function BridgeClient() {
 
           {/* 自律実行ログ (Code モード) */}
           {mode === 'code' && autonomousMode && autonomousLog.length > 0 && (
-            <div className="border-t border-white/5 px-3 py-2 max-h-24 overflow-y-auto" style={{ background: 'rgba(251,146,60,0.05)' }}>
-              <p className="text-orange-400 text-xs mb-1">自律実行 — ステップ {autonomousStep + 1}</p>
+            <div className="px-3 py-2 max-h-24 overflow-y-auto" style={{ borderTop: `1px solid ${LC.border}`, background: 'rgba(245,158,11,0.05)' }}>
+              <p className="text-xs mb-1" style={{ color: LC.warning }}>自律実行 — ステップ {autonomousStep + 1}</p>
               {autonomousLog.map((l, i) => (
-                <p key={i} className="text-gray-500 text-xs truncate"><span className="text-orange-600 mr-1">{i + 1}.</span>{l}</p>
+                <p key={i} className="text-xs truncate" style={{ color: LC.textSub }}><span className="mr-1" style={{ color: LC.warning }}>{i + 1}.</span>{l}</p>
               ))}
             </div>
           )}
@@ -2102,51 +2118,53 @@ export default function BridgeClient() {
 
           {/* 入力エリア（code / chat のみ） */}
           {(mode === 'code' || mode === 'chat') && (
-            <div className="border-t border-white/5 flex-shrink-0 relative"
-              style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.7)' }}>
+            <div className="flex-shrink-0 relative"
+              style={{ backdropFilter: 'blur(20px)', background: 'rgba(255,255,255,0.9)', borderTop: `1px solid ${LC.border}` }}>
 
-              {/* アクティブバッジ行（何か ON のときだけ） */}
+              {/* アクティブバッジ行 */}
               {(enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled || attachedContext.length > 0 || presets.length > 0) && (
                 <div className="flex items-center gap-1.5 px-3 pt-2 pb-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                  {enhanceMode    && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc' }}><Sparkles size={9} />強化</span>}
-                  {ttsEnabled     && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(56,189,248,0.12)', color: '#7dd3fc' }}><Volume2 size={9} />読上げ</span>}
-                  {confirmMode    && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5' }}><AlertTriangle size={9} />確認</span>}
-                  {autonomousMode && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(251,146,60,0.12)', color: '#fdba74' }}><Cpu size={9} />自律</span>}
-                  {parallelMode   && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc' }}><MonitorCheck size={9} />並列</span>}
-                  {watchdogActive && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5' }}><Radio size={9} className="animate-pulse" />監視</span>}
+                  {enhanceMode    && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: LC.skyLight, color: '#0369A1' }}><Sparkles size={9} />強化</span>}
+                  {ttsEnabled     && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: LC.skyLight, color: LC.sky }}><Volume2 size={9} />読上げ</span>}
+                  {confirmMode    && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(239,68,68,0.08)', color: LC.error }}><AlertTriangle size={9} />確認</span>}
+                  {autonomousMode && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(245,158,11,0.1)', color: LC.warning }}><Cpu size={9} />自律</span>}
+                  {parallelMode   && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: LC.skyLight, color: LC.sky }}><MonitorCheck size={9} />並列</span>}
+                  {watchdogActive && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(239,68,68,0.08)', color: LC.error }}><Radio size={9} className="animate-pulse" />監視</span>}
                   {attachedContext.length > 0 && (
-                    <button onClick={() => setAttachedContext([])} className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] active:scale-90" style={{ background: 'rgba(52,211,153,0.1)', color: '#6ee7b7' }}>
+                    <button onClick={() => setAttachedContext([])} className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] active:scale-90" style={{ background: '#F0FDF4', color: LC.success }}>
                       📎{attachedContext.length}件 ✕
                     </button>
                   )}
                   {presets.length > 0 && presets.map((p, i) => (
                     <button key={i} onClick={() => setInput(p)}
-                      className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] text-gray-400 active:scale-90 whitespace-nowrap"
-                      style={{ background: 'rgba(255,255,255,0.06)' }}>
+                      className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] active:scale-90 whitespace-nowrap"
+                      style={{ background: LC.beigeAlt, color: LC.textSub }}>
                       {p.length > 14 ? p.slice(0, 14) + '…' : p}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* アタッチメントメニュー（+ ボタンで展開） */}
+              {/* アタッチメントメニュー */}
               {showAttachMenu && (
-                <div className="absolute bottom-full left-3 mb-2 z-50 rounded-2xl overflow-hidden shadow-2xl"
-                  style={{ background: 'rgba(12,12,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', minWidth: 200 }}>
+                <div className="absolute bottom-full left-3 mb-2 z-50 rounded-2xl overflow-hidden"
+                  style={{ background: LC.surface, border: `1px solid ${LC.border}`, boxShadow: '0 8px 30px rgba(0,0,0,0.12)', backdropFilter: 'blur(20px)', minWidth: 200 }}>
                   {[
-                    { icon: <Camera size={16} />, label: 'スクショ → Code',  color: '#38bdf8', action: () => { cameraInputRef.current?.click(); setShowAttachMenu(false); } },
-                    { icon: <Users size={16} />,  label: 'スクショ → Team',  color: '#a78bfa', action: () => { visualInputRef.current?.click(); setShowAttachMenu(false); } },
-                    { icon: <Mic size={16} />,    label: '音声入力',          color: voiceRecording ? '#f87171' : '#94a3b8', action: () => { handleVoice(); setShowAttachMenu(false); } },
-                    { icon: <Radio size={16} />,  label: 'AI音声アシスタント', color: '#34d399', action: () => { setShowRealtimeVoice(true); setShowAttachMenu(false); } },
-                    { icon: <SlidersHorizontal size={16} />, label: 'ツール設定', color: (enhanceMode||confirmMode||autonomousMode||parallelMode||watchdogActive||ttsEnabled) ? '#818cf8' : '#6b7280', action: () => { setShowToolSheet(true); setShowAttachMenu(false); } },
+                    { icon: <Camera size={16} />, label: 'スクショ → Code',  color: LC.sky, action: () => { cameraInputRef.current?.click(); setShowAttachMenu(false); } },
+                    { icon: <Users size={16} />,  label: 'スクショ → Team',  color: '#A78BFA', action: () => { visualInputRef.current?.click(); setShowAttachMenu(false); } },
+                    { icon: <Mic size={16} />,    label: '音声入力',          color: voiceRecording ? LC.error : LC.textMuted, action: () => { handleVoice(); setShowAttachMenu(false); } },
+                    { icon: <Radio size={16} />,  label: 'AI音声アシスタント', color: LC.success, action: () => { setShowRealtimeVoice(true); setShowAttachMenu(false); } },
+                    { icon: <SlidersHorizontal size={16} />, label: 'ツール設定', color: (enhanceMode||confirmMode||autonomousMode||parallelMode||watchdogActive||ttsEnabled) ? LC.sky : LC.textMuted, action: () => { setShowToolSheet(true); setShowAttachMenu(false); } },
                   ].map((item, i) => (
                     <button key={i} onClick={item.action}
-                      className="w-full flex items-center gap-3 px-4 py-3 active:bg-white/5 transition-colors text-left"
-                      style={{ borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                      className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+                      style={{ borderBottom: i < 4 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = LC.beigeAlt)}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                       <span style={{ color: item.color }}>{item.icon}</span>
-                      <span className="text-sm text-gray-300">{item.label}</span>
+                      <span className="text-sm" style={{ color: LC.text }}>{item.label}</span>
                       {item.label === 'ツール設定' && (enhanceMode||confirmMode||autonomousMode||parallelMode||watchdogActive||ttsEnabled) && (
-                        <span className="ml-auto w-2 h-2 rounded-full bg-indigo-400" />
+                        <span className="ml-auto w-2 h-2 rounded-full" style={{ background: LC.sky }} />
                       )}
                     </button>
                   ))}
@@ -2154,7 +2172,7 @@ export default function BridgeClient() {
               )}
               {showAttachMenu && <div className="fixed inset-0 z-40" onClick={() => setShowAttachMenu(false)} />}
 
-              {/* メイン入力行: [model] [+] [textarea] [↑] */}
+              {/* メイン入力行 */}
               <div className="flex gap-2 items-end px-3 py-2.5">
                 {/* モデル切り替え（code モードのみ） */}
                 {mode === 'code' && (
@@ -2162,8 +2180,8 @@ export default function BridgeClient() {
                     onClick={() => setCodeModel(m => m === 'claude-haiku-4-5-20251001' ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001')}
                     className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-bold flex-shrink-0 transition-all active:scale-90"
                     style={codeModel === 'claude-haiku-4-5-20251001'
-                      ? { background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.3)', color: '#34d399' }
-                      : { background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
+                      ? { background: LC.beige, border: `1px solid ${LC.beigeStrong}`, color: LC.textSub }
+                      : { background: LC.skyLight, border: `1px solid ${LC.skyMid}`, color: LC.sky }}>
                     {codeModel === 'claude-haiku-4-5-20251001' ? '⚡' : '◑'}
                   </button>
                 )}
@@ -2172,10 +2190,10 @@ export default function BridgeClient() {
                   onClick={() => setShowAttachMenu(v => !v)}
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
                   style={{
-                    background: showAttachMenu ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)',
-                    border: showAttachMenu ? '1px solid rgba(99,102,241,0.4)' : '1px solid transparent',
+                    background: showAttachMenu ? LC.skyLight : LC.beige,
+                    border: showAttachMenu ? `1px solid ${LC.skyMid}` : `1px solid ${LC.border}`,
                   }}>
-                  <Plus size={20} className={showAttachMenu ? 'text-indigo-400 rotate-45 transition-transform' : 'text-gray-500 transition-transform'} />
+                  <Plus size={20} style={{ color: showAttachMenu ? LC.sky : LC.textSub, transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
                 </button>
 
                 {/* Textarea */}
@@ -2187,18 +2205,18 @@ export default function BridgeClient() {
                   placeholder={mode === 'chat' ? 'Claude に質問...' : '指示を入力...'}
                   rows={1}
                   disabled={mode === 'code' ? (running || !macOnline) : chatRunning}
-                  className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-gray-700 resize-none outline-none transition-all disabled:opacity-30"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '44px', maxHeight: '120px' }}
+                  className="flex-1 rounded-xl px-3.5 py-2.5 text-sm resize-none outline-none transition-all disabled:opacity-30"
+                  style={{ background: LC.bg, border: `1px solid ${LC.border}`, color: LC.text, minHeight: '44px', maxHeight: '120px' }}
                 />
 
-                {/* 送信 / ローディング */}
+                {/* 送信ボタン */}
                 <button
                   onClick={() => mode === 'chat' ? handleChatSend() : handleSend()}
                   disabled={mode === 'code' ? (running || !input.trim() || !macOnline) : (chatRunning || !input.trim())}
                   className="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30 flex-shrink-0"
                   style={mode === 'chat'
-                    ? { background: 'linear-gradient(135deg, #d97706, #dc2626)', boxShadow: input.trim() ? '0 0 15px rgba(217,119,6,0.25)' : 'none' }
-                    : { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: input.trim() ? '0 0 15px rgba(14,165,233,0.25)' : 'none' }}>
+                    ? { background: 'linear-gradient(135deg, #F59E0B, #EF4444)', boxShadow: input.trim() ? '0 0 15px rgba(245,158,11,0.25)' : 'none' }
+                    : { background: `linear-gradient(135deg, ${LC.sky}, #0284C7)`, boxShadow: input.trim() ? '0 0 15px rgba(14,165,233,0.25)' : 'none' }}>
                   {(running || chatRunning || enhancing)
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     : <ChevronRight size={18} />}
@@ -2211,15 +2229,15 @@ export default function BridgeClient() {
 
       {/* ─── ボトムナビゲーション ─── */}
       {view === 'chat' && (
-        <div className="flex-shrink-0 border-t border-white/5"
-          style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(24px)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}>
+        <div className="flex-shrink-0"
+          style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(24px)', borderTop: `1px solid ${LC.border}`, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}>
           <div className="flex">
             {([
-              { id: 'home',  label: 'Home',  icon: Home,               color: '#c4b5fd' },
-              { id: 'code',  label: 'Code',  icon: MonitorSmartphone,  color: '#a5b4fc' },
-              { id: 'chat',  label: 'Chat',  icon: Bot,                color: '#fcd34d' },
-              { id: 'team',  label: 'Team',  icon: Users,              color: '#818cf8' },
-              { id: 'more',  label: 'More',  icon: MoreHorizontal,     color: '#9ca3af' },
+              { id: 'home',  label: 'Home',  icon: Home,              color: LC.sky },
+              { id: 'code',  label: 'Code',  icon: MonitorSmartphone, color: LC.sky },
+              { id: 'chat',  label: 'Chat',  icon: Bot,               color: LC.warning },
+              { id: 'team',  label: 'Team',  icon: Users,             color: LC.sky },
+              { id: 'more',  label: 'More',  icon: MoreHorizontal,    color: LC.sky },
             ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string }[]).map(tab => {
               const isMore = tab.id === 'more';
               const isActive = isMore
@@ -2235,17 +2253,15 @@ export default function BridgeClient() {
                     if (m === 'team' && !fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined });
                   }}
                   className="flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-all active:scale-90 relative select-none">
-                  {/* 実行中ドット (team) */}
                   {tab.id === 'team' && (orchestrateRunning || orchestrateComplete) && (
                     <span className="absolute top-2 right-[calc(50%-14px)] w-2 h-2 rounded-full"
-                      style={{ background: orchestrateRunning ? '#818cf8' : '#34d399', boxShadow: orchestrateRunning ? '0 0 6px #818cf8' : 'none', animation: orchestrateRunning ? 'pulse 1.5s ease infinite' : 'none' }} />
+                      style={{ background: orchestrateRunning ? LC.sky : LC.success, boxShadow: orchestrateRunning ? `0 0 6px ${LC.sky}` : 'none', animation: orchestrateRunning ? 'pulse 1.5s ease infinite' : 'none' }} />
                   )}
-                  {/* 実行中ドット (code) */}
                   {tab.id === 'code' && running && (
-                    <span className="absolute top-2 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                    <span className="absolute top-2 right-[calc(50%-14px)] w-2 h-2 rounded-full animate-pulse" style={{ background: LC.sky }} />
                   )}
-                  <Icon size={22} style={{ color: isActive ? tab.color : '#374151' }} />
-                  <span className="text-xs font-medium" style={{ color: isActive ? tab.color : '#374151' }}>{tab.label}</span>
+                  <Icon size={22} style={{ color: isActive ? tab.color : LC.textMuted }} />
+                  <span className="text-xs font-medium" style={{ color: isActive ? tab.color : LC.textMuted }}>{tab.label}</span>
                   {isActive && (
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full"
                       style={{ background: tab.color }} />
@@ -2257,39 +2273,38 @@ export default function BridgeClient() {
         </div>
       )}
 
-      {/* ─── グローバル実行インジケーター（他タブで実行中に表示） ─── */}
+      {/* ─── グローバル実行インジケーター ─── */}
       {view === 'chat' && (
         <>
           {running && mode !== 'code' && (
-            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-auto" style={{ animation: 'fadeSlide 0.3s ease' }}>
+            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-auto" style={{ animation: 'fadeSlideUp 0.25s cubic-bezier(0.16,1,0.3,1)' }}>
               <button onClick={() => setMode('code')}
-                className="flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl"
-                style={{ background: 'rgba(14,165,233,0.95)', border: '1px solid rgba(56,189,248,0.5)', backdropFilter: 'blur(16px)' }}>
+                className="flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
+                style={{ background: LC.sky, backdropFilter: 'blur(16px)' }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 <span className="text-white text-xs font-semibold">Claude Code 実行中</span>
-                <span className="text-white/60 text-xs">→ Code</span>
+                <span className="text-white/70 text-xs">→ Code</span>
               </button>
             </div>
           )}
           {orchestrateRunning && mode !== 'team' && (
-            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-auto" style={{ animation: 'fadeSlide 0.3s ease' }}>
+            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-auto" style={{ animation: 'fadeSlideUp 0.25s cubic-bezier(0.16,1,0.3,1)' }}>
               <button onClick={() => setMode('team')}
-                className="flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl"
-                style={{ background: 'rgba(79,70,229,0.95)', border: '1px solid rgba(99,102,241,0.5)', backdropFilter: 'blur(16px)' }}>
+                className="flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
+                style={{ background: '#818CF8', backdropFilter: 'blur(16px)' }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 <span className="text-white text-xs font-semibold">AI Team 実行中 — {orchestratePhase}</span>
-                <span className="text-white/60 text-xs">→ Team</span>
+                <span className="text-white/70 text-xs">→ Team</span>
               </button>
             </div>
           )}
-          {/* V: Floating voice button — code/chat はインプットバーがあるので非表示 */}
           {currentProject && macOnline && !showRealtimeVoice && mode !== 'code' && mode !== 'chat' && (
             <button onClick={() => setShowRealtimeVoice(true)}
-              className="fixed right-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+              className="fixed right-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl active:scale-90 transition-all"
               style={{
                 bottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 64px)',
-                background: 'linear-gradient(135deg, #059669, #0ea5e9)',
-                boxShadow: '0 0 20px rgba(5,150,105,0.4)',
+                background: `linear-gradient(135deg, ${LC.success}, ${LC.sky})`,
+                boxShadow: `0 0 20px rgba(16,185,129,0.3)`,
               }}
               title="音声アシスタント">
               <Mic size={18} className="text-white" />
@@ -2303,7 +2318,7 @@ export default function BridgeClient() {
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
           style={{ animation: 'slideUp 0.2s ease' }}>
           <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold shadow-xl"
-            style={{ background: cpToast.success ? 'rgba(16,185,129,0.95)' : 'rgba(239,68,68,0.9)', color: 'white', backdropFilter: 'blur(10px)' }}>
+            style={{ background: cpToast.success ? LC.success : LC.error, color: 'white', backdropFilter: 'blur(10px)' }}>
             <GitCommit size={12} />
             <span>{cpToast.success ? `✓ ${cpToast.phase} — git checkpoint 保存` : `✗ ${cpToast.phase} — checkpoint 失敗`}</span>
           </div>
@@ -2312,24 +2327,24 @@ export default function BridgeClient() {
 
       {/* ─── Visual Capture モーダル ─── */}
       {visualCapturing && visualPreview && (
-        <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.85)' }} onClick={() => { setVisualCapturing(false); setVisualPreview(null); }}>
+        <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(8px)' }} onClick={() => { setVisualCapturing(false); setVisualPreview(null); }}>
           <div className="w-full rounded-t-3xl overflow-hidden"
-            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.1)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease' }}
+            style={{ background: LC.surface, border: `1px solid ${LC.border}`, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease', boxShadow: '0 -8px 40px rgba(0,0,0,0.15)' }}
             onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center pt-3 pb-3"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
+            <div className="flex justify-center pt-3 pb-3"><div className="w-10 h-1 rounded-full" style={{ background: LC.border }} /></div>
             <div className="px-4 pb-2">
-              <p className="text-white font-bold text-sm mb-3">Visual → AI Team</p>
+              <p className="font-bold text-sm mb-3" style={{ color: LC.text }}>Visual → AI Team</p>
               <img src={`data:${visualMime};base64,${visualPreview}`} alt="preview"
                 className="w-full max-h-48 object-contain rounded-xl mb-4"
-                style={{ border: '1px solid rgba(255,255,255,0.1)' }} />
-              <p className="text-gray-500 text-xs mb-4">この画像を分析してAI Teamの実装指示を自動生成します</p>
+                style={{ border: `1px solid ${LC.border}` }} />
+              <p className="text-xs mb-4" style={{ color: LC.textMuted }}>この画像を分析してAI Teamの実装指示を自動生成します</p>
               <div className="flex gap-2">
                 <button onClick={() => { setVisualCapturing(false); setVisualPreview(null); }}
-                  className="px-4 py-3 rounded-xl text-sm text-gray-500 active:scale-95"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}>キャンセル</button>
+                  className="px-4 py-3 rounded-xl text-sm active:scale-95"
+                  style={{ background: LC.beigeAlt, color: LC.textSub }}>キャンセル</button>
                 <button onClick={analyzeVisual} disabled={visualAnalyzing}
                   className="flex-1 py-3 rounded-xl text-sm font-bold text-white active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
+                  style={{ background: `linear-gradient(135deg, ${LC.sky}, #0284C7)` }}>
                   {visualAnalyzing
                     ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Gemini が解析中...</>
                     : <><Sparkles size={14} />解析 → プラン生成</>}
@@ -2344,31 +2359,31 @@ export default function BridgeClient() {
       {showMoreMenu && (
         <div className="fixed inset-0 z-50" onClick={() => setShowMoreMenu(false)}>
           <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl overflow-hidden"
-            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease' }}
+            style={{ background: LC.surface, border: `1px solid ${LC.border}`, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease', boxShadow: '0 -8px 40px rgba(0,0,0,0.12)' }}
             onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center pt-3 pb-5"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
-            <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-4">その他のパネル</p>
+            <div className="flex justify-center pt-3 pb-5"><div className="w-10 h-1 rounded-full" style={{ background: LC.beigeStrong }} /></div>
+            <p className="text-xs tracking-widest uppercase text-center mb-4" style={{ color: LC.textMuted }}>その他のパネル</p>
             <div className="grid grid-cols-4 gap-2 px-4 pb-6">
               {([
-                { id: 'files',      label: 'ファイル',  icon: FolderOpen, color: '#c4b5fd', onSelect: () => { if (fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); } } },
-                { id: 'tools',      label: 'ツール',    icon: Wrench,     color: '#fca5a5', onSelect: () => {} },
-                { id: 'schedule',   label: '予約',      icon: Clock,      color: '#fdba74', onSelect: () => {} },
-                { id: 'github',     label: 'GitHub',    icon: GitBranch,  color: '#d8b4fe', onSelect: () => {} },
-                { id: 'pm',         label: 'AI PM',     icon: Target,     color: '#fb923c', onSelect: () => {} },
-                { id: 'brain',      label: 'Brain',     icon: Brain,      color: '#a78bfa', onSelect: () => { if (macOnline) send({ type: 'brain_status', mac_id: selectedMacId || undefined }); } },
-                { id: 'git',        label: 'Git',      icon: GitBranch,  color: '#6ee7b7', onSelect: () => { if (macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); } } },
-                { id: 'production', label: '本番監視',  icon: Activity,   color: '#34d399', onSelect: () => {} },
-                { id: 'concierge',  label: 'ガイド',    icon: Bot,        color: '#818cf8', onSelect: () => {} },
-                { id: 'prompts',    label: 'Prompts',  icon: Star,       color: '#fbbf24', onSelect: () => {} },
+                { id: 'files',      label: 'ファイル',  icon: FolderOpen, color: '#A78BFA', onSelect: () => { if (fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); } } },
+                { id: 'tools',      label: 'ツール',    icon: Wrench,     color: '#F87171', onSelect: () => {} },
+                { id: 'schedule',   label: '予約',      icon: Clock,      color: LC.warning, onSelect: () => {} },
+                { id: 'github',     label: 'GitHub',    icon: GitBranch,  color: '#C084FC', onSelect: () => {} },
+                { id: 'pm',         label: 'AI PM',     icon: Target,     color: '#FB923C', onSelect: () => {} },
+                { id: 'brain',      label: 'Brain',     icon: Brain,      color: '#A78BFA', onSelect: () => { if (macOnline) send({ type: 'brain_status', mac_id: selectedMacId || undefined }); } },
+                { id: 'git',        label: 'Git',       icon: GitBranch,  color: LC.success, onSelect: () => { if (macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); } } },
+                { id: 'production', label: '本番監視',  icon: Activity,   color: LC.success, onSelect: () => {} },
+                { id: 'concierge',  label: 'ガイド',    icon: Bot,        color: LC.sky,    onSelect: () => {} },
+                { id: 'prompts',    label: 'Prompts',   icon: Star,       color: LC.warning, onSelect: () => {} },
               ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string; onSelect: () => void }[]).map(item => {
                 const Icon = item.icon;
                 const isActive = mode === item.id;
                 return (
                   <button key={item.id} onClick={() => { item.onSelect(); setMode(item.id as typeof mode); setShowMoreMenu(false); }}
                     className="flex flex-col items-center py-4 rounded-2xl active:scale-95 transition-all gap-2"
-                    style={{ background: isActive ? `${item.color}18` : 'rgba(255,255,255,0.04)', border: `1px solid ${isActive ? item.color + '40' : 'rgba(255,255,255,0.07)'}` }}>
-                    <Icon size={26} style={{ color: isActive ? item.color : '#4b5563' }} />
-                    <span className="text-xs font-medium" style={{ color: isActive ? item.color : '#6b7280' }}>{item.label}</span>
+                    style={{ background: isActive ? `${item.color}15` : LC.beigeAlt, border: `1px solid ${isActive ? item.color + '50' : LC.border}` }}>
+                    <Icon size={26} style={{ color: isActive ? item.color : LC.textMuted }} />
+                    <span className="text-xs font-medium" style={{ color: isActive ? item.color : LC.textSub }}>{item.label}</span>
                   </button>
                 );
               })}
@@ -2381,12 +2396,11 @@ export default function BridgeClient() {
       {showToolSheet && (
         <div className="fixed inset-0 z-50" onClick={() => setShowToolSheet(false)}>
           <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl overflow-hidden"
-            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease' }}
+            style={{ background: LC.surface, border: `1px solid ${LC.border}`, paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 20px)', animation: 'slideUp 0.22s ease', boxShadow: '0 -8px 40px rgba(0,0,0,0.12)' }}
             onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center pt-3 pb-4"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
-            <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-4">ツール設定</p>
+            <div className="flex justify-center pt-3 pb-4"><div className="w-10 h-1 rounded-full" style={{ background: LC.beigeStrong }} /></div>
+            <p className="text-xs tracking-widest uppercase text-center mb-4" style={{ color: LC.textMuted }}>ツール設定</p>
             <div className="px-4 pb-6 space-y-3">
-              {/* 共通トグル */}
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: '🔊 読み上げ (TTS)',      active: ttsEnabled,      toggle: () => { setTtsEnabled(v => !v); if (ttsEnabled) window.speechSynthesis?.cancel(); } },
@@ -2405,7 +2419,7 @@ export default function BridgeClient() {
                 ].map(item => (
                   <button key={item.label} onClick={item.toggle}
                     className="flex items-center gap-2.5 px-4 py-3.5 rounded-2xl text-sm text-left active:scale-97 transition-all"
-                    style={{ background: item.active ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)', border: item.active ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.07)', color: item.active ? '#a5b4fc' : '#6b7280' }}>
+                    style={{ background: item.active ? LC.skyLight : LC.beigeAlt, border: `1px solid ${item.active ? LC.skyMid : LC.border}`, color: item.active ? '#0369A1' : LC.textSub }}>
                     <span className="text-base leading-none">{item.label.slice(0, 2)}</span>
                     <span className="text-xs font-medium">{item.label.slice(3)}</span>
                   </button>
@@ -2413,8 +2427,8 @@ export default function BridgeClient() {
               </div>
 
               {/* モデル選択 */}
-              <div className="rounded-2xl px-4 py-3 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-gray-600 text-xs">モデル選択</p>
+              <div className="rounded-2xl px-4 py-3 space-y-2" style={{ background: LC.bg, border: `1px solid ${LC.border}` }}>
+                <p className="text-xs" style={{ color: LC.textMuted }}>モデル選択</p>
                 <div className="flex gap-2">
                   {mode === 'code' ? (
                     ['', 'claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8'].map((m, i) => {
@@ -2422,7 +2436,7 @@ export default function BridgeClient() {
                       return (
                         <button key={m} onClick={() => { setCodeModel(m); setShowToolSheet(false); }}
                           className="flex-1 py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
-                          style={{ background: codeModel === m ? 'rgba(14,165,233,0.2)' : 'rgba(255,255,255,0.04)', border: codeModel === m ? '1px solid rgba(14,165,233,0.4)' : '1px solid rgba(255,255,255,0.07)', color: codeModel === m ? '#7dd3fc' : '#6b7280' }}>
+                          style={{ background: codeModel === m ? LC.skyLight : LC.surface, border: `1px solid ${codeModel === m ? LC.skyMid : LC.border}`, color: codeModel === m ? LC.sky : LC.textSub }}>
                           {labels[i]}
                         </button>
                       );
@@ -2431,7 +2445,7 @@ export default function BridgeClient() {
                     CLAUDE_MODELS.map(m => (
                       <button key={m.id} onClick={() => { setChatModel(m.id); setShowToolSheet(false); }}
                         className="flex-1 py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
-                        style={{ background: chatModel === m.id ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.04)', border: chatModel === m.id ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.07)', color: chatModel === m.id ? '#fcd34d' : '#6b7280' }}>
+                        style={{ background: chatModel === m.id ? 'rgba(245,158,11,0.1)' : LC.surface, border: `1px solid ${chatModel === m.id ? LC.warning : LC.border}`, color: chatModel === m.id ? LC.warning : LC.textSub }}>
                         {m.label.split(' ')[0]}
                       </button>
                     ))
@@ -2439,19 +2453,18 @@ export default function BridgeClient() {
                 </div>
               </div>
 
-              {/* Code専用追加オプション */}
               {mode === 'code' && (
                 <div className="flex gap-2">
                   {macList.length > 1 && (
                     <select value={selectedMacId} onChange={e => setSelectedMacId(e.target.value)}
                       className="flex-1 h-11 px-3 rounded-xl text-xs outline-none"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af' }}>
-                      {macList.map(m => <option key={m.id} value={m.id} style={{ background: '#111' }}>{m.name}</option>)}
+                      style={{ background: LC.bg, border: `1px solid ${LC.border}`, color: LC.textSub }}>
+                      {macList.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   )}
                   <button onClick={() => { setLiveOpen(true); setShowToolSheet(false); }} disabled={!macOnline || running}
                     className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium active:scale-95 disabled:opacity-40"
-                    style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#c4b5fd' }}>
+                    style={{ background: LC.skyLight, border: `1px solid ${LC.skyMid}`, color: LC.sky }}>
                     <Radio size={14} /><span>Gemini Live</span>
                   </button>
                 </div>
@@ -2468,8 +2481,8 @@ export default function BridgeClient() {
           0%,100% { transform:translateY(0); }
           50% { transform:translateY(-5px); }
         }
-        @keyframes fadeSlide {
-          from { opacity:0; transform:translateY(6px); }
+        @keyframes fadeSlideUp {
+          from { opacity:0; transform:translateY(16px); }
           to { opacity:1; transform:translateY(0); }
         }
         @keyframes panelIn {
@@ -2479,6 +2492,10 @@ export default function BridgeClient() {
         .panel-enter { animation: panelIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
         @keyframes pulse {
           0%,100% { opacity:0.4; } 50% { opacity:0.8; }
+        }
+        @keyframes orbFloat {
+          0%,100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-20px) scale(1.05); }
         }
       `}</style>
     </div>
