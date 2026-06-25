@@ -1,9 +1,14 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const RELAY_API = process.env.NEXT_PUBLIC_RELAY_API_URL || '';
-const RELAY_WS = process.env.NEXT_PUBLIC_RELAY_WS_URL || '';
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
+
+// 同一ドメインの /relay を使う（ブラウザ実行時のみ）
+function getRelayWsUrl() {
+  if (typeof window === 'undefined') return '';
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${window.location.host}/relay`;
+}
 
 interface Project { id: string; name: string; }
 interface Message { role: 'user' | 'assistant' | 'system'; content: string; streaming?: boolean; }
@@ -75,21 +80,23 @@ export default function BridgeClient() {
   const [initError, setInitError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const wsUrl = token ? `${RELAY_WS}?role=client&token=${token}` : '';
+  const [relayWs, setRelayWs] = useState('');
+  useEffect(() => { setRelayWs(getRelayWsUrl()); }, []);
+  const wsUrl = token && relayWs ? `${relayWs}?role=client&token=${token}` : '';
   const { connected, send, addListener } = useWS(wsUrl, tokenReady && !!token);
 
   useEffect(() => {
     const stored = localStorage.getItem('bridge_token');
     if (stored) { setToken(stored); setTokenReady(true); return; }
-    if (!RELAY_API || !ADMIN_SECRET) { setInitError('環境変数が未設定です'); return; }
-    fetch(`${RELAY_API}/api/token`, {
+    if (!ADMIN_SECRET) { setInitError('NEXT_PUBLIC_ADMIN_SECRET が未設定です'); return; }
+    fetch('/api/bridge/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret: ADMIN_SECRET }),
     }).then(r => r.json()).then(d => {
       if (d.token) { localStorage.setItem('bridge_token', d.token); setToken(d.token); setTokenReady(true); }
       else setInitError('トークン取得失敗');
-    }).catch(() => setInitError('リレーサーバーに接続できません'));
+    }).catch(() => setInitError('サーバーに接続できません'));
   }, []);
 
   useEffect(() => {
