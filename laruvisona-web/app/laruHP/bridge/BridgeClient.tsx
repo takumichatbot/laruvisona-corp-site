@@ -15,6 +15,7 @@ import HomePanel from './HomePanel';
 import PromptLibrary from './PromptLibrary';
 import DiffViewer from './DiffViewer';
 import GoalDecomposer, { type DecomposePlan, type TaskStatus as DecomposeStatus } from './GoalDecomposer';
+import QuantumBrain from './QuantumBrain';
 import { addRecord, getRecords } from './TaskHistoryStore';
 import { Home } from 'lucide-react';
 
@@ -374,6 +375,9 @@ export default function BridgeClient() {
   // I: Git checkpoints
   const [checkpoints, setCheckpoints] = useState<Record<string, { success: boolean; message: string }>>({});
   const [cpToast, setCpToast] = useState<{ phase: string; success: boolean } | null>(null);
+  // 量子思考エンジン
+  const [showQuantumBrain, setShowQuantumBrain] = useState(false);
+  const [quantumGoal, setQuantumGoal] = useState('');
   // ゴール分解・並列実行
   const [decomposePlan, setDecomposePlan] = useState<DecomposePlan | null>(null);
   const [decomposeStatuses, setDecomposeStatuses] = useState<Record<string, DecomposeStatus>>({});
@@ -2248,6 +2252,23 @@ export default function BridgeClient() {
           {/* 機能1: Diff ビューア */}
           {diffResult && <DiffViewer stat={diffResult.stat} diff={diffResult.diff} onClose={() => setDiffResult(null)} />}
 
+          {/* 量子思考エンジン */}
+          {showQuantumBrain && (
+            <QuantumBrain
+              goal={quantumGoal}
+              project={currentProject?.name || ''}
+              adminSecret={ADMIN_SECRET}
+              onClose={() => setShowQuantumBrain(false)}
+              onApply={(text) => {
+                setInput(text);
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = 'auto';
+                  textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+                }
+              }}
+            />
+          )}
+
           {/* ゴール分解モーダル */}
           {showDecomposer && decomposePlan && (
             <GoalDecomposer
@@ -2358,6 +2379,7 @@ export default function BridgeClient() {
                 <div className="absolute bottom-full left-3 mb-2 z-50 rounded-2xl overflow-hidden"
                   style={{ background: LC.surface, border: `1px solid ${LC.border}`, boxShadow: '0 8px 30px rgba(0,0,0,0.12)', backdropFilter: 'blur(20px)', minWidth: 200 }}>
                   {[
+                    { icon: <span style={{ fontSize: 15 }}>⚛</span>, label: '量子思考',  color: '#818CF8', action: () => { if (!input.trim()) return; setQuantumGoal(input.trim()); setShowAttachMenu(false); setShowQuantumBrain(true); }, disabled: !input.trim() },
                     { icon: <Zap size={16} />,    label: 'ゴール分解',        color: '#F59E0B', action: () => { setShowAttachMenu(false); handleDecompose(); }, disabled: !input.trim() || !macOnline || decomposing },
                     { icon: <Camera size={16} />, label: 'スクショ → Code',  color: LC.sky, action: () => { cameraInputRef.current?.click(); setShowAttachMenu(false); } },
                     { icon: <Users size={16} />,  label: 'スクショ → Team',  color: '#A78BFA', action: () => { visualInputRef.current?.click(); setShowAttachMenu(false); } },
@@ -2368,7 +2390,7 @@ export default function BridgeClient() {
                     <button key={i} onClick={(item as { disabled?: boolean }).disabled ? undefined : item.action}
                       disabled={(item as { disabled?: boolean }).disabled}
                       className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left disabled:opacity-40"
-                      style={{ borderBottom: i < 5 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
+                      style={{ borderBottom: i < 6 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
                       onMouseEnter={e => { if (!(item as { disabled?: boolean }).disabled) e.currentTarget.style.background = LC.beigeAlt; }}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                       <span style={{ color: item.color }}>{item.icon}</span>
