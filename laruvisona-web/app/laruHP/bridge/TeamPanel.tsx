@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Users, Play, Square, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Zap, RotateCcw, AlertCircle, MessageSquare, Send, FlaskConical, Eye } from 'lucide-react';
+import { Users, Play, Square, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Zap, RotateCcw, AlertCircle, MessageSquare, Send, FlaskConical, Eye, Terminal, GitCommit, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 export interface OrchestrateTask {
   id: string; agent_name: string; title: string; instruction: string;
@@ -28,6 +28,8 @@ interface Props {
   onResetOrchestrate: () => void;
   initialDirective?: string;
   macList?: MacInfo[];
+  phaseEstimates?: Record<string, number>;
+  checkpoints?: Record<string, { success: boolean; message: string }>;
 }
 
 const EXAMPLES = [
@@ -59,11 +61,24 @@ function saveHistory(entry: HistoryEntry) {
   localStorage.setItem(HIST_KEY, JSON.stringify([entry, ...h].slice(0, 6)));
 }
 
+// J: Risk analysis helper
+function phaseRisk(phase: OrchestratePhase): { level: 'low' | 'medium' | 'high'; tags: string[] } {
+  const text = [phase.name, phase.description, ...phase.tasks.map(t => t.title + ' ' + t.instruction)].join(' ').toLowerCase();
+  const tags: string[] = [];
+  if (/auth|login|password|session|jwt|secret|oauth/.test(text)) tags.push('認証');
+  if (/db|database|migration|schema|prisma|sql|model/.test(text)) tags.push('DB');
+  if (/payment|stripe|billing|subscription/.test(text)) tags.push('決済');
+  if (/delete|drop|remov|truncat/.test(text)) tags.push('削除');
+  if (/api|route|endpoint|middleware/.test(text)) tags.push('API');
+  return { level: tags.length >= 2 ? 'high' : tags.length === 1 ? 'medium' : 'low', tags: tags.slice(0, 3) };
+}
+
 export default function TeamPanel({
   macOnline, projectName, fileTree, onSend,
   orchestrateRunning, orchestratePhase, taskStatuses, taskOutputs,
   orchestrateComplete, orchestrateReviewResult, orchestrateTestResult,
   onResetOrchestrate, initialDirective, macList = [],
+  phaseEstimates = {}, checkpoints = {},
 }: Props) {
   const [step, setStep] = useState<'input' | 'planning' | 'review' | 'executing' | 'done'>('input');
   const [directive, setDirective] = useState('');
@@ -77,7 +92,9 @@ export default function TeamPanel({
   const [showReview, setShowReview] = useState(false);
   const [showTestOutput, setShowTestOutput] = useState(false);
   const [phaseAssignments, setPhaseAssignments] = useState<Record<string, string>>({});
+  const [liveExpanded, setLiveExpanded] = useState(true);
   const svRef = useRef<HTMLInputElement>(null);
+  const liveTermRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -91,6 +108,13 @@ export default function TeamPanel({
   useEffect(() => {
     if (orchestrateRunning && step !== 'executing') setStep('executing');
   }, [orchestrateRunning, step]);
+
+  // F: Auto-scroll live terminal on new output
+  useEffect(() => {
+    if (liveTermRef.current) {
+      liveTermRef.current.scrollTop = liveTermRef.current.scrollHeight;
+    }
+  }, [taskOutputs]);
 
   useEffect(() => {
     if (orchestrateComplete && step === 'executing') {
@@ -262,7 +286,10 @@ export default function TeamPanel({
           </div>
         </div>
 
-        {plan.phases.map((phase, pi) => (
+        {plan.phases.map((phase, pi) => {
+          const risk = phaseRisk(phase);
+          const riskColor = risk.level === 'high' ? '#f87171' : risk.level === 'medium' ? '#fbbf24' : '#34d399';
+          return (
           <div key={phase.id} className="rounded-xl overflow-hidden"
             style={{ border: `1px solid ${PHASE_COLORS[pi % PHASE_COLORS.length]}22` }}>
             <div className="px-4 py-2.5 flex items-center gap-2"
@@ -270,7 +297,15 @@ export default function TeamPanel({
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ background: PHASE_COLORS[pi % PHASE_COLORS.length] }}>{pi + 1}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-semibold">{phase.name}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-white text-sm font-semibold">{phase.name}</p>
+                  {risk.level !== 'low' && (
+                    <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
+                      style={{ background: `${riskColor}18`, color: riskColor, border: `1px solid ${riskColor}33` }}>
+                      <ShieldAlert size={8} />{risk.tags.join('·')}
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-500 text-xs truncate">{phase.description}</p>
               </div>
               {macList.length > 1 ? (
@@ -308,7 +343,8 @@ export default function TeamPanel({
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         <div className="flex gap-2 pt-1">
           <button onClick={reset} className="px-4 py-3 rounded-xl text-sm text-gray-500 active:scale-98"
@@ -367,12 +403,44 @@ export default function TeamPanel({
           </div>
         </div>
 
+        {/* F: Live Terminal — 実行中タスクのリアルタイム出力 */}
+        {(() => {
+          const runningEntry = plan.phases.flatMap(p => p.tasks.map(t => ({ task: t, phase: p }))).find(({ task }) => taskStatuses[task.id] === 'running');
+          const liveOut = runningEntry ? (taskOutputs[runningEntry.task.id] ?? '') : '';
+          if (!runningEntry || !liveOut) return null;
+          return (
+            <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(2,6,14,0.97)', border: '1px solid rgba(99,102,241,0.4)', boxShadow: '0 0 20px rgba(99,102,241,0.1)' }}>
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-indigo-900/40">
+                <div className="flex gap-1">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#10b981' }} />
+                </div>
+                <Terminal size={11} className="text-indigo-500" />
+                <span className="text-indigo-400 text-xs font-mono flex-1 truncate">⚡ {runningEntry.task.agent_name} — {runningEntry.task.title}</span>
+                <button onClick={() => setLiveExpanded(v => !v)} className="text-gray-700 text-xs active:opacity-60 flex-shrink-0">
+                  {liveExpanded ? '▲' : '▼'}
+                </button>
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+              </div>
+              {liveExpanded && (
+                <div ref={liveTermRef} className="p-3 max-h-36 overflow-y-auto">
+                  <pre className="text-emerald-400 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed">{liveOut.slice(-1800)}</pre>
+                  <span className="text-emerald-400 animate-pulse text-xs font-mono">▋</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Phases + Tasks */}
         {plan.phases.map((phase, pi) => {
           const allDone = phase.tasks.every(t => taskStatuses[t.id] === 'done' || taskStatuses[t.id] === 'failed');
           const isRunning = !allDone && phase.tasks.some(t => taskStatuses[t.id] === 'running');
           const hasFailed = phase.tasks.some(t => taskStatuses[t.id] === 'failed');
           const phaseColor = allDone ? (hasFailed ? '#ef4444' : '#34d399') : isRunning ? PHASE_COLORS[pi % PHASE_COLORS.length] : '#374151';
+          const cp = checkpoints[phase.name];
+          const estSecs = phaseEstimates[phase.name];
           return (
             <div key={phase.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${phaseColor}30` }}>
               <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: `${phaseColor}0a` }}>
@@ -381,7 +449,18 @@ export default function TeamPanel({
                   : isRunning ? <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: phaseColor }} />
                   : <Clock size={13} className="text-gray-700" />}
                 <span className="flex-1 text-sm font-semibold" style={{ color: phaseColor }}>フェーズ {pi + 1}: {phase.name}</span>
-                <span className="text-xs text-gray-600">{phase.parallel ? '並列' : '順次'}</span>
+                {/* H: Time estimate */}
+                {isRunning && estSecs && (
+                  <span className="text-xs flex-shrink-0" style={{ color: '#fbbf24' }}>~{Math.round(estSecs / 60) || 1}分</span>
+                )}
+                {/* I: Checkpoint badge */}
+                {cp && (
+                  <span className="flex items-center gap-1 text-xs flex-shrink-0 px-1.5 py-0.5 rounded-full"
+                    style={{ background: cp.success ? 'rgba(52,211,153,0.12)' : 'rgba(239,68,68,0.1)', color: cp.success ? '#6ee7b7' : '#fca5a5' }}>
+                    <GitCommit size={9} />保存済
+                  </span>
+                )}
+                <span className="text-xs text-gray-600 flex-shrink-0">{phase.parallel ? '並列' : '順次'}</span>
               </div>
               <div className="p-2 grid grid-cols-2 gap-1.5">
                 {phase.tasks.map(task => {

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle, Users, MoreHorizontal, SlidersHorizontal, Clock, Target, Brain, Activity } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle, Users, MoreHorizontal, SlidersHorizontal, Clock, Target, Brain, Activity, GitCommit } from 'lucide-react';
 import GeminiLive from './GeminiLive';
 import SchedulePanel, { type Schedule } from './SchedulePanel';
 import ToolsPanel from './ToolsPanel';
@@ -343,11 +343,67 @@ export default function BridgeClient() {
   const [brainSearchResults, setBrainSearchResults] = useState<{ path: string; score: number; lines: number; preview: string }[]>([]);
   const [brainIndexing, setBrainIndexing] = useState(false);
   const [brainProgress, setBrainProgress] = useState<{ count: number; total: number } | null>(null);
+  // H: Phase time estimates
+  const phaseStartTimeRef = useRef<Record<string, number>>({});
+  const [phaseEstimates, setPhaseEstimates] = useState<Record<string, number>>({});
+  // I: Git checkpoints
+  const [checkpoints, setCheckpoints] = useState<Record<string, { success: boolean; message: string }>>({});
+  const [cpToast, setCpToast] = useState<{ phase: string; success: boolean } | null>(null);
   // Production
   const [productionMonitorActive, setProductionMonitorActive] = useState(false);
   const [productionHistory, setProductionHistory] = useState<{ ts: string; status: number; ms: number; ok: boolean; error?: string }[]>([]);
   const [productionLatest, setProductionLatest] = useState<{ ts: string; status: number; ms: number; ok: boolean; error?: string } | null>(null);
   const [productionIncidents, setProductionIncidents] = useState<{ ts: string; error: string; fixOutput: string; fixDone: boolean }[]>([]);
+
+  // H: Track phase start time & load stored estimates
+  useEffect(() => {
+    if (!orchestratePhase || !currentProject) return;
+    phaseStartTimeRef.current[orchestratePhase] = Date.now();
+    try {
+      const stored = JSON.parse(localStorage.getItem(`bridge_phase_times_${currentProject.name}`) || '{}');
+      setPhaseEstimates(stored);
+    } catch { /* ignore */ }
+  }, [orchestratePhase, currentProject]);
+
+  // H: Save phase durations on completion
+  useEffect(() => {
+    if (!orchestrateComplete || !currentProject) return;
+    const now = Date.now();
+    const newEsts = { ...phaseEstimates };
+    Object.entries(phaseStartTimeRef.current).forEach(([phase, start]) => {
+      const secs = (now - start) / 1000;
+      if (secs > 5 && secs < 900) {
+        newEsts[phase] = newEsts[phase] ? (newEsts[phase] + secs) / 2 : secs;
+      }
+    });
+    localStorage.setItem(`bridge_phase_times_${currentProject.name}`, JSON.stringify(newEsts));
+    setPhaseEstimates(newEsts);
+    phaseStartTimeRef.current = {};
+  }, [orchestrateComplete, currentProject]);
+
+  // I: Reset checkpoints on new orchestration
+  useEffect(() => {
+    if (orchestrateRunning) setCheckpoints({});
+  }, [orchestrateRunning]);
+
+  // K: Push notification on orchestration complete
+  useEffect(() => {
+    if (!orchestrateComplete || !currentProject) return;
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const n = new Notification('Bridge — AI Team 完了 🎉', {
+        body: `${currentProject.name} のタスクが完了しました`,
+        icon: '/favicon.ico',
+      });
+      setTimeout(() => n.close(), 8000);
+    }
+  }, [orchestrateComplete, currentProject]);
+
+  // K: Request notification permission when team tab activated
+  useEffect(() => {
+    if (mode === 'team' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (sessionStorage.getItem('bridge_unlocked') === '1') setUnlocked(true);
@@ -498,6 +554,13 @@ export default function BridgeClient() {
       if (m.type === 'orchestrate_test_result') {
         const r = (m as unknown) as { output?: string; passed: boolean; error?: string };
         setOrchestrateTestResult({ output: r.output || r.error || '', passed: r.passed });
+      }
+      // I: Git checkpoint
+      if (m.type === 'git_checkpoint') {
+        const r = (m as unknown) as { phase: string; success: boolean; message: string };
+        setCheckpoints(prev => ({ ...prev, [r.phase]: { success: r.success, message: r.message } }));
+        setCpToast({ phase: r.phase, success: r.success });
+        setTimeout(() => setCpToast(null), 3000);
       }
       // Brain
       if (m.type === 'brain_indexed') {
@@ -1329,6 +1392,8 @@ export default function BridgeClient() {
               }}
               initialDirective={teamInitialDirective}
               macList={macList as MacInfo[]}
+              phaseEstimates={phaseEstimates}
+              checkpoints={checkpoints}
             />
           )}
 
@@ -1810,6 +1875,18 @@ export default function BridgeClient() {
             </div>
           )}
         </>
+      )}
+
+      {/* ─── I: Git Checkpoint Toast ─── */}
+      {cpToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+          style={{ animation: 'slideUp 0.2s ease' }}>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold shadow-xl"
+            style={{ background: cpToast.success ? 'rgba(16,185,129,0.95)' : 'rgba(239,68,68,0.9)', color: 'white', backdropFilter: 'blur(10px)' }}>
+            <GitCommit size={12} />
+            <span>{cpToast.success ? `✓ ${cpToast.phase} — git checkpoint 保存` : `✗ ${cpToast.phase} — checkpoint 失敗`}</span>
+          </div>
+        </div>
       )}
 
       {/* ─── Visual Capture モーダル ─── */}
