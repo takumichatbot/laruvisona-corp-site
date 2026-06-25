@@ -14,6 +14,7 @@ import ConciergePanel from './ConciergePanel';
 import HomePanel from './HomePanel';
 import PromptLibrary from './PromptLibrary';
 import DiffViewer from './DiffViewer';
+import GoalDecomposer, { type DecomposePlan, type TaskStatus as DecomposeStatus } from './GoalDecomposer';
 import { addRecord, getRecords } from './TaskHistoryStore';
 import { Home } from 'lucide-react';
 
@@ -373,6 +374,14 @@ export default function BridgeClient() {
   // I: Git checkpoints
   const [checkpoints, setCheckpoints] = useState<Record<string, { success: boolean; message: string }>>({});
   const [cpToast, setCpToast] = useState<{ phase: string; success: boolean } | null>(null);
+  // ゴール分解・並列実行
+  const [decomposePlan, setDecomposePlan] = useState<DecomposePlan | null>(null);
+  const [decomposeStatuses, setDecomposeStatuses] = useState<Record<string, DecomposeStatus>>({});
+  const [decomposeOutputs, setDecomposeOutputs] = useState<Record<string, string>>({});
+  const [showDecomposer, setShowDecomposer] = useState(false);
+  const [decomposing, setDecomposing] = useState(false);
+  const [decomposeBatchRunning, setDecomposeBatchRunning] = useState(false);
+  const [decomposeGoal, setDecomposeGoal] = useState('');
   // Production
   const [productionMonitorActive, setProductionMonitorActive] = useState(false);
   const [productionHistory, setProductionHistory] = useState<{ ts: string; status: number; ms: number; ok: boolean; error?: string }[]>([]);
@@ -896,6 +905,28 @@ export default function BridgeClient() {
         ]);
         if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
       }
+      // ゴール分解バッチ実行イベント
+      if (m.type === 'batch_task_start') {
+        const r = m as unknown as { task_id: string };
+        setDecomposeStatuses(prev => ({ ...prev, [r.task_id]: 'running' }));
+      }
+      if (m.type === 'batch_task_output') {
+        const r = m as unknown as { task_id: string; content: string };
+        setDecomposeOutputs(prev => ({ ...prev, [r.task_id]: ((prev[r.task_id] || '') + r.content).slice(-800) }));
+      }
+      if (m.type === 'batch_task_done') {
+        const r = m as unknown as { task_id: string };
+        setDecomposeStatuses(prev => ({ ...prev, [r.task_id]: 'done' }));
+        haptic(20);
+      }
+      if (m.type === 'batch_task_failed') {
+        const r = m as unknown as { task_id: string };
+        setDecomposeStatuses(prev => ({ ...prev, [r.task_id]: 'failed' }));
+      }
+      if (m.type === 'batch_done') {
+        setDecomposeBatchRunning(false);
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100, 50, 100]);
+      }
     });
     return unsub;
   }, [addListener]);
@@ -1332,6 +1363,54 @@ export default function BridgeClient() {
     }
     setMessages(prev => [...prev, { role: 'user', content: finalText, ts: Date.now() }]);
     send({ type: 'message', content: finalEnrichedText, model: codeModel || undefined, mac_id: selectedMacId || undefined });
+  };
+
+  // ゴール分解: 入力テキストを Claude で分解してタスク計画を生成
+  const handleDecompose = async () => {
+    const goal = input.trim();
+    if (!goal || !currentProject) return;
+    haptic(10);
+    setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = '44px';
+    setDecomposing(true);
+    setDecomposeGoal(goal);
+    try {
+      const res = await fetch('/api/bridge/decompose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal, project: currentProject.name, secret: ADMIN_SECRET }),
+      });
+      const plan = await res.json() as DecomposePlan & { error?: string };
+      if (plan.error) throw new Error(plan.error);
+      setDecomposePlan(plan);
+      const initStatuses: Record<string, DecomposeStatus> = {};
+      plan.tasks.forEach(t => { initStatuses[t.id] = 'pending'; });
+      setDecomposeStatuses(initStatuses);
+      setDecomposeOutputs({});
+      setShowDecomposer(true);
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'system', content: `ゴール分解エラー: ${String(e)}` }]);
+    } finally {
+      setDecomposing(false);
+    }
+  };
+
+  // バッチ実行開始: mac_agent に run_batch を送信
+  const executeBatch = () => {
+    if (!decomposePlan || !currentProject) return;
+    setDecomposeBatchRunning(true);
+    send({
+      type: 'run_batch',
+      tasks: decomposePlan.tasks.map(t => ({ id: t.id, prompt: t.prompt })),
+      parallel_groups: decomposePlan.parallelGroups,
+      project: currentProject.id,
+      model: codeModel || undefined,
+    });
+  };
+
+  const abortBatch = () => {
+    send({ type: 'abort_batch' });
+    setDecomposeBatchRunning(false);
   };
 
   const handleVisualCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2169,6 +2248,20 @@ export default function BridgeClient() {
           {/* 機能1: Diff ビューア */}
           {diffResult && <DiffViewer stat={diffResult.stat} diff={diffResult.diff} onClose={() => setDiffResult(null)} />}
 
+          {/* ゴール分解モーダル */}
+          {showDecomposer && decomposePlan && (
+            <GoalDecomposer
+              goal={decomposeGoal}
+              plan={decomposePlan}
+              statuses={decomposeStatuses}
+              outputs={decomposeOutputs}
+              running={decomposeBatchRunning}
+              onStart={executeBatch}
+              onAbort={abortBatch}
+              onClose={() => setShowDecomposer(false)}
+            />
+          )}
+
           {/* ↓ 新着ボタン */}
           {newMsgPending && (mode === 'code' || mode === 'chat') && (
             <button
@@ -2265,19 +2358,24 @@ export default function BridgeClient() {
                 <div className="absolute bottom-full left-3 mb-2 z-50 rounded-2xl overflow-hidden"
                   style={{ background: LC.surface, border: `1px solid ${LC.border}`, boxShadow: '0 8px 30px rgba(0,0,0,0.12)', backdropFilter: 'blur(20px)', minWidth: 200 }}>
                   {[
+                    { icon: <Zap size={16} />,    label: 'ゴール分解',        color: '#F59E0B', action: () => { setShowAttachMenu(false); handleDecompose(); }, disabled: !input.trim() || !macOnline || decomposing },
                     { icon: <Camera size={16} />, label: 'スクショ → Code',  color: LC.sky, action: () => { cameraInputRef.current?.click(); setShowAttachMenu(false); } },
                     { icon: <Users size={16} />,  label: 'スクショ → Team',  color: '#A78BFA', action: () => { visualInputRef.current?.click(); setShowAttachMenu(false); } },
                     { icon: <Mic size={16} />,    label: '音声入力',          color: voiceRecording ? LC.error : LC.textMuted, action: () => { handleVoice(); setShowAttachMenu(false); } },
                     { icon: <Radio size={16} />,  label: 'AI音声アシスタント', color: LC.success, action: () => { setShowRealtimeVoice(true); setShowAttachMenu(false); } },
                     { icon: <SlidersHorizontal size={16} />, label: 'ツール設定', color: (enhanceMode||confirmMode||autonomousMode||parallelMode||watchdogActive||ttsEnabled) ? LC.sky : LC.textMuted, action: () => { setShowToolSheet(true); setShowAttachMenu(false); } },
                   ].map((item, i) => (
-                    <button key={i} onClick={item.action}
-                      className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
-                      style={{ borderBottom: i < 4 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = LC.beigeAlt)}
+                    <button key={i} onClick={(item as { disabled?: boolean }).disabled ? undefined : item.action}
+                      disabled={(item as { disabled?: boolean }).disabled}
+                      className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left disabled:opacity-40"
+                      style={{ borderBottom: i < 5 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
+                      onMouseEnter={e => { if (!(item as { disabled?: boolean }).disabled) e.currentTarget.style.background = LC.beigeAlt; }}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                       <span style={{ color: item.color }}>{item.icon}</span>
                       <span className="text-sm" style={{ color: LC.text }}>{item.label}</span>
+                      {item.label === 'ゴール分解' && decomposing && (
+                        <span className="ml-auto text-[10px] animate-pulse" style={{ color: '#F59E0B' }}>分解中...</span>
+                      )}
                       {item.label === 'ツール設定' && (enhanceMode||confirmMode||autonomousMode||parallelMode||watchdogActive||ttsEnabled) && (
                         <span className="ml-auto w-2 h-2 rounded-full" style={{ background: LC.sky }} />
                       )}
