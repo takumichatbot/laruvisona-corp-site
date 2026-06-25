@@ -104,6 +104,8 @@ app.prepare().then(() => {
       ws.on('message', (data) => {
         try {
           const msg = JSON.parse(data.toString());
+          // keepalive ping は吸収（クライアントへ流さない）
+          if (msg.type === 'ping') return;
           // Tag message with source mac
           const tagged = { ...msg, mac_id: macId };
           clients.forEach(c => safeSend(c, tagged));
