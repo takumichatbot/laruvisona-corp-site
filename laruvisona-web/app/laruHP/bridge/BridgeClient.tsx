@@ -2032,6 +2032,15 @@ export default function BridgeClient() {
                     : { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 15px rgba(14,165,233,0.25)' }}>
                   {(running || chatRunning || enhancing) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : '送信'}
                 </button>
+                {/* AI 音声コンシェルジュ（インプットバー内） */}
+                {macOnline && !showRealtimeVoice && (
+                  <button onClick={() => setShowRealtimeVoice(true)}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 active:scale-90 transition-all"
+                    style={{ background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(5,150,105,0.3)' }}
+                    title="AI音声アシスタント">
+                    <Radio size={15} className="text-emerald-400" />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -2111,11 +2120,15 @@ export default function BridgeClient() {
               </button>
             </div>
           )}
-          {/* V: Floating voice button */}
-          {currentProject && macOnline && !showRealtimeVoice && (
+          {/* V: Floating voice button — code/chat はインプットバーがあるので非表示 */}
+          {currentProject && macOnline && !showRealtimeVoice && mode !== 'code' && mode !== 'chat' && (
             <button onClick={() => setShowRealtimeVoice(true)}
-              className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all"
-              style={{ background: 'linear-gradient(135deg, #059669, #0ea5e9)', boxShadow: '0 0 20px rgba(5,150,105,0.4)' }}
+              className="fixed right-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+              style={{
+                bottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 64px)',
+                background: 'linear-gradient(135deg, #059669, #0ea5e9)',
+                boxShadow: '0 0 20px rgba(5,150,105,0.4)',
+              }}
               title="音声アシスタント">
               <Mic size={18} className="text-white" />
             </button>
