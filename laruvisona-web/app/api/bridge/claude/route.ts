@@ -5,14 +5,18 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    const { messages, projectName, model = 'claude-haiku-4-5-20251001' } = await req.json();
+    const { messages, projectName, model = 'claude-haiku-4-5-20251001', context } = await req.json();
+
+    const contextStr = context?.length
+      ? `\n\n---\n以下はプロジェクトの関連コードです:\n${(context as { path: string; content: string }[]).map(c => `# ${c.path}\n\`\`\`\n${c.content.slice(0, 2000)}\n\`\`\``).join('\n\n')}\n---`
+      : '';
 
     const systemPrompt = `あなたは「Laru Bridge」のAIアシスタントです。
 ユーザーのプロジェクト「${projectName}」の開発をサポートしています。
 - 日本語で回答してください
 - コードに関する質問、設計相談、実装アドバイスが得意です
 - コードブロックはmarkdown形式で出力してください
-- 簡潔・的確に答えてください`;
+- 簡潔・的確に答えてください${contextStr}`;
 
     const stream = await client.messages.stream({
       model,

@@ -49,7 +49,8 @@ app.prepare().then(() => {
     }
   });
 
-  let macWs = null;
+  // macs: Map<macId, { ws, name }>
+  const macs = new Map();
   const clients = [];
 
   const wss = new WebSocketServer({ noServer: true });
@@ -60,10 +61,17 @@ app.prepare().then(() => {
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
+  function broadcastMacList() {
+    const list = [...macs.entries()].map(([id, m]) => ({ id, name: m.name }));
+    clients.forEach(c => safeSend(c, { type: 'mac_list', macs: list }));
+  }
+
   wss.on('connection', (ws, req) => {
     const url = new URL(req.url, 'http://localhost');
     const token = url.searchParams.get('token') || '';
     const role = url.searchParams.get('role') || '';
+    const macId = url.searchParams.get('mac_id') || 'default';
+    const macName = url.searchParams.get('mac_name') || macId;
 
     if (!verify(token)) {
       safeSend(ws, { type: 'auth_error' });
@@ -72,24 +80,26 @@ app.prepare().then(() => {
     }
 
     if (role === 'mac') {
-      macWs = ws;
+      macs.set(macId, { ws, name: macName });
       safeSend(ws, { type: 'relay_ready' });
-      clients.forEach(c => safeSend(c, { type: 'mac_online' }));
+      broadcastMacList();
+      // backward compat: also send mac_online
+      clients.forEach(c => safeSend(c, { type: 'mac_online', mac_id: macId, mac_name: macName }));
 
       ws.on('message', (data) => {
         try {
           const msg = JSON.parse(data.toString());
-          clients.forEach(c => safeSend(c, msg));
+          // Tag message with source mac
+          const tagged = { ...msg, mac_id: macId };
+          clients.forEach(c => safeSend(c, tagged));
 
-          // Push notification when Claude Code finishes
           if (msg.type === 'done') {
             const activeClients = clients.filter(c => c.readyState === 1);
-            // Send push when no clients are connected (phone closed the app)
             if (activeClients.length === 0) {
               const ok = msg.exit_code === 0;
               sendPushNotification({
                 title: ok ? 'Claude Code 完了' : 'Claude Code エラー',
-                body: ok ? '実行が正常に完了しました' : `終了コード: ${msg.exit_code}`,
+                body: ok ? `${macName}: 実行が正常に完了しました` : `${macName}: 終了コード ${msg.exit_code}`,
                 url: '/laruHP/bridge',
               });
             }
@@ -97,18 +107,24 @@ app.prepare().then(() => {
         } catch {}
       });
       ws.on('close', () => {
-        macWs = null;
-        clients.forEach(c => safeSend(c, { type: 'mac_offline' }));
+        macs.delete(macId);
+        broadcastMacList();
+        clients.forEach(c => safeSend(c, { type: 'mac_offline', mac_id: macId }));
       });
 
     } else if (role === 'client') {
       clients.push(ws);
-      safeSend(ws, { type: 'mac_status', online: macWs !== null });
+      // backward compat: online = at least one mac connected
+      const online = macs.size > 0;
+      safeSend(ws, { type: 'mac_status', online });
+      broadcastMacList();
 
       ws.on('message', (data) => {
         try {
           const msg = JSON.parse(data.toString());
-          if (macWs) macWs.send(JSON.stringify(msg));
+          const targetId = msg.mac_id || (macs.size > 0 ? [...macs.keys()][0] : null);
+          const target = targetId ? macs.get(targetId) : null;
+          if (target) target.ws.send(JSON.stringify(msg));
           else safeSend(ws, { type: 'error', message: 'Macがオフラインです' });
         } catch {}
       });

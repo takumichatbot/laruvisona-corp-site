@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, CalendarClock, Cpu, MonitorCheck } from 'lucide-react';
 import GeminiLive from './GeminiLive';
+import SchedulePanel, { type Schedule } from './SchedulePanel';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -229,10 +230,24 @@ export default function BridgeClient() {
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   // モード切り替え: code / chat / git / files
-  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files'>('code');
+  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule'>('code');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
+  // 複数Mac
+  const [macList, setMacList] = useState<{ id: string; name: string }[]>([]);
+  const [selectedMacId, setSelectedMacId] = useState('');
+  // コード検索コンテキスト
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ path: string; content: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [attachedContext, setAttachedContext] = useState<{ path: string; content: string }[]>([]);
+  // 自律実行モード
+  const [autonomousMode, setAutonomousMode] = useState(false);
+  const [autonomousLog, setAutonomousLog] = useState<string[]>([]);
+  const [autonomousStep, setAutonomousStep] = useState(0);
+  const autonomousRef = useRef(false);
+  const lastOutputRef = useRef('');
   // Git status
   const [gitStatus, setGitStatus] = useState<{ status?: string; log?: string; error?: string } | null>(null);
   const [gitLoading, setGitLoading] = useState(false);
@@ -298,6 +313,19 @@ export default function BridgeClient() {
       if (m.type === 'mac_online') { setMacOnline(true); send({ type: 'list_projects' }); }
       if (m.type === 'mac_offline') { setMacOnline(false); setRunning(false); }
       if (m.type === 'auth_error') { localStorage.removeItem('bridge_token'); setToken(''); setTokenReady(false); }
+      if (m.type === 'mac_list') {
+        const list = ((m as unknown) as { macs: { id: string; name: string }[] }).macs || [];
+        setMacList(list);
+        if (list.length > 0 && !selectedMacId) setSelectedMacId(list[0].id);
+      }
+      if (m.type === 'code_search_result') {
+        const r = m as { results?: { path: string; content: string }[]; error?: string };
+        if (!r.error) setSearchResults(r.results || []);
+        setSearching(false);
+      }
+      if (m.type === 'file_write_result') {
+        setFileLoading(false);
+      }
       if (m.type === 'git_status_result') {
         setGitStatus(m as { status?: string; log?: string; error?: string });
         setGitLoading(false);
@@ -337,11 +365,19 @@ export default function BridgeClient() {
         setMessages(prev => {
           const updated = (() => {
             const last = prev[prev.length - 1];
-            return last?.streaming ? [...prev.slice(0, -1), { ...last, streaming: false, ts: Date.now() }] : prev;
+            if (last?.streaming) {
+              lastOutputRef.current = last.content;
+              return [...prev.slice(0, -1), { ...last, streaming: false, ts: Date.now() }];
+            }
+            return prev;
           })();
           const lastMsg = updated[updated.length - 1];
           if (lastMsg?.role === 'assistant' && lastMsg.content.length > 300) {
             setTimeout(() => summarizeOutput(lastMsg.content, updated.length - 1), 300);
+          }
+          // 自律実行モード
+          if (autonomousRef.current && m.exit_code === 0 && autonomousStep < 10) {
+            setTimeout(() => runAutonomousStep(lastOutputRef.current), 1000);
           }
           return updated;
         });
@@ -373,6 +409,71 @@ export default function BridgeClient() {
 
   const newConversation = () => {
     send({ type: 'new_conversation' });
+  };
+
+  // 自律実行
+  const runAutonomousStep = useCallback(async (lastOutput: string) => {
+    if (!currentProject || !autonomousRef.current) return;
+    try {
+      const res = await fetch('/api/bridge/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: `前のステップの実行結果:\n${lastOutput.slice(0, 2000)}\n\nタスクが完全に完了していたら「タスク完了」とだけ返してください。まだ残っていたら次に実行すべきClaude Codeへの指示を1つだけ返してください（説明不要）。` }],
+          projectName: currentProject.name,
+          model: 'claude-haiku-4-5-20251001',
+        }),
+      });
+      let nextStep = '';
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        for (const line of decoder.decode(value).split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try { nextStep += JSON.parse(data).text || ''; } catch { /* ignore */ }
+        }
+      }
+      nextStep = nextStep.trim();
+      if (!nextStep || nextStep.includes('タスク完了') || !autonomousRef.current) {
+        setAutonomousLog(prev => [...prev, '完了']);
+        autonomousRef.current = false;
+        setAutonomousMode(false);
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100, 50, 100]);
+        return;
+      }
+      setAutonomousLog(prev => [...prev, nextStep]);
+      setAutonomousStep(s => s + 1);
+      setMessages(prev => [...prev, { role: 'user', content: `[自律] ${nextStep}`, ts: Date.now() }]);
+      send({ type: 'message', content: nextStep, mac_id: selectedMacId || undefined });
+    } catch { autonomousRef.current = false; setAutonomousMode(false); }
+  }, [currentProject, send, selectedMacId]);
+
+  // コード検索
+  const handleCodeSearch = () => {
+    if (!searchQuery.trim() || !macOnline) return;
+    setSearching(true);
+    setSearchResults([]);
+    send({ type: 'code_search', query: searchQuery, mac_id: selectedMacId || undefined });
+  };
+
+  // ファイルアップロード（Files タブ）
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileLoading(true);
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await fetch('/api/bridge/upload', { method: 'POST', body: form });
+      const { name, base64 } = await res.json();
+      const targetPath = filePath ? `${filePath}/${name}` : name;
+      send({ type: 'file_write', path: targetPath, content: base64, mac_id: selectedMacId || undefined });
+    } catch { setFileLoading(false); }
+    e.target.value = '';
   };
 
   // プリセット管理
@@ -440,6 +541,7 @@ export default function BridgeClient() {
           messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
           projectName: currentProject.name,
           model: chatModel,
+          context: attachedContext.length > 0 ? attachedContext : undefined,
         }),
       });
 
@@ -572,8 +674,13 @@ export default function BridgeClient() {
       setEnhancing(false);
     }
 
+    if (autonomousMode) {
+      autonomousRef.current = true;
+      setAutonomousStep(0);
+      setAutonomousLog([finalText]);
+    }
     setMessages(prev => [...prev, { role: 'user', content: finalText, ts: Date.now() }]);
-    send({ type: 'message', content: finalText, model: codeModel || undefined });
+    send({ type: 'message', content: finalText, model: codeModel || undefined, mac_id: selectedMacId || undefined });
   };
 
   const handleLock = () => {
@@ -701,15 +808,16 @@ export default function BridgeClient() {
           <div className="flex gap-1 px-2 py-2 border-b border-white/5"
             style={{ background: 'rgba(0,0,0,0.4)' }}>
             {([
-              { id: 'code', label: 'Code', activeStyle: { background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc' } },
-              { id: 'chat', label: 'Chat', activeStyle: { background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.4)', color: '#fcd34d' } },
-              { id: 'git',  label: 'Git',  activeStyle: { background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.4)', color: '#6ee7b7' } },
-              { id: 'files',label: 'Files',activeStyle: { background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.4)', color: '#c4b5fd' } },
+              { id: 'code',     label: 'Code',     activeStyle: { background: 'rgba(14,165,233,0.15)',  border: '1px solid rgba(99,102,241,0.4)',  color: '#a5b4fc' } },
+              { id: 'chat',     label: 'Chat',     activeStyle: { background: 'rgba(245,158,11,0.12)',  border: '1px solid rgba(245,158,11,0.4)',  color: '#fcd34d' } },
+              { id: 'git',      label: 'Git',      activeStyle: { background: 'rgba(52,211,153,0.12)',  border: '1px solid rgba(52,211,153,0.4)',  color: '#6ee7b7' } },
+              { id: 'files',    label: 'Files',    activeStyle: { background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.4)', color: '#c4b5fd' } },
+              { id: 'schedule', label: 'Sched',    activeStyle: { background: 'rgba(251,146,60,0.12)',  border: '1px solid rgba(251,146,60,0.4)',  color: '#fdba74' } },
             ] as const).map(t => (
               <button key={t.id} onClick={() => {
                 setMode(t.id);
-                if (t.id === 'git' && !gitStatus && macOnline) { setGitLoading(true); send({ type: 'git_status' }); }
-                if (t.id === 'files' && fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '' }); }
+                if (t.id === 'git' && !gitStatus && macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); }
+                if (t.id === 'files' && fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); }
               }}
                 className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
                 style={mode === t.id ? t.activeStyle : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
@@ -796,12 +904,28 @@ export default function BridgeClient() {
             </div>
           )}
 
+          {/* スケジュール */}
+          {mode === 'schedule' && (
+            <SchedulePanel
+              projects={projects}
+              onExecute={(s: Schedule) => {
+                const proj = projects.find(p => p.id === s.projectId);
+                if (!proj) return;
+                setCurrentProject(proj);
+                setMessages(prev => [...prev, { role: 'user', content: `[スケジュール] ${s.instruction}`, ts: Date.now() }]);
+                send({ type: 'select_project', project: s.projectId });
+                setTimeout(() => send({ type: 'message', content: s.instruction, mac_id: selectedMacId || undefined }), 200);
+                setMode('code');
+              }}
+            />
+          )}
+
           {/* ファイルビューワー */}
           {mode === 'files' && (
             <div className="flex-1 overflow-y-auto">
               {/* パンくず */}
               <div className="flex items-center gap-1 px-4 py-2 border-b border-white/5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                <button onClick={() => { setFilePath(''); setFileContent(''); setFileHistory([]); setFileLoading(true); send({ type: 'file_list', path: '' }); }}
+                <button onClick={() => { setFilePath(''); setFileContent(''); setFileHistory([]); setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); }}
                   className="text-xs text-sky-400 flex-shrink-0 active:opacity-70">root</button>
                 {fileHistory.map((seg, i) => (
                   <span key={i} className="flex items-center gap-1 flex-shrink-0">
@@ -814,6 +938,10 @@ export default function BridgeClient() {
                   </span>
                 ))}
               </div>
+              <label className="ml-auto flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer active:scale-90 transition-all" style={{ background: 'rgba(167,139,250,0.1)' }}>
+                <Upload size={13} className="text-violet-400" />
+                <input type="file" className="hidden" onChange={handleFileUpload} />
+              </label>
               {fileLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>}
               {/* ファイルコンテンツ表示 */}
               {fileContent ? (
@@ -930,6 +1058,54 @@ export default function BridgeClient() {
             <div ref={bottomRef} />
           </div>
 
+          {/* コード検索パネル (Chat モード) */}
+          {mode === 'chat' && searchQuery !== '' && (
+            <div className="border-t border-white/5 px-3 py-3 space-y-2" style={{ background: 'rgba(0,0,0,0.5)' }}>
+              <div className="flex gap-2">
+                <input value={searchQuery.trim()} onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCodeSearch(); if (e.key === 'Escape') { setSearchQuery(''); setSearchResults([]); } }}
+                  placeholder="キーワードで検索..."
+                  className="flex-1 h-8 px-3 rounded-lg text-xs text-white outline-none"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                <button onClick={handleCodeSearch} disabled={searching || !macOnline}
+                  className="px-3 h-8 rounded-lg text-xs text-emerald-400 active:scale-90 disabled:opacity-40 transition-all"
+                  style={{ background: 'rgba(52,211,153,0.1)' }}>
+                  {searching ? '検索中...' : '検索'}
+                </button>
+                <button onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 active:scale-90"
+                  style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  <XIcon size={12} />
+                </button>
+              </div>
+              {searchResults.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {searchResults.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg"
+                      style={{ background: attachedContext.some(c => c.path === r.path) ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.03)' }}>
+                      <span className="text-xs text-gray-400 font-mono truncate flex-1">{r.path}</span>
+                      <button onClick={() => setAttachedContext(prev => prev.some(c => c.path === r.path) ? prev.filter(c => c.path !== r.path) : [...prev, r])}
+                        className="flex-shrink-0 text-xs px-2 py-0.5 rounded-lg transition-all active:scale-90"
+                        style={{ background: attachedContext.some(c => c.path === r.path) ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.06)', color: attachedContext.some(c => c.path === r.path) ? '#6ee7b7' : '#6b7280' }}>
+                        {attachedContext.some(c => c.path === r.path) ? '添付中' : '添付'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 自律実行ログ (Code モード) */}
+          {mode === 'code' && autonomousMode && autonomousLog.length > 0 && (
+            <div className="border-t border-white/5 px-3 py-2 max-h-24 overflow-y-auto" style={{ background: 'rgba(251,146,60,0.05)' }}>
+              <p className="text-orange-400 text-xs mb-1">自律実行 — ステップ {autonomousStep + 1}</p>
+              {autonomousLog.map((l, i) => (
+                <p key={i} className="text-gray-500 text-xs truncate"><span className="text-orange-600 mr-1">{i + 1}.</span>{l}</p>
+              ))}
+            </div>
+          )}
+
           {/* 入力エリア（code / chat のみ） */}
           {(mode === 'code' || mode === 'chat') && <div className="border-t border-white/5"
             style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
@@ -965,16 +1141,32 @@ export default function BridgeClient() {
                 title="プリセット追加">
                 <Plus size={14} className={showPresetAdd ? 'text-emerald-400' : 'text-gray-500'} />
               </button>
-              {/* Codeモード: モデル選択 + Gemini Live */}
+              {/* Codeモード: 自律実行 + モデル + Mac選択 + Live */}
               {mode === 'code' && (
                 <div className="flex items-center gap-1 ml-auto">
+                  {/* 自律実行 */}
+                  <button onClick={() => { setAutonomousMode(v => !v); autonomousRef.current = false; }}
+                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
+                    style={{ background: autonomousMode ? 'rgba(251,146,60,0.15)' : 'rgba(255,255,255,0.05)', border: autonomousMode ? '1px solid rgba(251,146,60,0.4)' : 'none', color: autonomousMode ? '#fdba74' : '#6b7280' }}>
+                    <Cpu size={12} />
+                    <span>自律</span>
+                  </button>
+                  {/* Mac選択 */}
+                  {macList.length > 1 && (
+                    <select value={selectedMacId} onChange={e => setSelectedMacId(e.target.value)}
+                      className="h-8 px-1 rounded-lg text-xs outline-none"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af', maxWidth: '80px' }}>
+                      {macList.map(m => <option key={m.id} value={m.id} style={{ background: '#111' }}>{m.name}</option>)}
+                    </select>
+                  )}
+                  {/* モデル選択 */}
                   <select value={codeModel} onChange={e => setCodeModel(e.target.value)} disabled={running}
                     className="h-8 px-2 rounded-lg text-xs outline-none transition-all"
                     style={{ background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.2)', color: '#7dd3fc' }}>
-                    <option value="" style={{ background: '#111', color: '#fff' }}>デフォルト</option>
-                    <option value="claude-haiku-4-5-20251001" style={{ background: '#111', color: '#fff' }}>Haiku (速い)</option>
-                    <option value="claude-sonnet-4-6" style={{ background: '#111', color: '#fff' }}>Sonnet (賢い)</option>
-                    <option value="claude-opus-4-8" style={{ background: '#111', color: '#fff' }}>Opus (最高)</option>
+                    <option value="" style={{ background: '#111', color: '#fff' }}>Default</option>
+                    <option value="claude-haiku-4-5-20251001" style={{ background: '#111', color: '#fff' }}>Haiku</option>
+                    <option value="claude-sonnet-4-6" style={{ background: '#111', color: '#fff' }}>Sonnet</option>
+                    <option value="claude-opus-4-8" style={{ background: '#111', color: '#fff' }}>Opus</option>
                   </select>
                   <button onClick={() => setLiveOpen(true)} disabled={!macOnline || running}
                     className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40"
@@ -984,15 +1176,32 @@ export default function BridgeClient() {
                   </button>
                 </div>
               )}
-              {/* Chatモード: モデル選択 */}
+              {/* Chatモード: コード検索コンテキスト + モデル選択 */}
               {mode === 'chat' && (
-                <select value={chatModel} onChange={e => setChatModel(e.target.value)} disabled={chatRunning}
-                  className="ml-auto h-8 px-2 rounded-lg text-xs outline-none transition-all"
-                  style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: '#fcd34d' }}>
-                  {CLAUDE_MODELS.map(m => (
-                    <option key={m.id} value={m.id} style={{ background: '#111', color: '#fff' }}>{m.label}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1 ml-auto">
+                  {/* コンテキスト添付バッジ */}
+                  {attachedContext.length > 0 && (
+                    <button onClick={() => setAttachedContext([])}
+                      className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs"
+                      style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', color: '#6ee7b7' }}>
+                      <MonitorCheck size={11} />
+                      <span>{attachedContext.length}件</span>
+                    </button>
+                  )}
+                  {/* コード検索 */}
+                  <button onClick={() => setSearchQuery(q => q || ' ')}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <Search size={13} className="text-gray-500" />
+                  </button>
+                  <select value={chatModel} onChange={e => setChatModel(e.target.value)} disabled={chatRunning}
+                    className="h-8 px-2 rounded-lg text-xs outline-none transition-all"
+                    style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: '#fcd34d' }}>
+                    {CLAUDE_MODELS.map(m => (
+                      <option key={m.id} value={m.id} style={{ background: '#111', color: '#fff' }}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
             <div className="flex gap-2 items-end px-3 pb-3">
