@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown } from 'lucide-react';
 import GeminiLive from './GeminiLive';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
@@ -228,11 +228,20 @@ export default function BridgeClient() {
   const [continuing, setContinuing] = useState(false);
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
-  // モード切り替え: code = Claude Code, chat = Claude Chat
-  const [mode, setMode] = useState<'code' | 'chat'>('code');
+  // モード切り替え: code / chat / git / files
+  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files'>('code');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
+  // Git status
+  const [gitStatus, setGitStatus] = useState<{ status?: string; log?: string; error?: string } | null>(null);
+  const [gitLoading, setGitLoading] = useState(false);
+  // ファイルビューワー
+  const [filePath, setFilePath] = useState('');
+  const [fileEntries, setFileEntries] = useState<{ name: string; is_dir: boolean }[]>([]);
+  const [fileContent, setFileContent] = useState('');
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileHistory, setFileHistory] = useState<string[]>([]);
   // プリセット指示
   const [presets, setPresets] = useState<string[]>([]);
   const [showPresetAdd, setShowPresetAdd] = useState(false);
@@ -289,6 +298,20 @@ export default function BridgeClient() {
       if (m.type === 'mac_online') { setMacOnline(true); send({ type: 'list_projects' }); }
       if (m.type === 'mac_offline') { setMacOnline(false); setRunning(false); }
       if (m.type === 'auth_error') { localStorage.removeItem('bridge_token'); setToken(''); setTokenReady(false); }
+      if (m.type === 'git_status_result') {
+        setGitStatus(m as { status?: string; log?: string; error?: string });
+        setGitLoading(false);
+      }
+      if (m.type === 'file_list_result') {
+        const r = m as { path?: string; entries?: { name: string; is_dir: boolean }[]; error?: string };
+        if (!r.error) setFileEntries(r.entries || []);
+        setFileLoading(false);
+      }
+      if (m.type === 'file_read_result') {
+        const r = m as { path?: string; content?: string; error?: string };
+        if (!r.error) setFileContent(r.content || '');
+        setFileLoading(false);
+      }
       if (m.type === 'projects') setProjects(m.projects || []);
       if (m.type === 'running') { setRunning(true); setContinuing(!!(m as {continuing?: boolean}).continuing); }
       if (m.type === 'conversation_reset') { setContinuing(false); setMessages(prev => [...prev, { role: 'system', content: '新しい会話を開始しました' }]); }
@@ -675,22 +698,24 @@ export default function BridgeClient() {
       {view === 'chat' && (
         <>
           {/* モード切り替えタブ */}
-          <div className="flex gap-1 px-3 py-2 border-b border-white/5"
+          <div className="flex gap-1 px-2 py-2 border-b border-white/5"
             style={{ background: 'rgba(0,0,0,0.4)' }}>
-            <button onClick={() => setMode('code')}
-              className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={mode === 'code'
-                ? { background: 'linear-gradient(135deg, rgba(14,165,233,0.2), rgba(99,102,241,0.2))', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc' }
-                : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
-              Claude Code
-            </button>
-            <button onClick={() => setMode('chat')}
-              className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={mode === 'chat'
-                ? { background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15))', border: '1px solid rgba(245,158,11,0.4)', color: '#fcd34d' }
-                : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
-              Claude Chat
-            </button>
+            {([
+              { id: 'code', label: 'Code', activeStyle: { background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc' } },
+              { id: 'chat', label: 'Chat', activeStyle: { background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.4)', color: '#fcd34d' } },
+              { id: 'git',  label: 'Git',  activeStyle: { background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.4)', color: '#6ee7b7' } },
+              { id: 'files',label: 'Files',activeStyle: { background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.4)', color: '#c4b5fd' } },
+            ] as const).map(t => (
+              <button key={t.id} onClick={() => {
+                setMode(t.id);
+                if (t.id === 'git' && !gitStatus && macOnline) { setGitLoading(true); send({ type: 'git_status' }); }
+                if (t.id === 'files' && fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '' }); }
+              }}
+                className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                style={mode === t.id ? t.activeStyle : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
+                {t.label}
+              </button>
+            ))}
           </div>
 
           {/* プリセット指示バー */}
@@ -729,8 +754,106 @@ export default function BridgeClient() {
             </div>
           )}
 
+          {/* Git status ビュー */}
+          {mode === 'git' && (
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-gray-600 text-xs tracking-widest uppercase">Git Status</p>
+                <button onClick={() => { setGitLoading(true); send({ type: 'git_status' }); }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center active:scale-90 transition-all"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}>
+                  <RotateCcw size={12} className={gitLoading ? 'text-emerald-400 animate-spin' : 'text-gray-600'} />
+                </button>
+              </div>
+              {gitLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>}
+              {gitStatus?.error && <p className="text-red-400 text-xs">{gitStatus.error}</p>}
+              {gitStatus?.status !== undefined && (
+                <div className="rounded-xl p-4 space-y-1" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="text-gray-600 text-xs mb-2">変更ファイル</p>
+                  {gitStatus.status ? (
+                    gitStatus.status.trim().split('\n').map((line, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold w-5" style={{ color: line.startsWith('M') ? '#fbbf24' : line.startsWith('A') ? '#34d399' : line.startsWith('D') ? '#f87171' : '#a5b4fc' }}>
+                          {line.slice(0, 2).trim()}
+                        </span>
+                        <span className="text-gray-300 text-xs font-mono truncate">{line.slice(3)}</span>
+                      </div>
+                    ))
+                  ) : <p className="text-gray-600 text-xs">変更なし（クリーン）</p>}
+                </div>
+              )}
+              {gitStatus?.log && (
+                <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="text-gray-600 text-xs mb-2">直近のコミット</p>
+                  {gitStatus.log.trim().split('\n').map((line, i) => (
+                    <div key={i} className="flex items-start gap-2 py-0.5">
+                      <span className="text-sky-500 text-xs font-mono flex-shrink-0">{line.slice(0, 7)}</span>
+                      <span className="text-gray-400 text-xs">{line.slice(8)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ファイルビューワー */}
+          {mode === 'files' && (
+            <div className="flex-1 overflow-y-auto">
+              {/* パンくず */}
+              <div className="flex items-center gap-1 px-4 py-2 border-b border-white/5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                <button onClick={() => { setFilePath(''); setFileContent(''); setFileHistory([]); setFileLoading(true); send({ type: 'file_list', path: '' }); }}
+                  className="text-xs text-sky-400 flex-shrink-0 active:opacity-70">root</button>
+                {fileHistory.map((seg, i) => (
+                  <span key={i} className="flex items-center gap-1 flex-shrink-0">
+                    <ChevronDown size={10} className="text-gray-700 -rotate-90" />
+                    <button onClick={() => {
+                      const newPath = fileHistory.slice(0, i + 1).join('/');
+                      setFilePath(newPath); setFileContent(''); setFileHistory(fileHistory.slice(0, i + 1));
+                      setFileLoading(true); send({ type: 'file_list', path: newPath });
+                    }} className="text-xs text-sky-400 active:opacity-70">{seg}</button>
+                  </span>
+                ))}
+              </div>
+              {fileLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>}
+              {/* ファイルコンテンツ表示 */}
+              {fileContent ? (
+                <div className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-gray-500 text-xs font-mono">{filePath}</p>
+                    <button onClick={() => setInput(`${filePath} を参照して: `)}
+                      className="text-xs text-violet-400 px-2 py-1 rounded-lg active:scale-90 transition-all"
+                      style={{ background: 'rgba(139,92,246,0.1)' }}>Codeに送る</button>
+                  </div>
+                  <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words leading-relaxed overflow-x-auto">{fileContent}</pre>
+                </div>
+              ) : (
+                /* ディレクトリリスト */
+                <div className="px-3 py-2 space-y-0.5">
+                  {fileEntries.map((entry, i) => (
+                    <button key={i} onClick={() => {
+                      const newPath = filePath ? `${filePath}/${entry.name}` : entry.name;
+                      if (entry.is_dir) {
+                        setFilePath(newPath); setFileContent(''); setFileHistory([...fileHistory, entry.name]);
+                        setFileLoading(true); send({ type: 'file_list', path: newPath });
+                      } else {
+                        setFilePath(newPath); setFileLoading(true); send({ type: 'file_read', path: newPath });
+                      }
+                    }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-all active:scale-98"
+                      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      {entry.is_dir
+                        ? <FolderOpen size={14} className="text-sky-400 flex-shrink-0" />
+                        : <FileText size={14} className="text-gray-600 flex-shrink-0" />}
+                      <span className="text-sm text-gray-300 truncate">{entry.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* メッセージリスト */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          <div className={`overflow-y-auto px-4 py-4 space-y-3 ${mode === 'code' || mode === 'chat' ? 'flex-1' : 'hidden'}`}>
             {mode === 'code' && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-2">
                 <p className="text-gray-700 text-sm">Claude Code に指示を送信</p>
@@ -807,8 +930,8 @@ export default function BridgeClient() {
             <div ref={bottomRef} />
           </div>
 
-          {/* 入力エリア */}
-          <div className="border-t border-white/5"
+          {/* 入力エリア（code / chat のみ） */}
+          {(mode === 'code' || mode === 'chat') && <div className="border-t border-white/5"
             style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
             {/* ツールバー */}
             <div className="flex items-center gap-2 px-3 pt-2 pb-1">
@@ -903,7 +1026,7 @@ export default function BridgeClient() {
                 送信
               </button>
             </div>
-          </div>
+          </div>}
         </>
       )}
 
