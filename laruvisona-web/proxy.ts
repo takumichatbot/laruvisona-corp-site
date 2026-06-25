@@ -75,7 +75,7 @@ export async function proxy(request: NextRequest) {
   const isProtected = PROTECTED.some(p => pathname.startsWith(p));
   if (isProtected && !user) {
     const loginUrl = new URL('/laruHP/auth/login', request.url);
-    loginUrl.searchParams.set('next', pathname);
+    loginUrl.searchParams.set('redirectTo', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
