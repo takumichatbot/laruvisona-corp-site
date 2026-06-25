@@ -61,18 +61,18 @@ export async function POST(req: Request) {
       if (!apiKey) throw new Error('OPENAI_API_KEY が未設定です');
 
       // SDK の beta.realtime はバージョン依存のため直接 REST で取得
+      // OpenAI-Beta ヘッダーが必要、sessions API は最小パラメータのみ受け付ける
       const resp = await fetch('https://api.openai.com/v1/realtime/sessions', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'OpenAI-Beta': 'realtime=v1',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-realtime-preview',
+          model: 'gpt-4o-realtime-preview-2024-12-17',
           voice: 'shimmer',
           instructions: `あなたは「Bridge」というAIコーディングアシスタントです。プロジェクト: ${projectName || '不明'}。日本語で会話し、ユーザーの開発意図を把握して具体的な実装指示に変換してください。タスクが明確になったら "→ AI Team に送信できます: [指示文]" の形式で提案してください。`,
-          input_audio_transcription: { model: 'whisper-1' },
-          turn_detection: { type: 'server_vad', threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 },
         }),
       });
 

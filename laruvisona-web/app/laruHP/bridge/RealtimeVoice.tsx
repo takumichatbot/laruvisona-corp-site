@@ -128,7 +128,7 @@ export default function RealtimeVoice({ projectName, onDirective, onClose }: Pro
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      const sdpResp = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+      const sdpResp = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${ephemeralKey}`,
