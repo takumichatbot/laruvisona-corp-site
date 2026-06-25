@@ -9,6 +9,7 @@ import TeamPanel, { type TaskStatus, type MacInfo } from './TeamPanel';
 import PMPanel from './PMPanel';
 import BrainPanel from './BrainPanel';
 import ProductionPanel from './ProductionPanel';
+import RealtimeVoice from './RealtimeVoice';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -338,6 +339,7 @@ export default function BridgeClient() {
   const [visualMime, setVisualMime] = useState('image/jpeg');
   const [visualAnalyzing, setVisualAnalyzing] = useState(false);
   const [teamInitialDirective, setTeamInitialDirective] = useState('');
+  const [showRealtimeVoice, setShowRealtimeVoice] = useState(false);
   // Brain
   const [brainStatus, setBrainStatus] = useState<{ exists: boolean; count?: number; indexed_at?: string } | null>(null);
   const [brainSearchResults, setBrainSearchResults] = useState<{ path: string; score: number; lines: number; preview: string }[]>([]);
@@ -367,10 +369,28 @@ export default function BridgeClient() {
     }
   }, [orchestrateComplete]);
 
-  // K+T: Push notification + haptic on orchestration complete
+  // K+T+Y: Push notification + haptic + TTS on orchestration complete
   useEffect(() => {
     if (!orchestrateComplete || !currentProject) return;
     haptic([40, 30, 80]);
+    // Y: TTS 音声通知
+    const taskVals = Object.values(taskStatuses as Record<string, string>);
+    const failed = taskVals.filter(s => s === 'failed').length;
+    const done = taskVals.filter(s => s === 'done').length;
+    const text = failed > 0
+      ? `${currentProject.name}、${done}タスク完了、${failed}件失敗しました。確認してください。`
+      : `${currentProject.name}の実装が完了しました。全${done}タスク成功です。`;
+    fetch('/api/bridge/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'tts', text, voice: 'shimmer' }),
+    }).then(r => r.ok ? r.blob() : null).then(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play().catch(() => {});
+      audio.onended = () => URL.revokeObjectURL(url);
+    }).catch(() => {});
   }, [orchestrateComplete]);
 
   // H: Track phase start time & load stored estimates
@@ -1377,6 +1397,15 @@ export default function BridgeClient() {
             <GitHubPanel githubRepo={currentProject?.githubRepo ?? null} />
           )}
 
+          {/* V: Realtime Voice modal */}
+          {showRealtimeVoice && currentProject && (
+            <RealtimeVoice
+              projectName={currentProject.name}
+              onDirective={(text) => { setTeamInitialDirective(text); setMode('team'); setShowRealtimeVoice(false); }}
+              onClose={() => setShowRealtimeVoice(false)}
+            />
+          )}
+
           {/* AI Software Team */}
           {mode === 'team' && currentProject && (
             <TeamPanel
@@ -1914,6 +1943,15 @@ export default function BridgeClient() {
                 <span className="text-white/60 text-xs">→ Team</span>
               </button>
             </div>
+          )}
+          {/* V: Floating voice button */}
+          {currentProject && macOnline && !showRealtimeVoice && (
+            <button onClick={() => setShowRealtimeVoice(true)}
+              className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all"
+              style={{ background: 'linear-gradient(135deg, #059669, #0ea5e9)', boxShadow: '0 0 20px rgba(5,150,105,0.4)' }}
+              title="音声アシスタント">
+              <Mic size={18} className="text-white" />
+            </button>
           )}
         </>
       )}

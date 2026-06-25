@@ -210,6 +210,9 @@ export default function TeamPanel({
   const [showConfetti, setShowConfetti] = useState(false);
   const [agentConfig, setAgentConfig] = useState('');
   const [showAgentConfig, setShowAgentConfig] = useState(false);
+  // U: o4-mini plan verification
+  const [verification, setVerification] = useState<{ valid: boolean; score: number; issues: { severity: string; desc: string }[]; suggestions: string[]; summary: string } | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const svRef = useRef<HTMLInputElement>(null);
   const liveTermRef = useRef<HTMLDivElement>(null);
   const planStreamRef = useRef<HTMLDivElement>(null);
@@ -289,7 +292,15 @@ export default function TeamPanel({
             if (ev.type === 'token') { setPlanStream(prev => prev + ev.text); }
             else if (ev.type === 'done') {
               if (!ev.plan?.phases?.length) throw new Error('プランの生成に失敗しました');
-              setPlan(ev.plan); setPlanStream(''); setStep('review'); return;
+              setPlan(ev.plan); setPlanStream(''); setStep('review');
+              // U: Auto-verify with o4-mini
+              setVerifying(true); setVerification(null);
+              fetch('/api/bridge/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'verify_plan', plan: ev.plan, directive }),
+              }).then(r => r.json()).then(v => { setVerification(v); setVerifying(false); }).catch(() => setVerifying(false));
+              return;
             } else if (ev.type === 'error') { throw new Error(ev.error); }
           } catch { /* ignore partial parse */ }
         }
@@ -469,6 +480,44 @@ export default function TeamPanel({
             <span className="text-indigo-400 text-xs">+1 コードレビュー</span>
           </div>
         </div>
+
+        {/* U: o4-mini Verification badge */}
+        {(verifying || verification) && (
+          <div className="rounded-xl px-4 py-3 space-y-2"
+            style={{ background: verification ? (verification.score >= 80 ? 'rgba(52,211,153,0.05)' : verification.score >= 60 ? 'rgba(251,191,36,0.05)' : 'rgba(239,68,68,0.05)') : 'rgba(255,255,255,0.03)', border: `1px solid ${verification ? (verification.score >= 80 ? 'rgba(52,211,153,0.25)' : verification.score >= 60 ? 'rgba(251,191,36,0.25)' : 'rgba(239,68,68,0.25)') : 'rgba(255,255,255,0.06)'}` }}>
+            <div className="flex items-center gap-2">
+              {verifying
+                ? <><div className="w-3 h-3 border border-indigo-400 border-t-transparent rounded-full animate-spin" /><span className="text-indigo-400 text-xs">o4-mini がプランを検証中...</span></>
+                : verification && <>
+                  <span className="text-sm">{verification.score >= 80 ? '✅' : verification.score >= 60 ? '⚠️' : '🚨'}</span>
+                  <span className="text-xs font-semibold" style={{ color: verification.score >= 80 ? '#34d399' : verification.score >= 60 ? '#fbbf24' : '#f87171' }}>
+                    スコア {verification.score}/100
+                  </span>
+                  <span className="text-gray-600 text-xs ml-auto">o4-mini 検証済み</span>
+                </>}
+            </div>
+            {verification?.summary && <p className="text-gray-400 text-xs leading-relaxed">{verification.summary}</p>}
+            {verification?.issues && verification.issues.length > 0 && (
+              <div className="space-y-1">
+                {verification.issues.map((iss, i) => (
+                  <div key={i} className="flex gap-2 text-xs">
+                    <span style={{ color: iss.severity === 'high' ? '#f87171' : iss.severity === 'medium' ? '#fbbf24' : '#9ca3af' }}>
+                      {iss.severity === 'high' ? '🔴' : iss.severity === 'medium' ? '🟡' : '🔵'}
+                    </span>
+                    <span className="text-gray-400 leading-relaxed">{iss.desc}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {verification?.suggestions && verification.suggestions.length > 0 && (
+              <div className="pt-1 border-t border-white/5">
+                {verification.suggestions.slice(0, 2).map((s, i) => (
+                  <p key={i} className="text-gray-600 text-xs">💡 {s}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Cost estimate */}
         <div className="rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
