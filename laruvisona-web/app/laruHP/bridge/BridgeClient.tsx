@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw } from 'lucide-react';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -219,6 +219,7 @@ export default function BridgeClient() {
   };
   const [input, setInput] = useState('');
   const [running, setRunning] = useState(false);
+  const [continuing, setContinuing] = useState(false);
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -259,7 +260,8 @@ export default function BridgeClient() {
       if (m.type === 'mac_offline') { setMacOnline(false); setRunning(false); }
       if (m.type === 'auth_error') { localStorage.removeItem('bridge_token'); setToken(''); setTokenReady(false); }
       if (m.type === 'projects') setProjects(m.projects || []);
-      if (m.type === 'running') setRunning(true);
+      if (m.type === 'running') { setRunning(true); setContinuing(!!(m as {continuing?: boolean}).continuing); }
+      if (m.type === 'conversation_reset') { setContinuing(false); setMessages(prev => [...prev, { role: 'system', content: '新しい会話を開始しました' }]); }
       if (m.type === 'output') {
         setMessages(prev => {
           const last = prev[prev.length - 1];
@@ -298,6 +300,10 @@ export default function BridgeClient() {
     if (!currentProject) return;
     localStorage.removeItem(`bridge_hist_${currentProject.id}`);
     setMessages([]);
+  };
+
+  const newConversation = () => {
+    send({ type: 'new_conversation' });
   };
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -351,6 +357,19 @@ export default function BridgeClient() {
           <div className={`w-2 h-2 rounded-full transition-all ${macOnline ? '' : 'bg-gray-700'}`}
             style={macOnline ? { background: '#38bdf8', boxShadow: '0 0 6px #38bdf8' } : {}} />
         </div>
+        {view === 'chat' && continuing && !running && (
+          <span className="text-xs px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
+            継続中
+          </span>
+        )}
+        {view === 'chat' && !running && (
+          <button onClick={newConversation}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
+            style={{ background: 'rgba(255,255,255,0.05)' }} title="新しい会話">
+            <RotateCcw size={14} />
+          </button>
+        )}
         {view === 'chat' && !running && messages.length > 0 && (
           <button onClick={clearHistory}
             className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 active:scale-90 transition-all"
