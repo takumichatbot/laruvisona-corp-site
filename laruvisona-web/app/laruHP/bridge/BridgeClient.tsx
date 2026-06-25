@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle, Users, MoreHorizontal, SlidersHorizontal, Clock } from 'lucide-react';
 import GeminiLive from './GeminiLive';
 import SchedulePanel, { type Schedule } from './SchedulePanel';
 import ToolsPanel from './ToolsPanel';
@@ -327,6 +327,8 @@ export default function BridgeClient() {
   const [summaries, setSummaries] = useState<Record<number, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const [relayWs, setRelayWs] = useState('');
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showToolSheet, setShowToolSheet] = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem('bridge_unlocked') === '1') setUnlocked(true);
@@ -1021,31 +1023,6 @@ export default function BridgeClient() {
       {/* Chat view */}
       {view === 'chat' && (
         <>
-          {/* モード切り替えタブ */}
-          <div className="flex gap-1 px-2 py-2 border-b border-white/5"
-            style={{ background: 'rgba(0,0,0,0.4)' }}>
-            {([
-              { id: 'code',     label: 'Code',     activeStyle: { background: 'rgba(14,165,233,0.15)',  border: '1px solid rgba(99,102,241,0.4)',  color: '#a5b4fc' } },
-              { id: 'chat',     label: 'Chat',     activeStyle: { background: 'rgba(245,158,11,0.12)',  border: '1px solid rgba(245,158,11,0.4)',  color: '#fcd34d' } },
-              { id: 'git',      label: 'Git',      activeStyle: { background: 'rgba(52,211,153,0.12)',  border: '1px solid rgba(52,211,153,0.4)',  color: '#6ee7b7' } },
-              { id: 'files',    label: 'Files',    activeStyle: { background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.4)', color: '#c4b5fd' } },
-              { id: 'schedule', label: 'Sched',    activeStyle: { background: 'rgba(251,146,60,0.12)',  border: '1px solid rgba(251,146,60,0.4)',  color: '#fdba74' } },
-              { id: 'tools',    label: 'Tools',    activeStyle: { background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.4)', color: '#fca5a5' } },
-              { id: 'github',   label: 'GH',       activeStyle: { background: 'rgba(124,58,237,0.12)',  border: '1px solid rgba(124,58,237,0.4)',  color: '#c4b5fd' } },
-              { id: 'team',     label: '🤖 Team',  activeStyle: { background: 'rgba(79,70,229,0.18)',   border: '1px solid rgba(79,70,229,0.5)',   color: '#a5b4fc' } },
-            ] as const).map(t => (
-              <button key={t.id} onClick={() => {
-                setMode(t.id);
-                if (t.id === 'git' && macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); }
-                if (t.id === 'files' && fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); }
-                if (t.id === 'team' && !fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined });
-              }}
-                className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={mode === t.id ? t.activeStyle : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
-                {t.label}
-              </button>
-            ))}
-          </div>
 
           {/* Ambient アラートバー */}
           {watchdogAlerts.length > 0 && (
@@ -1364,7 +1341,7 @@ export default function BridgeClient() {
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
               const dx = e.changedTouches[0].clientX - touchStartX.current;
-              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'files', 'schedule', 'tools', 'github', 'team'];
+              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'team'];
               if (Math.abs(dx) > 70) {
                 const cur = TAB_ORDER.indexOf(mode);
                 const next = dx < 0 ? Math.min(cur + 1, TAB_ORDER.length - 1) : Math.max(cur - 1, 0);
@@ -1525,184 +1502,293 @@ export default function BridgeClient() {
           )}
 
           {/* 入力エリア（code / chat のみ） */}
-          {(mode === 'code' || mode === 'chat') && <div className="border-t border-white/5"
-            style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
-            {/* ツールバー */}
-            <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-              {/* 画像 */}
-              <label className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all active:scale-90 ${enhancing ? 'opacity-40 pointer-events-none' : ''}`}
-                style={{ background: 'rgba(255,255,255,0.05)' }}>
-                <Camera size={14} className="text-gray-500" />
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
-              </label>
-              {/* 音声 */}
-              <button onClick={handleVoice} disabled={enhancing}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-40"
-                style={{ background: voiceRecording ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)', border: voiceRecording ? '1px solid rgba(239,68,68,0.4)' : 'none' }}>
-                <Mic size={14} className={voiceRecording ? 'text-red-400' : 'text-gray-500'} />
-              </button>
-              {/* TTS */}
-              <button onClick={() => { setTtsEnabled(v => !v); if (ttsEnabled) window.speechSynthesis?.cancel(); }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                style={{ background: ttsEnabled ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.05)', border: ttsEnabled ? '1px solid rgba(56,189,248,0.3)' : 'none' }}>
-                {ttsEnabled ? <Volume2 size={14} className="text-sky-400" /> : <VolumeX size={14} className="text-gray-600" />}
-              </button>
-              {/* 強化モード */}
-              <button onClick={() => setEnhanceMode(v => !v)} disabled={enhancing}
-                className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40"
-                style={{
-                  background: enhanceMode ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
-                  border: enhanceMode ? '1px solid rgba(99,102,241,0.4)' : 'none',
-                  color: enhanceMode ? '#a5b4fc' : '#6b7280',
-                }}>
-                {enhancing ? <div className="w-3 h-3 border border-indigo-400 border-t-transparent rounded-full animate-spin" /> : <Sparkles size={12} />}
-                <span>強化</span>
-              </button>
-              {/* プリセット追加 */}
-              <button onClick={() => setShowPresetAdd(v => !v)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                style={{ background: showPresetAdd ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.05)', border: showPresetAdd ? '1px solid rgba(52,211,153,0.3)' : 'none' }}
-                title="プリセット追加">
-                <Plus size={14} className={showPresetAdd ? 'text-emerald-400' : 'text-gray-500'} />
-              </button>
-              {/* Codeモード: 自律実行 + モデル + Mac選択 + Live */}
-              {mode === 'code' && (
-                <div className="flex items-center gap-1 ml-auto">
-                  {/* Multi-Agent */}
-                  <button onClick={() => setParallelMode(v => !v)}
-                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
-                    style={{ background: parallelMode ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)', border: parallelMode ? '1px solid rgba(99,102,241,0.4)' : 'none', color: parallelMode ? '#a5b4fc' : '#6b7280' }}>
-                    <MonitorCheck size={11} />
-                    <span>並列</span>
-                  </button>
-                  {/* Watchdog */}
-                  <button onClick={() => {
-                    if (watchdogActive) { send({ type: 'watchdog_stop' }); setWatchdogActive(false); }
-                    else { send({ type: 'watchdog_start' }); }
+          {(mode === 'code' || mode === 'chat') && (
+            <div className="border-t border-white/5 flex-shrink-0"
+              style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.7)' }}>
+              {/* プリセット + ツール状態バッジ行 */}
+              {(presets.length > 0 || showPresetAdd || enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled || attachedContext.length > 0) && (
+                <div className="flex items-center gap-2 px-3 pt-2 pb-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                  {/* アクティブツールバッジ */}
+                  {enhanceMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc' }}><Sparkles size={10} />強化</span>}
+                  {ttsEnabled && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', color: '#7dd3fc' }}><Volume2 size={10} />読上げ</span>}
+                  {confirmMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}><AlertTriangle size={10} />確認</span>}
+                  {autonomousMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.3)', color: '#fdba74' }}><Cpu size={10} />自律</span>}
+                  {parallelMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}><MonitorCheck size={10} />並列</span>}
+                  {watchdogActive && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}><Radio size={10} className="animate-pulse" />監視中</span>}
+                  {attachedContext.length > 0 && (
+                    <button onClick={() => setAttachedContext([])} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium active:scale-90" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', color: '#6ee7b7' }}>
+                      <MonitorCheck size={10} />{attachedContext.length}件 ✕
+                    </button>
+                  )}
+                  {/* プリセット */}
+                  {presets.length > 0 && <div className="w-px h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }} />}
+                  {presets.map((p, i) => (
+                    <div key={i} className="flex items-center gap-1 flex-shrink-0 group">
+                      <button onClick={() => setInput(p)}
+                        className="px-3 py-1 rounded-full text-xs text-gray-400 whitespace-nowrap transition-all active:scale-90"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        {p.length > 18 ? p.slice(0, 18) + '…' : p}
+                      </button>
+                      <button onClick={() => removePreset(i)} className="w-4 h-4 rounded-full flex-shrink-0 hidden group-hover:flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.3)' }}>
+                        <XIcon size={8} className="text-red-400" />
+                      </button>
+                    </div>
+                  ))}
+                  {showPresetAdd && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <input value={presetInput} onChange={e => setPresetInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { savePreset(presetInput); setPresetInput(''); setShowPresetAdd(false); } if (e.key === 'Escape') { setShowPresetAdd(false); setPresetInput(''); } }}
+                        placeholder="指示..." autoFocus
+                        className="w-32 px-2 py-1 rounded-full text-xs text-white outline-none"
+                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)' }} />
+                      <button onClick={() => { savePreset(presetInput); setPresetInput(''); setShowPresetAdd(false); }} className="px-2 py-1 rounded-full text-xs text-emerald-400" style={{ background: 'rgba(52,211,153,0.1)' }}>追加</button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* メイン入力行 */}
+              <div className="flex gap-2 items-end px-3 py-2.5">
+                {/* 画像 */}
+                <label className={`w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-90 flex-shrink-0 ${enhancing ? 'opacity-40 pointer-events-none' : ''}`}
+                  style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <Camera size={17} className="text-gray-500" />
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+                </label>
+                {/* 音声 */}
+                <button onClick={handleVoice} disabled={enhancing}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-40 flex-shrink-0"
+                  style={{ background: voiceRecording ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.06)', border: voiceRecording ? '1px solid rgba(239,68,68,0.5)' : 'none' }}>
+                  <Mic size={17} className={voiceRecording ? 'text-red-400' : 'text-gray-500'} />
+                </button>
+                {/* Textarea */}
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); mode === 'chat' ? handleChatSend() : handleSend(); } }}
+                  placeholder={mode === 'chat' ? 'Claude に質問...' : '指示を入力...'}
+                  rows={1}
+                  disabled={mode === 'code' ? (running || !macOnline) : chatRunning}
+                  className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-gray-700 resize-none outline-none transition-all disabled:opacity-30"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '44px', maxHeight: '120px' }}
+                />
+                {/* ツールシートボタン */}
+                <button onClick={() => setShowToolSheet(true)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0 relative"
+                  style={{ background: (enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled) ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)', border: (enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled) ? '1px solid rgba(99,102,241,0.4)' : 'none' }}>
+                  <SlidersHorizontal size={17} className={(enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled) ? 'text-indigo-400' : 'text-gray-500'} />
+                </button>
+                {/* 送信 */}
+                <button
+                  onClick={() => mode === 'chat' ? handleChatSend() : handleSend()}
+                  disabled={mode === 'code' ? (running || !input.trim() || !macOnline) : (chatRunning || !input.trim())}
+                  className="h-10 px-4 rounded-xl font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30 flex-shrink-0"
+                  style={mode === 'chat'
+                    ? { background: 'linear-gradient(135deg, #d97706, #dc2626)', boxShadow: '0 0 15px rgba(217,119,6,0.25)' }
+                    : { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 15px rgba(14,165,233,0.25)' }}>
+                  {(running || chatRunning || enhancing) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : '送信'}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ─── ボトムナビゲーション ─── */}
+      {view === 'chat' && (
+        <div className="flex-shrink-0 border-t border-white/5"
+          style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(24px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <div className="flex">
+            {([
+              { id: 'code',  label: 'Code',  icon: MonitorSmartphone, color: '#a5b4fc' },
+              { id: 'chat',  label: 'Chat',  icon: Bot,                color: '#fcd34d' },
+              { id: 'git',   label: 'Git',   icon: GitBranch,          color: '#6ee7b7' },
+              { id: 'team',  label: 'Team',  icon: Users,              color: '#818cf8' },
+              { id: 'more',  label: 'More',  icon: MoreHorizontal,     color: '#9ca3af' },
+            ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string }[]).map(tab => {
+              const isMore = tab.id === 'more';
+              const isActive = isMore
+                ? (['files', 'schedule', 'tools', 'github'] as string[]).includes(mode)
+                : mode === tab.id;
+              const Icon = tab.icon;
+              return (
+                <button key={tab.id}
+                  onClick={() => {
+                    if (isMore) { setShowMoreMenu(true); return; }
+                    const m = tab.id as typeof mode;
+                    setMode(m);
+                    if (m === 'git' && macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); }
+                    if (m === 'team' && !fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined });
                   }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                    style={{ background: watchdogActive ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', border: watchdogActive ? '1px solid rgba(239,68,68,0.3)' : 'none' }}
-                    title={watchdogActive ? '監視停止' : '常時監視開始'}>
-                    <Radio size={12} className={watchdogActive ? 'text-red-400 animate-pulse' : 'text-gray-600'} />
+                  className="flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-all active:scale-90 relative select-none">
+                  {/* 実行中ドット (team) */}
+                  {tab.id === 'team' && (orchestrateRunning || orchestrateComplete) && (
+                    <span className="absolute top-2 right-[calc(50%-14px)] w-2 h-2 rounded-full"
+                      style={{ background: orchestrateRunning ? '#818cf8' : '#34d399', boxShadow: orchestrateRunning ? '0 0 6px #818cf8' : 'none', animation: orchestrateRunning ? 'pulse 1.5s ease infinite' : 'none' }} />
+                  )}
+                  {/* 実行中ドット (code) */}
+                  {tab.id === 'code' && running && (
+                    <span className="absolute top-2 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                  )}
+                  <Icon size={22} style={{ color: isActive ? tab.color : '#374151' }} />
+                  <span className="text-xs font-medium" style={{ color: isActive ? tab.color : '#374151' }}>{tab.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full"
+                      style={{ background: tab.color }} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── グローバル実行インジケーター（他タブで実行中に表示） ─── */}
+      {view === 'chat' && (
+        <>
+          {running && mode !== 'code' && (
+            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-auto" style={{ animation: 'fadeSlide 0.3s ease' }}>
+              <button onClick={() => setMode('code')}
+                className="flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl"
+                style={{ background: 'rgba(14,165,233,0.95)', border: '1px solid rgba(56,189,248,0.5)', backdropFilter: 'blur(16px)' }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <span className="text-white text-xs font-semibold">Claude Code 実行中</span>
+                <span className="text-white/60 text-xs">→ Code</span>
+              </button>
+            </div>
+          )}
+          {orchestrateRunning && mode !== 'team' && (
+            <div className="fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-auto" style={{ animation: 'fadeSlide 0.3s ease' }}>
+              <button onClick={() => setMode('team')}
+                className="flex items-center gap-2 px-4 py-2 rounded-full shadow-2xl"
+                style={{ background: 'rgba(79,70,229,0.95)', border: '1px solid rgba(99,102,241,0.5)', backdropFilter: 'blur(16px)' }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <span className="text-white text-xs font-semibold">AI Team 実行中 — {orchestratePhase}</span>
+                <span className="text-white/60 text-xs">→ Team</span>
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ─── More メニュー ─── */}
+      {showMoreMenu && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowMoreMenu(false)}>
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl overflow-hidden"
+            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'env(safe-area-inset-bottom, 16px)', animation: 'slideUp 0.22s ease' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center pt-3 pb-5"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
+            <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-4">その他のパネル</p>
+            <div className="grid grid-cols-4 gap-3 px-5 pb-6">
+              {([
+                { id: 'files',    label: 'ファイル', icon: FolderOpen, color: '#c4b5fd', onSelect: () => { if (fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); } } },
+                { id: 'tools',    label: 'ツール',   icon: Wrench,     color: '#fca5a5', onSelect: () => {} },
+                { id: 'schedule', label: '予約',     icon: Clock,      color: '#fdba74', onSelect: () => {} },
+                { id: 'github',   label: 'GitHub',   icon: GitBranch,  color: '#d8b4fe', onSelect: () => {} },
+              ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string; onSelect: () => void }[]).map(item => {
+                const Icon = item.icon;
+                const isActive = mode === item.id;
+                return (
+                  <button key={item.id} onClick={() => { item.onSelect(); setMode(item.id as typeof mode); setShowMoreMenu(false); }}
+                    className="flex flex-col items-center py-4 rounded-2xl active:scale-95 transition-all gap-2"
+                    style={{ background: isActive ? `${item.color}18` : 'rgba(255,255,255,0.04)', border: `1px solid ${isActive ? item.color + '40' : 'rgba(255,255,255,0.07)'}` }}>
+                    <Icon size={26} style={{ color: isActive ? item.color : '#4b5563' }} />
+                    <span className="text-xs font-medium" style={{ color: isActive ? item.color : '#6b7280' }}>{item.label}</span>
                   </button>
-                  {/* 確認モード */}
-                  <button onClick={() => setConfirmMode(v => !v)}
-                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
-                    style={{ background: confirmMode ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', border: confirmMode ? '1px solid rgba(239,68,68,0.3)' : 'none', color: confirmMode ? '#fca5a5' : '#6b7280' }}>
-                    <AlertTriangle size={11} />
-                    <span>確認</span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ツールシート ─── */}
+      {showToolSheet && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowToolSheet(false)}>
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl overflow-hidden"
+            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.09)', paddingBottom: 'env(safe-area-inset-bottom, 16px)', animation: 'slideUp 0.22s ease' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center pt-3 pb-4"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
+            <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-4">ツール設定</p>
+            <div className="px-4 pb-6 space-y-3">
+              {/* 共通トグル */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: '🔊 読み上げ (TTS)',      active: ttsEnabled,      toggle: () => { setTtsEnabled(v => !v); if (ttsEnabled) window.speechSynthesis?.cancel(); } },
+                  { label: '✨ Gemini 強化',          active: enhanceMode,     toggle: () => setEnhanceMode(v => !v) },
+                  ...(mode === 'code' ? [
+                    { label: '⚠️ 確認モード',         active: confirmMode,     toggle: () => setConfirmMode(v => !v) },
+                    { label: '🤖 自律実行',            active: autonomousMode,  toggle: () => { setAutonomousMode(v => !v); autonomousRef.current = false; } },
+                    { label: '⚡ 並列エージェント',   active: parallelMode,    toggle: () => setParallelMode(v => !v) },
+                    { label: '📡 Ambient 監視',        active: watchdogActive,  toggle: () => { if (watchdogActive) { send({ type: 'watchdog_stop' }); setWatchdogActive(false); } else send({ type: 'watchdog_start' }); } },
+                  ] : [
+                    { label: '🔍 コード検索',         active: searchQuery !== '', toggle: () => setSearchQuery(q => q || ' ') },
+                    { label: '⚠️ エラー自動診断',     active: diagnosing,      toggle: () => { const err = window.prompt('エラーを貼り付けてください'); if (err) diagnoseError(err); setShowToolSheet(false); } },
+                    { label: '📝 プロジェクト概要',   active: false,           toggle: () => { generateProjectSummary(); setShowToolSheet(false); } },
+                  ]),
+                  { label: '📌 プリセット追加',       active: showPresetAdd,   toggle: () => setShowPresetAdd(v => !v) },
+                ].map(item => (
+                  <button key={item.label} onClick={item.toggle}
+                    className="flex items-center gap-2.5 px-4 py-3.5 rounded-2xl text-sm text-left active:scale-97 transition-all"
+                    style={{ background: item.active ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)', border: item.active ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.07)', color: item.active ? '#a5b4fc' : '#6b7280' }}>
+                    <span className="text-base leading-none">{item.label.slice(0, 2)}</span>
+                    <span className="text-xs font-medium">{item.label.slice(3)}</span>
                   </button>
-                  {/* 自律実行 */}
-                  <button onClick={() => { setAutonomousMode(v => !v); autonomousRef.current = false; }}
-                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
-                    style={{ background: autonomousMode ? 'rgba(251,146,60,0.15)' : 'rgba(255,255,255,0.05)', border: autonomousMode ? '1px solid rgba(251,146,60,0.4)' : 'none', color: autonomousMode ? '#fdba74' : '#6b7280' }}>
-                    <Cpu size={12} />
-                    <span>自律</span>
-                  </button>
-                  {/* Mac選択 */}
+                ))}
+              </div>
+
+              {/* モデル選択 */}
+              <div className="rounded-2xl px-4 py-3 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <p className="text-gray-600 text-xs">モデル選択</p>
+                <div className="flex gap-2">
+                  {mode === 'code' ? (
+                    ['', 'claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8'].map((m, i) => {
+                      const labels = ['Default', 'Haiku', 'Sonnet', 'Opus'];
+                      return (
+                        <button key={m} onClick={() => { setCodeModel(m); setShowToolSheet(false); }}
+                          className="flex-1 py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
+                          style={{ background: codeModel === m ? 'rgba(14,165,233,0.2)' : 'rgba(255,255,255,0.04)', border: codeModel === m ? '1px solid rgba(14,165,233,0.4)' : '1px solid rgba(255,255,255,0.07)', color: codeModel === m ? '#7dd3fc' : '#6b7280' }}>
+                          {labels[i]}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    CLAUDE_MODELS.map(m => (
+                      <button key={m.id} onClick={() => { setChatModel(m.id); setShowToolSheet(false); }}
+                        className="flex-1 py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
+                        style={{ background: chatModel === m.id ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.04)', border: chatModel === m.id ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.07)', color: chatModel === m.id ? '#fcd34d' : '#6b7280' }}>
+                        {m.label.split(' ')[0]}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Code専用追加オプション */}
+              {mode === 'code' && (
+                <div className="flex gap-2">
                   {macList.length > 1 && (
                     <select value={selectedMacId} onChange={e => setSelectedMacId(e.target.value)}
-                      className="h-8 px-1 rounded-lg text-xs outline-none"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af', maxWidth: '80px' }}>
+                      className="flex-1 h-11 px-3 rounded-xl text-xs outline-none"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af' }}>
                       {macList.map(m => <option key={m.id} value={m.id} style={{ background: '#111' }}>{m.name}</option>)}
                     </select>
                   )}
-                  {/* モデル選択 */}
-                  <select value={codeModel} onChange={e => setCodeModel(e.target.value)} disabled={running}
-                    className="h-8 px-2 rounded-lg text-xs outline-none transition-all"
-                    style={{ background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.2)', color: '#7dd3fc' }}>
-                    <option value="" style={{ background: '#111', color: '#fff' }}>Default</option>
-                    <option value="claude-haiku-4-5-20251001" style={{ background: '#111', color: '#fff' }}>Haiku</option>
-                    <option value="claude-sonnet-4-6" style={{ background: '#111', color: '#fff' }}>Sonnet</option>
-                    <option value="claude-opus-4-8" style={{ background: '#111', color: '#fff' }}>Opus</option>
-                  </select>
-                  <button onClick={() => setLiveOpen(true)} disabled={!macOnline || running}
-                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40"
+                  <button onClick={() => { setLiveOpen(true); setShowToolSheet(false); }} disabled={!macOnline || running}
+                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium active:scale-95 disabled:opacity-40"
                     style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#c4b5fd' }}>
-                    <Radio size={12} />
-                    <span>Live</span>
+                    <Radio size={14} /><span>Gemini Live</span>
                   </button>
                 </div>
               )}
-              {/* Chatモード: コード検索コンテキスト + モデル選択 */}
-              {mode === 'chat' && (
-                <div className="flex items-center gap-1 ml-auto">
-                  {/* コンテキスト添付バッジ */}
-                  {attachedContext.length > 0 && (
-                    <button onClick={() => setAttachedContext([])}
-                      className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs"
-                      style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', color: '#6ee7b7' }}>
-                      <MonitorCheck size={11} />
-                      <span>{attachedContext.length}件</span>
-                    </button>
-                  )}
-                  {/* エラー診断 */}
-                  <button onClick={() => { const err = window.prompt('エラーを貼り付けてください'); if (err) diagnoseError(err); }}
-                    disabled={diagnosing}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-40"
-                    style={{ background: diagnosing ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)' }}
-                    title="エラー自動診断">
-                    {diagnosing ? <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" /> : <AlertTriangle size={13} className="text-gray-500" />}
-                  </button>
-                  {/* プロジェクト概要 */}
-                  <button onClick={generateProjectSummary} disabled={!macOnline}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-40"
-                    style={{ background: 'rgba(255,255,255,0.05)' }} title="プロジェクト概要を生成">
-                    <Cpu size={13} className="text-gray-500" />
-                  </button>
-                  {/* コード検索 */}
-                  <button onClick={() => setSearchQuery(q => q || ' ')}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                    style={{ background: 'rgba(255,255,255,0.05)' }}>
-                    <Search size={13} className="text-gray-500" />
-                  </button>
-                  <select value={chatModel} onChange={e => setChatModel(e.target.value)} disabled={chatRunning}
-                    className="h-8 px-2 rounded-lg text-xs outline-none transition-all"
-                    style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: '#fcd34d' }}>
-                    {CLAUDE_MODELS.map(m => (
-                      <option key={m.id} value={m.id} style={{ background: '#111', color: '#fff' }}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
-            <div className="flex gap-2 items-end px-3 pb-3">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={e => {
-                  setInput(e.target.value);
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    mode === 'chat' ? handleChatSend() : handleSend();
-                  }
-                }}
-                placeholder={mode === 'chat' ? 'Claude に質問...' : '指示を入力...'}
-                rows={1}
-                disabled={mode === 'code' ? (running || !macOnline) : chatRunning}
-                className="flex-1 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 resize-none outline-none transition-all disabled:opacity-30"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '44px', maxHeight: '120px' }}
-              />
-              <button
-                onClick={() => mode === 'chat' ? handleChatSend() : handleSend()}
-                disabled={mode === 'code' ? (running || !input.trim() || !macOnline) : (chatRunning || !input.trim())}
-                className="h-10 px-4 rounded-xl font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30"
-                style={mode === 'chat'
-                  ? { background: 'linear-gradient(135deg, #d97706, #dc2626)', boxShadow: '0 0 15px rgba(217,119,6,0.3)' }
-                  : { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 15px rgba(14,165,233,0.3)' }}>
-                送信
-              </button>
-            </div>
-          </div>}
-        </>
+          </div>
+        </div>
       )}
 
       <style>{`
         @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         @keyframes bounce {
           0%,100% { transform:translateY(0); }
           50% { transform:translateY(-5px); }
