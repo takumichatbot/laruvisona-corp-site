@@ -129,10 +129,11 @@ app.prepare().then(() => {
 
     } else if (role === 'client') {
       clients.push(ws);
-      // backward compat: online = at least one mac connected
       const online = macs.size > 0;
       safeSend(ws, { type: 'mac_status', online });
       broadcastMacList();
+      // iPhone が繋いだとき: Mac にバッファを送るよう通知
+      macs.forEach(({ ws: macWs }) => safeSend(macWs, { type: 'client_connected' }));
 
       ws.on('message', (data) => {
         try {
