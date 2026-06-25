@@ -16,6 +16,11 @@ const PROJECT_ICONS: Record<string, React.ReactNode> = {
 interface Project { id: string; name: string; }
 interface Message { role: 'user' | 'assistant' | 'system'; content: string; streaming?: boolean; ts?: number; }
 
+const CLAUDE_MODELS = [
+  { id: 'claude-haiku-4-5-20251001', label: 'Haiku (速い)' },
+  { id: 'claude-sonnet-4-6', label: 'Sonnet (賢い)' },
+];
+
 function getRelayWsUrl() {
   if (typeof window === 'undefined') return '';
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -223,6 +228,11 @@ export default function BridgeClient() {
   const [continuing, setContinuing] = useState(false);
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
+  // モード切り替え: code = Claude Code, chat = Claude Chat
+  const [mode, setMode] = useState<'code' | 'chat'>('code');
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
+  const [chatRunning, setChatRunning] = useState(false);
   // Gemini
   const [enhanceMode, setEnhanceMode] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
@@ -320,6 +330,76 @@ export default function BridgeClient() {
 
   const newConversation = () => {
     send({ type: 'new_conversation' });
+  };
+
+  const handleChatSend = async () => {
+    const text = input.trim();
+    if (!text || chatRunning || !currentProject) return;
+    setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = '44px';
+
+    let finalText = text;
+    if (enhanceMode) {
+      try {
+        finalText = await gemini('enhance', {
+          input: text,
+          projectName: currentProject.name,
+          recentHistory: chatMessages.slice(-6).map(m => ({ role: m.role, content: m.content })),
+        });
+      } catch { finalText = text; }
+    }
+
+    const userMsg: Message = { role: 'user', content: finalText, ts: Date.now() };
+    const nextMessages = [...chatMessages, userMsg];
+    setChatMessages(nextMessages);
+    setChatRunning(true);
+
+    const assistantMsg: Message = { role: 'assistant', content: '', streaming: true, ts: Date.now() };
+    setChatMessages([...nextMessages, assistantMsg]);
+
+    try {
+      const res = await fetch('/api/bridge/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
+          projectName: currentProject.name,
+          model: chatModel,
+        }),
+      });
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let full = '';
+
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const lines = decoder.decode(value).split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const { text: chunk } = JSON.parse(data);
+            full += chunk;
+            setChatMessages(prev => {
+              const last = prev[prev.length - 1];
+              return last?.streaming ? [...prev.slice(0, -1), { ...last, content: full }] : prev;
+            });
+          } catch { /* ignore parse errors */ }
+        }
+      }
+
+      setChatMessages(prev => {
+        const last = prev[prev.length - 1];
+        return last?.streaming ? [...prev.slice(0, -1), { ...last, content: full, streaming: false }] : prev;
+      });
+    } catch (e) {
+      setChatMessages(prev => [...prev.slice(0, -1), { role: 'assistant', content: 'エラーが発生しました', ts: Date.now() }]);
+    } finally {
+      setChatRunning(false);
+    }
   };
 
   const gemini = async (action: string, params: Record<string, unknown>) => {
@@ -535,13 +615,43 @@ export default function BridgeClient() {
       {/* Chat view */}
       {view === 'chat' && (
         <>
+          {/* モード切り替えタブ */}
+          <div className="flex gap-1 px-3 py-2 border-b border-white/5"
+            style={{ background: 'rgba(0,0,0,0.4)' }}>
+            <button onClick={() => setMode('code')}
+              className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={mode === 'code'
+                ? { background: 'linear-gradient(135deg, rgba(14,165,233,0.2), rgba(99,102,241,0.2))', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc' }
+                : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
+              Claude Code
+            </button>
+            <button onClick={() => setMode('chat')}
+              className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={mode === 'chat'
+                ? { background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15))', border: '1px solid rgba(245,158,11,0.4)', color: '#fcd34d' }
+                : { background: 'rgba(255,255,255,0.03)', color: '#4b5563' }}>
+              Claude Chat
+            </button>
+          </div>
+
+          {/* メッセージリスト */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-            {messages.length === 0 && (
+            {mode === 'code' && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-2">
                 <p className="text-gray-700 text-sm">Claude Code に指示を送信</p>
               </div>
             )}
-            {messages.map((m, i) => (
+            {mode === 'chat' && chatMessages.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.1))', border: '1px solid rgba(245,158,11,0.2)' }}>
+                  <Bot size={22} className="text-amber-400" />
+                </div>
+                <p className="text-gray-600 text-sm">Claude と直接会話</p>
+                <p className="text-gray-700 text-xs text-center">コード質問・設計相談・なんでも</p>
+              </div>
+            )}
+            {(mode === 'code' ? messages : chatMessages).map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : m.role === 'system' ? 'justify-center' : 'justify-start'}`}
                 style={{ animation: 'fadeSlide 0.2s ease forwards' }}>
                 {m.role === 'system' ? (
@@ -553,12 +663,12 @@ export default function BridgeClient() {
                   <div className="max-w-[88%]">
                     <div className="rounded-2xl px-4 py-3"
                       style={m.role === 'user'
-                        ? { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', borderBottomRightRadius: 4 }
+                        ? { background: mode === 'chat' ? 'linear-gradient(135deg, #d97706, #dc2626)' : 'linear-gradient(135deg, #0ea5e9, #6366f1)', borderBottomRightRadius: 4 }
                         : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderBottomLeftRadius: 4 }}>
                       <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed">{m.content}</pre>
                       {m.streaming && (
                         <span className="inline-block w-2 h-4 ml-0.5 align-middle"
-                          style={{ background: '#38bdf8', animation: 'blink 0.7s step-end infinite' }} />
+                          style={{ background: mode === 'chat' ? '#fbbf24' : '#38bdf8', animation: 'blink 0.7s step-end infinite' }} />
                       )}
                     </div>
                     {m.ts && !m.streaming && (
@@ -566,7 +676,7 @@ export default function BridgeClient() {
                         {new Date(m.ts).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     )}
-                    {summaries[i] && (
+                    {mode === 'code' && summaries[i] && (
                       <div className="mt-2 rounded-xl px-3 py-2 text-xs leading-relaxed"
                         style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
                         <span className="text-violet-500 font-semibold mr-1">✦ Gemini要約</span>
@@ -577,7 +687,7 @@ export default function BridgeClient() {
                 )}
               </div>
             ))}
-            {running && messages[messages.length - 1]?.role !== 'assistant' && (
+            {mode === 'code' && running && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex justify-start">
                 <div className="flex gap-1.5 px-4 py-3 rounded-2xl rounded-bl-sm"
                   style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -588,12 +698,24 @@ export default function BridgeClient() {
                 </div>
               </div>
             )}
+            {mode === 'chat' && chatRunning && chatMessages[chatMessages.length - 1]?.role !== 'assistant' && (
+              <div className="flex justify-start">
+                <div className="flex gap-1.5 px-4 py-3 rounded-2xl rounded-bl-sm"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {[0, 0.15, 0.3].map((d, i) => (
+                    <div key={i} className="w-2 h-2 rounded-full"
+                      style={{ background: '#fbbf24', animation: `bounce 1s ease ${d}s infinite` }} />
+                  ))}
+                </div>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
 
+          {/* 入力エリア */}
           <div className="border-t border-white/5"
             style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.6)' }}>
-            {/* Gemini ツールバー */}
+            {/* ツールバー */}
             <div className="flex items-center gap-2 px-3 pt-2 pb-1">
               {/* 画像 */}
               <label className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all active:scale-90 ${enhancing ? 'opacity-40 pointer-events-none' : ''}`}
@@ -618,13 +740,25 @@ export default function BridgeClient() {
                 {enhancing ? <div className="w-3 h-3 border border-indigo-400 border-t-transparent rounded-full animate-spin" /> : <Sparkles size={12} />}
                 <span>強化</span>
               </button>
-              {/* Gemini Live */}
-              <button onClick={() => setLiveOpen(true)} disabled={!macOnline || running}
-                className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40 ml-auto"
-                style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#c4b5fd' }}>
-                <Radio size={12} />
-                <span>Live</span>
-              </button>
+              {/* Codeモード: Gemini Live */}
+              {mode === 'code' && (
+                <button onClick={() => setLiveOpen(true)} disabled={!macOnline || running}
+                  className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40 ml-auto"
+                  style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', color: '#c4b5fd' }}>
+                  <Radio size={12} />
+                  <span>Live</span>
+                </button>
+              )}
+              {/* Chatモード: モデル選択 */}
+              {mode === 'chat' && (
+                <select value={chatModel} onChange={e => setChatModel(e.target.value)} disabled={chatRunning}
+                  className="ml-auto h-8 px-2 rounded-lg text-xs outline-none transition-all"
+                  style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: '#fcd34d' }}>
+                  {CLAUDE_MODELS.map(m => (
+                    <option key={m.id} value={m.id} style={{ background: '#111', color: '#fff' }}>{m.label}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="flex gap-2 items-end px-3 pb-3">
               <textarea
@@ -635,18 +769,25 @@ export default function BridgeClient() {
                   e.target.style.height = 'auto';
                   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                 }}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                placeholder="指示を入力..."
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    mode === 'chat' ? handleChatSend() : handleSend();
+                  }
+                }}
+                placeholder={mode === 'chat' ? 'Claude に質問...' : '指示を入力...'}
                 rows={1}
-                disabled={running || !macOnline}
+                disabled={mode === 'code' ? (running || !macOnline) : chatRunning}
                 className="flex-1 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 resize-none outline-none transition-all disabled:opacity-30"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '44px', maxHeight: '120px' }}
               />
               <button
-                onClick={handleSend}
-                disabled={running || !input.trim() || !macOnline}
+                onClick={mode === 'chat' ? handleChatSend : handleSend}
+                disabled={mode === 'code' ? (running || !input.trim() || !macOnline) : (chatRunning || !input.trim())}
                 className="h-10 px-4 rounded-xl font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30"
-                style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 15px rgba(14,165,233,0.3)' }}>
+                style={mode === 'chat'
+                  ? { background: 'linear-gradient(135deg, #d97706, #dc2626)', boxShadow: '0 0 15px rgba(217,119,6,0.3)' }
+                  : { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 15px rgba(14,165,233,0.3)' }}>
                 送信
               </button>
             </div>
