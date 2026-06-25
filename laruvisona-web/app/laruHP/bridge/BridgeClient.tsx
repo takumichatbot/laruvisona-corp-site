@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2 } from 'lucide-react';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -210,6 +210,13 @@ export default function BridgeClient() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+
+  const loadHistory = (projectId: string): Message[] => {
+    try { return JSON.parse(localStorage.getItem(`bridge_hist_${projectId}`) || '[]'); } catch { return []; }
+  };
+  const saveHistory = (projectId: string, msgs: Message[]) => {
+    try { localStorage.setItem(`bridge_hist_${projectId}`, JSON.stringify(msgs.slice(-100))); } catch {}
+  };
   const [input, setInput] = useState('');
   const [running, setRunning] = useState(false);
   const [initError, setInitError] = useState('');
@@ -276,11 +283,21 @@ export default function BridgeClient() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+  useEffect(() => {
+    if (currentProject && messages.length > 0) saveHistory(currentProject.id, messages);
+  }, [messages, currentProject]);
+
   const selectProject = (p: Project) => {
     send({ type: 'select_project', project: p.id });
     setCurrentProject(p);
-    setMessages([]);
+    setMessages(loadHistory(p.id));
     setView('chat');
+  };
+
+  const clearHistory = () => {
+    if (!currentProject) return;
+    localStorage.removeItem(`bridge_hist_${currentProject.id}`);
+    setMessages([]);
   };
 
   const handleSend = () => {
@@ -326,6 +343,13 @@ export default function BridgeClient() {
           <div className={`w-2 h-2 rounded-full transition-all ${macOnline ? '' : 'bg-gray-700'}`}
             style={macOnline ? { background: '#38bdf8', boxShadow: '0 0 6px #38bdf8' } : {}} />
         </div>
+        {view === 'chat' && !running && messages.length > 0 && (
+          <button onClick={clearHistory}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:text-red-400 transition-all active:scale-90"
+            style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <Trash2 size={14} />
+          </button>
+        )}
         {running && (
           <button onClick={() => send({ type: 'abort' })}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-red-400 transition-all active:scale-90"
