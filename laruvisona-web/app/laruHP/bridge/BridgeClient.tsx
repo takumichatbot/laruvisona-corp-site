@@ -244,8 +244,11 @@ export default function BridgeClient() {
   useEffect(() => {
     const unsub = addListener((msg: unknown) => {
       const m = msg as { type: string; online?: boolean; projects?: Project[]; content?: string; exit_code?: number; message?: string };
-      if (m.type === 'mac_status') setMacOnline(m.online ?? false);
-      if (m.type === 'mac_online') setMacOnline(true);
+      if (m.type === 'mac_status') {
+        setMacOnline(m.online ?? false);
+        if (m.online) send({ type: 'list_projects' });
+      }
+      if (m.type === 'mac_online') { setMacOnline(true); send({ type: 'list_projects' }); }
       if (m.type === 'mac_offline') { setMacOnline(false); setRunning(false); }
       if (m.type === 'auth_error') { localStorage.removeItem('bridge_token'); setToken(''); setTokenReady(false); }
       if (m.type === 'projects') setProjects(m.projects || []);
