@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Rocket, Terminal, KeyRound, RotateCcw, BarChart2, Smartphone, ChevronDown, ChevronUp, Copy } from 'lucide-react';
+import { Rocket, Terminal, KeyRound, RotateCcw, BarChart2, Smartphone, ChevronDown, ChevronUp, Copy, FlaskConical, Globe, ExternalLink } from 'lucide-react';
 
 interface CostStat { inputTokens: number; outputTokens: number; model: string }
 
@@ -16,6 +16,11 @@ interface Props {
   costs: CostStat[];
   onGemini: (action: string, params: Record<string, unknown>) => Promise<string>;
   gitDiff: string;
+  testOutput: string;
+  testRunning: boolean;
+  testPassed: boolean | null;
+  tunnelUrl: string;
+  tunnelLoading: boolean;
 }
 
 const MODEL_PRICES: Record<string, [number, number]> = {
@@ -31,7 +36,7 @@ function calcCost(stats: CostStat[]) {
   }, 0);
 }
 
-export default function ToolsPanel({ projectName, macOnline, onSend, logs, logsActive, envContent, envPath, envLoading, costs, onGemini, gitDiff }: Props) {
+export default function ToolsPanel({ projectName, macOnline, onSend, logs, logsActive, envContent, envPath, envLoading, costs, onGemini, gitDiff, testOutput, testRunning, testPassed, tunnelUrl, tunnelLoading }: Props) {
   const [section, setSection] = useState<string | null>('deploy');
   const [envKey, setEnvKey] = useState('');
   const [envVal, setEnvVal] = useState('');
@@ -157,6 +162,67 @@ export default function ToolsPanel({ projectName, macOnline, onSend, logs, logsA
               </div>
             )}
           </div>
+        </div>
+      </Section>
+
+      {/* テストループ */}
+      <Section id="tests" label="テスト自動ループ" icon={<FlaskConical size={14} />} open={section === 'tests'} onToggle={() => toggle('tests')} color="#f472b6">
+        <div className="space-y-2">
+          <button onClick={() => onSend({ type: 'run_tests' })} disabled={!macOnline || testRunning}
+            className="w-full py-3 rounded-xl font-semibold text-sm text-white active:scale-98 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{ background: testRunning ? 'rgba(244,114,182,0.15)' : 'linear-gradient(135deg, #db2777, #7c3aed)', boxShadow: testRunning ? 'none' : '0 0 20px rgba(219,39,119,0.3)' }}>
+            {testRunning
+              ? <><div className="w-3 h-3 border border-pink-400 border-t-transparent rounded-full animate-spin" /> テスト実行中...</>
+              : 'テストを実行'}
+          </button>
+          {testPassed !== null && !testRunning && (
+            <div className="rounded-xl px-3 py-2 text-sm font-semibold text-center"
+              style={{ background: testPassed ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)', color: testPassed ? '#6ee7b7' : '#fca5a5' }}>
+              {testPassed ? '✓ テスト通過' : '✗ テスト失敗'}
+            </div>
+          )}
+          {testOutput && (
+            <pre className="text-xs font-mono text-gray-400 max-h-48 overflow-y-auto rounded-xl p-3 whitespace-pre-wrap break-words"
+              style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              {testOutput}
+            </pre>
+          )}
+        </div>
+      </Section>
+
+      {/* ライブプレビュー */}
+      <Section id="tunnel" label="ライブプレビュー" icon={<Globe size={14} />} open={section === 'tunnel'} onToggle={() => toggle('tunnel')} color="#38bdf8">
+        <div className="space-y-2">
+          <p className="text-gray-600 text-xs">開発サーバーをスマホで閲覧できるよう公開URLを生成します</p>
+          <div className="flex gap-2">
+            <button onClick={() => onSend({ type: 'start_tunnel' })} disabled={!macOnline || tunnelLoading || !!tunnelUrl}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold active:scale-98 transition-all disabled:opacity-40"
+              style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.3)', color: '#7dd3fc' }}>
+              {tunnelLoading ? '起動中...' : tunnelUrl ? '公開中' : '開始'}
+            </button>
+            <button onClick={() => onSend({ type: 'stop_tunnel' })} disabled={!tunnelUrl}
+              className="flex-1 py-2 rounded-xl text-xs font-semibold active:scale-98 transition-all disabled:opacity-40"
+              style={{ background: 'rgba(255,255,255,0.05)', color: '#6b7280' }}>
+              停止
+            </button>
+          </div>
+          {tunnelUrl && (
+            <div className="rounded-xl px-3 py-2 flex items-center gap-2" style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)' }}>
+              <a href={tunnelUrl} target="_blank" rel="noopener noreferrer"
+                className="flex-1 text-sky-400 text-xs font-mono truncate">{tunnelUrl}</a>
+              <a href={tunnelUrl} target="_blank" rel="noopener noreferrer"
+                className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center active:scale-90"
+                style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <ExternalLink size={11} className="text-gray-500" />
+              </a>
+              <button onClick={() => navigator.clipboard?.writeText(tunnelUrl)}
+                className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center active:scale-90"
+                style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <Copy size={11} className="text-gray-500" />
+              </button>
+            </div>
+          )}
+          <p className="text-gray-700 text-xs">cloudflared または localtunnel を使用。事前に npx localtunnel が使えるか確認。</p>
         </div>
       </Section>
 

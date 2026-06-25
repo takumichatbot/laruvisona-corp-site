@@ -4,6 +4,7 @@ import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi,
 import GeminiLive from './GeminiLive';
 import SchedulePanel, { type Schedule } from './SchedulePanel';
 import ToolsPanel from './ToolsPanel';
+import GitHubPanel from './GitHubPanel';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -15,7 +16,7 @@ const PROJECT_ICONS: Record<string, React.ReactNode> = {
   laru_dev: <Wrench size={28} />,
 };
 
-interface Project { id: string; name: string; }
+interface Project { id: string; name: string; githubRepo?: string; }
 interface Message { role: 'user' | 'assistant' | 'system'; content: string; streaming?: boolean; ts?: number; }
 
 const CLAUDE_MODELS = [
@@ -231,7 +232,7 @@ export default function BridgeClient() {
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   // モード切り替え: code / chat / git / files
-  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools'>('code');
+  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github'>('code');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
@@ -262,6 +263,21 @@ export default function BridgeClient() {
   const [deployOutput, setDeployOutput] = useState('');
   // エラー診断
   const [diagnosing, setDiagnosing] = useState(false);
+  // Ambient監視
+  const [watchdogAlerts, setWatchdogAlerts] = useState<{ level: string; message: string }[]>([]);
+  const [watchdogActive, setWatchdogActive] = useState(false);
+  // テストループ
+  const [testOutput, setTestOutput] = useState('');
+  const [testRunning, setTestRunning] = useState(false);
+  const [testPassed, setTestPassed] = useState<boolean | null>(null);
+  // ライブプレビュー
+  const [tunnelUrl, setTunnelUrl] = useState('');
+  const [tunnelLoading, setTunnelLoading] = useState(false);
+  // マルチエージェント
+  const [parallelMode, setParallelMode] = useState(false);
+  const [parallelTasks, setParallelTasks] = useState(['', '']);
+  const [agentOutputs, setAgentOutputs] = useState<Record<string, string>>({});
+  const [agentRunning, setAgentRunning] = useState(false);
   // 複数Mac
   const [macList, setMacList] = useState<{ id: string; name: string }[]>([]);
   const [selectedMacId, setSelectedMacId] = useState('');
@@ -380,6 +396,47 @@ export default function BridgeClient() {
         const r = m as { stat?: string; diff?: string; error?: string };
         if (!r.error) setGitDiff(r.diff || '');
       }
+      // Ambient watchdog
+      if (m.type === 'watchdog_started') setWatchdogActive(true);
+      if (m.type === 'watchdog_stopped') setWatchdogActive(false);
+      if (m.type === 'watchdog_alert') {
+        const r = (m as unknown) as { alerts: { level: string; message: string }[] };
+        setWatchdogAlerts(prev => [...prev, ...r.alerts]);
+      }
+      // テスト
+      if (m.type === 'test_started') { setTestRunning(true); setTestOutput(''); setTestPassed(null); }
+      if (m.type === 'test_output') {
+        const r = m as { content: string };
+        setTestOutput(prev => (prev + r.content).slice(-3000));
+      }
+      if (m.type === 'test_result') {
+        const r = m as { exit_code?: number; passed?: boolean; error?: string };
+        setTestRunning(false);
+        setTestPassed(r.error ? false : (r.passed ?? r.exit_code === 0));
+        if (r.error) setTestOutput(prev => prev + '\n[エラー] ' + r.error);
+      }
+      // トンネル
+      if (m.type === 'tunnel_started') {
+        const r = (m as unknown) as { url: string };
+        setTunnelUrl(r.url); setTunnelLoading(false);
+      }
+      if (m.type === 'tunnel_stopped') { setTunnelUrl(''); setTunnelLoading(false); }
+      if (m.type === 'tunnel_result') {
+        const r = m as { error?: string };
+        setTunnelLoading(false);
+        if (r.error) setMessages(prev => [...prev, { role: 'system', content: `トンネルエラー: ${r.error}` }]);
+      }
+      // マルチエージェント
+      if (m.type === 'parallel_started') setAgentRunning(true);
+      if (m.type === 'agent_output') {
+        const r = (m as unknown) as { agent_id: string; content: string };
+        setAgentOutputs(prev => ({ ...prev, [r.agent_id]: ((prev[r.agent_id] || '') + r.content).slice(-2000) }));
+      }
+      if (m.type === 'agent_done') {
+        const r = (m as unknown) as { agent_id: string };
+        setAgentOutputs(prev => ({ ...prev, [r.agent_id]: (prev[r.agent_id] || '') + '\n✓ 完了' }));
+      }
+      if (m.type === 'parallel_done') setAgentRunning(false);
       if (m.type === 'git_status_result') {
         setGitStatus(m as { status?: string; log?: string; error?: string });
         setGitLoading(false);
@@ -929,6 +986,7 @@ export default function BridgeClient() {
               { id: 'files',    label: 'Files',    activeStyle: { background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.4)', color: '#c4b5fd' } },
               { id: 'schedule', label: 'Sched',    activeStyle: { background: 'rgba(251,146,60,0.12)',  border: '1px solid rgba(251,146,60,0.4)',  color: '#fdba74' } },
               { id: 'tools',    label: 'Tools',    activeStyle: { background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.4)', color: '#fca5a5' } },
+              { id: 'github',   label: 'GH',       activeStyle: { background: 'rgba(124,58,237,0.12)',  border: '1px solid rgba(124,58,237,0.4)',  color: '#c4b5fd' } },
             ] as const).map(t => (
               <button key={t.id} onClick={() => {
                 setMode(t.id);
@@ -941,6 +999,63 @@ export default function BridgeClient() {
               </button>
             ))}
           </div>
+
+          {/* Ambient アラートバー */}
+          {watchdogAlerts.length > 0 && (
+            <div className="px-3 py-1.5 space-y-1" style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.15)' }}>
+              {watchdogAlerts.slice(-2).map((a, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs">
+                  <span className={a.level === 'danger' ? 'text-red-400' : 'text-amber-400'}>⚠</span>
+                  <span className="text-gray-300 flex-1 truncate">{a.message}</span>
+                  <button onClick={() => setWatchdogAlerts(prev => prev.filter((_, j) => j !== i))} className="text-gray-600 active:opacity-50 flex-shrink-0">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* マルチエージェント UI */}
+          {parallelMode && (
+            <div className="px-3 py-2 space-y-2" style={{ background: 'rgba(99,102,241,0.06)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
+              <div className="flex items-center justify-between">
+                <p className="text-indigo-400 text-xs font-semibold">Multi-Agent — 並列実行</p>
+                <button onClick={() => setParallelMode(false)} className="text-gray-600 text-xs active:opacity-50">✕ 閉じる</button>
+              </div>
+              {parallelTasks.map((t, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <span className="text-gray-600 text-xs w-12 flex-shrink-0">Agent {i+1}</span>
+                  <input value={t} onChange={e => setParallelTasks(prev => prev.map((v, j) => j === i ? e.target.value : v))}
+                    placeholder={`タスク ${i+1}`}
+                    className="flex-1 h-8 px-2 rounded-lg text-xs text-white outline-none"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.3)' }} />
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <button onClick={() => setParallelTasks(prev => [...prev, ''])} disabled={parallelTasks.length >= 4}
+                  className="px-3 py-1.5 rounded-lg text-xs text-indigo-400 active:scale-90 disabled:opacity-40"
+                  style={{ background: 'rgba(99,102,241,0.1)' }}>+ 追加</button>
+                <button onClick={() => {
+                  const tasks = parallelTasks.filter(t => t.trim());
+                  if (!tasks.length || !macOnline) return;
+                  setAgentOutputs({});
+                  send({ type: 'parallel_exec', tasks, model: codeModel || undefined });
+                }} disabled={agentRunning || !macOnline || !parallelTasks.some(t => t.trim())}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white active:scale-98 transition-all disabled:opacity-40"
+                  style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
+                  {agentRunning ? '実行中...' : '並列実行'}
+                </button>
+              </div>
+              {Object.keys(agentOutputs).length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {Object.entries(agentOutputs).map(([id, out]) => (
+                    <div key={id} className="rounded-lg p-2" style={{ background: 'rgba(0,0,0,0.4)' }}>
+                      <p className="text-indigo-300 text-xs mb-1">{id}</p>
+                      <pre className="text-gray-400 text-xs font-mono whitespace-pre-wrap break-words">{out.slice(-500)}</pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* プリセット指示バー */}
           {(presets.length > 0 || showPresetAdd) && (
@@ -1039,7 +1154,11 @@ export default function BridgeClient() {
             <ToolsPanel
               projectName={currentProject.name}
               macOnline={macOnline}
-              onSend={(msg) => { setEnvLoading(msg.type === 'env_read' || msg.type === 'env_write'); send(msg); }}
+              onSend={(msg) => {
+                if (msg.type === 'env_read' || msg.type === 'env_write') setEnvLoading(true);
+                if (msg.type === 'start_tunnel') setTunnelLoading(true);
+                send(msg);
+              }}
               logs={logs}
               logsActive={logsActive}
               envContent={envContent}
@@ -1048,7 +1167,17 @@ export default function BridgeClient() {
               costs={costs}
               onGemini={gemini}
               gitDiff={gitDiff}
+              testOutput={testOutput}
+              testRunning={testRunning}
+              testPassed={testPassed}
+              tunnelUrl={tunnelUrl}
+              tunnelLoading={tunnelLoading}
             />
+          )}
+
+          {/* GitHub */}
+          {mode === 'github' && (
+            <GitHubPanel githubRepo={currentProject?.githubRepo ?? null} />
           )}
 
           {/* スケジュール */}
@@ -1153,7 +1282,7 @@ export default function BridgeClient() {
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
               const dx = e.changedTouches[0].clientX - touchStartX.current;
-              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'files', 'schedule', 'tools'];
+              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'files', 'schedule', 'tools', 'github'];
               if (Math.abs(dx) > 70) {
                 const cur = TAB_ORDER.indexOf(mode);
                 const next = dx < 0 ? Math.min(cur + 1, TAB_ORDER.length - 1) : Math.max(cur - 1, 0);
@@ -1357,6 +1486,23 @@ export default function BridgeClient() {
               {/* Codeモード: 自律実行 + モデル + Mac選択 + Live */}
               {mode === 'code' && (
                 <div className="flex items-center gap-1 ml-auto">
+                  {/* Multi-Agent */}
+                  <button onClick={() => setParallelMode(v => !v)}
+                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
+                    style={{ background: parallelMode ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)', border: parallelMode ? '1px solid rgba(99,102,241,0.4)' : 'none', color: parallelMode ? '#a5b4fc' : '#6b7280' }}>
+                    <MonitorCheck size={11} />
+                    <span>並列</span>
+                  </button>
+                  {/* Watchdog */}
+                  <button onClick={() => {
+                    if (watchdogActive) { send({ type: 'watchdog_stop' }); setWatchdogActive(false); }
+                    else { send({ type: 'watchdog_start' }); }
+                  }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                    style={{ background: watchdogActive ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', border: watchdogActive ? '1px solid rgba(239,68,68,0.3)' : 'none' }}
+                    title={watchdogActive ? '監視停止' : '常時監視開始'}>
+                    <Radio size={12} className={watchdogActive ? 'text-red-400 animate-pulse' : 'text-gray-600'} />
+                  </button>
                   {/* 確認モード */}
                   <button onClick={() => setConfirmMode(v => !v)}
                     className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
