@@ -22,7 +22,11 @@ export async function POST(req: Request) {
 
     // 1. Whisper 音声認識
     const audioBuffer = Buffer.from(await audioBlob.arrayBuffer());
-    const audioFile = new File([audioBuffer], 'recording.webm', { type: audioBlob.type || 'audio/webm' });
+    const blobType = audioBlob.type || 'audio/webm';
+    const ext = blobType.includes('mp4') || blobType.includes('m4a') ? 'm4a'
+      : blobType.includes('ogg') ? 'ogg'
+      : 'webm';
+    const audioFile = new File([audioBuffer], `recording.${ext}`, { type: blobType });
 
     const transcription = await openai.audio.transcriptions.create({
       model: 'whisper-1',

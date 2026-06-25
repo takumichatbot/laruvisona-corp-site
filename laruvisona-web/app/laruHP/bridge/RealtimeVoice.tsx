@@ -31,15 +31,15 @@ export default function RealtimeVoice({ projectName, onDirective, onClose }: Pro
     setError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-      const mr = new MediaRecorder(stream, { mimeType });
+      // mimeType を強制せず、ブラウザに任せる（iOS は mp4、Chrome は webm を選ぶ）
+      const mr = new MediaRecorder(stream);
       mrRef.current = mr;
       chunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mr.start(100);
+      mr.start(); // チャンク分割しない — stop() で全データが一括 ondataavailable で来る
       setRecording(true);
     } catch {
-      setError('マイクへのアクセスが拒否されました。設定を確認してください。');
+      setError('マイクへのアクセスが拒否されました。設定 → Safari → マイクを確認してください。');
     }
   };
 
@@ -48,24 +48,33 @@ export default function RealtimeVoice({ projectName, onDirective, onClose }: Pro
     setRecording(false);
     setProcessing(true);
 
-    mrRef.current.stop();
-    const mimeType = mrRef.current.mimeType;
-    mrRef.current.stream.getTracks().forEach(t => t.stop());
+    const mr = mrRef.current;
     mrRef.current = null;
 
-    // Give MediaRecorder time to flush final chunk
-    await new Promise(r => setTimeout(r, 250));
+    // stop() 後に最終 ondataavailable + onstop が発火するまで待つ
+    await new Promise<void>(resolve => {
+      mr.onstop = () => resolve();
+      mr.stop();
+    });
+    mr.stream.getTracks().forEach(t => t.stop());
 
-    const blob = new Blob(chunksRef.current, { type: mimeType });
-    if (blob.size < 1000) {
-      setError('録音が短すぎます。もう少し長く話してください。');
+    const actualType = mr.mimeType || 'audio/webm';
+    const blob = new Blob(chunksRef.current, { type: actualType });
+
+    if (blob.size < 200) {
+      setError('録音データが空です。マイクの許可を確認するか、もう少し長く話してください。');
       setProcessing(false);
       return;
     }
 
+    // ファイル名の拡張子を MIME タイプに合わせる
+    const ext = actualType.includes('mp4') || actualType.includes('m4a') ? 'm4a'
+      : actualType.includes('ogg') ? 'ogg'
+      : 'webm';
+
     try {
       const fd = new FormData();
-      fd.append('audio', blob, `recording.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`);
+      fd.append('audio', blob, `recording.${ext}`);
       fd.append('projectName', projectName);
       fd.append('history', JSON.stringify(turns.slice(-6).map(t => ({ role: t.role, text: t.text }))));
 
