@@ -238,6 +238,8 @@ export default function BridgeClient() {
   };
   const [input, setInput] = useState('');
   const [running, setRunning] = useState(false);
+  const [runElapsed, setRunElapsed] = useState(0);
+  const runTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [continuing, setContinuing] = useState(false);
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
@@ -400,6 +402,17 @@ export default function BridgeClient() {
       audio.onended = () => URL.revokeObjectURL(url);
     }).catch(() => {});
   }, [orchestrateComplete]);
+
+  // 実行中タイマー
+  useEffect(() => {
+    if (running) {
+      setRunElapsed(0);
+      runTimerRef.current = setInterval(() => setRunElapsed(s => s + 1), 1000);
+    } else {
+      if (runTimerRef.current) { clearInterval(runTimerRef.current); runTimerRef.current = null; }
+    }
+    return () => { if (runTimerRef.current) clearInterval(runTimerRef.current); };
+  }, [running]);
 
   // タスク履歴トラッキング
   const taskStartRef = useRef<number>(0);
@@ -1319,6 +1332,38 @@ export default function BridgeClient() {
         </div>
       )}
 
+      {/* ライブステータスバー (code モード実行中) */}
+      {mode === 'code' && running && (() => {
+        const last = messages[messages.length - 1];
+        const streamingLine = last?.streaming && last.content
+          ? last.content.split('\n').filter(l => l.trim()).slice(-1)[0]?.trim().slice(0, 72) ?? ''
+          : '';
+        return (
+          <div className="px-4 py-2 flex items-center gap-2 overflow-hidden"
+            style={{ background: 'rgba(14,165,233,0.06)', borderBottom: '1px solid rgba(14,165,233,0.14)' }}>
+            {/* プログレスバー */}
+            <div className="flex-shrink-0 w-20 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <div className="h-full rounded-full" style={{
+                background: 'linear-gradient(90deg, #0ea5e9, #6366f1)',
+                width: `${Math.min(95, (runElapsed / 120) * 100 + 5)}%`,
+                transition: 'width 1s linear',
+              }} />
+            </div>
+            <span className="text-sky-400 text-[11px] font-mono flex-shrink-0">{runElapsed}s</span>
+            {streamingLine ? (
+              <span className="text-gray-500 text-[11px] truncate">{streamingLine}</span>
+            ) : (
+              <span className="text-gray-600 text-[11px]">
+                {runElapsed < 5 ? 'ファイルを読み込んでいます' :
+                 runElapsed < 15 ? 'コードを分析しています' :
+                 runElapsed < 30 ? '実装を計画しています' :
+                 runElapsed < 60 ? 'ファイルを編集しています' : '動作確認しています'}
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Projects view */}
       {view === 'projects' && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -1846,12 +1891,25 @@ export default function BridgeClient() {
             ))}
             {mode === 'code' && running && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex justify-start">
-                <div className="flex gap-1.5 px-4 py-3 rounded-2xl rounded-bl-sm"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  {[0, 0.15, 0.3].map((d, i) => (
-                    <div key={i} className="w-2 h-2 rounded-full"
-                      style={{ background: '#38bdf8', animation: `bounce 1s ease ${d}s infinite` }} />
-                  ))}
+                <div className="rounded-2xl rounded-bl-sm px-4 py-3 max-w-[88%]"
+                  style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.18)' }}>
+                  {/* フェーズヒント */}
+                  <p className="text-sky-400 text-xs font-semibold mb-1.5">
+                    {runElapsed < 5 ? '📂 コードベースを読んでいます...' :
+                     runElapsed < 15 ? '🧠 問題を分析しています...' :
+                     runElapsed < 30 ? '✏️ 実装を計画しています...' :
+                     runElapsed < 60 ? '⚡ ファイルを書き換えています...' :
+                     '🔍 動作確認しています...'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      {[0, 0.15, 0.3].map((d, i) => (
+                        <div key={i} className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: '#38bdf8', animation: `bounce 1s ease ${d}s infinite` }} />
+                      ))}
+                    </div>
+                    <span className="text-gray-600 text-[11px]">{runElapsed}s 経過</span>
+                  </div>
                 </div>
               </div>
             )}
