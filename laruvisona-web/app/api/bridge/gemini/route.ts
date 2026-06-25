@@ -209,6 +209,30 @@ ${vision}
       }
     }
 
+    // ── 11. Chat → AI Team 指示変換 ─────────────────────────────────────────
+    if (action === 'chat_to_directive') {
+      const { messages: msgs, projectName: pn } = body;
+      const conv = (msgs as { role: string; content: string }[])
+        .slice(-12)
+        .map(m => `${m.role === 'user' ? 'User' : 'Claude'}: ${m.content.slice(0, 400)}`)
+        .join('\n');
+      const prompt = `以下のClaude Codeとの会話を分析して、AIソフトウェアチームへの包括的な実装指示を生成してください。
+プロジェクト: ${pn}
+
+会話:
+${conv}
+
+## 指示文の要件
+- 会話から実装すべき機能・修正点をすべて抽出
+- 具体的なファイル名・関数名・技術スタックを含める
+- AIチームが迷わず実行できる詳細さ（200-400文字）
+- 日本語のみ
+
+指示文のみ出力してください。`;
+      const result = await getModel().generateContent(prompt);
+      return NextResponse.json({ result: result.response.text() });
+    }
+
     return NextResponse.json({ error: '不明なアクション' }, { status: 400 });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Gemini APIエラー';

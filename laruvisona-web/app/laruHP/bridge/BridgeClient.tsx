@@ -355,6 +355,24 @@ export default function BridgeClient() {
   const [productionLatest, setProductionLatest] = useState<{ ts: string; status: number; ms: number; ok: boolean; error?: string } | null>(null);
   const [productionIncidents, setProductionIncidents] = useState<{ ts: string; error: string; fixOutput: string; fixDone: boolean }[]>([]);
 
+  // T: Haptic feedback utility
+  const haptic = (pattern: number | number[]) => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
+  };
+
+  // M: Auto-fetch git diff after orchestration completes
+  useEffect(() => {
+    if (orchestrateComplete && macOnline) {
+      send({ type: 'git_diff', mac_id: selectedMacId || undefined });
+    }
+  }, [orchestrateComplete]);
+
+  // K+T: Push notification + haptic on orchestration complete
+  useEffect(() => {
+    if (!orchestrateComplete || !currentProject) return;
+    haptic([40, 30, 80]);
+  }, [orchestrateComplete]);
+
   // H: Track phase start time & load stored estimates
   useEffect(() => {
     if (!orchestratePhase || !currentProject) return;
@@ -995,6 +1013,7 @@ export default function BridgeClient() {
   const handleSend = async (overrideText?: string) => {
     const text = overrideText ?? input.trim();
     if (!text || running) return;
+    haptic(8);
     if (!overrideText) { setInput(''); if (textareaRef.current) textareaRef.current.style.height = '44px'; }
 
     // 確認モード
@@ -1394,6 +1413,7 @@ export default function BridgeClient() {
               macList={macList as MacInfo[]}
               phaseEstimates={phaseEstimates}
               checkpoints={checkpoints}
+              orchestrateDiff={gitDiff}
             />
           )}
 
@@ -1636,6 +1656,27 @@ export default function BridgeClient() {
                       style={{ background: '#38bdf8', animation: `bounce 1s ease ${d}s infinite` }} />
                   ))}
                 </div>
+              </div>
+            )}
+            {/* Q: Chat → AI Team 変換ボタン */}
+            {mode === 'chat' && chatMessages.length >= 2 && !chatRunning && (
+              <div className="flex justify-center py-1">
+                <button onClick={async () => {
+                  if (!currentProject) return;
+                  haptic(12);
+                  try {
+                    const res = await fetch('/api/bridge/gemini', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'chat_to_directive', messages: chatMessages, projectName: currentProject.name }),
+                    });
+                    const data = await res.json();
+                    if (data.result) { setTeamInitialDirective(data.result.trim()); setMode('team'); if (!fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined }); }
+                  } catch { /* ignore */ }
+                }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all"
+                  style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
+                  <Users size={11} />この会話を AI Team に渡す
+                </button>
               </div>
             )}
             {mode === 'chat' && chatRunning && chatMessages[chatMessages.length - 1]?.role !== 'assistant' && (

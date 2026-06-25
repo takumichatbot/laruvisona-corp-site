@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Users, Play, Square, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Zap, RotateCcw, AlertCircle, MessageSquare, Send, FlaskConical, Eye, Terminal, GitCommit, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Users, Play, Square, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Zap, RotateCcw, AlertCircle, MessageSquare, Send, FlaskConical, Eye, Terminal, GitCommit, ShieldAlert, RefreshCw, ChevronRight, SlidersHorizontal } from 'lucide-react';
 
 export interface OrchestrateTask {
   id: string; agent_name: string; title: string; instruction: string;
@@ -18,6 +18,56 @@ interface HistoryEntry { directive: string; planTitle: string; success: boolean;
 
 export interface MacInfo { id: string; name: string; }
 
+// O: Plan templates
+const PLAN_TEMPLATES = [
+  { icon: '🔐', title: '認証追加', directive: 'NextAuth v5でGoogle/GitHub認証を追加。middleware.tsで保護ルート実装、ログイン/ログアウトUI、セッション管理。' },
+  { icon: '💳', title: 'Stripe課金', directive: 'Stripeで月額サブスクリプション実装。Free/Proプラン、Webhookハンドラー、課金ポータルページ。' },
+  { icon: '📊', title: 'ダッシュボード', directive: '統計カード・グラフ・アクティビティログのダッシュボードページ。データAPI実装、ローディング/エラー状態つき。' },
+  { icon: '📡', title: 'REST API', directive: 'CRUD REST APIエンドポイント追加。Zodバリデーション、エラーハンドリング、APIキー認証、レート制限。' },
+  { icon: '🔍', title: '全文検索', directive: 'デバウンス検索UI、検索APIルート、DBフルテキストインデックス、オートコンプリート実装。' },
+  { icon: '📧', title: 'メール通知', directive: 'Resendでトランザクションメール。テンプレート、Webhookイベント連携、配信追跡機能。' },
+];
+
+// L: Syntax highlighting for terminal output
+function colorizeTerminal(text: string): React.ReactNode {
+  return text.split('\n').map((line, i) => {
+    let color = '#9ca3af';
+    if (/^[+>]/.test(line) && !/^\+\+\+/.test(line)) color = '#34d399';
+    else if (/^[-<]/.test(line) && !/^---/.test(line)) color = '#f87171';
+    else if (/error|Error|ERROR|failed|FAILED|✗|✕|❌/i.test(line)) color = '#fca5a5';
+    else if (/success|✓|✔|done|Done|完了|passed|PASSED|✅/i.test(line)) color = '#6ee7b7';
+    else if (/warning|Warning|⚠|WARN/i.test(line)) color = '#fcd34d';
+    else if (/\.(tsx?|jsx?|py|css|json|md)\b/i.test(line)) color = '#93c5fd';
+    else if (/^(import|export|const|let|function|class|interface|type|async)\s/.test(line)) color = '#c4b5fd';
+    return <span key={i} style={{ color, display: 'block', minHeight: '1.25em' }}>{line || ' '}</span>;
+  });
+}
+
+// N: Confetti
+function Confetti({ active }: { active: boolean }) {
+  if (!active) return null;
+  const palette = ['#6366f1','#34d399','#f59e0b','#ec4899','#0ea5e9','#a855f7'];
+  const items = Array.from({ length: 28 }, (_, i) => ({
+    id: i, x: 3 + (i * 3.4) % 94,
+    color: palette[i % 6], delay: (i * 0.033) % 0.7,
+    size: 5 + (i % 4),
+  }));
+  return (
+    <>
+      <style>{`@keyframes cfUp{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(-110vh) rotate(${720}deg);opacity:0}}`}</style>
+      <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+        {items.map(p => (
+          <div key={p.id} style={{
+            position: 'absolute', left: `${p.x}%`, bottom: '-10px',
+            width: p.size, height: p.size * 0.6, background: p.color, borderRadius: 2,
+            animation: `cfUp ${0.9 + p.delay}s ease-out ${p.delay}s forwards`,
+          }} />
+        ))}
+      </div>
+    </>
+  );
+}
+
 interface Props {
   macOnline: boolean; projectName: string; fileTree: string;
   onSend: (msg: Record<string, unknown>) => void;
@@ -30,6 +80,7 @@ interface Props {
   macList?: MacInfo[];
   phaseEstimates?: Record<string, number>;
   checkpoints?: Record<string, { success: boolean; message: string }>;
+  orchestrateDiff?: string;
 }
 
 const EXAMPLES = [
@@ -78,7 +129,7 @@ export default function TeamPanel({
   orchestrateRunning, orchestratePhase, taskStatuses, taskOutputs,
   orchestrateComplete, orchestrateReviewResult, orchestrateTestResult,
   onResetOrchestrate, initialDirective, macList = [],
-  phaseEstimates = {}, checkpoints = {},
+  phaseEstimates = {}, checkpoints = {}, orchestrateDiff = '',
 }: Props) {
   const [step, setStep] = useState<'input' | 'planning' | 'review' | 'executing' | 'done'>('input');
   const [directive, setDirective] = useState('');
@@ -93,10 +144,28 @@ export default function TeamPanel({
   const [showTestOutput, setShowTestOutput] = useState(false);
   const [phaseAssignments, setPhaseAssignments] = useState<Record<string, string>>({});
   const [liveExpanded, setLiveExpanded] = useState(true);
+  const [planStream, setPlanStream] = useState('');
+  const [showDiff, setShowDiff] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [agentConfig, setAgentConfig] = useState('');
+  const [showAgentConfig, setShowAgentConfig] = useState(false);
   const svRef = useRef<HTMLInputElement>(null);
   const liveTermRef = useRef<HTMLDivElement>(null);
+  const planStreamRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`bridge_agent_config_${projectName}`);
+    if (saved) setAgentConfig(saved);
+  }, [projectName]);
+
+  useEffect(() => {
+    if (orchestrateComplete && !Object.values(taskStatuses).some(s => s === 'failed')) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 2000);
+    }
+  }, [orchestrateComplete]);
 
   useEffect(() => {
     if (initialDirective && initialDirective.trim()) {
@@ -111,10 +180,9 @@ export default function TeamPanel({
 
   // F: Auto-scroll live terminal on new output
   useEffect(() => {
-    if (liveTermRef.current) {
-      liveTermRef.current.scrollTop = liveTermRef.current.scrollHeight;
-    }
-  }, [taskOutputs]);
+    if (liveTermRef.current) liveTermRef.current.scrollTop = liveTermRef.current.scrollHeight;
+    if (planStreamRef.current) planStreamRef.current.scrollTop = planStreamRef.current.scrollHeight;
+  }, [taskOutputs, planStream]);
 
   useEffect(() => {
     if (orchestrateComplete && step === 'executing') {
@@ -135,18 +203,36 @@ export default function TeamPanel({
 
   const generatePlan = async () => {
     if (!directive.trim()) return;
-    setStep('planning'); setPlanError('');
+    setStep('planning'); setPlanError(''); setPlanStream('');
     try {
       const res = await fetch('/api/bridge/orchestrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directive, projectName, fileTree, model: planModel }),
+        body: JSON.stringify({ directive, projectName, fileTree, model: planModel, agentConfig: agentConfig.trim() || undefined }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      if (!data.plan?.phases?.length) throw new Error('プランの生成に失敗しました');
-      setPlan(data.plan);
-      setStep('review');
+      if (!res.ok) throw new Error('サーバーエラー');
+      if (!res.body) throw new Error('ストリームなし');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() ?? '';
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          try {
+            const ev = JSON.parse(part.slice(6));
+            if (ev.type === 'token') { setPlanStream(prev => prev + ev.text); }
+            else if (ev.type === 'done') {
+              if (!ev.plan?.phases?.length) throw new Error('プランの生成に失敗しました');
+              setPlan(ev.plan); setPlanStream(''); setStep('review'); return;
+            } else if (ev.type === 'error') { throw new Error(ev.error); }
+          } catch { /* ignore partial parse */ }
+        }
+      }
     } catch (e) {
       setPlanError(e instanceof Error ? e.message : 'エラー');
       setStep('input');
@@ -224,6 +310,20 @@ export default function TeamPanel({
           </div>
         </div>
 
+        {/* O: Plan templates */}
+        <div className="space-y-1.5">
+          <p className="text-gray-700 text-xs px-1">クイックテンプレート</p>
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            {PLAN_TEMPLATES.map(t => (
+              <button key={t.title} onClick={() => setDirective(t.directive)}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs active:scale-95 transition-all"
+                style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
+                <span>{t.icon}</span>{t.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-1.5">
           <p className="text-gray-700 text-xs px-1">例文</p>
           {EXAMPLES.map(ex => (
@@ -235,10 +335,45 @@ export default function TeamPanel({
           ))}
         </div>
 
+        {/* S: Agent specialization config */}
+        <div>
+          <button onClick={() => setShowAgentConfig(v => !v)}
+            className="flex items-center gap-2 text-xs text-gray-700 active:opacity-70">
+            <SlidersHorizontal size={11} />カスタムエージェント指示
+            {agentConfig && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+            <ChevronRight size={10} className={`transition-transform ${showAgentConfig ? 'rotate-90' : ''}`} />
+          </button>
+          {showAgentConfig && (
+            <textarea value={agentConfig}
+              onChange={e => { setAgentConfig(e.target.value); localStorage.setItem(`bridge_agent_config_${projectName}`, e.target.value); }}
+              placeholder={`例: TypeScriptのstrictモードを常に有効にする。tailwindのclassは既存のものを優先する。`}
+              className="mt-2 w-full text-xs text-gray-400 resize-none outline-none rounded-xl px-3 py-2.5 leading-relaxed"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', minHeight: '72px' }} />
+          )}
+        </div>
+
         {planError && (
           <div className="flex items-start gap-2 rounded-xl px-3 py-2" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
             <AlertCircle size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
             <p className="text-red-400 text-xs">{planError}</p>
+          </div>
+        )}
+
+        {/* R: Streaming plan generation terminal */}
+        {step === 'planning' && (
+          <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(2,6,14,0.97)', border: '1px solid rgba(99,102,241,0.4)', boxShadow: '0 0 20px rgba(99,102,241,0.1)' }}>
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-indigo-900/40">
+              <div className="flex gap-1">
+                {['#ef4444','#f59e0b','#10b981'].map((c, i) => <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />)}
+              </div>
+              <Terminal size={11} className="text-indigo-500" />
+              <span className="text-indigo-400 text-xs font-mono flex-1">Claude — プラン立案中...</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+            <div ref={planStreamRef} className="p-3 max-h-52 overflow-y-auto">
+              <div className="text-xs font-mono leading-relaxed">{colorizeTerminal(planStream || ' ')}</div>
+              <span className="text-emerald-400 animate-pulse text-xs font-mono">▋</span>
+            </div>
           </div>
         )}
 
@@ -425,7 +560,7 @@ export default function TeamPanel({
               </div>
               {liveExpanded && (
                 <div ref={liveTermRef} className="p-3 max-h-36 overflow-y-auto">
-                  <pre className="text-emerald-400 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed">{liveOut.slice(-1800)}</pre>
+                  <div className="text-xs font-mono leading-relaxed">{colorizeTerminal(liveOut.slice(-1800))}</div>
                   <span className="text-emerald-400 animate-pulse text-xs font-mono">▋</span>
                 </div>
               )}
@@ -485,9 +620,17 @@ export default function TeamPanel({
                         </div>
                         {st === 'running' && <div className="mt-1.5 h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}><div className="h-full rounded-full animate-pulse" style={{ width: '65%', background: '#818cf8' }} /></div>}
                       </button>
+                      {/* P: Retry button for failed tasks */}
+                      {st === 'failed' && (
+                        <button onClick={() => onSend({ type: 'orchestrate_retry_task', task_id: task.id, title: task.title })}
+                          className="mt-1 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold active:scale-95 transition-all"
+                          style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
+                          <RefreshCw size={9} />リトライ
+                        </button>
+                      )}
                       {expanded && out && (
                         <div className="mt-1 rounded-xl p-2.5 max-h-40 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <pre className="text-gray-400 text-xs font-mono whitespace-pre-wrap break-words leading-relaxed">{out.slice(-1500)}</pre>
+                          <div className="text-xs font-mono leading-relaxed">{colorizeTerminal(out.slice(-1500))}</div>
                         </div>
                       )}
                     </div>
@@ -539,14 +682,36 @@ export default function TeamPanel({
           </div>
         )}
 
+        {/* N: Confetti */}
+        <Confetti active={showConfetti} />
+
         {/* Completion */}
         {step === 'done' && (
-          <div className="rounded-2xl p-4 text-center space-y-1.5"
-            style={{ background: failedTasks > 0 ? 'rgba(239,68,68,0.06)' : 'rgba(52,211,153,0.06)', border: `1px solid ${failedTasks > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(52,211,153,0.2)'}` }}>
-            <p className="text-xl">{failedTasks > 0 ? '⚠️' : '🎉'}</p>
-            <p className="font-bold text-white text-sm">{failedTasks > 0 ? '一部失敗' : 'チーム完了'}</p>
-            <p className="text-gray-500 text-xs">{failedTasks > 0 ? `${doneTasks - failedTasks} 成功 / ${failedTasks} 失敗` : `全${doneTasks}タスク完了`}</p>
-          </div>
+          <>
+            <div className="rounded-2xl p-4 text-center space-y-2"
+              style={{ background: failedTasks > 0 ? 'rgba(239,68,68,0.06)' : 'rgba(52,211,153,0.06)', border: `1px solid ${failedTasks > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(52,211,153,0.2)'}` }}>
+              <p className="text-2xl">{failedTasks > 0 ? '⚠️' : '🎉'}</p>
+              <p className="font-bold text-white text-sm">{failedTasks > 0 ? '一部失敗' : 'チーム完了！'}</p>
+              <p className="text-gray-500 text-xs">{failedTasks > 0 ? `${doneTasks - failedTasks} 成功 / ${failedTasks} 失敗` : `全${doneTasks}タスク完了`}</p>
+            </div>
+            {/* M: Diff viewer */}
+            {orchestrateDiff && (
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+                <button onClick={() => setShowDiff(v => !v)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 active:opacity-80"
+                  style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <Terminal size={12} className="text-gray-600" />
+                  <span className="text-xs text-gray-500 flex-1 text-left">変更差分 (git diff)</span>
+                  <ChevronRight size={12} className={`text-gray-700 transition-transform ${showDiff ? 'rotate-90' : ''}`} />
+                </button>
+                {showDiff && (
+                  <div className="px-3 pb-3 max-h-72 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.5)' }}>
+                    <div className="text-xs font-mono leading-relaxed pt-2">{colorizeTerminal(orchestrateDiff.slice(0, 8000))}</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Supervisor Chat */}
