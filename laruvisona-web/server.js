@@ -51,6 +51,8 @@ app.prepare().then(() => {
 
   // macs: Map<macId, { ws, name }>
   const macs = new Map();
+  // Expose to Next.js API routes so quick-task POST can forward directly to mac_agent
+  global.relayMacs = macs;
   const clients = [];
 
   const wss = new WebSocketServer({ noServer: true });
