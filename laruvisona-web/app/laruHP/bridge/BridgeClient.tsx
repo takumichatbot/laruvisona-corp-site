@@ -343,6 +343,9 @@ export default function BridgeClient() {
   const [relayWs, setRelayWs] = useState('');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showToolSheet, setShowToolSheet] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const visualInputRef = useRef<HTMLInputElement>(null);
   // Visual-to-Code
   const [visualCapturing, setVisualCapturing] = useState(false);
   const [visualPreview, setVisualPreview] = useState<string | null>(null);
@@ -1996,72 +1999,77 @@ export default function BridgeClient() {
             </div>
           )}
 
+          {/* hidden file inputs */}
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+          <input ref={visualInputRef} type="file" accept="image/*" className="hidden" onChange={handleVisualCapture} />
+
           {/* 入力エリア（code / chat のみ） */}
           {(mode === 'code' || mode === 'chat') && (
-            <div className="border-t border-white/5 flex-shrink-0"
+            <div className="border-t border-white/5 flex-shrink-0 relative"
               style={{ backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.7)' }}>
-              {/* プリセット + ツール状態バッジ行 */}
-              {(presets.length > 0 || showPresetAdd || enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled || attachedContext.length > 0) && (
-                <div className="flex items-center gap-2 px-3 pt-2 pb-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                  {/* アクティブツールバッジ */}
-                  {enhanceMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc' }}><Sparkles size={10} />強化</span>}
-                  {ttsEnabled && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)', color: '#7dd3fc' }}><Volume2 size={10} />読上げ</span>}
-                  {confirmMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}><AlertTriangle size={10} />確認</span>}
-                  {autonomousMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.3)', color: '#fdba74' }}><Cpu size={10} />自律</span>}
-                  {parallelMode && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}><MonitorCheck size={10} />並列</span>}
-                  {watchdogActive && <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}><Radio size={10} className="animate-pulse" />監視中</span>}
+
+              {/* アクティブバッジ行（何か ON のときだけ） */}
+              {(enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled || attachedContext.length > 0 || presets.length > 0) && (
+                <div className="flex items-center gap-1.5 px-3 pt-2 pb-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                  {enhanceMode    && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc' }}><Sparkles size={9} />強化</span>}
+                  {ttsEnabled     && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(56,189,248,0.12)', color: '#7dd3fc' }}><Volume2 size={9} />読上げ</span>}
+                  {confirmMode    && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5' }}><AlertTriangle size={9} />確認</span>}
+                  {autonomousMode && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(251,146,60,0.12)', color: '#fdba74' }}><Cpu size={9} />自律</span>}
+                  {parallelMode   && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(99,102,241,0.12)', color: '#a5b4fc' }}><MonitorCheck size={9} />並列</span>}
+                  {watchdogActive && <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5' }}><Radio size={9} className="animate-pulse" />監視</span>}
                   {attachedContext.length > 0 && (
-                    <button onClick={() => setAttachedContext([])} className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium active:scale-90" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', color: '#6ee7b7' }}>
-                      <MonitorCheck size={10} />{attachedContext.length}件 ✕
+                    <button onClick={() => setAttachedContext([])} className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] active:scale-90" style={{ background: 'rgba(52,211,153,0.1)', color: '#6ee7b7' }}>
+                      📎{attachedContext.length}件 ✕
                     </button>
                   )}
-                  {/* プリセット */}
-                  {presets.length > 0 && <div className="w-px h-4 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }} />}
-                  {presets.map((p, i) => (
-                    <div key={i} className="flex items-center gap-1 flex-shrink-0 group">
-                      <button onClick={() => setInput(p)}
-                        className="px-3 py-1 rounded-full text-xs text-gray-400 whitespace-nowrap transition-all active:scale-90"
-                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        {p.length > 18 ? p.slice(0, 18) + '…' : p}
-                      </button>
-                      <button onClick={() => removePreset(i)} className="w-4 h-4 rounded-full flex-shrink-0 hidden group-hover:flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.3)' }}>
-                        <XIcon size={8} className="text-red-400" />
-                      </button>
-                    </div>
+                  {presets.length > 0 && presets.map((p, i) => (
+                    <button key={i} onClick={() => setInput(p)}
+                      className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] text-gray-400 active:scale-90 whitespace-nowrap"
+                      style={{ background: 'rgba(255,255,255,0.06)' }}>
+                      {p.length > 14 ? p.slice(0, 14) + '…' : p}
+                    </button>
                   ))}
-                  {showPresetAdd && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <input value={presetInput} onChange={e => setPresetInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') { savePreset(presetInput); setPresetInput(''); setShowPresetAdd(false); } if (e.key === 'Escape') { setShowPresetAdd(false); setPresetInput(''); } }}
-                        placeholder="指示..." autoFocus
-                        className="w-32 px-2 py-1 rounded-full text-xs text-white outline-none"
-                        style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)' }} />
-                      <button onClick={() => { savePreset(presetInput); setPresetInput(''); setShowPresetAdd(false); }} className="px-2 py-1 rounded-full text-xs text-emerald-400" style={{ background: 'rgba(52,211,153,0.1)' }}>追加</button>
-                    </div>
-                  )}
                 </div>
               )}
-              {/* メイン入力行 */}
+
+              {/* アタッチメントメニュー（+ ボタンで展開） */}
+              {showAttachMenu && (
+                <div className="absolute bottom-full left-3 mb-2 z-50 rounded-2xl overflow-hidden shadow-2xl"
+                  style={{ background: 'rgba(12,12,24,0.98)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', minWidth: 200 }}>
+                  {[
+                    { icon: <Camera size={16} />, label: 'スクショ → Code',  color: '#38bdf8', action: () => { cameraInputRef.current?.click(); setShowAttachMenu(false); } },
+                    { icon: <Users size={16} />,  label: 'スクショ → Team',  color: '#a78bfa', action: () => { visualInputRef.current?.click(); setShowAttachMenu(false); } },
+                    { icon: <Mic size={16} />,    label: '音声入力',          color: voiceRecording ? '#f87171' : '#94a3b8', action: () => { handleVoice(); setShowAttachMenu(false); } },
+                    { icon: <Radio size={16} />,  label: 'AI音声アシスタント', color: '#34d399', action: () => { setShowRealtimeVoice(true); setShowAttachMenu(false); } },
+                    { icon: <SlidersHorizontal size={16} />, label: 'ツール設定', color: (enhanceMode||confirmMode||autonomousMode||parallelMode||watchdogActive||ttsEnabled) ? '#818cf8' : '#6b7280', action: () => { setShowToolSheet(true); setShowAttachMenu(false); } },
+                  ].map((item, i) => (
+                    <button key={i} onClick={item.action}
+                      className="w-full flex items-center gap-3 px-4 py-3 active:bg-white/5 transition-colors text-left"
+                      style={{ borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                      <span style={{ color: item.color }}>{item.icon}</span>
+                      <span className="text-sm text-gray-300">{item.label}</span>
+                      {item.label === 'ツール設定' && (enhanceMode||confirmMode||autonomousMode||parallelMode||watchdogActive||ttsEnabled) && (
+                        <span className="ml-auto w-2 h-2 rounded-full bg-indigo-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showAttachMenu && <div className="fixed inset-0 z-40" onClick={() => setShowAttachMenu(false)} />}
+
+              {/* メイン入力行: [+] [textarea] [↑] */}
               <div className="flex gap-2 items-end px-3 py-2.5">
-                {/* 画像 (Code送信) */}
-                <label className={`w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-90 flex-shrink-0 ${enhancing ? 'opacity-40 pointer-events-none' : ''}`}
-                  style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <Camera size={17} className="text-gray-500" />
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
-                </label>
-                {/* Visual → Team */}
-                <label className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-90 flex-shrink-0"
-                  style={{ background: 'rgba(79,70,229,0.12)', border: '1px solid rgba(99,102,241,0.3)' }}
-                  title="スクリーンショット → AI Team">
-                  <Users size={15} className="text-indigo-400" />
-                  <input type="file" accept="image/*" className="hidden" onChange={handleVisualCapture} />
-                </label>
-                {/* 音声 */}
-                <button onClick={handleVoice} disabled={enhancing}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-40 flex-shrink-0"
-                  style={{ background: voiceRecording ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.06)', border: voiceRecording ? '1px solid rgba(239,68,68,0.5)' : 'none' }}>
-                  <Mic size={17} className={voiceRecording ? 'text-red-400' : 'text-gray-500'} />
+                {/* + ボタン */}
+                <button
+                  onClick={() => setShowAttachMenu(v => !v)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
+                  style={{
+                    background: showAttachMenu ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)',
+                    border: showAttachMenu ? '1px solid rgba(99,102,241,0.4)' : '1px solid transparent',
+                  }}>
+                  <Plus size={20} className={showAttachMenu ? 'text-indigo-400 rotate-45 transition-transform' : 'text-gray-500 transition-transform'} />
                 </button>
+
                 {/* Textarea */}
                 <textarea
                   ref={textareaRef}
@@ -2074,31 +2082,19 @@ export default function BridgeClient() {
                   className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-gray-700 resize-none outline-none transition-all disabled:opacity-30"
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '44px', maxHeight: '120px' }}
                 />
-                {/* ツールシートボタン */}
-                <button onClick={() => setShowToolSheet(true)}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0 relative"
-                  style={{ background: (enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled) ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)', border: (enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled) ? '1px solid rgba(99,102,241,0.4)' : 'none' }}>
-                  <SlidersHorizontal size={17} className={(enhanceMode || confirmMode || autonomousMode || parallelMode || watchdogActive || ttsEnabled) ? 'text-indigo-400' : 'text-gray-500'} />
-                </button>
-                {/* 送信 */}
+
+                {/* 送信 / ローディング */}
                 <button
                   onClick={() => mode === 'chat' ? handleChatSend() : handleSend()}
                   disabled={mode === 'code' ? (running || !input.trim() || !macOnline) : (chatRunning || !input.trim())}
-                  className="h-10 px-4 rounded-xl font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30 flex-shrink-0"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30 flex-shrink-0"
                   style={mode === 'chat'
-                    ? { background: 'linear-gradient(135deg, #d97706, #dc2626)', boxShadow: '0 0 15px rgba(217,119,6,0.25)' }
-                    : { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 15px rgba(14,165,233,0.25)' }}>
-                  {(running || chatRunning || enhancing) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : '送信'}
+                    ? { background: 'linear-gradient(135deg, #d97706, #dc2626)', boxShadow: input.trim() ? '0 0 15px rgba(217,119,6,0.25)' : 'none' }
+                    : { background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: input.trim() ? '0 0 15px rgba(14,165,233,0.25)' : 'none' }}>
+                  {(running || chatRunning || enhancing)
+                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <ChevronRight size={18} />}
                 </button>
-                {/* AI 音声コンシェルジュ（インプットバー内） */}
-                {macOnline && !showRealtimeVoice && (
-                  <button onClick={() => setShowRealtimeVoice(true)}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 active:scale-90 transition-all"
-                    style={{ background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(5,150,105,0.3)' }}
-                    title="AI音声アシスタント">
-                    <Radio size={15} className="text-emerald-400" />
-                  </button>
-                )}
               </div>
             </div>
           )}
