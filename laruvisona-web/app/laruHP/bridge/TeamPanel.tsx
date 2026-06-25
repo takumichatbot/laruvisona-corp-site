@@ -373,6 +373,24 @@ export default function TeamPanel({
           </div>
         )}
 
+        {/* クイックスタートボタン（指示が空のときのみ） */}
+        {!directive.trim() && (
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: '🐛 バグ修正', hint: 'バグを特定して修正して', color: '#f87171' },
+              { label: '✨ 機能追加', hint: '新機能を追加して', color: '#34d399' },
+              { label: '♻️ リファクタ', hint: 'コードを整理・リファクタリングして', color: '#60a5fa' },
+              { label: '🧪 テスト追加', hint: 'ユニットテストを追加して', color: '#fbbf24' },
+            ].map(item => (
+              <button key={item.label} onClick={() => setDirective(item.hint)}
+                className="py-3 rounded-2xl text-sm font-semibold active:scale-95 transition-all"
+                style={{ background: `${item.color}14`, border: `1px solid ${item.color}33`, color: item.color }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Directive input */}
         <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <textarea value={directive} onChange={e => setDirective(e.target.value)}

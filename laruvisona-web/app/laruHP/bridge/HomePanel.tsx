@@ -12,9 +12,12 @@ interface Props {
   macCount: number;
   orchestrateRunning: boolean;
   orchestrateComplete: boolean;
+  lastMode?: 'code' | 'chat';
+  lastInput?: string;
   onSelectProject: (p: Project) => void;
   onNavigate: (mode: string) => void;
   onRunPrompt: (prompt: string, mode: 'code' | 'chat') => void;
+  onContinueLast?: () => void;
 }
 
 const TYPE_COLOR: Record<string, string> = { code: '#a5b4fc', chat: '#fcd34d', team: '#818cf8', brain: '#c084fc', git: '#6ee7b7', other: '#9ca3af' };
@@ -49,7 +52,7 @@ function StatCard({ label, value, sub, color, icon: Icon }: { label: string; val
   );
 }
 
-export default function HomePanel({ projects, currentProject, macOnline, macCount, orchestrateRunning, orchestrateComplete, onSelectProject, onNavigate, onRunPrompt }: Props) {
+export default function HomePanel({ projects, currentProject, macOnline, macCount, orchestrateRunning, orchestrateComplete, lastMode, lastInput, onSelectProject, onNavigate, onRunPrompt, onContinueLast }: Props) {
   const [stats, setStats] = useState(() => getStats(currentProject?.name));
   const [recent, setRecent] = useState<TaskRecord[]>(() => getRecords(undefined, 8));
   const [prompts, setPrompts] = useState<SavedPrompt[]>(() => getPrompts({ starred: true }));
@@ -88,6 +91,38 @@ export default function HomePanel({ projects, currentProject, macOnline, macCoun
         <StatCard label="成功率" value={`${stats.successRate}%`} sub={`全${stats.total}件`} color="#34d399" icon={TrendingUp} />
         <StatCard label="平均時間" value={stats.avgDurationSec > 0 ? `${stats.avgDurationSec}s` : '—'} sub="実行時間" color="#fcd34d" icon={Clock} />
       </div>
+
+      {/* 前回の続き + 最近の入力チップ */}
+      {(onContinueLast || recent.length > 0) && (
+        <div className="space-y-2">
+          {onContinueLast && lastInput && (
+            <button onClick={onContinueLast}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left active:scale-[0.98] transition-all"
+              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)' }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(99,102,241,0.2)' }}>
+                <ChevronRight size={16} className="text-indigo-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-indigo-300 text-xs font-semibold mb-0.5">前回の続き ({lastMode})</p>
+                <p className="text-gray-400 text-xs truncate">{lastInput}</p>
+              </div>
+            </button>
+          )}
+          {recent.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {[...new Set(recent.map(r => r.input))].slice(0, 5).map((input, i) => (
+                <button key={i}
+                  onClick={() => onRunPrompt(input, 'code')}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs text-gray-400 active:scale-95 transition-all whitespace-nowrap"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                  {input.length > 22 ? input.slice(0, 22) + '…' : input}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Running banner */}
       {(orchestrateRunning || orchestrateComplete) && (

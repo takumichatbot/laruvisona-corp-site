@@ -340,6 +340,11 @@ export default function BridgeClient() {
   const voiceChunksRef = useRef<Blob[]>([]);
   const [summaries, setSummaries] = useState<Record<number, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newMsgPending, setNewMsgPending] = useState(false);
+  const [collapsedOutputs, setCollapsedOutputs] = useState<Set<number>>(new Set());
+  const [fileSummaries, setFileSummaries] = useState<Record<number, string[]>>({});
   const [relayWs, setRelayWs] = useState('');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
@@ -838,7 +843,39 @@ export default function BridgeClient() {
     return unsub;
   }, [addListener]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // スクロール位置を監視して isAtBottom を更新
+  const handleChatScroll = () => {
+    if (!chatScrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatScrollRef.current;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 60;
+    setIsAtBottom(atBottom);
+    if (atBottom) setNewMsgPending(false);
+  };
+
+  // 新メッセージ到達時: 末尾にいれば自動スクロール、離れていれば「↓ 新着」ボタン
+  useEffect(() => {
+    if (isAtBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setNewMsgPending(false);
+    } else {
+      setNewMsgPending(true);
+    }
+  }, [messages]);
+
+  // done 時にファイル変更サマリーを抽出してメッセージを折りたたむ
+  useEffect(() => {
+    if (running) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant' || last.content.length < 200) return;
+    const idx = messages.length - 1;
+    const matches = [...last.content.matchAll(/(?:Write|Edit|Create)\s*\(\s*["']?([^"'\s,)\n]+)/g)];
+    const files = [...new Set(matches.map(m => m[1]).filter(f => f.includes('.')))];
+    if (files.length > 0) {
+      setFileSummaries(prev => ({ ...prev, [idx]: files }));
+      setCollapsedOutputs(prev => new Set([...prev, idx]));
+    }
+  }, [running]);
+
 
   useEffect(() => {
     if (currentProject && messages.length > 0) saveHistory(currentProject.id, messages);
@@ -1635,6 +1672,9 @@ export default function BridgeClient() {
               macCount={macList.length || (macOnline ? 1 : 0)}
               orchestrateRunning={orchestrateRunning}
               orchestrateComplete={orchestrateComplete}
+              lastMode={messages.findLast(m => m.role === 'user') ? 'code' : chatMessages.findLast(m => m.role === 'user') ? 'chat' : undefined}
+              lastInput={messages.findLast(m => m.role === 'user')?.content?.slice(0, 60) ?? chatMessages.findLast(m => m.role === 'user')?.content?.slice(0, 60)}
+              onContinueLast={messages.length > 0 || chatMessages.length > 0 ? () => setMode(messages.length > 0 ? 'code' : 'chat') : undefined}
               onSelectProject={(p) => { selectProject(p); setMode('code'); }}
               onNavigate={(m) => setMode(m as typeof mode)}
               onRunPrompt={(prompt, m) => {
@@ -1817,6 +1857,8 @@ export default function BridgeClient() {
                 setMode(TAB_ORDER[next]);
               }
             }}
+            ref={chatScrollRef}
+            onScroll={handleChatScroll}
             className={`overflow-y-auto px-4 py-4 space-y-3 ${mode === 'code' || mode === 'chat' ? 'flex-1' : 'hidden'}`}>
             {mode === 'code' && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-2">
@@ -1854,11 +1896,42 @@ export default function BridgeClient() {
                   </span>
                 ) : (
                   <div className="max-w-[88%]">
+                    {/* assistant + code モード + 折りたたみ対象 → ファイルサマリーカード表示 */}
+                    {m.role === 'assistant' && mode === 'code' && fileSummaries[i] && !m.streaming && (
+                      <div className="mb-2 rounded-2xl px-3.5 py-3"
+                        style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}>
+                        <p className="text-emerald-400 text-xs font-semibold mb-2">✅ 変更ファイル ({fileSummaries[i].length}件)</p>
+                        {fileSummaries[i].map((f, fi) => (
+                          <p key={fi} className="text-gray-400 text-xs font-mono truncate leading-relaxed">{f}</p>
+                        ))}
+                      </div>
+                    )}
                     <div className="rounded-2xl px-4 py-3"
                       style={m.role === 'user'
                         ? { background: mode === 'chat' ? 'linear-gradient(135deg, #d97706, #dc2626)' : 'linear-gradient(135deg, #0ea5e9, #6366f1)', borderBottomRightRadius: 4 }
                         : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderBottomLeftRadius: 4 }}>
-                      <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed">{m.content}</pre>
+                      {/* 折りたたみ表示 */}
+                      {m.role === 'assistant' && mode === 'code' && collapsedOutputs.has(i) && !m.streaming ? (
+                        <>
+                          <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed text-gray-500 line-clamp-3">
+                            {m.content.split('\n').slice(0, 3).join('\n')}
+                          </pre>
+                          <button onClick={() => setCollapsedOutputs(prev => { const s = new Set(prev); s.delete(i); return s; })}
+                            className="mt-2 text-xs text-sky-400 active:opacity-60">
+                            全文を見る ({m.content.split('\n').length}行) ↓
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <pre className="text-sm whitespace-pre-wrap break-words font-mono leading-relaxed">{m.content}</pre>
+                          {m.role === 'assistant' && mode === 'code' && !m.streaming && m.content.split('\n').length > 6 && !collapsedOutputs.has(i) && (
+                            <button onClick={() => setCollapsedOutputs(prev => new Set([...prev, i]))}
+                              className="mt-2 text-xs text-gray-600 active:opacity-60">
+                              折りたたむ ↑
+                            </button>
+                          )}
+                        </>
+                      )}
                       {m.streaming && (
                         <span className="inline-block w-2 h-4 ml-0.5 align-middle"
                           style={{ background: mode === 'chat' ? '#fbbf24' : '#38bdf8', animation: 'blink 0.7s step-end infinite' }} />
@@ -1955,6 +2028,16 @@ export default function BridgeClient() {
             )}
             <div ref={bottomRef} />
           </div>
+
+          {/* ↓ 新着ボタン（スクロールが上に離れているとき） */}
+          {newMsgPending && (mode === 'code' || mode === 'chat') && (
+            <button
+              onClick={() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); setNewMsgPending(false); setIsAtBottom(true); }}
+              className="absolute left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-lg active:scale-95 transition-all"
+              style={{ bottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 120px)', background: 'rgba(99,102,241,0.9)', backdropFilter: 'blur(8px)' }}>
+              ↓ 新着メッセージ
+            </button>
+          )}
 
           {/* コード検索パネル (Chat モード) */}
           {mode === 'chat' && searchQuery !== '' && (
