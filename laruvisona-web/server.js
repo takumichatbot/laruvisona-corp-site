@@ -88,6 +88,19 @@ app.prepare().then(() => {
       // backward compat: also send mac_online
       clients.forEach(c => safeSend(c, { type: 'mac_online', mac_id: macId, mac_name: macName }));
 
+      // Mac 接続時: キューに溜まったショートカットタスクを処理
+      setTimeout(() => {
+        const queue = global.bridgeQuickQueue;
+        if (!queue || queue.length === 0) return;
+        const pending = queue.filter(t => !t.mac_id || t.mac_id === macId);
+        global.bridgeQuickQueue = queue.filter(t => t.mac_id && t.mac_id !== macId);
+        for (const task of pending) {
+          if (task.project) safeSend(ws, { type: 'select_project', project: task.project });
+          safeSend(ws, { type: 'message', content: task.input });
+          console.log(`[relay] queued task forwarded to ${macId}: ${task.input.slice(0, 40)}`);
+        }
+      }, 1500); // Mac の初期化を待つ
+
       ws.on('message', (data) => {
         try {
           const msg = JSON.parse(data.toString());
@@ -130,10 +143,12 @@ app.prepare().then(() => {
           else safeSend(ws, { type: 'error', message: 'Macがオフラインです' });
         } catch {}
       });
-      ws.on('close', () => {
+      const removeClient = () => {
         const i = clients.indexOf(ws);
         if (i > -1) clients.splice(i, 1);
-      });
+      };
+      ws.on('close', removeClient);
+      ws.on('error', removeClient);
     }
   });
 

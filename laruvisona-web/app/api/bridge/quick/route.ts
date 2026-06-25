@@ -35,16 +35,22 @@ export async function POST(req: Request) {
           safeSendToMac(target, { type: 'select_project', project: task.project });
         }
         safeSendToMac(target, { type: 'message', content: task.input });
-        return NextResponse.json({ ok: true, taskId: task.id, mode: 'immediate', mac_id: targetId });
+        return NextResponse.json({
+          ok: true, taskId: task.id, mode: 'immediate', mac_id: targetId,
+          message: '✅ Macに送信しました。完了後に通知が届きます。',
+        });
       }
     }
 
-    // Fallback: queue for when Bridge client reconnects
+    // Fallback: queue for when Mac reconnects
     // @ts-ignore
     if (!global.bridgeQuickQueue) global.bridgeQuickQueue = [];
     // @ts-ignore
     global.bridgeQuickQueue.push(task);
-    return NextResponse.json({ ok: true, taskId: task.id, mode: 'queued' });
+    return NextResponse.json({
+      ok: true, taskId: task.id, mode: 'queued',
+      message: '⏳ Macがオフラインです。次回接続時に自動実行されます。',
+    });
   } catch {
     return NextResponse.json({ error: 'error' }, { status: 500 });
   }
