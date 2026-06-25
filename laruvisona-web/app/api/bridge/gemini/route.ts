@@ -132,6 +132,83 @@ ${diff.slice(0, 4000)}
       return NextResponse.json({ result: result.response.text() });
     }
 
+    // ── 9. Visual → AI Team ディレクティブ変換 ───────────────────────────────
+    if (action === 'visual_to_directive') {
+      const { imageBase64, mimeType, projectName, fileTree } = body;
+      const result = await getModel('gemini-2.5-flash-preview-05-20').generateContent([
+        { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
+        `あなたはソフトウェア開発の要件定義専門家です。
+プロジェクト: ${projectName}
+${fileTree ? `\nプロジェクト構造の一部:\n${(fileTree as string).slice(0, 1200)}\n` : ''}
+
+この画像（UIデザイン・競合サービスのスクリーンショット・モックアップ・手書きスケッチ等）を詳細に分析して、
+AIソフトウェアチームへの包括的な開発指示を生成してください。
+
+## 指示文の要件
+- 何を実装するか（具体的な機能・UI要素・API等）
+- 使用すべき技術スタック（既存プロジェクトに合わせて）
+- データ構造・状態管理の方針
+- UX/デザインの詳細（色・レイアウト・アニメーション）
+- 既存コードとの統合箇所
+
+## 出力形式
+開発チームへの指示文（300-500文字、日本語）のみ出力。タイトルや前置き不要。`,
+      ]);
+      return NextResponse.json({ result: result.response.text() });
+    }
+
+    // ── 10. PM ビジョン → エピック/ストーリー分解 ────────────────────────────
+    if (action === 'pm_breakdown') {
+      const { vision, projectName, model: mdl } = body;
+      const prompt = `あなたはアジャイル開発のプロダクトマネージャーです。
+プロジェクト: ${projectName}
+
+以下のプロダクトビジョンを分析し、実装可能なエピックとユーザーストーリーに分解してください。
+
+## ビジョン
+${vision}
+
+## 出力形式 (JSONのみ)
+{
+  "productName": "プロダクト名",
+  "summary": "ビジョン要約（2行）",
+  "epics": [
+    {
+      "id": "epic_1",
+      "title": "エピックタイトル",
+      "description": "このエピックの目的",
+      "priority": "high|medium|low",
+      "stories": [
+        {
+          "id": "story_1_1",
+          "title": "ユーザーストーリータイトル",
+          "description": "ユーザーとして〜したい、なぜなら〜",
+          "points": 3,
+          "directive": "AIチームへの実装指示（具体的・実行可能）"
+        }
+      ]
+    }
+  ]
+}`;
+      const client2 = new (await import('@anthropic-ai/sdk')).default({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const resp = await client2.messages.create({
+        model: (mdl as string) || 'claude-sonnet-4-6',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const text = resp.content[0].type === 'text' ? resp.content[0].text : '';
+      let jsonStr = text.trim();
+      const fence = jsonStr.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+      if (fence) jsonStr = fence[1].trim();
+      const brace = jsonStr.match(/\{[\s\S]*\}/);
+      if (brace) jsonStr = brace[0];
+      try {
+        return NextResponse.json({ plan: JSON.parse(jsonStr) });
+      } catch {
+        return NextResponse.json({ error: 'PMプラン生成失敗', raw: text.slice(0, 300) }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({ error: '不明なアクション' }, { status: 400 });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Gemini APIエラー';

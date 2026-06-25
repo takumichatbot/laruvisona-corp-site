@@ -1,11 +1,14 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle, Users, MoreHorizontal, SlidersHorizontal, Clock } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle, Users, MoreHorizontal, SlidersHorizontal, Clock, Target, Brain, Activity } from 'lucide-react';
 import GeminiLive from './GeminiLive';
 import SchedulePanel, { type Schedule } from './SchedulePanel';
 import ToolsPanel from './ToolsPanel';
 import GitHubPanel from './GitHubPanel';
-import TeamPanel, { type TaskStatus } from './TeamPanel';
+import TeamPanel, { type TaskStatus, type MacInfo } from './TeamPanel';
+import PMPanel from './PMPanel';
+import BrainPanel from './BrainPanel';
+import ProductionPanel from './ProductionPanel';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -232,8 +235,8 @@ export default function BridgeClient() {
   const [continuing, setContinuing] = useState(false);
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
-  // モード切り替え: code / chat / git / files
-  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team'>('code');
+  // モード切り替え: code / chat / git / files / team / pm / brain / production
+  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools' | 'github' | 'team' | 'pm' | 'brain' | 'production'>('code');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
@@ -329,6 +332,22 @@ export default function BridgeClient() {
   const [relayWs, setRelayWs] = useState('');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showToolSheet, setShowToolSheet] = useState(false);
+  // Visual-to-Code
+  const [visualCapturing, setVisualCapturing] = useState(false);
+  const [visualPreview, setVisualPreview] = useState<string | null>(null);
+  const [visualMime, setVisualMime] = useState('image/jpeg');
+  const [visualAnalyzing, setVisualAnalyzing] = useState(false);
+  const [teamInitialDirective, setTeamInitialDirective] = useState('');
+  // Brain
+  const [brainStatus, setBrainStatus] = useState<{ exists: boolean; count?: number; indexed_at?: string } | null>(null);
+  const [brainSearchResults, setBrainSearchResults] = useState<{ path: string; score: number; lines: number; preview: string }[]>([]);
+  const [brainIndexing, setBrainIndexing] = useState(false);
+  const [brainProgress, setBrainProgress] = useState<{ count: number; total: number } | null>(null);
+  // Production
+  const [productionMonitorActive, setProductionMonitorActive] = useState(false);
+  const [productionHistory, setProductionHistory] = useState<{ ts: string; status: number; ms: number; ok: boolean; error?: string }[]>([]);
+  const [productionLatest, setProductionLatest] = useState<{ ts: string; status: number; ms: number; ok: boolean; error?: string } | null>(null);
+  const [productionIncidents, setProductionIncidents] = useState<{ ts: string; error: string; fixOutput: string; fixDone: boolean }[]>([]);
 
   useEffect(() => {
     if (sessionStorage.getItem('bridge_unlocked') === '1') setUnlocked(true);
@@ -479,6 +498,44 @@ export default function BridgeClient() {
       if (m.type === 'orchestrate_test_result') {
         const r = (m as unknown) as { output?: string; passed: boolean; error?: string };
         setOrchestrateTestResult({ output: r.output || r.error || '', passed: r.passed });
+      }
+      // Brain
+      if (m.type === 'brain_indexed') {
+        const r = (m as unknown) as { count: number; indexed_at: string };
+        setBrainStatus({ exists: true, count: r.count, indexed_at: r.indexed_at });
+        setBrainIndexing(false); setBrainProgress(null);
+      }
+      if (m.type === 'brain_progress') {
+        const r = (m as unknown) as { count: number; total: number };
+        setBrainProgress({ count: r.count, total: r.total });
+      }
+      if (m.type === 'brain_status_result') {
+        const r = (m as unknown) as { exists: boolean; count?: number; indexed_at?: string };
+        setBrainStatus(r); setBrainIndexing(false);
+      }
+      if (m.type === 'brain_search_result') {
+        const r = (m as unknown) as { results: { path: string; score: number; lines: number; preview: string }[] };
+        setBrainSearchResults(r.results || []);
+      }
+      if (m.type === 'brain_index') { setBrainIndexing(true); setBrainProgress(null); }
+      // Production
+      if (m.type === 'production_monitor_started') setProductionMonitorActive(true);
+      if (m.type === 'production_monitor_stopped') setProductionMonitorActive(false);
+      if (m.type === 'production_status') {
+        const r = (m as unknown) as { entry: { ts: string; status: number; ms: number; ok: boolean; error?: string }; history: typeof productionHistory };
+        setProductionLatest(r.entry);
+        setProductionHistory(r.history);
+      }
+      if (m.type === 'production_incident') {
+        const r = (m as unknown) as { error: string };
+        setProductionIncidents(prev => [{ ts: new Date().toISOString(), error: r.error, fixOutput: '', fixDone: false }, ...prev].slice(0, 10));
+      }
+      if (m.type === 'production_fix_output') {
+        const r = (m as unknown) as { content: string };
+        setProductionIncidents(prev => prev.map((inc, i) => i === 0 ? { ...inc, fixOutput: inc.fixOutput + r.content } : inc));
+      }
+      if (m.type === 'production_fix_done') {
+        setProductionIncidents(prev => prev.map((inc, i) => i === 0 ? { ...inc, fixDone: true } : inc));
       }
       if (m.type === 'file_tree_result') {
         const r = (m as unknown) as { tree?: string };
@@ -902,6 +959,40 @@ export default function BridgeClient() {
     send({ type: 'message', content: finalText, model: codeModel || undefined, mac_id: selectedMacId || undefined });
   };
 
+  const handleVisualCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVisualMime(file.type);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setVisualPreview((reader.result as string).split(',')[1]);
+      setVisualCapturing(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const analyzeVisual = async () => {
+    if (!visualPreview || !currentProject) return;
+    setVisualAnalyzing(true);
+    try {
+      const res = await fetch('/api/bridge/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'visual_to_directive', imageBase64: visualPreview, mimeType: visualMime, projectName: currentProject.name, fileTree }),
+      });
+      const data = await res.json();
+      if (data.result) {
+        setTeamInitialDirective(data.result.trim());
+        setVisualCapturing(false);
+        setVisualPreview(null);
+        setMode('team');
+        if (!fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined });
+      }
+    } catch { /* ignore */ }
+    setVisualAnalyzing(false);
+  };
+
   const handleLock = () => {
     sessionStorage.removeItem('bridge_unlocked');
     setUnlocked(false);
@@ -1236,6 +1327,49 @@ export default function BridgeClient() {
                 setOrchestrateReviewResult('');
                 setOrchestrateTestResult(null);
               }}
+              initialDirective={teamInitialDirective}
+              macList={macList as MacInfo[]}
+            />
+          )}
+
+          {/* AI PM */}
+          {mode === 'pm' && currentProject && (
+            <PMPanel
+              projectName={currentProject.name}
+              onExecuteStory={(directive) => {
+                setTeamInitialDirective(directive);
+                setMode('team');
+                if (!fileTree && macOnline) send({ type: 'file_tree', mac_id: selectedMacId || undefined });
+              }}
+            />
+          )}
+
+          {/* Codebase Brain */}
+          {mode === 'brain' && currentProject && (
+            <BrainPanel
+              projectName={currentProject.name}
+              macOnline={macOnline}
+              onSend={(msg) => {
+                if (msg.type === 'brain_index') setBrainIndexing(true);
+                send({ ...msg, mac_id: selectedMacId || undefined });
+              }}
+              brainStatus={brainStatus}
+              brainSearchResults={brainSearchResults}
+              brainIndexing={brainIndexing}
+              brainProgress={brainProgress}
+            />
+          )}
+
+          {/* Production AI */}
+          {mode === 'production' && currentProject && (
+            <ProductionPanel
+              projectName={currentProject.name}
+              macOnline={macOnline}
+              onSend={(msg) => send({ ...msg, mac_id: selectedMacId || undefined })}
+              monitorActive={productionMonitorActive}
+              statusHistory={productionHistory}
+              latestEntry={productionLatest}
+              incidentLog={productionIncidents}
             />
           )}
 
@@ -1548,11 +1682,18 @@ export default function BridgeClient() {
               )}
               {/* メイン入力行 */}
               <div className="flex gap-2 items-end px-3 py-2.5">
-                {/* 画像 */}
+                {/* 画像 (Code送信) */}
                 <label className={`w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-90 flex-shrink-0 ${enhancing ? 'opacity-40 pointer-events-none' : ''}`}
                   style={{ background: 'rgba(255,255,255,0.06)' }}>
                   <Camera size={17} className="text-gray-500" />
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+                </label>
+                {/* Visual → Team */}
+                <label className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all active:scale-90 flex-shrink-0"
+                  style={{ background: 'rgba(79,70,229,0.12)', border: '1px solid rgba(99,102,241,0.3)' }}
+                  title="スクリーンショット → AI Team">
+                  <Users size={15} className="text-indigo-400" />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleVisualCapture} />
                 </label>
                 {/* 音声 */}
                 <button onClick={handleVoice} disabled={enhancing}
@@ -1608,7 +1749,7 @@ export default function BridgeClient() {
             ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string }[]).map(tab => {
               const isMore = tab.id === 'more';
               const isActive = isMore
-                ? (['files', 'schedule', 'tools', 'github'] as string[]).includes(mode)
+                ? (['files', 'schedule', 'tools', 'github', 'pm', 'brain', 'production'] as string[]).includes(mode)
                 : mode === tab.id;
               const Icon = tab.icon;
               return (
@@ -1671,6 +1812,36 @@ export default function BridgeClient() {
         </>
       )}
 
+      {/* ─── Visual Capture モーダル ─── */}
+      {visualCapturing && visualPreview && (
+        <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.85)' }} onClick={() => { setVisualCapturing(false); setVisualPreview(null); }}>
+          <div className="w-full rounded-t-3xl overflow-hidden"
+            style={{ background: 'rgba(8,8,18,0.98)', border: '1px solid rgba(255,255,255,0.1)', paddingBottom: 'env(safe-area-inset-bottom, 16px)', animation: 'slideUp 0.22s ease' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center pt-3 pb-3"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
+            <div className="px-4 pb-2">
+              <p className="text-white font-bold text-sm mb-3">Visual → AI Team</p>
+              <img src={`data:${visualMime};base64,${visualPreview}`} alt="preview"
+                className="w-full max-h-48 object-contain rounded-xl mb-4"
+                style={{ border: '1px solid rgba(255,255,255,0.1)' }} />
+              <p className="text-gray-500 text-xs mb-4">この画像を分析してAI Teamの実装指示を自動生成します</p>
+              <div className="flex gap-2">
+                <button onClick={() => { setVisualCapturing(false); setVisualPreview(null); }}
+                  className="px-4 py-3 rounded-xl text-sm text-gray-500 active:scale-95"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}>キャンセル</button>
+                <button onClick={analyzeVisual} disabled={visualAnalyzing}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold text-white active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
+                  {visualAnalyzing
+                    ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Gemini が解析中...</>
+                    : <><Sparkles size={14} />解析 → プラン生成</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── More メニュー ─── */}
       {showMoreMenu && (
         <div className="fixed inset-0 z-50" onClick={() => setShowMoreMenu(false)}>
@@ -1679,12 +1850,15 @@ export default function BridgeClient() {
             onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-5"><div className="w-10 h-1 rounded-full bg-white/15" /></div>
             <p className="text-gray-600 text-xs tracking-widest uppercase text-center mb-4">その他のパネル</p>
-            <div className="grid grid-cols-4 gap-3 px-5 pb-6">
+            <div className="grid grid-cols-4 gap-2 px-4 pb-6">
               {([
-                { id: 'files',    label: 'ファイル', icon: FolderOpen, color: '#c4b5fd', onSelect: () => { if (fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); } } },
-                { id: 'tools',    label: 'ツール',   icon: Wrench,     color: '#fca5a5', onSelect: () => {} },
-                { id: 'schedule', label: '予約',     icon: Clock,      color: '#fdba74', onSelect: () => {} },
-                { id: 'github',   label: 'GitHub',   icon: GitBranch,  color: '#d8b4fe', onSelect: () => {} },
+                { id: 'files',      label: 'ファイル',  icon: FolderOpen, color: '#c4b5fd', onSelect: () => { if (fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); } } },
+                { id: 'tools',      label: 'ツール',    icon: Wrench,     color: '#fca5a5', onSelect: () => {} },
+                { id: 'schedule',   label: '予約',      icon: Clock,      color: '#fdba74', onSelect: () => {} },
+                { id: 'github',     label: 'GitHub',    icon: GitBranch,  color: '#d8b4fe', onSelect: () => {} },
+                { id: 'pm',         label: 'AI PM',     icon: Target,     color: '#fb923c', onSelect: () => {} },
+                { id: 'brain',      label: 'Brain',     icon: Brain,      color: '#a78bfa', onSelect: () => { if (macOnline) send({ type: 'brain_status', mac_id: selectedMacId || undefined }); } },
+                { id: 'production', label: '本番監視',  icon: Activity,   color: '#34d399', onSelect: () => {} },
               ] as { id: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; color: string; onSelect: () => void }[]).map(item => {
                 const Icon = item.icon;
                 const isActive = mode === item.id;

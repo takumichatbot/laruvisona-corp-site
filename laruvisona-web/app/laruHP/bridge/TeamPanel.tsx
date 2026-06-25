@@ -16,6 +16,8 @@ export type TaskStatus = 'pending' | 'running' | 'done' | 'failed';
 
 interface HistoryEntry { directive: string; planTitle: string; success: boolean; ts: number; }
 
+export interface MacInfo { id: string; name: string; }
+
 interface Props {
   macOnline: boolean; projectName: string; fileTree: string;
   onSend: (msg: Record<string, unknown>) => void;
@@ -24,6 +26,8 @@ interface Props {
   orchestrateComplete: boolean; orchestrateReviewResult: string;
   orchestrateTestResult: { output: string; passed: boolean } | null;
   onResetOrchestrate: () => void;
+  initialDirective?: string;
+  macList?: MacInfo[];
 }
 
 const EXAMPLES = [
@@ -59,7 +63,7 @@ export default function TeamPanel({
   macOnline, projectName, fileTree, onSend,
   orchestrateRunning, orchestratePhase, taskStatuses, taskOutputs,
   orchestrateComplete, orchestrateReviewResult, orchestrateTestResult,
-  onResetOrchestrate,
+  onResetOrchestrate, initialDirective, macList = [],
 }: Props) {
   const [step, setStep] = useState<'input' | 'planning' | 'review' | 'executing' | 'done'>('input');
   const [directive, setDirective] = useState('');
@@ -72,9 +76,17 @@ export default function TeamPanel({
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showReview, setShowReview] = useState(false);
   const [showTestOutput, setShowTestOutput] = useState(false);
+  const [phaseAssignments, setPhaseAssignments] = useState<Record<string, string>>({});
   const svRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
+
+  useEffect(() => {
+    if (initialDirective && initialDirective.trim()) {
+      setDirective(initialDirective);
+      setStep('input');
+    }
+  }, [initialDirective]);
 
   useEffect(() => {
     if (orchestrateRunning && step !== 'executing') setStep('executing');
@@ -121,7 +133,8 @@ export default function TeamPanel({
     if (!plan || !macOnline) return;
     onResetOrchestrate();
     setSvMessages([]);
-    onSend({ type: 'orchestrate_start', plan });
+    const assignments = Object.keys(phaseAssignments).length > 0 ? phaseAssignments : undefined;
+    onSend({ type: 'orchestrate_start', plan, phaseAssignments: assignments });
     setStep('executing');
   };
 
@@ -256,13 +269,22 @@ export default function TeamPanel({
               style={{ background: `${PHASE_COLORS[pi % PHASE_COLORS.length]}0d` }}>
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
                 style={{ background: PHASE_COLORS[pi % PHASE_COLORS.length] }}>{pi + 1}</span>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-semibold">{phase.name}</p>
                 <p className="text-gray-500 text-xs truncate">{phase.description}</p>
               </div>
-              <span className="text-xs rounded-full px-2 py-0.5" style={{ background: 'rgba(255,255,255,0.06)', color: '#6b7280' }}>
-                {phase.parallel ? '並列' : '順次'}
-              </span>
+              {macList.length > 1 ? (
+                <select value={phaseAssignments[phase.id] || macList[0]?.id || ''}
+                  onChange={e => setPhaseAssignments(prev => ({ ...prev, [phase.id]: e.target.value }))}
+                  className="h-6 px-1.5 rounded-lg text-xs outline-none flex-shrink-0"
+                  style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', maxWidth: 90 }}>
+                  {macList.map(m => <option key={m.id} value={m.id} style={{ background: '#111' }}>{m.name}</option>)}
+                </select>
+              ) : (
+                <span className="text-xs rounded-full px-2 py-0.5 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: '#6b7280' }}>
+                  {phase.parallel ? '並列' : '順次'}
+                </span>
+              )}
             </div>
             <div className="px-3 py-2 space-y-1">
               {phase.tasks.map(task => (
