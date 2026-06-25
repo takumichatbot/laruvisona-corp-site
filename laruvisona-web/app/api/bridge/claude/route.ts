@@ -32,13 +32,12 @@ export async function POST(req: Request) {
     const readable = new ReadableStream({
       async start(controller) {
         for await (const chunk of stream) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
+          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`));
           }
         }
+        const finalMsg = await stream.finalMessage();
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ usage: finalMsg.usage, model })}\n\n`));
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
       },

@@ -88,6 +88,50 @@ ${ctx ? `\n直近の会話:\n${ctx}\n` : ''}
       return NextResponse.json({ result: result.response.text() });
     }
 
+    // ── 6. エラー自動診断 ────────────────────────────────────────────────────
+    if (action === 'diagnose') {
+      const { error, projectName } = body;
+      const prompt = `以下のエラーを分析して原因と修正方法を教えてください。
+プロジェクト: ${projectName}
+エラー:
+${error}
+
+以下の形式で日本語で回答してください:
+**原因:** （簡潔に1-2行）
+**修正方法:** （具体的な手順）
+**Claude Codeへの指示:** （そのままClaude Codeに送れる形式で1行）`;
+      const result = await getModel().generateContent(prompt);
+      return NextResponse.json({ result: result.response.text() });
+    }
+
+    // ── 7. プロジェクト概要生成 ──────────────────────────────────────────────
+    if (action === 'project_summary') {
+      const { files, projectName } = body;
+      const fileContents = (files as { path: string; content: string }[])
+        .map(f => `## ${f.path}\n${f.content.slice(0, 1500)}`)
+        .join('\n\n');
+      const prompt = `以下のファイルを元にプロジェクト「${projectName}」の概要を日本語でまとめてください。
+技術スタック、主な機能、アーキテクチャを3-5行で。
+
+${fileContents}`;
+      const result = await getModel().generateContent(prompt);
+      return NextResponse.json({ result: result.response.text() });
+    }
+
+    // ── 8. コミットメッセージ生成 ────────────────────────────────────────────
+    if (action === 'commit_message') {
+      const { diff, projectName } = body;
+      const prompt = `以下のgit diffを見て、適切なコミットメッセージを生成してください。
+プロジェクト: ${projectName}
+
+${diff.slice(0, 4000)}
+
+形式: 「feat/fix/refactor/docs: 変更内容を日本語で1行」
+コミットメッセージのみ出力してください。`;
+      const result = await getModel().generateContent(prompt);
+      return NextResponse.json({ result: result.response.text() });
+    }
+
     return NextResponse.json({ error: '不明なアクション' }, { status: 400 });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Gemini APIエラー';

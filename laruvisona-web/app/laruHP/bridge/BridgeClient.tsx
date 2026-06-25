@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, CalendarClock, Cpu, MonitorCheck } from 'lucide-react';
+import { Globe, Bot, Zap, Wrench, Folder, ArrowLeft, Square, ChevronRight, Wifi, WifiOff, MonitorSmartphone, Trash2, Lock, RotateCcw, Sparkles, Camera, Mic, Radio, Plus, X as XIcon, GitBranch, FolderOpen, FileText, ChevronDown, Search, Upload, Cpu, MonitorCheck, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
 import GeminiLive from './GeminiLive';
 import SchedulePanel, { type Schedule } from './SchedulePanel';
+import ToolsPanel from './ToolsPanel';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -230,10 +231,37 @@ export default function BridgeClient() {
   const [initError, setInitError] = useState('');
   const [view, setView] = useState<'projects' | 'chat'>('projects');
   // モード切り替え: code / chat / git / files
-  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule'>('code');
+  const [mode, setMode] = useState<'code' | 'chat' | 'git' | 'files' | 'schedule' | 'tools'>('code');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatModel, setChatModel] = useState(CLAUDE_MODELS[0].id);
   const [chatRunning, setChatRunning] = useState(false);
+  // TTS
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const speakText = (text: string) => {
+    if (!ttsEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.slice(0, 500));
+    u.lang = 'ja-JP'; u.rate = 1.15;
+    window.speechSynthesis.speak(u);
+  };
+  // 確認モード
+  const [confirmMode, setConfirmMode] = useState(false);
+  const [pendingInstruction, setPendingInstruction] = useState<string | null>(null);
+  // スワイプ
+  const touchStartX = useRef(0);
+  // メモリ
+  const [memories, setMemories] = useState<{ id: string; content: string; ts: number }[]>([]);
+  // Tools パネル用
+  const [logs, setLogs] = useState('');
+  const [logsActive, setLogsActive] = useState(false);
+  const [envContent, setEnvContent] = useState('');
+  const [envPath, setEnvPath] = useState('.env');
+  const [envLoading, setEnvLoading] = useState(false);
+  const [costs, setCosts] = useState<{ inputTokens: number; outputTokens: number; model: string }[]>([]);
+  const [gitDiff, setGitDiff] = useState('');
+  const [deployOutput, setDeployOutput] = useState('');
+  // エラー診断
+  const [diagnosing, setDiagnosing] = useState(false);
   // 複数Mac
   const [macList, setMacList] = useState<{ id: string; name: string }[]>([]);
   const [selectedMacId, setSelectedMacId] = useState('');
@@ -281,6 +309,11 @@ export default function BridgeClient() {
       const saved = JSON.parse(localStorage.getItem('bridge_presets') || '[]');
       if (Array.isArray(saved)) setPresets(saved);
     } catch { /* ignore */ }
+    // メモリ読み込み
+    try {
+      const mem = JSON.parse(localStorage.getItem('bridge_memories') || '[]');
+      if (Array.isArray(mem)) setMemories(mem);
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => { if (unlocked) setRelayWs(getRelayWsUrl()); }, [unlocked]);
@@ -323,8 +356,29 @@ export default function BridgeClient() {
         if (!r.error) setSearchResults(r.results || []);
         setSearching(false);
       }
-      if (m.type === 'file_write_result') {
-        setFileLoading(false);
+      if (m.type === 'file_write_result') { setFileLoading(false); }
+      if (m.type === 'log_output') {
+        setLogs(prev => (prev + (m as { content: string }).content).slice(-4000));
+      }
+      if (m.type === 'logs_stopped') { setLogsActive(false); }
+      if (m.type === 'deploy_started') { setDeployOutput('デプロイ中...\n'); }
+      if (m.type === 'deploy_result') {
+        const r = m as { output?: string; error?: string; exit_code?: number };
+        setDeployOutput(r.error || r.output || '');
+        if (r.exit_code === 0 && 'vibrate' in navigator) navigator.vibrate([100, 50, 200]);
+      }
+      if (m.type === 'env_result') {
+        const r = m as { content?: string; path?: string; error?: string };
+        setEnvContent(r.content || ''); setEnvPath(r.path || '.env'); setEnvLoading(false);
+      }
+      if (m.type === 'env_write_result') { setEnvLoading(false); onSend({ type: 'env_read' }); }
+      if (m.type === 'git_action_result') {
+        const r = m as { output?: string; error?: string; action?: string };
+        setMessages(prev => [...prev, { role: 'system', content: r.error || `${r.action}: ${r.output?.trim().slice(0, 100)}` }]);
+      }
+      if (m.type === 'git_diff_result') {
+        const r = m as { stat?: string; diff?: string; error?: string };
+        if (!r.error) setGitDiff(r.diff || '');
       }
       if (m.type === 'git_status_result') {
         setGitStatus(m as { status?: string; log?: string; error?: string });
@@ -353,8 +407,9 @@ export default function BridgeClient() {
       }
       if (m.type === 'done') {
         setRunning(false);
-        // バイブレーション
+        // バイブレーション + TTS
         if ('vibrate' in navigator) navigator.vibrate(m.exit_code === 0 ? [100, 50, 100] : [300]);
+        if (ttsEnabled) speakText(m.exit_code === 0 ? '実行完了しました' : 'エラーが発生しました');
         // フォアグラウンド通知
         if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
           new Notification(m.exit_code === 0 ? 'Claude Code 完了' : 'Claude Code エラー', {
@@ -410,6 +465,60 @@ export default function BridgeClient() {
   const newConversation = () => {
     send({ type: 'new_conversation' });
   };
+
+  // メモリ管理
+  const saveMemory = (content: string) => {
+    if (!content.trim()) return;
+    const id = Date.now().toString();
+    const updated = [...memories, { id, content: content.trim(), ts: Date.now() }].slice(-20);
+    setMemories(updated);
+    localStorage.setItem('bridge_memories', JSON.stringify(updated));
+  };
+  const deleteMemory = (id: string) => {
+    const updated = memories.filter(m => m.id !== id);
+    setMemories(updated);
+    localStorage.setItem('bridge_memories', JSON.stringify(updated));
+  };
+
+  // エラー自動診断
+  const diagnoseError = async (errorText: string) => {
+    if (!currentProject) return;
+    setDiagnosing(true);
+    try {
+      const result = await gemini('diagnose', { error: errorText, projectName: currentProject.name });
+      setChatMessages(prev => [...prev, { role: 'assistant', content: result, ts: Date.now() }]);
+      setMode('chat');
+    } catch { /* ignore */ }
+    setDiagnosing(false);
+  };
+
+  // プロジェクト概要生成
+  const generateProjectSummary = async () => {
+    if (!currentProject || !macOnline) return;
+    const keyFiles = ['package.json', 'README.md', 'src/index.ts', 'app/layout.tsx'];
+    const fileContents: { path: string; content: string }[] = [];
+    for (const f of keyFiles) {
+      try {
+        const res = await new Promise<{ content?: string }>((resolve) => {
+          const handler = (msg: unknown) => {
+            const m = msg as { type: string; path?: string; content?: string };
+            if (m.type === 'file_read_result' && m.path === f) { resolve(m); }
+          };
+          addListener(handler);
+          send({ type: 'file_read', path: f, mac_id: selectedMacId || undefined });
+          setTimeout(() => resolve({}), 3000);
+        });
+        if (res.content) fileContents.push({ path: f, content: res.content });
+      } catch { /* ignore */ }
+    }
+    if (fileContents.length === 0) return;
+    const summary = await gemini('project_summary', { files: fileContents, projectName: currentProject.name });
+    setChatMessages(prev => [...prev, { role: 'assistant', content: `**プロジェクト概要**\n\n${summary}`, ts: Date.now() }]);
+    setMode('chat');
+  };
+
+  // handleSend のラッパー（確認モード対応）
+  const onSend = (msg: Record<string, unknown>) => send(msg);
 
   // 自律実行
   const runAutonomousStep = useCallback(async (lastOutput: string) => {
@@ -558,7 +667,11 @@ export default function BridgeClient() {
           const data = line.slice(6).trim();
           if (data === '[DONE]') break;
           try {
-            const { text: chunk } = JSON.parse(data);
+            const parsed = JSON.parse(data);
+            if (parsed.usage) {
+              setCosts(prev => [...prev, { inputTokens: parsed.usage.input_tokens || 0, outputTokens: parsed.usage.output_tokens || 0, model: parsed.model || chatModel }]);
+            }
+            const chunk = parsed.text || '';
             full += chunk;
             setChatMessages(prev => {
               const last = prev[prev.length - 1];
@@ -655,11 +768,13 @@ export default function BridgeClient() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSend = async () => {
-    const text = input.trim();
+  const handleSend = async (overrideText?: string) => {
+    const text = overrideText ?? input.trim();
     if (!text || running) return;
-    setInput('');
-    if (textareaRef.current) textareaRef.current.style.height = '44px';
+    if (!overrideText) { setInput(''); if (textareaRef.current) textareaRef.current.style.height = '44px'; }
+
+    // 確認モード
+    if (confirmMode && !overrideText) { setPendingInstruction(text); return; }
 
     let finalText = text;
     if (enhanceMode && currentProject) {
@@ -813,10 +928,11 @@ export default function BridgeClient() {
               { id: 'git',      label: 'Git',      activeStyle: { background: 'rgba(52,211,153,0.12)',  border: '1px solid rgba(52,211,153,0.4)',  color: '#6ee7b7' } },
               { id: 'files',    label: 'Files',    activeStyle: { background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.4)', color: '#c4b5fd' } },
               { id: 'schedule', label: 'Sched',    activeStyle: { background: 'rgba(251,146,60,0.12)',  border: '1px solid rgba(251,146,60,0.4)',  color: '#fdba74' } },
+              { id: 'tools',    label: 'Tools',    activeStyle: { background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.4)', color: '#fca5a5' } },
             ] as const).map(t => (
               <button key={t.id} onClick={() => {
                 setMode(t.id);
-                if (t.id === 'git' && !gitStatus && macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); }
+                if (t.id === 'git' && macOnline) { setGitLoading(true); send({ type: 'git_status', mac_id: selectedMacId || undefined }); send({ type: 'git_diff', mac_id: selectedMacId || undefined }); }
                 if (t.id === 'files' && fileEntries.length === 0 && macOnline) { setFileLoading(true); send({ type: 'file_list', path: '', mac_id: selectedMacId || undefined }); }
               }}
                 className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
@@ -901,7 +1017,38 @@ export default function BridgeClient() {
                   ))}
                 </div>
               )}
+              {gitDiff && (
+                <div className="flex gap-2">
+                  <button onClick={() => { setInput('現在のgit diffを説明して'); setMode('chat'); }}
+                    className="flex-1 py-2 rounded-xl text-xs active:scale-98 transition-all"
+                    style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#6ee7b7' }}>
+                    差分を説明
+                  </button>
+                  <button onClick={() => setMode('tools')}
+                    className="flex-1 py-2 rounded-xl text-xs active:scale-98 transition-all"
+                    style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)', color: '#c4b5fd' }}>
+                    コミット生成 →
+                  </button>
+                </div>
+              )}
             </div>
+          )}
+
+          {/* ツール */}
+          {mode === 'tools' && currentProject && (
+            <ToolsPanel
+              projectName={currentProject.name}
+              macOnline={macOnline}
+              onSend={(msg) => { setEnvLoading(msg.type === 'env_read' || msg.type === 'env_write'); send(msg); }}
+              logs={logs}
+              logsActive={logsActive}
+              envContent={envContent}
+              envPath={envPath}
+              envLoading={envLoading}
+              costs={costs}
+              onGemini={gemini}
+              gitDiff={gitDiff}
+            />
           )}
 
           {/* スケジュール */}
@@ -980,11 +1127,54 @@ export default function BridgeClient() {
             </div>
           )}
 
+          {/* 確認ダイアログ */}
+          {pendingInstruction && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: 'rgba(0,0,0,0.8)' }}>
+              <div className="w-full rounded-2xl p-5 space-y-4" style={{ background: '#0f0f1a', border: '1px solid rgba(239,68,68,0.3)' }}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-red-400" />
+                  <p className="text-white font-semibold text-sm">実行確認</p>
+                </div>
+                <p className="text-gray-300 text-sm rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>{pendingInstruction}</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setPendingInstruction(null)}
+                    className="flex-1 py-3 rounded-xl text-sm text-gray-400 active:scale-95"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}>キャンセル</button>
+                  <button onClick={() => { const t = pendingInstruction; setPendingInstruction(null); handleSend(t); }}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold text-white active:scale-95"
+                    style={{ background: 'linear-gradient(135deg, #dc2626, #f97316)' }}>実行</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* メッセージリスト */}
-          <div className={`overflow-y-auto px-4 py-4 space-y-3 ${mode === 'code' || mode === 'chat' ? 'flex-1' : 'hidden'}`}>
+          <div
+            onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={e => {
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              const TAB_ORDER: typeof mode[] = ['code', 'chat', 'git', 'files', 'schedule', 'tools'];
+              if (Math.abs(dx) > 70) {
+                const cur = TAB_ORDER.indexOf(mode);
+                const next = dx < 0 ? Math.min(cur + 1, TAB_ORDER.length - 1) : Math.max(cur - 1, 0);
+                setMode(TAB_ORDER[next]);
+              }
+            }}
+            className={`overflow-y-auto px-4 py-4 space-y-3 ${mode === 'code' || mode === 'chat' ? 'flex-1' : 'hidden'}`}>
             {mode === 'code' && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-2">
                 <p className="text-gray-700 text-sm">Claude Code に指示を送信</p>
+              </div>
+            )}
+            {mode === 'chat' && memories.length > 0 && chatMessages.length === 0 && (
+              <div className="rounded-xl p-3 mb-2" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                <p className="text-indigo-400 text-xs mb-2">記憶 ({memories.length}件)</p>
+                {memories.slice(-3).map(m => (
+                  <div key={m.id} className="flex items-start gap-2 py-1">
+                    <p className="flex-1 text-gray-500 text-xs truncate">{m.content}</p>
+                    <button onClick={() => deleteMemory(m.id)} className="flex-shrink-0 text-gray-700 active:opacity-50 text-xs">✕</button>
+                  </div>
+                ))}
               </div>
             )}
             {mode === 'chat' && chatMessages.length === 0 && (
@@ -1027,6 +1217,23 @@ export default function BridgeClient() {
                         style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#a5b4fc' }}>
                         <span className="text-violet-500 font-semibold mr-1">✦ Gemini要約</span>
                         {summaries[i]}
+                      </div>
+                    )}
+                    {m.role === 'assistant' && !m.streaming && (
+                      <div className="flex gap-1 mt-1">
+                        {ttsEnabled && (
+                          <button onClick={() => speakText(m.content)}
+                            className="w-6 h-6 rounded-lg flex items-center justify-center active:scale-90 opacity-40 hover:opacity-100 transition-opacity"
+                            style={{ background: 'rgba(255,255,255,0.05)' }}>
+                            <Volume2 size={10} className="text-gray-500" />
+                          </button>
+                        )}
+                        <button onClick={() => saveMemory(m.content.slice(0, 200))}
+                          title="メモリに保存"
+                          className="w-6 h-6 rounded-lg flex items-center justify-center active:scale-90 opacity-40 hover:opacity-100 transition-opacity"
+                          style={{ background: 'rgba(255,255,255,0.05)' }}>
+                          <Plus size={10} className="text-gray-500" />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1123,6 +1330,12 @@ export default function BridgeClient() {
                 style={{ background: voiceRecording ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)', border: voiceRecording ? '1px solid rgba(239,68,68,0.4)' : 'none' }}>
                 <Mic size={14} className={voiceRecording ? 'text-red-400' : 'text-gray-500'} />
               </button>
+              {/* TTS */}
+              <button onClick={() => { setTtsEnabled(v => !v); if (ttsEnabled) window.speechSynthesis?.cancel(); }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                style={{ background: ttsEnabled ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.05)', border: ttsEnabled ? '1px solid rgba(56,189,248,0.3)' : 'none' }}>
+                {ttsEnabled ? <Volume2 size={14} className="text-sky-400" /> : <VolumeX size={14} className="text-gray-600" />}
+              </button>
               {/* 強化モード */}
               <button onClick={() => setEnhanceMode(v => !v)} disabled={enhancing}
                 className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90 disabled:opacity-40"
@@ -1144,6 +1357,13 @@ export default function BridgeClient() {
               {/* Codeモード: 自律実行 + モデル + Mac選択 + Live */}
               {mode === 'code' && (
                 <div className="flex items-center gap-1 ml-auto">
+                  {/* 確認モード */}
+                  <button onClick={() => setConfirmMode(v => !v)}
+                    className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
+                    style={{ background: confirmMode ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', border: confirmMode ? '1px solid rgba(239,68,68,0.3)' : 'none', color: confirmMode ? '#fca5a5' : '#6b7280' }}>
+                    <AlertTriangle size={11} />
+                    <span>確認</span>
+                  </button>
                   {/* 自律実行 */}
                   <button onClick={() => { setAutonomousMode(v => !v); autonomousRef.current = false; }}
                     className="flex items-center gap-1 px-2 h-8 rounded-lg text-xs transition-all active:scale-90"
@@ -1188,6 +1408,20 @@ export default function BridgeClient() {
                       <span>{attachedContext.length}件</span>
                     </button>
                   )}
+                  {/* エラー診断 */}
+                  <button onClick={() => { const err = window.prompt('エラーを貼り付けてください'); if (err) diagnoseError(err); }}
+                    disabled={diagnosing}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-40"
+                    style={{ background: diagnosing ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)' }}
+                    title="エラー自動診断">
+                    {diagnosing ? <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" /> : <AlertTriangle size={13} className="text-gray-500" />}
+                  </button>
+                  {/* プロジェクト概要 */}
+                  <button onClick={generateProjectSummary} disabled={!macOnline}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-40"
+                    style={{ background: 'rgba(255,255,255,0.05)' }} title="プロジェクト概要を生成">
+                    <Cpu size={13} className="text-gray-500" />
+                  </button>
                   {/* コード検索 */}
                   <button onClick={() => setSearchQuery(q => q || ' ')}
                     className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-90"
@@ -1226,7 +1460,7 @@ export default function BridgeClient() {
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', minHeight: '44px', maxHeight: '120px' }}
               />
               <button
-                onClick={mode === 'chat' ? handleChatSend : handleSend}
+                onClick={() => mode === 'chat' ? handleChatSend() : handleSend()}
                 disabled={mode === 'code' ? (running || !input.trim() || !macOnline) : (chatRunning || !input.trim())}
                 className="h-10 px-4 rounded-xl font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30"
                 style={mode === 'chat'
