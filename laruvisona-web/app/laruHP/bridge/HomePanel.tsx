@@ -179,11 +179,46 @@ export default function HomePanel({ projects, currentProject, macOnline, macCoun
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2.5 mb-5">
+        <div className="grid grid-cols-3 gap-2.5 mb-4">
           <StatCard label="今日" value={stats.todayCount} sub={`${stats.todaySuccess}件成功`} color={C.sky} icon={Zap} />
           <StatCard label="成功率" value={`${stats.successRate}%`} sub={`全${stats.total}件`} color={C.success} icon={TrendingUp} />
           <StatCard label="平均時間" value={stats.avgDurationSec > 0 ? `${stats.avgDurationSec}s` : '—'} sub="実行時間" color={C.warning} icon={Clock} />
         </div>
+
+        {/* 機能4: 健全度スコア */}
+        {(() => {
+          const score = Math.round(
+            stats.successRate * 0.5 +
+            (stats.total > 0 ? Math.min(stats.todayCount * 5, 30) : 0) +
+            (stats.avgDurationSec > 0 && stats.avgDurationSec < 60 ? 20 : 10)
+          );
+          const color = score >= 75 ? C.success : score >= 50 ? C.warning : C.error;
+          const label = score >= 75 ? '良好' : score >= 50 ? '要注意' : '要改善';
+          return (
+            <div className="rounded-2xl p-4 flex items-center gap-4 mb-5"
+              style={{ background: C.surface, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div className="relative w-14 h-14 flex-shrink-0">
+                <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90">
+                  <circle cx="28" cy="28" r="22" fill="none" stroke={C.beigeAlt} strokeWidth="5" />
+                  <circle cx="28" cy="28" r="22" fill="none" stroke={color} strokeWidth="5"
+                    strokeDasharray={`${2 * Math.PI * 22}`}
+                    strokeDashoffset={`${2 * Math.PI * 22 * (1 - score / 100)}`}
+                    style={{ transition: 'stroke-dashoffset 0.8s ease', strokeLinecap: 'round' }} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-bold" style={{ color }}>{score}</span>
+                </div>
+              </div>
+              <div>
+                <p className="font-bold text-sm" style={{ color: C.text }}>プロジェクト健全度</p>
+                <p className="text-xs mt-0.5 font-semibold" style={{ color }}>{label}</p>
+                <p className="text-[10px] mt-1" style={{ color: C.textMuted }}>
+                  成功率 {stats.successRate}% · 今日 {stats.todayCount}件
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 前回の続き */}
         {(onContinueLast || recent.length > 0) && (

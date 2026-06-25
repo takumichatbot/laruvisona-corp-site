@@ -13,6 +13,7 @@ import RealtimeVoice from './RealtimeVoice';
 import ConciergePanel from './ConciergePanel';
 import HomePanel from './HomePanel';
 import PromptLibrary from './PromptLibrary';
+import DiffViewer from './DiffViewer';
 import { addRecord, getRecords } from './TaskHistoryStore';
 import { Home } from 'lucide-react';
 
@@ -278,8 +279,10 @@ export default function BridgeClient() {
   // エラー診断
   const [diagnosing, setDiagnosing] = useState(false);
   // Ambient監視
-  const [watchdogAlerts, setWatchdogAlerts] = useState<{ level: string; message: string }[]>([]);
+  const [watchdogAlerts, setWatchdogAlerts] = useState<{ level: string; message: string; ts?: number }[]>([]);
   const [watchdogActive, setWatchdogActive] = useState(false);
+  // Diff ビューア (機能1)
+  const [diffResult, setDiffResult] = useState<{ stat: string; diff: string } | null>(null);
   // テストループ
   const [testOutput, setTestOutput] = useState('');
   const [testRunning, setTestRunning] = useState(false);
@@ -387,6 +390,23 @@ export default function BridgeClient() {
       send({ type: 'git_diff', mac_id: selectedMacId || undefined });
     }
   }, [orchestrateComplete]);
+
+  // 機能5: iOS ショートカットからのタスクをポーリング（30秒ごと）
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/bridge/quick');
+        const data = await res.json() as { tasks: Array<{ id: string; input: string; project: string }> };
+        for (const task of data.tasks || []) {
+          if (task.input && macOnline && currentProject) {
+            setInput(task.input);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    const interval = setInterval(poll, 30000);
+    return () => clearInterval(interval);
+  }, [macOnline, currentProject]);
 
   // K+T+Y: Push notification + haptic + TTS on orchestration complete
   useEffect(() => {
@@ -652,6 +672,21 @@ export default function BridgeClient() {
         const r = (m as unknown) as { alerts: { level: string; message: string }[] };
         setWatchdogAlerts(prev => [...prev, ...r.alerts]);
       }
+      // 機能1: Diff ビューア
+      if (m.type === 'diff_result') {
+        const r = m as unknown as { stat: string; diff: string };
+        setDiffResult({ stat: r.stat, diff: r.diff });
+      }
+      // 機能6: エラーログ自動監視
+      if (m.type === 'log_alert') {
+        const r = m as unknown as { path: string; excerpt: string; level: string };
+        setWatchdogAlerts(prev => [...prev.slice(-4), {
+          level: 'danger',
+          message: `ログエラー検出: ${r.path.split('/').pop()} — ${r.excerpt.slice(-100)}`,
+          ts: Date.now(),
+        }]);
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      }
       // テスト
       if (m.type === 'test_started') { setTestRunning(true); setTestOutput(''); setTestPassed(null); }
       if (m.type === 'test_output') {
@@ -809,7 +844,6 @@ export default function BridgeClient() {
         setRunning(false);
         // バイブレーション + TTS
         if ('vibrate' in navigator) navigator.vibrate(m.exit_code === 0 ? [100, 50, 100] : [300]);
-        if (ttsEnabled) speakText(m.exit_code === 0 ? '実行完了しました' : 'エラーが発生しました');
         // フォアグラウンド通知
         if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
           new Notification(m.exit_code === 0 ? 'Claude Code 完了' : 'Claude Code エラー', {
@@ -833,6 +867,20 @@ export default function BridgeClient() {
           // 自律実行モード
           if (autonomousRef.current && m.exit_code === 0 && autonomousStep < 10) {
             setTimeout(() => runAutonomousStep(lastOutputRef.current), 1000);
+          }
+          // 機能3: 音声ウォークスルー
+          if (ttsEnabled) {
+            const lastMsg2 = updated[updated.length - 1];
+            const fileMatches = lastMsg2?.content?.matchAll(/(?:Write|Edit|Create)\s*\(\s*["']?([^"'\s)]+)/g);
+            const changedFiles = fileMatches ? [...fileMatches].map(fm => fm[1]).slice(0, 3) : [];
+            if (m.exit_code === 0) {
+              const summary = changedFiles.length > 0
+                ? `完了しました。${changedFiles.map((f: string) => f.split('/').pop()).join('、')}を変更しました。`
+                : '実行が完了しました。';
+              speakText(summary);
+            } else {
+              speakText('エラーが発生しました。出力を確認してください。');
+            }
           }
           return updated;
         });
@@ -1231,13 +1279,59 @@ export default function BridgeClient() {
       setEnhancing(false);
     }
 
+    // 機能8: 自然言語スケジュール検出
+    const schedulePatterns = [
+      { regex: /毎朝(\d+)時/, cron: (h: string) => `0 ${h} * * *` },
+      { regex: /毎日(\d+)時/, cron: (h: string) => `0 ${h} * * *` },
+      { regex: /(\d+)分ごと/, cron: (mm: string) => `*/${mm} * * * *` },
+      { regex: /毎時/, cron: () => `0 * * * *` },
+      { regex: /毎週(月|火|水|木|金|土|日)/, cron: (d: string) => {
+          const map: Record<string, string> = { 月: '1', 火: '2', 水: '3', 木: '4', 金: '5', 土: '6', 日: '0' };
+          return `0 9 * * ${map[d] || '1'}`;
+        }
+      },
+    ];
+    let matchedSchedule = false;
+    for (const p of schedulePatterns) {
+      const match = finalText.match(p.regex);
+      if (match) {
+        const cron = p.cron(match[1] || '');
+        const taskWithoutSchedule = finalText.replace(p.regex, '').replace(/[にをのは]$/, '').trim();
+        try {
+          const schedules = JSON.parse(localStorage.getItem('bridge_schedules') || '[]');
+          schedules.push({ id: Date.now().toString(), cron, task: taskWithoutSchedule, project: currentProject?.id, createdAt: Date.now() });
+          localStorage.setItem('bridge_schedules', JSON.stringify(schedules.slice(-20)));
+        } catch { /* ignore */ }
+        setMessages(prev => [...prev, { role: 'system', content: `スケジュール登録: ${p.regex.source.replace(/[()]/g, '')} → "${taskWithoutSchedule}"` }]);
+        matchedSchedule = true;
+        break;
+      }
+    }
+    if (matchedSchedule) return;
+
+    // 機能2: スマートコンテキスト注入
+    let enrichedText = finalText;
+    if (macOnline && currentProject && finalText.length > 5) {
+      const lastAssistant = messages.findLast(mm => mm.role === 'assistant');
+      const hasError = lastAssistant?.content?.match(/Error:|error:|TypeError:|SyntaxError:|Cannot find/);
+      if (hasError && lastAssistant) {
+        const errorContext = lastAssistant.content.slice(0, 500);
+        enrichedText = `[前回のエラー]\n${errorContext}\n\n[指示]\n${finalText}`;
+      }
+      const fileMentions = finalText.match(/[\w/\-]+\.(tsx?|jsx?|py|css|json|md)/g);
+      if (fileMentions && fileMentions.length > 0 && !enrichedText.includes('[前回のエラー]')) {
+        enrichedText = `[対象ファイル: ${fileMentions.join(', ')}]\n${finalText}`;
+      }
+    }
+    const finalEnrichedText = enrichedText;
+
     if (autonomousMode) {
       autonomousRef.current = true;
       setAutonomousStep(0);
-      setAutonomousLog([finalText]);
+      setAutonomousLog([finalEnrichedText]);
     }
     setMessages(prev => [...prev, { role: 'user', content: finalText, ts: Date.now() }]);
-    send({ type: 'message', content: finalText, model: codeModel || undefined, mac_id: selectedMacId || undefined });
+    send({ type: 'message', content: finalEnrichedText, model: codeModel || undefined, mac_id: selectedMacId || undefined });
   };
 
   const handleVisualCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1989,6 +2083,24 @@ export default function BridgeClient() {
                           style={{ background: LC.beigeAlt }}>
                           <Plus size={10} style={{ color: LC.textSub }} />
                         </button>
+                        {/* 機能7: スニペット共有 */}
+                        <button onClick={async () => {
+                          try {
+                            const res = await fetch('/api/bridge/share', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ content: m.content }),
+                            });
+                            const data = await res.json() as { id: string };
+                            const url = `${window.location.origin}/api/bridge/share?id=${data.id}`;
+                            await navigator.clipboard.writeText(url);
+                          } catch { /* ignore */ }
+                        }}
+                          title="共有リンクをコピー"
+                          className="w-6 h-6 rounded-lg flex items-center justify-center active:scale-90 opacity-40 hover:opacity-100 transition-opacity"
+                          style={{ background: LC.beigeAlt }}>
+                          <span style={{ fontSize: 10 }}>🔗</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -2053,6 +2165,9 @@ export default function BridgeClient() {
             )}
             <div ref={bottomRef} />
           </div>
+
+          {/* 機能1: Diff ビューア */}
+          {diffResult && <DiffViewer stat={diffResult.stat} diff={diffResult.diff} onClose={() => setDiffResult(null)} />}
 
           {/* ↓ 新着ボタン */}
           {newMsgPending && (mode === 'code' || mode === 'chat') && (
@@ -2469,6 +2584,26 @@ export default function BridgeClient() {
                   </button>
                 </div>
               )}
+
+              {/* 機能5: iOS ショートカット設定 */}
+              <div className="rounded-2xl p-4" style={{ background: LC.beige, border: `1px solid ${LC.border}` }}>
+                <p className="font-semibold text-sm mb-2" style={{ color: LC.text }}>iOS ショートカット連携</p>
+                <p className="text-xs mb-3" style={{ color: LC.textSub }}>
+                  ショートカットアプリから Bridge にタスクを送信できます。
+                </p>
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/api/bridge/quick`;
+                    navigator.clipboard.writeText(url).catch(() => {});
+                  }}
+                  className="w-full py-2.5 rounded-xl text-xs font-semibold text-white active:scale-95"
+                  style={{ background: `linear-gradient(135deg, ${LC.sky}, #0284C7)` }}>
+                  API URL をコピー
+                </button>
+                <p className="text-[10px] mt-2 text-center" style={{ color: LC.textMuted }}>
+                  {`POST: { "secret": "YOUR_PIN", "project": "...", "input": "..." }`}
+                </p>
+              </div>
             </div>
           </div>
         </div>
