@@ -266,8 +266,6 @@ export default function BridgeClient() {
   // 確認モード
   const [confirmMode, setConfirmMode] = useState(false);
   const [pendingInstruction, setPendingInstruction] = useState<string | null>(null);
-  // スワイプ
-  const touchStartX = useRef(0);
   // メモリ
   const [memories, setMemories] = useState<{ id: string; content: string; ts: number }[]>([]);
   // Tools パネル用
@@ -2071,16 +2069,6 @@ export default function BridgeClient() {
 
           {/* メッセージリスト */}
           <div
-            onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
-            onTouchEnd={e => {
-              const dx = e.changedTouches[0].clientX - touchStartX.current;
-              const TAB_ORDER: typeof mode[] = ['home', 'code', 'chat', 'team'];
-              if (Math.abs(dx) > 70) {
-                const cur = TAB_ORDER.indexOf(mode);
-                const next = dx < 0 ? Math.min(cur + 1, TAB_ORDER.length - 1) : Math.max(cur - 1, 0);
-                setMode(TAB_ORDER[next]);
-              }
-            }}
             ref={chatScrollRef}
             onScroll={handleChatScroll}
             className={`overflow-y-auto px-4 py-4 space-y-3 ${mode === 'code' || mode === 'chat' ? 'flex-1' : 'hidden'}`}
