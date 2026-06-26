@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bridge-v3';
+const CACHE_NAME = 'bridge-v4';
 const STATIC_ASSETS = ['/manifest.json', '/laruhp_logo.png'];
 
 self.addEventListener('install', e => {
@@ -18,14 +18,16 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
     return;
   }
+  // network-first: 常に最新を取りに行き、オフライン時のみキャッシュへフォールバック。
+  // （cache-first だと新しいデプロイが反映されず、古い JS が動き続けてしまう）
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const networkFetch = fetch(e.request).then(res => {
-        if (res.ok && res.type !== 'opaque') caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
-        return res;
-      }).catch(() => cached);
-      return cached || networkFetch;
-    })
+    fetch(e.request).then(res => {
+      if (res.ok && res.type !== 'opaque') {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });
 
