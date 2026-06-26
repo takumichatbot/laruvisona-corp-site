@@ -17,7 +17,7 @@ import DiffViewer from './DiffViewer';
 import GoalDecomposer, { type DecomposePlan, type TaskStatus as DecomposeStatus } from './GoalDecomposer';
 import QuantumBrain from './QuantumBrain';
 import { addRecord, getRecords } from './TaskHistoryStore';
-import { Home } from 'lucide-react';
+import { Home, Copy, Check } from 'lucide-react';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
@@ -242,6 +242,7 @@ export default function BridgeClient() {
   const [input, setInput] = useState('');
   const [running, setRunning] = useState(false);
   const [progressText, setProgressText] = useState<string>('');  // 機能5: 実行中の進捗
+  const [copiedMsgIdx, setCopiedMsgIdx] = useState<number | null>(null);  // コピー完了フィードバック
   const [runElapsed, setRunElapsed] = useState(0);
   const runTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [continuing, setContinuing] = useState(false);
@@ -916,11 +917,25 @@ export default function BridgeClient() {
       if (m.type === 'error') { setRunning(false); setProgressText(''); setMessages(prev => [...prev, { role: 'system', content: m.message || 'エラー' }]); }
       if (m.type === 'missed_output') {
         const r = m as unknown as { output: string; exit_code: number; project: string };
-        setMessages(prev => [
-          ...prev,
-          { role: 'system', content: `📬 ページを閉じている間に完了しました（${r.exit_code === 0 ? '成功' : 'エラー'}）` },
-          { role: 'assistant', content: r.output, streaming: false, ts: Date.now() },
-        ]);
+        // バグ④: 実行終了として扱う（入力欄が固まるのを防ぐ）
+        setRunning(false); setProgressText('');
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          const head = (r.output || '').slice(0, 80);
+          // バグ③: 既に同じ内容が表示済みなら二重表示しない
+          const alreadyShown = last?.role === 'assistant' && !!last.content && head.length > 0 &&
+            (last.content === r.output || last.content.includes(head) || r.output.includes(last.content.slice(0, 80)));
+          if (alreadyShown) {
+            // ストリーミング途中なら確定だけして終わる
+            if (last.streaming) return [...prev.slice(0, -1), { ...last, content: r.output, streaming: false, ts: Date.now() }];
+            return prev; // 既に確定済み → 何も足さない
+          }
+          return [
+            ...prev,
+            { role: 'system', content: `📬 ページを閉じている間に完了しました（${r.exit_code === 0 ? '成功' : 'エラー'}）` },
+            { role: 'assistant', content: r.output, streaming: false, ts: Date.now() },
+          ];
+        });
         if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
       }
       // ゴール分解バッチ実行イベント
@@ -2164,6 +2179,21 @@ export default function BridgeClient() {
                     )}
                     {m.role === 'assistant' && !m.streaming && (
                       <div className="flex gap-1 mt-1">
+                        {/* ワンタップでコピー */}
+                        <button onClick={async () => {
+                          try { await navigator.clipboard.writeText(m.content); }
+                          catch { /* ignore */ }
+                          setCopiedMsgIdx(i);
+                          haptic(15);
+                          setTimeout(() => setCopiedMsgIdx(prev => prev === i ? null : prev), 1500);
+                        }}
+                          title="コピー"
+                          className="h-6 px-2 rounded-lg flex items-center gap-1 active:scale-90 transition-all"
+                          style={{ background: copiedMsgIdx === i ? 'rgba(16,185,129,0.15)' : LC.skyLight }}>
+                          {copiedMsgIdx === i
+                            ? <><Check size={10} style={{ color: LC.success }} /><span style={{ fontSize: 10, color: LC.success }}>コピー済</span></>
+                            : <><Copy size={10} style={{ color: '#0369A1' }} /><span style={{ fontSize: 10, color: '#0369A1' }}>コピー</span></>}
+                        </button>
                         {ttsEnabled && (
                           <button onClick={() => speakText(m.content)}
                             className="w-6 h-6 rounded-lg flex items-center justify-center active:scale-90 opacity-40 hover:opacity-100 transition-opacity"
@@ -2447,8 +2477,8 @@ export default function BridgeClient() {
                   ref={textareaRef}
                   value={input}
                   onChange={e => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); mode === 'chat' ? handleChatSend() : handleSend(); } }}
-                  placeholder={mode === 'chat' ? 'Claude に質問...' : '指示を入力...'}
+                  /* Enter は改行のみ。送信は送信ボタンからのみ（誤送信防止） */
+                  placeholder={mode === 'chat' ? 'Claude に質問...（送信ボタンで送信）' : '指示を入力...（送信ボタンで送信）'}
                   rows={1}
                   disabled={mode === 'code' ? (running || !macOnline) : chatRunning}
                   className="flex-1 rounded-xl px-3.5 py-2.5 text-sm resize-none outline-none transition-all disabled:opacity-30"
