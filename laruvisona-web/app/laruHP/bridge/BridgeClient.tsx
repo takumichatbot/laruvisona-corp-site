@@ -241,6 +241,7 @@ export default function BridgeClient() {
   };
   const [input, setInput] = useState('');
   const [running, setRunning] = useState(false);
+  const [progressText, setProgressText] = useState<string>('');  // 機能5: 実行中の進捗
   const [runElapsed, setRunElapsed] = useState(0);
   const runTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [continuing, setContinuing] = useState(false);
@@ -843,7 +844,10 @@ export default function BridgeClient() {
         setFileLoading(false);
       }
       if (m.type === 'projects') setProjects(m.projects || []);
-      if (m.type === 'running') { setRunning(true); setContinuing(!!(m as {continuing?: boolean}).continuing); }
+      if (m.type === 'running') { setRunning(true); setProgressText('実行中...'); setContinuing(!!(m as {continuing?: boolean}).continuing); }
+      // 機能5: 30秒ごとの進捗通知（接続が生きている確認）
+      if (m.type === 'progress') { setRunning(true); setProgressText((m as { message?: string }).message || '実行中...'); }
+      // 機能1: keepalive ping は無視（接続維持のみ）
       if (m.type === 'conversation_reset') { setContinuing(false); setMessages(prev => [...prev, { role: 'system', content: '新しい会話を開始しました' }]); }
       if (m.type === 'output') {
         setMessages(prev => {
@@ -855,6 +859,7 @@ export default function BridgeClient() {
       }
       if (m.type === 'done') {
         setRunning(false);
+        setProgressText('');
         // バイブレーション + TTS
         if ('vibrate' in navigator) navigator.vibrate(m.exit_code === 0 ? [100, 50, 100] : [300]);
         // フォアグラウンド通知
@@ -898,8 +903,17 @@ export default function BridgeClient() {
           return updated;
         });
       }
-      if (m.type === 'aborted') { setRunning(false); setMessages(prev => [...prev, { role: 'system', content: '処理を中断しました' }]); }
-      if (m.type === 'error') { setRunning(false); setMessages(prev => [...prev, { role: 'system', content: m.message || 'エラー' }]); }
+      if (m.type === 'aborted') { setRunning(false); setProgressText(''); setMessages(prev => [...prev, { role: 'system', content: '処理を停止しました' }]); }
+      // 機能3: タイムアウト通知
+      if (m.type === 'timeout') {
+        setRunning(false); setProgressText('');
+        if ('vibrate' in navigator) navigator.vibrate([300]);
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          new Notification('Claude Code タイムアウト', { body: (m as { message?: string }).message || 'タイムアウトしました', icon: '/laruhp_logo.png' });
+        }
+        setMessages(prev => [...prev, { role: 'system', content: `⏱ ${(m as { message?: string }).message || 'タイムアウトしました'}` }]);
+      }
+      if (m.type === 'error') { setRunning(false); setProgressText(''); setMessages(prev => [...prev, { role: 'system', content: m.message || 'エラー' }]); }
       if (m.type === 'missed_output') {
         const r = m as unknown as { output: string; exit_code: number; project: string };
         setMessages(prev => [
@@ -1604,6 +1618,13 @@ export default function BridgeClient() {
                  runElapsed < 15 ? 'コードを分析しています' :
                  runElapsed < 30 ? '実装を計画しています' :
                  runElapsed < 60 ? 'ファイルを編集しています' : '動作確認しています'}
+              </span>
+            )}
+            {/* 機能5: サーバー由来の進捗（接続が生きている証明）。緑ドットで明示 */}
+            {progressText && (
+              <span className="flex items-center gap-1 flex-shrink-0 ml-auto">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#10B981', animation: 'pulse 1.5s infinite' }} />
+                <span className="text-[10px]" style={{ color: '#10B981' }}>接続OK</span>
               </span>
             )}
           </div>
