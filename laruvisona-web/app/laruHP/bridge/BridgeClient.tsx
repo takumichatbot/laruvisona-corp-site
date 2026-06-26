@@ -846,7 +846,9 @@ export default function BridgeClient() {
       if (m.type === 'projects') setProjects(m.projects || []);
       if (m.type === 'running') { setRunning(true); setProgressText('実行中...'); setContinuing(!!(m as {continuing?: boolean}).continuing); }
       // 機能5: 30秒ごとの進捗通知（接続が生きている確認）
-      if (m.type === 'progress') { setRunning(true); setProgressText((m as { message?: string }).message || '実行中...'); }
+      // 注意: setRunning(true) は呼ばない。done の後に遅れて届いた progress で
+      //       running が再び true になり「動作確認中」のまま固まるのを防ぐ。
+      if (m.type === 'progress') { setProgressText((m as { message?: string }).message || '実行中...'); }
       // 機能1: keepalive ping は無視（接続維持のみ）
       if (m.type === 'conversation_reset') { setContinuing(false); setMessages(prev => [...prev, { role: 'system', content: '新しい会話を開始しました' }]); }
       if (m.type === 'output') {
@@ -1531,11 +1533,11 @@ export default function BridgeClient() {
 
         {/* 右: 実行中は中断ボタン、それ以外はステータスドット + ⋯ */}
         {running ? (
-          <button onClick={() => send({ type: 'abort' })}
+          <button onClick={() => { send({ type: 'abort' }); setRunning(false); setProgressText(''); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-90 flex-shrink-0"
             style={{ background: LC.surface, border: `1px solid rgba(239,68,68,0.3)`, color: LC.error }}>
             <Square size={10} fill="currentColor" />
-            中断
+            停止
           </button>
         ) : (
           <div className="flex items-center gap-2">
