@@ -197,8 +197,8 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
       onTouchMove={e => onMove(e.touches[0].clientX, e.touches[0].clientY)}
       className="w-full text-left relative overflow-hidden rounded-2xl p-5 transition-all duration-200 active:scale-95"
       style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.08)',
+        border: '1px solid rgba(255,255,255,0.15)',
         transform: `perspective(600px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) ${active ? 'scale(0.97)' : 'scale(1)'}`,
         boxShadow: active ? '0 0 30px rgba(14,165,233,0.2)' : '0 4px 20px rgba(0,0,0,0.3)',
         transition: 'transform 0.15s ease, box-shadow 0.2s ease',
@@ -214,7 +214,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
           <span className="text-white">{PROJECT_ICONS[project.id] || <Folder size={24} />}</span>
         </div>
         <div className="flex-1">
-          <p className="text-white font-semibold">{project.name}</p>
+          <p className="text-black font-semibold">{project.name}</p>
           <p className="text-gray-500 text-xs mt-0.5">Claude Code</p>
         </div>
         <ChevronRight size={18} className="text-gray-600" />
