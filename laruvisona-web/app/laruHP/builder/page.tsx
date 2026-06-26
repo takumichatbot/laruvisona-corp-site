@@ -1512,8 +1512,15 @@ function AiChatSidebar({ open, onClose, blocks, selectedBlockId, onApplyActions,
 
   if (!open) return null;
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      e.preventDefault();
+    }
+  };
+
   return (
-    <div className="fixed right-[300px] bottom-4 z-40 w-80 bg-[#0f1729] border border-white/15 rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: '70vh' }}>
+    <div className="fixed right-[300px] bottom-4 z-40 w-80 bg-[#0f1729] border border-white/15 rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: '70vh' }} onTouchStart={handleTouchStart} data-lenis-prevent-wheel>
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-lg">✨</span>
@@ -1521,7 +1528,7 @@ function AiChatSidebar({ open, onClose, blocks, selectedBlockId, onApplyActions,
         </div>
         <button onClick={onClose} aria-label="AIアシスタントを閉じる" className="text-slate-500 hover:text-white text-lg leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2" data-lenis-prevent-wheel>
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
@@ -1539,10 +1546,11 @@ function AiChatSidebar({ open, onClose, blocks, selectedBlockId, onApplyActions,
         <div ref={bottomRef} />
       </div>
       <div className="flex gap-2 p-3 border-t border-white/10 flex-shrink-0">
-        <input value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+        <textarea value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="指示を入力..."
-          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 resize-none"
+          rows={1}
+          className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 resize-none max-h-24 overflow-y-auto"
         />
         <button onClick={send} disabled={loading || !input.trim()}
           className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-3 py-2 rounded-xl transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-sky-400">
