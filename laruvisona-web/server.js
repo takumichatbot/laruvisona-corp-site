@@ -83,6 +83,7 @@ app.prepare().then(() => {
 
     if (role === 'mac') {
       macs.set(macId, { ws, name: macName });
+      console.log(`[relay] mac connected: ${macId} (${macName}) — total macs: ${macs.size}`);
       safeSend(ws, { type: 'relay_ready' });
       broadcastMacList();
       // backward compat: also send mac_online
@@ -125,6 +126,7 @@ app.prepare().then(() => {
       });
       ws.on('close', () => {
         macs.delete(macId);
+        console.log(`[relay] mac disconnected: ${macId} — total macs: ${macs.size}`);
         broadcastMacList();
         clients.forEach(c => safeSend(c, { type: 'mac_offline', mac_id: macId }));
       });
