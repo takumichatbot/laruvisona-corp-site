@@ -103,7 +103,7 @@ export default async function SiteByDomainPage({ params }: Props) {
 
   if (!site?.published_html) notFound();
 
-  void supabase.rpc('increment_view_count_by_domain', { site_domain: domain });
+  // ページビューはクライアント側ビーコン（下部 script）で訪問ごとに記録（ISR対策）
 
   const settings = (site.settings_json ?? {}) as {
     larubotPublicId?: string;
@@ -142,6 +142,8 @@ export default async function SiteByDomainPage({ params }: Props) {
       {laruseoPublicId && (
         <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
       )}
+      {/* Pageview tracking（ISR下でも訪問ごとに記録）*/}
+      <script dangerouslySetInnerHTML={{ __html: `fetch('/api/pageview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:'${domain}'}),keepalive:true}).catch(function(){});` }} />
       {/* Heatmap tracking */}
       <script dangerouslySetInnerHTML={{ __html: `(function(){var D='${domain}',P='/api/heatmap?domain='+D,Q=[];function flush(){if(!Q.length)return;fetch(P,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Q),keepalive:true});Q=[];}document.addEventListener('click',function(e){Q.push({type:'click',x:e.clientX,y:e.clientY,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});});window.addEventListener('scroll',function(){var d=Math.round((scrollY/(document.body.scrollHeight-innerHeight||1))*100);Q.push({type:'scroll',scrollDepth:d,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});},{passive:true});window.addEventListener('beforeunload',flush);setInterval(flush,30000);})()` }} />
       {hasActivePopup && (

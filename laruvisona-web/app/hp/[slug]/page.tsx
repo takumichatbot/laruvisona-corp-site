@@ -139,8 +139,8 @@ export default async function PublishedSitePage({ params }: Props) {
     notFound();
   }
 
-  // Fire-and-forget view count increment
-  void supabase.rpc('increment_view_count', { site_slug: slug });
+  // ページビューは ISR キャッシュ下では再生成時しか走らず過少カウントになるため、
+  // クライアント側ビーコン（下部の script）で訪問ごとに /api/pageview へ記録する。
 
   const settings = (site.settings_json ?? {}) as {
     larubotPublicId?: string;
@@ -187,6 +187,8 @@ export default async function PublishedSitePage({ params }: Props) {
       {laruseoPublicId && (
         <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
       )}
+      {/* Pageview tracking（ISR下でも訪問ごとに記録）*/}
+      <script dangerouslySetInnerHTML={{ __html: `fetch('/api/pageview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:'${slug}'}),keepalive:true}).catch(function(){});` }} />
       {/* Heatmap tracking */}
       <script dangerouslySetInnerHTML={{ __html: `(function(){var S='${slug}',P='/api/heatmap?slug='+S,Q=[];function flush(){if(!Q.length)return;fetch(P,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Q),keepalive:true});Q=[];}document.addEventListener('click',function(e){Q.push({type:'click',x:e.clientX,y:e.clientY,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});});window.addEventListener('scroll',function(){var d=Math.round((scrollY/(document.body.scrollHeight-innerHeight||1))*100);Q.push({type:'scroll',scrollDepth:d,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});},{passive:true});window.addEventListener('beforeunload',flush);setInterval(flush,30000);})()` }} />
       {/* Popup */}
