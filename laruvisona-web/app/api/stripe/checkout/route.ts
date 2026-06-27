@@ -31,11 +31,13 @@ export async function POST(req: Request) {
   const isAnnual = billing === 'annual';
   const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
 
-  const priceId = isAnnual ? PLAN_ANNUAL_PRICE_MAP[plan] : PLAN_PRICE_MAP[plan];
-  // Annual price not configured yet — fall back to monthly
-  const resolvedPriceId = priceId ?? (isAnnual ? PLAN_PRICE_MAP[plan] : undefined);
+  const resolvedPriceId = isAnnual ? PLAN_ANNUAL_PRICE_MAP[plan] : PLAN_PRICE_MAP[plan];
+  // 月払い価格へのフォールバックはしない（表示と請求の食い違い＝誤課金を防ぐ）
   if (!resolvedPriceId) {
-    return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    return NextResponse.json(
+      { error: isAnnual ? '年払いは現在準備中です。月払いをご利用ください。' : 'Invalid plan' },
+      { status: 400 }
+    );
   }
 
   // Get or create Stripe customer

@@ -83,7 +83,7 @@ function CheckoutButton({
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setError('エラーが発生しました。もう一度お試しください。');
+        setError(data.error || 'エラーが発生しました。もう一度お試しください。');
         setLoading(false);
       }
     } catch {
