@@ -4631,14 +4631,27 @@ function BuilderContent() {
           industry: onboardingData?.industry,
         }),
       });
-      const { site: s } = await res.json();
+      // 未ログイン: 作業をローカル保存して登録へ誘導（サイレント失敗を防ぐ）
+      if (res.status === 401) {
+        try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
+        setPublishing(false);
+        router.push('/laruHP/auth/signup?redirectTo=/laruHP/builder');
+        return;
+      }
+      const { site: s } = await res.json().catch(() => ({ site: null }));
       id = s?.id;
       if (id) setDbSiteId(id);
     }
-    if (!id) { setPublishing(false); return; }
+    if (!id) { setPublishing(false); setSaveError('公開の準備に失敗しました。通信環境を確認してもう一度お試しください。'); return; }
 
     const res = await fetch(`/api/sites/${id}/publish`, { method: 'POST' });
-    const data = await res.json();
+    if (res.status === 401) {
+      try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
+      setPublishing(false);
+      router.push('/laruHP/auth/signup?redirectTo=/laruHP/builder');
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
     if (data.error === 'subscription_required') {
       setPublishing(false);
       setPendingSiteId(id);
@@ -4649,6 +4662,8 @@ function BuilderContent() {
       setPublished(true);
       setPublishedSlug(data.slug);
       if (fromOnboarding) setShowPublishSuccess(true);
+    } else {
+      setSaveError(data.message || data.error || '公開に失敗しました。もう一度お試しください。');
     }
     setPublishing(false);
   };

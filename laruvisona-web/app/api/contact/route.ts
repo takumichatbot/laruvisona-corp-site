@@ -279,11 +279,11 @@ export async function POST(req: Request) {
       });
       const whStatus = whRes.ok ? 'success' : 'failed';
       await supabase.from('contacts').update({
-        extra_fields: { ...(extraFields || {}), webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },
+        extra_fields: { ...mergedExtraFields, webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },
       }).eq('id', contactRow.id);
     } catch {
       await supabase.from('contacts').update({
-        extra_fields: { ...(extraFields || {}), webhook_status: 'failed', webhook_at: webhookAt, webhook_code: 'error' },
+        extra_fields: { ...mergedExtraFields, webhook_status: 'failed', webhook_at: webhookAt, webhook_code: 'error' },
       }).eq('id', contactRow.id);
     }
   }
