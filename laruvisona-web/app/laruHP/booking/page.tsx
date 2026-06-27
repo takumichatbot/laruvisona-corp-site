@@ -53,7 +53,7 @@ export default function BookingPage() {
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { window.location.href = '/laruHP/auth/login?redirectTo=/laruHP/booking'; return; }
     const { data } = await supabase.from('sites').select('id, name, data').eq('user_id', user.id);
     setSites(data ?? []);
     if (data && data.length > 0 && !siteId) setSiteId(data[0].id);

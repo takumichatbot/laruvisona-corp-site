@@ -92,7 +92,7 @@ export default function CRMPage() {
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { window.location.href = '/laruHP/auth/login?redirectTo=/laruHP/crm'; return; }
     const siteIds = (await supabase.from('sites').select('id').eq('user_id', user.id)).data?.map(s => s.id) ?? [];
     const [{ data: sData }, { data: cData }] = await Promise.all([
       supabase.from('sites').select('id, name').eq('user_id', user.id),
