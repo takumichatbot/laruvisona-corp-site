@@ -850,6 +850,18 @@ export default function BridgeClient() {
       if (m.type === 'progress') { setProgressText((m as { message?: string }).message || '実行中...'); }
       // 機能1: keepalive ping は無視（接続維持のみ）
       if (m.type === 'conversation_reset') { setContinuing(false); setMessages(prev => [...prev, { role: 'system', content: '新しい会話を開始しました' }]); }
+      // sync（git pull）の結果
+      if (m.type === 'sync_result') {
+        const r = m as unknown as { ok?: boolean; output?: string; error?: string };
+        haptic(20); setContinuing(false);
+        const body = r.error ? `❌ 同期失敗: ${r.error}` : `${r.ok ? '✅ 最新に更新しました' : '⚠ 更新で問題発生'}\n${(r.output || '').trim().slice(-400)}`;
+        setMessages(prev => [...prev, { role: 'system', content: body }]);
+      }
+      if (m.type === 'token_usage_result') {
+        const r = m as unknown as { month: string; total: number; limit: number };
+        const lim = r.limit > 0 ? `${r.limit.toLocaleString()}` : '無制限';
+        setMessages(prev => [...prev, { role: 'system', content: `📊 ${r.month} のトークン使用量: ${r.total.toLocaleString()} / ${lim}` }]);
+      }
       if (m.type === 'output') {
         setMessages(prev => {
           const last = prev[prev.length - 1];
@@ -1326,6 +1338,13 @@ export default function BridgeClient() {
     if (!text || running) return;
     haptic(8);
     if (!overrideText) { setInput(''); if (textareaRef.current) textareaRef.current.style.height = '44px'; }
+
+    // 特殊コマンド: 「sync」「同期」で最新コードを git pull
+    if (['sync', '同期', 'pull'].includes(text.toLowerCase())) {
+      setMessages(prev => [...prev, { role: 'system', content: '🔄 最新コードを取得中...' }]);
+      send({ type: 'sync', project: currentProject?.id });
+      return;
+    }
 
     // 確認モード
     if (confirmMode && !overrideText) { setPendingInstruction(text); return; }
