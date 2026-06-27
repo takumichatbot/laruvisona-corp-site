@@ -158,4 +158,68 @@ app.prepare().then(() => {
   });
 
   server.listen(port, () => console.log(`> Ready on port ${port}`));
+
+  // ── 定期実行スケジューラ（常時起動のこのプロセスが内部APIを叩く）──────────────
+  // Render は単一インスタンスのため、外部cron無しでステップ配信・週次レポートを動かす。
+  const SELF = `http://127.0.0.1:${port}`;
+
+  async function triggerSequences() {
+    if (!process.env.RETENTION_SECRET) return;
+    try {
+      const r = await fetch(`${SELF}/api/sequences/execute`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.RETENTION_SECRET}` },
+      });
+      if (!r.ok) console.warn('[cron] sequences/execute:', r.status);
+    } catch (e) { console.warn('[cron] sequences error:', e?.message); }
+  }
+  // ステップ配信: 15分ごと（起動30秒後に初回）
+  setTimeout(triggerSequences, 30 * 1000);
+  setInterval(triggerSequences, 15 * 60 * 1000);
+
+  // 週次レポート: JST 月曜 8時台に1回だけ（同一週の二重送信を防ぐ）
+  let _lastWeeklyKey = '';
+  async function maybeWeeklyReport() {
+    if (!process.env.CRON_SECRET) return;
+    const jst = new Date(Date.now() + 9 * 3600 * 1000);
+    const day = jst.getUTCDay();   // 1 = Monday
+    const hour = jst.getUTCHours();
+    const weekKey = `${jst.getUTCFullYear()}-${jst.getUTCMonth()}-${jst.getUTCDate()}`;
+    if (day === 1 && hour === 8 && _lastWeeklyKey !== weekKey) {
+      _lastWeeklyKey = weekKey;
+      try {
+        const r = await fetch(`${SELF}/api/cron/weekly-report`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+        });
+        if (!r.ok) console.warn('[cron] weekly-report:', r.status);
+      } catch (e) { console.warn('[cron] weekly error:', e?.message); }
+    }
+  }
+  setInterval(maybeWeeklyReport, 30 * 60 * 1000); // 30分ごとに判定
+
+  // 日次バッチ: JST 9時台に1回（リテンション・日次ダイジェスト・予約リマインダー）
+  let _lastDailyKey = '';
+  async function postCron(pathname) {
+    try {
+      const r = await fetch(`${SELF}${pathname}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.RETENTION_SECRET}` },
+      });
+      if (!r.ok) console.warn(`[cron] ${pathname}:`, r.status);
+    } catch (e) { console.warn(`[cron] ${pathname} error:`, e?.message); }
+  }
+  async function maybeDaily() {
+    if (!process.env.RETENTION_SECRET) return;
+    const jst = new Date(Date.now() + 9 * 3600 * 1000);
+    const hour = jst.getUTCHours();
+    const dayKey = `${jst.getUTCFullYear()}-${jst.getUTCMonth()}-${jst.getUTCDate()}`;
+    if (hour === 9 && _lastDailyKey !== dayKey) {
+      _lastDailyKey = dayKey;
+      await postCron('/api/retention/send');
+      await postCron('/api/digest/send');
+      await postCron('/api/sms/reminders');
+    }
+  }
+  setInterval(maybeDaily, 30 * 60 * 1000); // 30分ごとに判定
 });
