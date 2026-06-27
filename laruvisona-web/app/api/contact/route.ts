@@ -236,9 +236,11 @@ export async function POST(req: Request) {
 </body>
 </html>`;
 
-  const lineToken = (settings?.lineNotifyToken as string) || '';
+  // LINE Messaging API: lineNotifyToken に「チャネルアクセストークン\n送信先ID」を保持
+  const lineRaw = (settings?.lineNotifyToken as string) || '';
+  const [lineChannelToken, lineTarget] = lineRaw.split('\n').map(s => s.trim());
   const webhookUrl = (settings?.webhookUrl as string) || '';
-  const lineMessage = `\n【${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}】${site.name}\nお名前: ${name}\nメール: ${email}${phone ? `\nTEL: ${phone}` : ''}${message ? `\nメッセージ: ${message.slice(0, 200)}` : ''}`;
+  const lineMessage = `【${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}】${site.name}\nお名前: ${name}\nメール: ${email}${phone ? `\nTEL: ${phone}` : ''}${message ? `\nメッセージ: ${message.slice(0, 200)}` : ''}`;
 
   await Promise.all([
     resend.emails.send({
@@ -256,14 +258,14 @@ export async function POST(req: Request) {
         : `【受付完了】お問い合わせを承りました — ${site.name}`,
       html: autoReplyHtml,
     }).catch(err => { console.error('[Contact] auto-reply email failed:', err); }),
-    ...(lineToken ? [
-      fetch('https://notify-api.line.me/api/notify', {
+    ...(lineChannelToken && lineTarget ? [
+      fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lineToken}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Bearer ${lineChannelToken}`,
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({ message: lineMessage }),
+        body: JSON.stringify({ to: lineTarget, messages: [{ type: 'text', text: lineMessage }] }),
       }).catch(() => {}),
     ] : []),
   ]);

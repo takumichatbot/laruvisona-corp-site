@@ -3408,20 +3408,27 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               <div className="text-slate-500 text-[10px] mt-1">お問い合わせ・予約フォーム送信時に通知</div>
             </div>
 
-            {/* LINE Notify */}
+            {/* LINE 通知（Messaging API） — トークンと送信先IDを改行区切りで1フィールドに保持 */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg" style={{ color: '#06c755' }}>💬</span>
-                <span className="font-bold text-sm">LINE 通知</span>
+                <span className="font-bold text-sm">LINE 通知（Messaging API）</span>
               </div>
               <input
                 type="password"
-                value={lineNotifyToken}
-                placeholder="LINE Notify トークン"
-                onChange={e => onLineNotifyTokenChange(e.target.value)}
+                value={lineNotifyToken.split('\n')[0] || ''}
+                placeholder="チャネルアクセストークン（長期）"
+                onChange={e => { const t = lineNotifyToken.split('\n'); onLineNotifyTokenChange(`${e.target.value}\n${t[1] || ''}`); }}
                 className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] mb-1"
               />
-              <div className="text-slate-500 text-[10px]">フォーム送信時に LINE へ即時通知。<a href="https://notify-bot.line.me/ja/" target="_blank" rel="noreferrer" className="underline hover:text-slate-400">LINE Notify</a> でトークンを取得して貼り付けてください。</div>
+              <input
+                type="text"
+                value={lineNotifyToken.split('\n')[1] || ''}
+                placeholder="送信先 ユーザーID（自分のID）または グループID"
+                onChange={e => { const t = lineNotifyToken.split('\n'); onLineNotifyTokenChange(`${t[0] || ''}\n${e.target.value}`); }}
+                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px] mb-1"
+              />
+              <div className="text-slate-500 text-[10px]">フォーム送信時に LINE へ即時通知。<a href="https://developers.line.biz/console/" target="_blank" rel="noreferrer" className="underline hover:text-slate-400">LINE Developers</a> で Messaging API チャネルを作成し、①チャネルアクセストークン（長期）②通知先のユーザーID（自分のID）を入力してください。※旧 LINE Notify は終了したため使えません。</div>
             </div>
 
             {/* Webhook */}
