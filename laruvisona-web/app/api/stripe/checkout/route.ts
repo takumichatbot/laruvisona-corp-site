@@ -7,7 +7,7 @@ const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   'hp-bot': process.env.STRIPE_BUNDLE_BOT_PRICE_ID,
   'hp-bot-seo': process.env.STRIPE_BUNDLE_FULL_PRICE_ID,
   agency: process.env.STRIPE_AGENCY_PRICE_ID,
-  lite: process.env.STRIPE_BUNDLE_BOT_PRICE_ID, // lite は hp-bot と同じ Price ID
+  lite: process.env.STRIPE_LITE_PRICE_ID, // ¥2,980 専用 Price ID（未設定だと lite は購入不可・過剰請求を防ぐ）
 };
 
 // Annual price IDs — create these in Stripe Dashboard as yearly prices (approx 20% discount)
@@ -16,7 +16,7 @@ const PLAN_ANNUAL_PRICE_MAP: Record<string, string | undefined> = {
   'hp-bot': process.env.STRIPE_BOT_ANNUAL_PRICE_ID,
   'hp-bot-seo': process.env.STRIPE_FULL_ANNUAL_PRICE_ID,
   agency: process.env.STRIPE_AGENCY_ANNUAL_PRICE_ID,
-  lite: process.env.STRIPE_BOT_ANNUAL_PRICE_ID, // lite は hp-bot と同じ Annual Price ID
+  lite: process.env.STRIPE_LITE_ANNUAL_PRICE_ID, // ¥2,980 の年払い Price ID
 };
 
 export async function POST(req: Request) {

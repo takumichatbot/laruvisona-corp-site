@@ -256,7 +256,7 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
                 {[
                   { label: 'HP (¥999)', value: stats.planBreakdown.hp || 0, color: 'text-slate-300' },
-                  { label: 'Lite (¥4,980)', value: stats.planBreakdown['lite'] || 0, color: 'text-purple-300' },
+                  { label: 'Lite (¥2,980)', value: stats.planBreakdown['lite'] || 0, color: 'text-purple-300' },
                   { label: 'HP+Bot (¥4,980)', value: stats.planBreakdown['hp-bot'] || 0, color: 'text-indigo-300' },
                   { label: 'HP+Bot+SEO (¥9,800)', value: stats.planBreakdown['hp-bot-seo'] || 0, color: 'text-emerald-300' },
                   { label: 'Agency (¥19,800)', value: stats.planBreakdown['agency'] || 0, color: 'text-amber-300' },
@@ -407,7 +407,7 @@ export default function AdminPage() {
                         className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500/50"
                       >
                         <option value="hp">HP (¥999)</option>
-                        <option value="lite">Lite (¥4,980)</option>
+                        <option value="lite">Lite (¥2,980)</option>
                         <option value="hp-bot">HP+Bot (¥4,980)</option>
                         <option value="hp-bot-seo">HP+Bot+SEO (¥9,800)</option>
                         <option value="agency">Agency (¥19,800)</option>

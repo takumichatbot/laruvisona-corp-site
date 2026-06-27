@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 const PLAN_LABELS: Record<string, { name: string; price: string; color: string }> = {
   hp:           { name: 'HP プラン',               price: '¥999/月',    color: 'text-sky-600 bg-sky-50 border-sky-200' },
-  lite:         { name: 'HP + LARUbot Lite',        price: '¥4,980/月',  color: 'text-indigo-500 bg-indigo-50 border-indigo-200' },
+  lite:         { name: 'HP + LARUbot Lite',        price: '¥2,980/月',  color: 'text-indigo-500 bg-indigo-50 border-indigo-200' },
   'hp-bot':     { name: 'HP + LARUbot',             price: '¥4,980/月',  color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
   'hp-bot-seo': { name: 'HP + Bot + SEO',           price: '¥9,800/月',  color: 'text-purple-600 bg-purple-50 border-purple-200' },
   agency:       { name: 'エージェンシー',            price: '¥19,800/月', color: 'text-violet-600 bg-violet-50 border-violet-200' },

@@ -37,9 +37,9 @@ function Cell({ value }: { value: Availability }) {
   return <div className="flex justify-center"><span className="text-gray-300 text-base">−</span></div>;
 }
 
-const MONTHLY = { hp: 999, lite: 4980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 } as const;
-const ANNUAL  = { hp: 833, lite: 4150, hpBot: 4150, hpBotSeo: 8166, agency: 16500 } as const;
-const ANNUAL_TOTAL = { hp: 9990, lite: 49800, hpBot: 49800, hpBotSeo: 98000, agency: 198000 } as const;
+const MONTHLY = { hp: 999, lite: 2980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 } as const;
+const ANNUAL  = { hp: 833, lite: 2483, hpBot: 4150, hpBotSeo: 8166, agency: 16500 } as const;
+const ANNUAL_TOTAL = { hp: 9990, lite: 29800, hpBot: 49800, hpBotSeo: 98000, agency: 198000 } as const;
 
 function CheckoutButton({
   plan,
