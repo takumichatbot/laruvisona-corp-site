@@ -357,6 +357,9 @@ export default function BridgeClient() {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const visualInputRef = useRef<HTMLInputElement>(null);
+  const imageAttachInputRef = useRef<HTMLInputElement>(null);
+  // Claudeに直接読ませる添付画像（送信時に同梱）
+  const [pendingImage, setPendingImage] = useState<{ data: string; mime: string; preview: string } | null>(null);
   // Visual-to-Code
   const [visualCapturing, setVisualCapturing] = useState(false);
   const [visualPreview, setVisualPreview] = useState<string | null>(null);
@@ -1268,6 +1271,21 @@ export default function BridgeClient() {
     return d.result as string;
   };
 
+  // 画像を添付 → 次の送信で Claude に直接読ませる（Geminiを経由しない）
+  const handleImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1];
+      setPendingImage({ data: base64, mime: file.type || 'image/png', preview: dataUrl });
+      haptic(10);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1335,7 +1353,8 @@ export default function BridgeClient() {
 
   const handleSend = async (overrideText?: string) => {
     const text = overrideText ?? input.trim();
-    if (!text || running) return;
+    // 画像だけ（テキスト空）でも送れるようにする
+    if ((!text && !pendingImage) || running) return;
     haptic(8);
     if (!overrideText) { setInput(''); if (textareaRef.current) textareaRef.current.style.height = '44px'; }
 
@@ -1413,8 +1432,17 @@ export default function BridgeClient() {
       setAutonomousStep(0);
       setAutonomousLog([finalEnrichedText]);
     }
-    setMessages(prev => [...prev, { role: 'user', content: finalText, ts: Date.now() }]);
-    send({ type: 'message', content: finalEnrichedText, model: codeModel || undefined, mac_id: selectedMacId || undefined });
+    // 添付画像があれば同梱（Claudeが直接読む）して送信後にクリア
+    const img = pendingImage;
+    setMessages(prev => [...prev, { role: 'user', content: (img ? '🖼 画像を添付 ' : '') + finalText, ts: Date.now() }]);
+    send({
+      type: 'message',
+      content: finalEnrichedText || '添付画像を確認してください',
+      model: codeModel || undefined,
+      mac_id: selectedMacId || undefined,
+      ...(img ? { image: { data: img.data, mime: img.mime } } : {}),
+    });
+    if (img) setPendingImage(null);
   };
 
   // ゴール分解: 入力テキストを Claude で分解してタスク計画を生成
@@ -2404,6 +2432,7 @@ export default function BridgeClient() {
           {/* hidden file inputs */}
           <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
           <input ref={visualInputRef} type="file" accept="image/*" className="hidden" onChange={handleVisualCapture} />
+          <input ref={imageAttachInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageAttach} />
 
           {/* 入力エリア（code / chat のみ） */}
           {(mode === 'code' || mode === 'chat') && (
@@ -2442,6 +2471,7 @@ export default function BridgeClient() {
                     { icon: <span style={{ fontSize: 15 }}>⚛</span>, label: '量子思考',  color: '#818CF8', action: () => { if (!input.trim()) return; setQuantumGoal(input.trim()); setShowAttachMenu(false); setShowQuantumBrain(true); }, disabled: !input.trim() },
                     { icon: <Zap size={16} />,    label: 'ゴール分解',        color: '#F59E0B', action: () => { setShowAttachMenu(false); handleDecompose(); }, disabled: !input.trim() || !macOnline || decomposing },
                     { icon: <Camera size={16} />, label: 'スクショ → Code',  color: LC.sky, action: () => { cameraInputRef.current?.click(); setShowAttachMenu(false); } },
+                    { icon: <Camera size={16} />, label: '画像を添付（Claudeが読む）', color: '#10B981', action: () => { imageAttachInputRef.current?.click(); setShowAttachMenu(false); } },
                     { icon: <Users size={16} />,  label: 'スクショ → Team',  color: '#A78BFA', action: () => { visualInputRef.current?.click(); setShowAttachMenu(false); } },
                     { icon: <Mic size={16} />,    label: '音声入力',          color: voiceRecording ? LC.error : LC.textMuted, action: () => { handleVoice(); setShowAttachMenu(false); } },
                     { icon: <Radio size={16} />,  label: 'AI音声アシスタント', color: LC.success, action: () => { setShowRealtimeVoice(true); setShowAttachMenu(false); } },
@@ -2450,7 +2480,7 @@ export default function BridgeClient() {
                     <button key={i} onClick={(item as { disabled?: boolean }).disabled ? undefined : item.action}
                       disabled={(item as { disabled?: boolean }).disabled}
                       className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left disabled:opacity-40"
-                      style={{ borderBottom: i < 6 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
+                      style={{ borderBottom: i < 7 ? `1px solid ${LC.border}` : 'none', background: 'transparent' }}
                       onMouseEnter={e => { if (!(item as { disabled?: boolean }).disabled) e.currentTarget.style.background = LC.beigeAlt; }}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                       <span style={{ color: item.color }}>{item.icon}</span>
@@ -2466,6 +2496,22 @@ export default function BridgeClient() {
                 </div>
               )}
               {showAttachMenu && <div className="fixed inset-0 z-40" onClick={() => setShowAttachMenu(false)} />}
+
+              {/* 添付画像プレビュー */}
+              {pendingImage && (
+                <div className="flex items-center gap-2 px-3 pt-2">
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={pendingImage.preview} alt="添付" className="w-14 h-14 rounded-lg object-cover" style={{ border: `1px solid ${LC.border}` }} />
+                    <button onClick={() => setPendingImage(null)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center active:scale-90"
+                      style={{ background: LC.error, color: '#fff' }}>
+                      <XIcon size={11} />
+                    </button>
+                  </div>
+                  <span className="text-[11px]" style={{ color: LC.textSub }}>画像をClaudeに送信します</span>
+                </div>
+              )}
 
               {/* メイン入力行 */}
               <div className="flex gap-2 items-end px-3 py-2.5">
@@ -2507,7 +2553,7 @@ export default function BridgeClient() {
                 {/* 送信ボタン */}
                 <button
                   onClick={() => mode === 'chat' ? handleChatSend() : handleSend()}
-                  disabled={mode === 'code' ? (running || !input.trim() || !macOnline) : (chatRunning || !input.trim())}
+                  disabled={mode === 'code' ? (running || (!input.trim() && !pendingImage) || !macOnline) : (chatRunning || !input.trim())}
                   className="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm text-white transition-all active:scale-90 disabled:opacity-30 flex-shrink-0"
                   style={mode === 'chat'
                     ? { background: 'linear-gradient(135deg, #F59E0B, #EF4444)', boxShadow: input.trim() ? '0 0 15px rgba(245,158,11,0.25)' : 'none' }
