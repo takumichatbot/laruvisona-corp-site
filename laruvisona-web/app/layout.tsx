@@ -20,6 +20,11 @@ export const metadata = {
   metadataBase: new URL('https://laruvisona.jp'),
   title: 'LARUVisona | 「想像」を「実装」する',
   description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/laruhp_logo.png',
+  },
   openGraph: {
     title: 'LARUVisona | 「想像」を「実装」する',
     description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
@@ -42,6 +47,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja" className={`${spaceGrotesk.variable} ${notoSansJP.variable}`}>
       {/* 背景を真っ黒にして、文字を白ベースに設定 */}
       <body className="bg-[#030712] text-slate-100 antialiased selection:bg-blue-500 selection:text-white">
+        {/* Organization 構造化データ（Googleにロゴ・社名を認識させる） */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: '株式会社LARUVisona',
+              alternateName: 'LARUVisona',
+              url: 'https://laruvisona.jp',
+              logo: 'https://laruvisona.jp/images/logo_light.png',
+              description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
+              sameAs: ['https://larubot.tokyo'],
+            }),
+          }}
+        />
         <GoogleAnalytics />
         <SmoothScroll>
           {children}
