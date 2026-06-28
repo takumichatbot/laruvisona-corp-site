@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
-type Availability = 'yes' | 'no' | 'limited';
+type Availability = 'yes' | 'no' | 'limited' | (string & {});
 
 interface FeatureRow {
   label: string;
@@ -18,7 +18,11 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: 'AIコンテンツ生成',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'ビジュアルエディタ',      hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'SEO自動最適化',           hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'LARUbot AIチャットボット', hp: 'no',  lite: 'limited', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'LARUbot AIチャットボット', hp: 'no',  lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: '　└ Q&A 登録数',          hp: 'no',  lite: '15件', hpBot: '30件', hpBotSeo: '30件' },
+  { label: '　└ 設置ボット数',        hp: 'no',  lite: '2体',  hpBot: '3体',  hpBotSeo: '3体' },
+  { label: '　└ 質問例',              hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
+  { label: '　└ メールシーケンス',    hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
   { label: 'LARUSEO AIブログ',        hp: 'no',  lite: 'no',  hpBot: 'no',  hpBotSeo: 'yes' },
   { label: '独自ドメイン対応',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'SSL・サーバー費用込み',   hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
@@ -34,7 +38,11 @@ function Cell({ value }: { value: Availability }) {
   if (value === 'limited') {
     return <div className="flex justify-center"><span className="text-amber-500 font-bold text-xs">制限あり</span></div>;
   }
-  return <div className="flex justify-center"><span className="text-gray-300 text-base">−</span></div>;
+  if (value === 'no') {
+    return <div className="flex justify-center"><span className="text-gray-300 text-base">−</span></div>;
+  }
+  // 具体的な数値（Q&A数・ボット数など）
+  return <div className="flex justify-center"><span className="text-gray-700 font-semibold text-xs">{value}</span></div>;
 }
 
 const MONTHLY = { hp: 999, lite: 2980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 } as const;
