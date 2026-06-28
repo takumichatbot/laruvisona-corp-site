@@ -81,6 +81,10 @@ app.prepare().then(() => {
       return;
     }
 
+    // ハートビート: 死んだ接続を検知・掃除（半開き接続でマップが汚れるのを防ぐ）
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
+
     if (role === 'mac') {
       macs.set(macId, { ws, name: macName });
       console.log(`[relay] mac connected: ${macId} (${macName}) — total macs: ${macs.size}`);
@@ -156,6 +160,17 @@ app.prepare().then(() => {
       ws.on('error', removeClient);
     }
   });
+
+  // 30秒ごとに全接続へ ping。前回 pong が無ければ切断（死んだ接続を掃除）。
+  // 猶予は最大60秒なので Cloudflare 経由の pong 遅延では誤切断しない。
+  const hbInterval = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if (ws.isAlive === false) { try { ws.terminate(); } catch {} return; }
+      ws.isAlive = false;
+      try { ws.ping(); } catch {}
+    });
+  }, 30000);
+  wss.on('close', () => clearInterval(hbInterval));
 
   server.listen(port, () => console.log(`> Ready on port ${port}`));
 
