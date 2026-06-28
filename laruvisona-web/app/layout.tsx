@@ -20,11 +20,6 @@ export const metadata = {
   metadataBase: new URL('https://laruvisona.jp'),
   title: 'LARUVisona | 「想像」を「実装」する',
   description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/laruhp_logo.png',
-  },
   openGraph: {
     title: 'LARUVisona | 「想像」を「実装」する',
     description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
