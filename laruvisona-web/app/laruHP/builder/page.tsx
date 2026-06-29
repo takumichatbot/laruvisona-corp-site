@@ -17,7 +17,8 @@ type BlockType =
   | 'popup' | 'newsletter'
   | 'share' | 'stripe-buy'
   | 'google-reviews'
-  | 'announcement-bar' | 'instagram';
+  | 'announcement-bar' | 'instagram'
+  | 'before-after' | 'tabs' | 'team';
 
 interface Block {
   id: string;
@@ -171,6 +172,30 @@ const defaultBlock = (type: BlockType): Block => {
         { q: 'ご質問1', a: '回答を入力してください。' },
         { q: 'ご質問2', a: '回答を入力してください。' },
         { q: 'ご質問3', a: '回答を入力してください。' },
+      ],
+    },
+    'before-after': {
+      heading: 'ビフォー / アフター',
+      beforeImage: '',
+      afterImage: '',
+      beforeLabel: 'Before',
+      afterLabel: 'After',
+    },
+    tabs: {
+      heading: '',
+      items: [
+        { label: 'タブ1', body: 'タブ1の内容を入力してください。' },
+        { label: 'タブ2', body: 'タブ2の内容を入力してください。' },
+        { label: 'タブ3', body: 'タブ3の内容を入力してください。' },
+      ],
+    },
+    team: {
+      heading: 'スタッフ紹介',
+      columns: '3',
+      items: [
+        { photo: '', name: '山田 太郎', role: '代表', bio: '一言コメントを入力' },
+        { photo: '', name: '鈴木 花子', role: 'スタッフ', bio: '一言コメントを入力' },
+        { photo: '', name: '田中 一郎', role: 'スタッフ', bio: '一言コメントを入力' },
       ],
     },
     contact: {
@@ -353,6 +378,9 @@ const BLOCK_PALETTE = [
     { type: 'services' as BlockType, label: 'サービス', icon: '📋' },
     { type: 'testimonials' as BlockType, label: 'お客様の声', icon: '⭐' },
     { type: 'faq' as BlockType, label: 'FAQ', icon: '❓' },
+    { type: 'before-after' as BlockType, label: 'Before/After', icon: '🔀' },
+    { type: 'tabs' as BlockType, label: 'タブ', icon: '📑' },
+    { type: 'team' as BlockType, label: 'スタッフ紹介', icon: '👥' },
     { type: 'hours' as BlockType, label: '営業時間', icon: '🕐' },
     { type: 'contact' as BlockType, label: 'お問合せ', icon: '📞' },
   ]},
@@ -730,6 +758,71 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                       onBlur={e => { const ni=[...items]; ni[i]={...ni[i],a:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
                       dangerouslySetInnerHTML={{ __html: item.a }} />
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      case 'before-after': {
+        const pairs: Array<[string, string, string]> = [
+          ['beforeImage', 'beforeLabel', d.beforeImage as string],
+          ['afterImage', 'afterLabel', d.afterImage as string],
+        ];
+        return (
+          <div className="px-8 py-12">
+            {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-8')}
+            <div className="max-w-3xl mx-auto grid grid-cols-2 gap-3">
+              {pairs.map(([, labelKey, img], i) => (
+                <div key={i} className="relative rounded-2xl overflow-hidden border border-gray-200 bg-gray-100" style={{ aspectRatio: '4/3' }}>
+                  {img
+                    ? <img src={img} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">画像を設定（右パネル）</div>}
+                  <span className="absolute top-2 left-2 text-[11px] font-bold text-white bg-black/60 px-2 py-1 rounded">{d[labelKey] as string}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-gray-400 text-xs mt-3">公開サイトではスライダーで比較できます</p>
+          </div>
+        );
+      }
+
+      case 'tabs': {
+        const items = (d.items as Array<{ label: string; body: string }>) || [];
+        return (
+          <div className="px-8 py-12">
+            {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-6')}
+            <div className="max-w-2xl mx-auto">
+              <div className="flex gap-2 border-b border-gray-200 mb-4 flex-wrap">
+                {items.map((it, i) => (
+                  <span key={i} className={`px-4 py-2 text-sm font-bold ${i === 0 ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}>{it.label}</span>
+                ))}
+              </div>
+              {items[0] && <p className="text-gray-600 text-sm whitespace-pre-wrap">{items[0].body}</p>}
+            </div>
+            <p className="text-center text-gray-400 text-xs mt-3">タブ内容の編集は右パネルから</p>
+          </div>
+        );
+      }
+
+      case 'team': {
+        const items = (d.items as Array<{ photo: string; name: string; role: string; bio: string }>) || [];
+        const cols = Number(d.columns) || 3;
+        return (
+          <div className="px-8 py-12">
+            {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-8')}
+            <div className="max-w-4xl mx-auto grid gap-6" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
+              {items.map((m, i) => (
+                <div key={i} className="text-center">
+                  <div className="w-24 h-24 mx-auto rounded-full overflow-hidden bg-gray-100 mb-3">
+                    {m.photo
+                      ? <img src={m.photo} alt="" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">👤</div>}
+                  </div>
+                  <p className="font-bold text-gray-800">{m.name}</p>
+                  <p className="text-blue-500 text-xs mb-1">{m.role}</p>
+                  <p className="text-gray-500 text-xs">{m.bio}</p>
                 </div>
               ))}
             </div>
@@ -2748,6 +2841,94 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </>
               );
             })()}
+            {block?.type === 'before-after' && (
+              <>
+                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">Before / After</span>
+                {(['before', 'after'] as const).map(side => {
+                  const imgKey = side === 'before' ? 'beforeImage' : 'afterImage';
+                  const labelKey = side === 'before' ? 'beforeLabel' : 'afterLabel';
+                  return (
+                    <div key={side} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2 mb-2">
+                      <span className="text-slate-400 text-[10px]">{side === 'before' ? 'Before（施術前）' : 'After（施術後）'}</span>
+                      <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, [imgKey]: url }))}
+                        className="w-full text-xs bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">{d[imgKey] ? '画像を変更' : '画像を選択'}</button>
+                      {d[imgKey] ? <img src={d[imgKey] as string} alt="" className="w-full h-20 object-cover rounded" /> : null}
+                      <input type="text" value={d[labelKey] as string} placeholder="ラベル"
+                        onChange={e => onDataChange(block.id, { ...d, [labelKey]: e.target.value })}
+                        className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                    </div>
+                  );
+                })}
+              </>
+            )}
+            {block?.type === 'tabs' && (() => {
+              type TabItem = { label: string; body: string };
+              const items = (d.items as TabItem[]) || [];
+              return (
+                <>
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">タブ</span>
+                  <div className="space-y-2">
+                    {items.map((item, i) => (
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-[10px]">タブ{i + 1}</span>
+                          <button onClick={() => onDataChange(block.id, { ...d, items: items.filter((_, j) => j !== i) })}
+                            className="text-red-400/60 hover:text-red-400 text-xs">✕</button>
+                        </div>
+                        <input type="text" value={item.label} placeholder="タブ名"
+                          onChange={e => { const ni = [...items]; ni[i] = { ...ni[i], label: e.target.value }; onDataChange(block.id, { ...d, items: ni }); }}
+                          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                        <textarea rows={3} value={item.body} placeholder="内容"
+                          onChange={e => { const ni = [...items]; ni[i] = { ...ni[i], body: e.target.value }; onDataChange(block.id, { ...d, items: ni }); }}
+                          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs resize-none" />
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => onDataChange(block.id, { ...d, items: [...items, { label: '新しいタブ', body: '内容を入力' }] })}
+                    className="w-full mt-2 text-xs bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">+ タブ追加</button>
+                </>
+              );
+            })()}
+            {block?.type === 'team' && (() => {
+              type Member = { photo: string; name: string; role: string; bio: string };
+              const items = (d.items as Member[]) || [];
+              return (
+                <>
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">スタッフ</span>
+                  <label className="block mb-2">
+                    <span className="text-slate-500 text-[10px] block mb-0.5">列数</span>
+                    <select value={String(d.columns || '3')} onChange={e => onDataChange(block.id, { ...d, columns: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs">
+                      <option value="2">2列</option><option value="3">3列</option><option value="4">4列</option>
+                    </select>
+                  </label>
+                  <div className="space-y-2">
+                    {items.map((m, i) => (
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-[10px]">{i + 1}</span>
+                          <button onClick={() => onDataChange(block.id, { ...d, items: items.filter((_, j) => j !== i) })}
+                            className="text-red-400/60 hover:text-red-400 text-xs">✕</button>
+                        </div>
+                        <button type="button" onClick={() => onOpenImageLib(url => { const ni = [...items]; ni[i] = { ...ni[i], photo: url }; onDataChange(block.id, { ...d, items: ni }); })}
+                          className="w-full text-xs bg-white/10 hover:bg-white/20 text-white py-1.5 rounded transition-colors">{m.photo ? '写真を変更' : '写真を選択'}</button>
+                        <input type="text" value={m.name} placeholder="名前"
+                          onChange={e => { const ni = [...items]; ni[i] = { ...ni[i], name: e.target.value }; onDataChange(block.id, { ...d, items: ni }); }}
+                          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                        <input type="text" value={m.role} placeholder="役職"
+                          onChange={e => { const ni = [...items]; ni[i] = { ...ni[i], role: e.target.value }; onDataChange(block.id, { ...d, items: ni }); }}
+                          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                        <input type="text" value={m.bio} placeholder="一言コメント"
+                          onChange={e => { const ni = [...items]; ni[i] = { ...ni[i], bio: e.target.value }; onDataChange(block.id, { ...d, items: ni }); }}
+                          className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => onDataChange(block.id, { ...d, items: [...items, { photo: '', name: '新しいスタッフ', role: 'スタッフ', bio: '' }] })}
+                    className="w-full mt-2 text-xs bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">+ スタッフ追加</button>
+                </>
+              );
+            })()}
             {block?.type === 'hours' && (() => {
               type SchRow = {day:string;hours:string;closed:boolean};
               const schedule = (d.schedule as SchRow[]) || [];
@@ -2945,7 +3126,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
-            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram'].includes(block.type) && (
+            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram','before-after','tabs','team'].includes(block.type) && (
               <div className="text-slate-500 py-4 text-center">
                 キャンバス上でクリックしてテキストを直接編集できます
               </div>

@@ -23,7 +23,7 @@ services:
     rootDir: laruvisona-web
     buildCommand: npm install && npm run build
     startCommand: npm start
-    plan: starter
+    plan: free                 # 無料インスタンス（テスト時だけ起動・実質¥0。15分無操作でスリープ→次回アクセスで数十秒起動）
     region: singapore
     autoDeploy: false          # 勝手に再デプロイさせない（テスト用なので手動で十分）
     envVars:

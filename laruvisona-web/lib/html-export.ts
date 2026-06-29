@@ -162,6 +162,59 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </section>`;
     }
 
+    case 'before-after': {
+      const beforeImage = raw('beforeImage');
+      const afterImage = raw('afterImage');
+      if (!beforeImage && !afterImage) return '';
+      return `
+<section data-lhp-anim class="lhp-section">
+  <h2 class="lhp-section-title">${str('heading')}</h2>
+  <div style="position:relative;max-width:640px;margin:0 auto;border-radius:16px;overflow:hidden;background:#eee;min-height:200px;user-select:none">
+    <img src="${escapeHtml(afterImage)}" alt="${str('afterLabel')}" style="display:block;width:100%;height:auto" />
+    <img src="${escapeHtml(beforeImage)}" alt="${str('beforeLabel')}" data-ba style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;clip-path:inset(0 50% 0 0)" />
+    <span style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:bold;padding:4px 8px;border-radius:6px">${str('beforeLabel')}</span>
+    <span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:bold;padding:4px 8px;border-radius:6px">${str('afterLabel')}</span>
+    <input type="range" min="0" max="100" value="50" aria-label="Before After"
+      oninput="this.parentNode.querySelector('[data-ba]').style.clipPath='inset(0 '+(100-this.value)+'% 0 0)'"
+      style="position:absolute;bottom:12px;left:5%;width:90%;cursor:ew-resize" />
+  </div>
+</section>`;
+    }
+
+    case 'tabs': {
+      const items = (d['items'] as Array<{ label: string; body: string }>) ?? [];
+      const heading = str('heading');
+      return `
+<section data-lhp-anim class="lhp-section">
+  ${heading ? `<h2 class="lhp-section-title">${heading}</h2>` : ''}
+  <div class="lhp-tabs" style="max-width:720px;margin:0 auto">
+    <div role="tablist" style="display:flex;gap:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap">
+      ${items.map((it, i) => `<button type="button" data-tab-btn
+        onclick="var w=this.closest('.lhp-tabs');w.querySelectorAll('[data-tab-btn]').forEach(function(b,j){b.style.borderBottomColor=j===${i}?'#2563eb':'transparent';b.style.color=j===${i}?'#2563eb':'#6b7280'});w.querySelectorAll('[data-tab-panel]').forEach(function(p,j){p.style.display=j===${i}?'block':'none'})"
+        style="padding:10px 16px;font-weight:bold;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid ${i === 0 ? '#2563eb' : 'transparent'};color:${i === 0 ? '#2563eb' : '#6b7280'}">${escapeHtml(it.label)}</button>`).join('')}
+    </div>
+    ${items.map((it, i) => `<div data-tab-panel style="display:${i === 0 ? 'block' : 'none'};padding:20px 4px;white-space:pre-wrap;color:#374151;line-height:1.7">${escapeHtml(it.body)}</div>`).join('')}
+  </div>
+</section>`;
+    }
+
+    case 'team': {
+      const items = (d['items'] as Array<{ photo: string; name: string; role: string; bio: string }>) ?? [];
+      return `
+<section data-lhp-anim class="lhp-section">
+  <h2 class="lhp-section-title">${str('heading')}</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;max-width:880px;margin:0 auto">
+    ${items.map(m => `
+    <div style="text-align:center">
+      <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;background:#f3f4f6">${m.photo ? `<img src="${escapeHtml(m.photo)}" alt="${escapeHtml(m.name)}" style="width:100%;height:100%;object-fit:cover" />` : ''}</div>
+      <p style="font-weight:bold;color:#1f2937;margin:0">${escapeHtml(m.name)}</p>
+      <p style="color:#2563eb;font-size:12px;margin:2px 0">${escapeHtml(m.role)}</p>
+      <p style="color:#6b7280;font-size:12px;margin:0">${escapeHtml(m.bio)}</p>
+    </div>`).join('')}
+  </div>
+</section>`;
+    }
+
     case 'contact': {
       const extraFields = (d['extraFields'] as string[]) || [];
       const typeOptions = (d['typeOptions'] as string[])?.filter(Boolean) || [];
