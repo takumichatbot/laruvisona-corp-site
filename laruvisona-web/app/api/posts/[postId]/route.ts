@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 
-async function verifyOwner(supabase: Awaited<ReturnType<typeof createClient>>, postId: string, userId: string) {
-  const { data } = await supabase
+function admin() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
+
+// 投稿の所有者（= サイトのowner）が userId と一致するか検証（service roleで確実に読む）
+async function verifyOwner(service: ReturnType<typeof admin>, postId: string, userId: string) {
+  const { data } = await service
     .from('news_posts')
     .select('id, site_id, sites!inner(user_id)')
     .eq('id', postId)
@@ -15,11 +25,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ postId:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const service = admin();
   const { postId } = await params;
-  const post = await verifyOwner(supabase, postId, user.id);
-  if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!(await verifyOwner(service, postId, user.id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const { data } = await supabase.from('news_posts').select('*').eq('id', postId).single();
+  const { data } = await service.from('news_posts').select('*').eq('id', postId).single();
   return NextResponse.json({ post: data });
 }
 
@@ -28,12 +38,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ postId
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const service = admin();
   const { postId } = await params;
-  const post = await verifyOwner(supabase, postId, user.id);
-  if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!(await verifyOwner(service, postId, user.id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const updates = await req.json() as Record<string, unknown>;
-  const { data, error } = await supabase.from('news_posts').update(updates).eq('id', postId).select().single();
+  // 改ざん防止: 主要キーは更新不可
+  delete updates.id; delete updates.site_id; delete updates.user_id; delete updates.created_at;
+  updates.updated_at = new Date().toISOString();
+
+  const { data, error } = await service.from('news_posts').update(updates).eq('id', postId).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ post: data });
 }
@@ -43,10 +57,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ post
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const service = admin();
   const { postId } = await params;
-  const post = await verifyOwner(supabase, postId, user.id);
-  if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!(await verifyOwner(service, postId, user.id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  await supabase.from('news_posts').delete().eq('id', postId);
+  await service.from('news_posts').delete().eq('id', postId);
   return NextResponse.json({ ok: true });
 }

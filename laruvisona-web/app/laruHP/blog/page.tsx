@@ -64,7 +64,8 @@ export default function BlogPage() {
 
   const loadPosts = useCallback(async (siteId: string) => {
     setPostsLoading(true);
-    const res = await fetch(`/api/sites/${siteId}/posts`);
+    // 管理画面は下書き含む全件・全カラムが必要（?all=true）
+    const res = await fetch(`/api/sites/${siteId}/posts?all=true`);
     const data = await res.json();
     setPosts(data.posts || []);
     setPostsLoading(false);
