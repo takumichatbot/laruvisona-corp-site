@@ -18,7 +18,8 @@ type BlockType =
   | 'share' | 'stripe-buy'
   | 'google-reviews'
   | 'announcement-bar' | 'instagram'
-  | 'before-after' | 'tabs' | 'team' | 'free';
+  | 'before-after' | 'tabs' | 'team' | 'free'
+  | 'shop-grid' | 'shop-item';
 
 interface Block {
   id: string;
@@ -207,6 +208,15 @@ const defaultBlock = (type: BlockType): Block => {
         { photo: '', name: '鈴木 花子', role: 'スタッフ', bio: '一言コメントを入力' },
         { photo: '', name: '田中 一郎', role: 'スタッフ', bio: '一言コメントを入力' },
       ],
+    },
+    'shop-grid': {
+      heading: 'ショップ',
+      subtext: '',
+    },
+    'shop-item': {
+      productId: '',
+      buyText: '購入する',
+      bgColor: '#ffffff',
     },
     free: {
       bg: '#f8fafc',
@@ -402,6 +412,8 @@ const BLOCK_PALETTE = [
     { type: 'tabs' as BlockType, label: 'タブ', icon: '📑' },
     { type: 'team' as BlockType, label: 'スタッフ紹介', icon: '👥' },
     { type: 'free' as BlockType, label: 'フリーキャンバス', icon: '🎨' },
+    { type: 'shop-grid' as BlockType, label: 'ショップ一覧', icon: '🛍️' },
+    { type: 'shop-item' as BlockType, label: '商品（単品）', icon: '🏷️' },
     { type: 'hours' as BlockType, label: '営業時間', icon: '🕐' },
     { type: 'contact' as BlockType, label: 'お問合せ', icon: '📞' },
   ]},
@@ -899,6 +911,44 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
           </div>
         );
       }
+
+      case 'shop-grid':
+        return (
+          <div className="px-8 py-12">
+            {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-2')}
+            {editable('subtext', 'p', 'text-gray-500 text-center block mb-8')}
+            <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="border border-gray-200 rounded-2xl overflow-hidden">
+                  <div className="h-24 bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center text-2xl">🛍️</div>
+                  <div className="p-3">
+                    <div className="h-3 bg-gray-100 rounded mb-2" />
+                    <div className="h-3 bg-gray-100 rounded w-2/3 mb-3" />
+                    <div className="h-7 bg-sky-600/90 rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">🛍️ 公開サイトでは「ショップ管理」で登録した商品が、カート・バリエーション付きで表示されます</p>
+          </div>
+        );
+
+      case 'shop-item':
+        return (
+          <div className="px-8 py-12" style={{ backgroundColor: (d.bgColor as string) || '#fff' }}>
+            <div className="max-w-md mx-auto border border-gray-200 rounded-2xl overflow-hidden">
+              <div className="h-40 bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center text-4xl">🏷️</div>
+              <div className="p-5">
+                <div className="h-4 bg-gray-100 rounded mb-2 w-1/2" />
+                <div className="h-6 bg-gray-100 rounded mb-4 w-1/3" />
+                <div className="h-10 bg-sky-600/90 rounded-xl flex items-center justify-center text-white text-sm font-bold">{(d.buyText as string) || '購入する'}</div>
+              </div>
+            </div>
+            <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">
+              {d.productId ? '🏷️ 公開サイトで選択した商品が表示されます' : '⚠️ 右パネルで商品を選択してください'}
+            </p>
+          </div>
+        );
 
       case 'contact':
         return (
@@ -1793,6 +1843,17 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   const [webhookLogs, setWebhookLogs] = useState<{ id: string; name: string; email: string; type: string; webhook_status: string; webhook_at: string; webhook_code: string }[] | null>(null);
   const [webhookLogsLoading, setWebhookLogsLoading] = useState(false);
   const d = block?.data || {};
+
+  // shop-item ブロック用: サイトの商品一覧を取得して選択肢にする
+  const [shopProducts, setShopProducts] = useState<Array<{ id: string; name: string; price: number }>>([]);
+  useEffect(() => {
+    if (block?.type === 'shop-item' && siteId) {
+      fetch(`/api/products?siteId=${siteId}`)
+        .then(r => r.json())
+        .then(dt => setShopProducts((dt.products as Array<{ id: string; name: string; price: number }>) || []))
+        .catch(() => {});
+    }
+  }, [block?.type, siteId]);
 
   const AI_COPY_BLOCKS = ['hero', 'heading', 'paragraph', 'cta', 'services'];
 
@@ -3089,6 +3150,38 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </>
               );
             })()}
+            {block?.type === 'shop-grid' && (
+              <>
+                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">ショップ一覧</span>
+                <p className="text-[11px] text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2 leading-relaxed">「ダッシュボード → ショップ管理」で登録した<strong className="text-slate-300">販売中の商品すべて</strong>を、カート・バリエーション付きで表示します。見出しはプレビュー上で直接編集できます。</p>
+              </>
+            )}
+            {block?.type === 'shop-item' && (
+              <>
+                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">商品（単品）</span>
+                <label className="block mb-2">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">表示する商品</span>
+                  <select value={(d.productId as string) || ''} onChange={e => onDataChange(block.id, { ...d, productId: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs">
+                    <option value="">— 商品を選択 —</option>
+                    {shopProducts.map(p => <option key={p.id} value={p.id}>{p.name}（¥{(p.price || 0).toLocaleString()}）</option>)}
+                  </select>
+                </label>
+                {shopProducts.length === 0 && (
+                  <p className="text-[11px] text-amber-300/80 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 leading-relaxed">商品がありません。先に「ダッシュボード → ショップ管理」で商品を登録してください。</p>
+                )}
+                <label className="block mt-2">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">ボタン文言</span>
+                  <input type="text" value={(d.buyText as string) || '購入する'} onChange={e => onDataChange(block.id, { ...d, buyText: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                </label>
+                <label className="block mt-2">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">背景色</span>
+                  <input type="color" value={(d.bgColor as string) || '#ffffff'} onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                    className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" />
+                </label>
+              </>
+            )}
             {block?.type === 'hours' && (() => {
               type SchRow = {day:string;hours:string;closed:boolean};
               const schedule = (d.schedule as SchRow[]) || [];
@@ -3286,7 +3379,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
-            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram','before-after','tabs','team','free'].includes(block.type) && (
+            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram','before-after','tabs','team','free','shop-grid','shop-item'].includes(block.type) && (
               <div className="text-slate-500 py-4 text-center">
                 キャンバス上でクリックしてテキストを直接編集できます
               </div>

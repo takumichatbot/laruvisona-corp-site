@@ -238,6 +238,109 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </section>`;
     }
 
+    case 'shop-grid': {
+      const bid = block.id;
+      return `
+<section data-lhp-anim class="lhp-section" id="lhp-shop-${bid}">
+  <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
+  ${raw('subtext') ? `<p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>` : ''}
+  <div id="lhp-shop-list-${bid}" style="max-width:960px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px">
+    <p style="grid-column:1/-1;text-align:center;color:#94a3b8">読み込み中...</p>
+  </div>
+</section>
+<script>
+(function(){
+  var sid=window.__LHPSID; if(!sid)return;
+  var root=document.getElementById('lhp-shop-list-${bid}'); if(!root)return;
+  var KEY='laru_cart_'+sid, QB='width:36px;height:36px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:18px;font-weight:700;cursor:pointer;color:#0f172a';
+  var products=[], chosen={}, cart={};
+  try{cart=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  var EMO={'サービス':'⚙️','コース・講座':'📚','チケット':'🎟️','デジタルコンテンツ':'💾','その他':'📦'};
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cart))}catch(e){}}
+  function keyOf(p,v){return v?p+'::'+v:p;}
+  function findP(id){for(var i=0;i<products.length;i++)if(products[i].id===id)return products[i];return null;}
+  function variant(p,vid){if(!p.variants)return null;for(var i=0;i<p.variants.length;i++)if(p.variants[i].id===vid)return p.variants[i];return null;}
+  function price(p,v){return p.price+((v&&v.priceDelta)||0);}
+  function stock(p,v){var s=v?v.stock:p.stock;return (s===null||s===undefined)?Infinity:s;}
+  function yen(n){return '¥'+n.toLocaleString();}
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  fetch('/api/hp/shop/products?siteId='+encodeURIComponent(sid)).then(function(r){return r.json()}).then(function(d){
+    products=d.products||[];
+    products.forEach(function(p){if(p.variants&&p.variants.length)chosen[p.id]=p.variants[0].id;});
+    render();
+  }).catch(function(){root.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#94a3b8">商品を読み込めませんでした</p>';});
+  function render(){
+    if(!products.length){root.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#94a3b8">現在販売中の商品はありません</p>';renderBar();return;}
+    root.innerHTML=products.map(function(p){
+      var hv=p.variants&&p.variants.length, vid=hv?chosen[p.id]:null, v=variant(p,vid);
+      var pr=price(p,v), st=stock(p,v), inc=cart[keyOf(p.id,vid)]||0, sold=st<=0;
+      var vhtml=hv?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+p.variants.map(function(o){var os=(o.stock!==null&&o.stock!==undefined&&o.stock<=0),sel=vid===o.id;return '<button data-v="'+p.id+'|'+o.id+'" '+(os?'disabled':'')+' style="font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:'+(os?'not-allowed':'pointer')+';border:'+(sel?'2px solid #0369a1':'1px solid #cbd5e1')+';background:'+(os?'#f1f5f9':sel?'#eff6ff':'#fff')+';color:'+(os?'#cbd5e1':sel?'#0369a1':'#334155')+'">'+esc(o.name)+(o.priceDelta?'（'+(o.priceDelta>0?'+':'')+yen(o.priceDelta)+'）':'')+'</button>';}).join('')+'</div>':'';
+      var img=(p.images&&p.images[0])?'<img src="'+esc(p.images[0])+'" alt="" style="width:100%;height:100%;object-fit:cover"/>':(EMO[p.category]||'📦');
+      var ctrl=sold?'<button disabled style="width:100%;background:#e2e8f0;color:#94a3b8;border:none;border-radius:12px;padding:12px;font-weight:700">売り切れ</button>':inc>0?'<div style="display:flex;align-items:center;justify-content:center;gap:14px"><button data-m="'+p.id+'" style="'+QB+'">−</button><span style="font-weight:800;font-size:18px;min-width:22px;text-align:center">'+inc+'</span><button data-p="'+p.id+'" style="'+QB+'">＋</button></div>':'<button data-add="'+p.id+'" style="width:100%;background:#0369a1;color:#fff;border:none;border-radius:12px;padding:12px;font-weight:700;cursor:pointer">カートに追加</button>';
+      return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;display:flex;flex-direction:column"><div style="height:150px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden">'+img+'</div><div style="padding:16px;flex:1;display:flex;flex-direction:column"><span style="font-size:11px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:100px;font-weight:700;border:1px solid #bae6fd;align-self:flex-start;margin-bottom:8px">'+esc(p.category)+'</span><h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 6px">'+esc(p.name)+'</h3>'+(p.description?'<p style="font-size:12px;color:#475569;margin:0 0 12px;flex:1">'+esc(p.description)+'</p>':'<div style="flex:1"></div>')+vhtml+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:20px;font-weight:800;color:#0369a1">'+yen(pr)+'</span>'+(st!==Infinity?'<span style="font-size:12px;color:'+(st<=5?'#dc2626':'#64748b')+';font-weight:600">残り'+st+'件</span>':'')+'</div>'+ctrl+'</div></div>';
+    }).join('');
+    root.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){var a=b.getAttribute('data-v').split('|');chosen[a[0]]=a[1];render();};});
+    root.querySelectorAll('[data-add]').forEach(function(b){b.onclick=function(){addP(b.getAttribute('data-add'),1);};});
+    root.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){addP(b.getAttribute('data-p'),1);};});
+    root.querySelectorAll('[data-m]').forEach(function(b){b.onclick=function(){addP(b.getAttribute('data-m'),-1);};});
+    renderBar();
+  }
+  function addP(id,delta){var p=findP(id);if(!p)return;var vid=(p.variants&&p.variants.length)?chosen[id]:null;var v=variant(p,vid);var k=keyOf(id,vid);var n=(cart[k]||0)+delta;var mx=stock(p,v);if(n>mx)n=mx;if(n<=0)delete cart[k];else cart[k]=n;save();render();}
+  function items(){var a=[];Object.keys(cart).forEach(function(k){var pp=k.split('::'),p=findP(pp[0]);if(!p)return;var v=variant(p,pp[1]);a.push({k:k,p:p,v:v,q:cart[k],unit:price(p,v)});});return a;}
+  function renderBar(){
+    var it=items(),bar=document.getElementById('lhp-shopbar-${bid}');
+    var tq=it.reduce(function(s,x){return s+x.q},0),tp=it.reduce(function(s,x){return s+x.unit*x.q},0);
+    if(!bar){bar=document.createElement('div');bar.id='lhp-shopbar-${bid}';bar.style.cssText='position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -2px 12px rgba(0,0,0,.08);padding:12px 24px;z-index:60;display:none';document.body.appendChild(bar);}
+    if(tq<=0){bar.style.display='none';return;}
+    bar.style.display='block';
+    bar.innerHTML='<div style="max-width:960px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap"><span style="font-weight:700;color:#0f172a">🛒 カート '+tq+'点</span><span style="font-size:20px;font-weight:800;color:#0369a1;margin-left:auto">'+yen(tp)+'</span><button id="lhp-co-${bid}" style="background:#0f172a;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-weight:700;cursor:pointer">レジに進む</button></div>';
+    document.getElementById('lhp-co-${bid}').onclick=function(){var btn=this;btn.disabled=true;btn.textContent='処理中...';fetch('/api/shop/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,items:it.map(function(x){return{productId:x.p.id,variantId:x.v?x.v.id:undefined,quantity:x.q}}),successUrl:location.href.split('?')[0]+'?payment=success',cancelUrl:location.href.split('?')[0]})}).then(function(r){return r.json()}).then(function(d){if(d.url){try{localStorage.removeItem(KEY)}catch(e){}location.href=d.url;}else{btn.disabled=false;btn.textContent='レジに進む';alert(d.error||'決済を開始できませんでした');}}).catch(function(){btn.disabled=false;btn.textContent='レジに進む';alert('通信エラー');});};
+  }
+})();
+</script>`;
+    }
+
+    case 'shop-item': {
+      const bid = block.id;
+      const pid = raw('productId');
+      if (!pid) return `<section class="lhp-section"><p style="text-align:center;color:#94a3b8">（商品が選択されていません）</p></section>`;
+      return `
+<section data-lhp-anim class="lhp-section" id="lhp-item-${bid}" style="background:${raw('bgColor') || '#fff'}">
+  <div id="lhp-item-box-${bid}" style="max-width:480px;margin:0 auto"><p style="text-align:center;color:#94a3b8">読み込み中...</p></div>
+</section>
+<script>
+(function(){
+  var sid=window.__LHPSID; if(!sid)return;
+  var box=document.getElementById('lhp-item-box-${bid}'); if(!box)return;
+  var PID=${JSON.stringify(pid)}, BUY=${JSON.stringify(raw('buyText') || '購入する')}, QB='width:40px;height:40px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:20px;font-weight:700;cursor:pointer;color:#0f172a';
+  var p=null,vid=null,qty=1;
+  var EMO={'サービス':'⚙️','コース・講座':'📚','チケット':'🎟️','デジタルコンテンツ':'💾','その他':'📦'};
+  function yen(n){return '¥'+n.toLocaleString();}
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function variant(){if(!p.variants)return null;for(var i=0;i<p.variants.length;i++)if(p.variants[i].id===vid)return p.variants[i];return null;}
+  function price(){var v=variant();return p.price+((v&&v.priceDelta)||0);}
+  function stock(){var v=variant();var s=v?v.stock:p.stock;return (s===null||s===undefined)?Infinity:s;}
+  fetch('/api/hp/shop/products?siteId='+encodeURIComponent(sid)).then(function(r){return r.json()}).then(function(d){
+    var list=d.products||[];for(var i=0;i<list.length;i++)if(list[i].id===PID)p=list[i];
+    if(!p){box.innerHTML='<p style="text-align:center;color:#94a3b8">商品が見つかりません</p>';return;}
+    if(p.variants&&p.variants.length)vid=p.variants[0].id;
+    render();
+  }).catch(function(){box.innerHTML='<p style="text-align:center;color:#94a3b8">読み込めませんでした</p>';});
+  function render(){
+    var v=variant(),pr=price(),st=stock(),sold=st<=0,hv=p.variants&&p.variants.length;
+    var vhtml=hv?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px">'+p.variants.map(function(o){var os=(o.stock!==null&&o.stock!==undefined&&o.stock<=0),sel=vid===o.id;return '<button data-v="'+o.id+'" '+(os?'disabled':'')+' style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:'+(os?'not-allowed':'pointer')+';border:'+(sel?'2px solid #0369a1':'1px solid #cbd5e1')+';background:'+(os?'#f1f5f9':sel?'#eff6ff':'#fff')+';color:'+(os?'#cbd5e1':sel?'#0369a1':'#334155')+'">'+esc(o.name)+(o.priceDelta?'（'+(o.priceDelta>0?'+':'')+yen(o.priceDelta)+'）':'')+'</button>';}).join('')+'</div>':'';
+    var img=(p.images&&p.images[0])?'<img src="'+esc(p.images[0])+'" alt="" style="width:100%;height:100%;object-fit:cover"/>':(EMO[p.category]||'📦');
+    box.innerHTML='<div style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:#fff"><div style="height:200px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);display:flex;align-items:center;justify-content:center;font-size:56px;overflow:hidden">'+img+'</div><div style="padding:24px"><h3 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 8px">'+esc(p.name)+'</h3>'+(p.description?'<p style="font-size:14px;color:#475569;margin:0 0 16px;line-height:1.6">'+esc(p.description)+'</p>':'')+vhtml+'<div style="font-size:28px;font-weight:800;color:#0369a1;margin-bottom:8px">'+yen(pr)+'</div>'+(st!==Infinity?'<p style="font-size:13px;color:'+(st<=5?'#dc2626':'#64748b')+';margin:0 0 16px">残り'+st+'件</p>':'<div style="height:8px"></div>')+(sold?'<button disabled style="width:100%;background:#e2e8f0;color:#94a3b8;border:none;border-radius:12px;padding:14px;font-weight:700">売り切れ</button>':'<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><button id="qm-${bid}" style="'+QB+'">−</button><span style="font-weight:800;font-size:18px;min-width:24px;text-align:center">'+qty+'</span><button id="qp-${bid}" style="'+QB+'">＋</button></div><button id="buy-${bid}" style="width:100%;background:#0369a1;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;cursor:pointer">'+esc(BUY)+'</button>')+'</div></div>';
+    box.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){vid=b.getAttribute('data-v');qty=1;render();};});
+    var qm=document.getElementById('qm-${bid}'),qp=document.getElementById('qp-${bid}'),buy=document.getElementById('buy-${bid}');
+    if(qm)qm.onclick=function(){if(qty>1){qty--;render();}};
+    if(qp)qp.onclick=function(){if(qty<stock()){qty++;render();}};
+    if(buy)buy.onclick=function(){buy.disabled=true;buy.textContent='処理中...';fetch('/api/shop/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,items:[{productId:p.id,variantId:vid||undefined,quantity:qty}],successUrl:location.href.split('?')[0]+'?payment=success',cancelUrl:location.href.split('?')[0]})}).then(function(r){return r.json()}).then(function(d){if(d.url){location.href=d.url;}else{buy.disabled=false;buy.textContent=BUY;alert(d.error||'決済を開始できませんでした');}}).catch(function(){buy.disabled=false;buy.textContent=BUY;alert('通信エラー');});};
+  }
+})();
+</script>`;
+    }
+
     case 'contact': {
       const extraFields = (d['extraFields'] as string[]) || [];
       const typeOptions = (d['typeOptions'] as string[])?.filter(Boolean) || [];
