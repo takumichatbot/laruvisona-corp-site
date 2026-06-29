@@ -67,6 +67,55 @@ export async function POST(req: Request) {
         break;
       }
 
+      // ショップ購入（mode=payment, kind=shop）: 在庫を減算しオーナーへ注文通知
+      if (session.mode === 'payment' && bmeta.kind === 'shop') {
+        const shopSiteId = bmeta.laru_site_id;
+        if (shopSiteId) {
+          let cart: Array<{ id: string; q: number }> = [];
+          try { if (bmeta.laru_cart) cart = JSON.parse(bmeta.laru_cart); } catch {}
+          if (!cart.length && bmeta.laru_product_id) cart = [{ id: bmeta.laru_product_id, q: 1 }];
+
+          const { data: shopSite } = await supabase
+            .from('sites')
+            .select('name, user_id, settings_json')
+            .eq('id', shopSiteId)
+            .single();
+          if (shopSite) {
+            const settings = (shopSite.settings_json as Record<string, unknown>) || {};
+            const products = (settings.products as Array<{ id: string; name: string; stock: number | null }>) || [];
+            const orderLines: string[] = [];
+            let changed = false;
+            for (const c of cart) {
+              const p = products.find(pp => pp.id === c.id);
+              if (!p) continue;
+              orderLines.push(`${p.name} × ${c.q}`);
+              if (p.stock !== null && p.stock !== undefined) { p.stock = Math.max(0, p.stock - c.q); changed = true; }
+            }
+            if (changed) {
+              await supabase.from('sites').update({ settings_json: { ...settings, products } }).eq('id', shopSiteId);
+            }
+            const { data: { user: owner } } = await supabase.auth.admin.getUserById(shopSite.user_id);
+            const toEmail = (settings.notifyEmail as string) || owner?.email;
+            if (toEmail) {
+              const amount = session.amount_total ? `¥${session.amount_total.toLocaleString()}` : '';
+              await sendEmail(
+                toEmail,
+                `【ご注文】${shopSite.name} — 新しい注文が入りました`,
+                `<div style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px">
+                  <h2 style="color:#0f172a">🛍️ 新しいご注文</h2>
+                  <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                    ${orderLines.map(l => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${l}</td></tr>`).join('')}
+                  </table>
+                  <p style="font-size:18px;font-weight:700;color:#0369a1">合計: ${amount}</p>
+                  <p style="color:#475569;font-size:14px">購入者メール: ${session.customer_details?.email || '—'}</p>
+                </div>`
+              );
+            }
+          }
+        }
+        break;
+      }
+
       if (session.mode !== 'subscription') break;
 
       const meta = (session.metadata || {}) as Record<string, string>;

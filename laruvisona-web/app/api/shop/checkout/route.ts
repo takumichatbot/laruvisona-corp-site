@@ -2,60 +2,81 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 
-// POST /api/shop/checkout — create Stripe Checkout for a product
-// Public endpoint (customers buying from published shop)
-export async function POST(req: Request) {
-  const { siteId, productId, successUrl, cancelUrl } = await req.json() as {
-    siteId: string;
-    productId: string;
-    successUrl: string;
-    cancelUrl: string;
-  };
+// POST /api/shop/checkout — カート（複数商品・数量）対応の Stripe Checkout
+// 公開エンドポイント（公開ショップから購入）。単品(productId)も後方互換で受け付ける。
+interface ProductRow {
+  id: string; name: string; description: string; price: number;
+  images: string[]; active: boolean; stock?: number | null;
+}
 
-  if (!siteId || !productId) {
-    return NextResponse.json({ error: 'siteId and productId required' }, { status: 400 });
-  }
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({})) as {
+    siteId?: string;
+    productId?: string;
+    items?: Array<{ productId: string; quantity: number }>;
+    successUrl?: string;
+    cancelUrl?: string;
+  };
+  const { siteId, productId, successUrl, cancelUrl } = body;
+
+  if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
+
+  // 単品 → items 形式に正規化
+  const reqItems = (body.items && body.items.length > 0)
+    ? body.items
+    : (productId ? [{ productId, quantity: 1 }] : []);
+  if (reqItems.length === 0) return NextResponse.json({ error: '商品が指定されていません' }, { status: 400 });
 
   const service = await createServiceClient();
   const { data: site } = await service.from('sites').select('name, settings_json').eq('id', siteId).single();
   if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
 
-  const settings = (site.settings_json as Record<string, unknown>) || {};
-  const products = (settings.products as Array<{
-    id: string; name: string; description: string; price: number;
-    images: string[]; active: boolean;
-  }>) || [];
+  const products = (((site.settings_json as Record<string, unknown>) || {}).products as ProductRow[]) || [];
 
-  const product = products.find(p => p.id === productId && p.active);
-  if (!product) return NextResponse.json({ error: 'Product not found or inactive' }, { status: 404 });
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+  const cart: Array<{ id: string; q: number }> = [];
+  for (const it of reqItems) {
+    const qty = Math.max(1, Math.floor(Number(it.quantity) || 1));
+    const product = products.find(p => p.id === it.productId && p.active);
+    if (!product) return NextResponse.json({ error: '販売中でない商品が含まれています' }, { status: 404 });
+    if (product.stock !== null && product.stock !== undefined && qty > product.stock) {
+      return NextResponse.json({ error: `「${product.name}」の在庫が不足しています（残り${product.stock}件）` }, { status: 409 });
+    }
+    lineItems.push({
+      price_data: {
+        currency: 'jpy',
+        product_data: {
+          name: product.name,
+          ...(product.description ? { description: product.description } : {}),
+          ...(product.images?.length ? { images: product.images.slice(0, 8) } : {}),
+        },
+        unit_amount: product.price,
+      },
+      quantity: qty,
+    });
+    cart.push({ id: product.id, q: qty });
+  }
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-  const stripeProduct = await stripe.products.create({
-    name: product.name,
-    description: product.description || undefined,
-    images: product.images.slice(0, 8),
-    metadata: { laru_site_id: siteId, laru_product_id: productId },
-  });
-
-  const stripePrice = await stripe.prices.create({
-    product: stripeProduct.id,
-    unit_amount: product.price,
-    currency: 'jpy',
-  });
-
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    line_items: [{ price: stripePrice.id, quantity: 1 }],
-    success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/?payment=success`,
-    cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/`,
-    locale: 'ja',
-    metadata: {
-      laru_site_id: siteId,
-      laru_product_id: productId,
-      laru_product_name: product.name,
-    },
-  });
-
-  return NextResponse.json({ url: session.url });
+  try {
+    const cartJson = JSON.stringify(cart);
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: lineItems,
+      success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/?payment=success`,
+      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/`,
+      locale: 'ja',
+      metadata: {
+        kind: 'shop',
+        laru_site_id: siteId,
+        // 在庫減算用。Stripeのmetadata上限(500字)を超える場合は省略
+        ...(cartJson.length <= 480 ? { laru_cart: cartJson } : {}),
+        ...(cart.length === 1 ? { laru_product_id: cart[0].id } : {}),
+      },
+    });
+    return NextResponse.json({ url: session.url });
+  } catch (err: unknown) {
+    console.error('[shop/checkout] stripe error:', (err as { message?: string })?.message);
+    return NextResponse.json({ error: '決済の開始に失敗しました' }, { status: 500 });
+  }
 }

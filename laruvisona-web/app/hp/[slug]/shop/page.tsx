@@ -1,7 +1,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import ShopBuyButton from './ShopBuyButton';
+import ShopClient from './ShopClient';
 
 function getServiceClient() {
   return createServiceClient(
@@ -83,14 +83,6 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
     })),
   }) : null;
 
-  const categoryEmoji: Record<string, string> = {
-    'サービス': '⚙️',
-    'コース・講座': '📚',
-    'チケット': '🎟️',
-    'デジタルコンテンツ': '💾',
-    'その他': '📦',
-  };
-
   return (
     <>
     {productJsonLd && (
@@ -127,41 +119,7 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
             <p style={{ fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 24 }}>
               {products.length}件の商品・サービス
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-              {products.map(product => (
-                <div key={product.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>
-                    {categoryEmoji[product.category] ?? '📦'}
-                  </div>
-
-                  <div style={{ padding: '20px 20px 24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 11, background: '#f0f9ff', color: '#0369a1', padding: '3px 10px', borderRadius: 100, fontWeight: 700, border: '1px solid #bae6fd', display: 'inline-block', marginBottom: 10 }}>
-                      {product.category}
-                    </span>
-                    <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: '0 0 8px', lineHeight: 1.4 }}>{product.name}</h2>
-                    {product.description && (
-                      <p style={{ fontSize: 13, color: '#475569', margin: '0 0 16px', lineHeight: 1.6, flex: 1 }}>{product.description}</p>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                      <span style={{ fontSize: 24, fontWeight: 800, color: '#0369a1' }}>¥{product.price.toLocaleString()}</span>
-                      {product.stock !== null && (
-                        <span style={{ fontSize: 12, color: product.stock <= 5 ? '#dc2626' : '#64748b', fontWeight: 600 }}>
-                          残り{product.stock}件
-                        </span>
-                      )}
-                    </div>
-
-                    <ShopBuyButton
-                      siteId={site.id}
-                      productId={product.id}
-                      successUrl={`${shopUrl}?payment=success`}
-                      cancelUrl={shopUrl}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ShopClient products={products} siteId={site.id} shopUrl={shopUrl} />
           </>
         )}
       </main>
