@@ -7,7 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Estimator from '@/components/Estimator';
 import ChatMockup from '@/components/ChatMockup';
 import VoiceUI from '@/components/VoiceUI';
-import Contact from '@/components/Contact';
+import InquiryForm from '@/components/InquiryForm';
 import Intro from '@/components/Intro';
 
 // 3D背景（SSRオフ）
@@ -179,7 +179,10 @@ export default function Home() {
         </div>
 
         {/* --- Hero Section --- */}
-        <section className="h-screen flex flex-col items-center justify-center text-center px-4 pt-20">
+        <section className="relative h-screen flex flex-col items-center justify-center text-center px-4 pt-20">
+          {/* 3D球の上で文字を読みやすくする暗いスクリム（セクションのz-10内＝背景3Dより前面） */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 45%, rgba(3,7,18,0.78) 0%, rgba(3,7,18,0.45) 45%, transparent 72%)' }} aria-hidden="true" />
+          <div className="relative z-10 flex flex-col items-center">
           <div className="gsap-hero opacity-0 translate-y-10 inline-flex items-center gap-3 border border-white/10 bg-white/5 backdrop-blur-md px-5 py-2 rounded-full mb-8">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -202,6 +205,7 @@ export default function Home() {
             <a href="#services" className="bg-white text-black px-10 py-4 rounded-full font-bold hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.2)] text-lg inline-flex items-center gap-3">
               Discover <i className="fas fa-arrow-down animate-bounce"></i>
             </a>
+          </div>
           </div>
         </section>
 
@@ -509,9 +513,8 @@ export default function Home() {
             <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">お問い合わせ</h2>
             <p className="text-slate-400 mb-16 text-lg">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
             
-            {/* 🌟 修正: 先ほど作ったContactコンポーネントに置き換え、メッセージを渡す */}
-            <Contact />
-            
+            <InquiryForm dark />
+
           </div>
         </section>
 
