@@ -653,7 +653,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     list.innerHTML=posts.map(function(p){
       var d=new Date(p.published_at);
       var ds=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');
-      return '<div class="lhp-news-item">'+(p.category?'<span class="lhp-news-tag">'+p.category+'</span>':'')+'<span class="lhp-news-date">'+ds+'</span><span class="lhp-news-title">'+p.title+'</span></div>';
+      return '<a class="lhp-news-item" href="/hp/post/'+p.id+'" style="text-decoration:none;color:inherit;cursor:pointer">'+(p.category?'<span class="lhp-news-tag">'+p.category+'</span>':'')+'<span class="lhp-news-date">'+ds+'</span><span class="lhp-news-title">'+p.title+'</span></a>';
     }).join('');
   }).catch(function(){});
 })();
