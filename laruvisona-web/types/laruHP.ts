@@ -8,7 +8,7 @@ export type BlockType =
   | 'share' | 'stripe-buy'
   | 'google-reviews'
   | 'announcement-bar' | 'instagram'
-  | 'before-after' | 'tabs' | 'team';
+  | 'before-after' | 'tabs' | 'team' | 'free';
 
 export interface Block {
   id: string;

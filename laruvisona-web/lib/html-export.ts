@@ -215,6 +215,29 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </section>`;
     }
 
+    case 'free': {
+      type El = { id: string; type: 'text' | 'image' | 'button'; x: number; y: number; w: number; text?: string; size?: number; color?: string; weight?: string; align?: string; src?: string; radius?: number; link?: string; bg?: string };
+      const els = (d['elements'] as El[]) || [];
+      const height = Number(d['height']) || 600;
+      const renderEl = (el: El): string => {
+        const base = `position:absolute;left:${el.x}%;top:${el.y}%`;
+        if (el.type === 'text') {
+          return `<div style="${base};width:${el.w}%;font-size:${(el.size || 16) / 10}cqw;color:${el.color || '#111'};font-weight:${el.weight || 400};text-align:${el.align || 'left'};line-height:1.4">${escapeHtml(el.text || '')}</div>`;
+        }
+        if (el.type === 'image') {
+          return el.src ? `<img src="${escapeHtml(el.src)}" alt="" style="${base};width:${el.w}%;height:auto;border-radius:${el.radius || 0}px;object-fit:cover" />` : '';
+        }
+        const href = /^(https?:\/\/|\/|#|mailto:)/i.test(el.link || '') ? (el.link as string) : '#';
+        return `<a href="${escapeHtml(href)}" style="${base};display:inline-block;background:${el.bg || '#2563eb'};color:${el.color || '#fff'};font-size:${(el.size || 16) / 10}cqw;font-weight:700;padding:.6em 1.2em;border-radius:.6em;text-decoration:none;text-align:center">${escapeHtml(el.text || '')}</a>`;
+      };
+      return `
+<section class="lhp-section" style="padding:0">
+  <div style="position:relative;width:100%;background:${raw('bg') || '#f8fafc'};aspect-ratio:1000 / ${height};container-type:inline-size;overflow:hidden">
+    ${els.map(renderEl).join('')}
+  </div>
+</section>`;
+    }
+
     case 'contact': {
       const extraFields = (d['extraFields'] as string[]) || [];
       const typeOptions = (d['typeOptions'] as string[])?.filter(Boolean) || [];

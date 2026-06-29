@@ -18,7 +18,7 @@ type BlockType =
   | 'share' | 'stripe-buy'
   | 'google-reviews'
   | 'announcement-bar' | 'instagram'
-  | 'before-after' | 'tabs' | 'team';
+  | 'before-after' | 'tabs' | 'team' | 'free';
 
 interface Block {
   id: string;
@@ -26,6 +26,16 @@ interface Block {
   data: Record<string, unknown>;
   memo?: string;
 }
+
+// フリーキャンバスの配置要素（x/y/w は%、size は1000幅基準の設計px）
+type FreeEl = {
+  id: string;
+  type: 'text' | 'image' | 'button';
+  x: number; y: number; w: number;
+  text?: string; size?: number; color?: string; weight?: string; align?: string;
+  src?: string; radius?: number;
+  link?: string; bg?: string;
+};
 
 interface SEOSettings {
   title: string;
@@ -196,6 +206,15 @@ const defaultBlock = (type: BlockType): Block => {
         { photo: '', name: '山田 太郎', role: '代表', bio: '一言コメントを入力' },
         { photo: '', name: '鈴木 花子', role: 'スタッフ', bio: '一言コメントを入力' },
         { photo: '', name: '田中 一郎', role: 'スタッフ', bio: '一言コメントを入力' },
+      ],
+    },
+    free: {
+      bg: '#f8fafc',
+      height: 600, // 1000幅基準の設計px（aspect-ratio 1000:height で全幅にスケール）
+      elements: [
+        { id: 'e1', type: 'text', x: 8, y: 12, w: 60, text: '自由に配置できる見出し', size: 44, color: '#0f172a', weight: '800', align: 'left' },
+        { id: 'e2', type: 'text', x: 8, y: 30, w: 55, text: 'テキスト・画像・ボタンをドラッグで好きな位置に置けます。', size: 18, color: '#475569', weight: '400', align: 'left' },
+        { id: 'e3', type: 'button', x: 8, y: 48, w: 30, text: 'お問い合わせ', link: '#contact', bg: '#2563eb', color: '#ffffff', size: 16 },
       ],
     },
     contact: {
@@ -382,6 +401,7 @@ const BLOCK_PALETTE = [
     { type: 'before-after' as BlockType, label: 'Before/After', icon: '🔀' },
     { type: 'tabs' as BlockType, label: 'タブ', icon: '📑' },
     { type: 'team' as BlockType, label: 'スタッフ紹介', icon: '👥' },
+    { type: 'free' as BlockType, label: 'フリーキャンバス', icon: '🎨' },
     { type: 'hours' as BlockType, label: '営業時間', icon: '🕐' },
     { type: 'contact' as BlockType, label: 'お問合せ', icon: '📞' },
   ]},
@@ -457,6 +477,30 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
   onDataChange: (data: Record<string, unknown>) => void;
 }) {
   const d = block.data;
+
+  // ── フリーキャンバス: ドラッグ移動と要素描画 ──
+  const freeRef = useRef<HTMLDivElement>(null);
+  const startFreeDrag = (e: React.PointerEvent, idx: number) => {
+    const canvas = freeRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const els = (d.elements as FreeEl[]) || [];
+    const move = (ev: PointerEvent) => {
+      const x = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((ev.clientY - rect.top) / rect.height) * 100));
+      onDataChange({ ...d, elements: els.map((el, j) => j === idx ? { ...el, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 } : el) });
+    };
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  const renderFreeEl = (el: FreeEl) => {
+    if (el.type === 'text') return <div style={{ fontSize: `${(el.size || 16) / 10}cqw`, color: el.color, fontWeight: el.weight as React.CSSProperties['fontWeight'], textAlign: el.align as React.CSSProperties['textAlign'], lineHeight: 1.4 }}>{el.text}</div>;
+    if (el.type === 'image') return el.src
+      ? <img src={el.src} alt="" style={{ width: '100%', height: 'auto', borderRadius: el.radius || 0 }} />
+      : <div className="bg-gray-200 text-gray-400 text-xs flex items-center justify-center" style={{ width: '100%', aspectRatio: '4/3', borderRadius: el.radius || 0 }}>画像</div>;
+    return <span style={{ display: 'inline-block', background: el.bg, color: el.color, fontSize: `${(el.size || 16) / 10}cqw`, fontWeight: 700, padding: '.6em 1.2em', borderRadius: '.6em' }}>{el.text}</span>;
+  };
 
   const editable = (key: string, tag: 'h1'|'h2'|'h3'|'h4'|'p'|'div'|'span' = 'span', className: string = '') => {
     const props = {
@@ -827,6 +871,31 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                 </div>
               ))}
             </div>
+          </div>
+        );
+      }
+
+      case 'free': {
+        const els = (d.elements as FreeEl[]) || [];
+        return (
+          <div
+            ref={freeRef}
+            className="relative w-full overflow-hidden"
+            style={{ background: d.bg as string, aspectRatio: `1000 / ${Number(d.height) || 600}`, containerType: 'inline-size' } as React.CSSProperties}
+          >
+            {els.map((el, i) => (
+              <div
+                key={el.id}
+                onPointerDown={(e) => startFreeDrag(e, i)}
+                className="absolute cursor-move select-none"
+                style={{ left: `${el.x}%`, top: `${el.y}%`, width: el.type === 'button' ? 'auto' : `${el.w}%`, touchAction: 'none' }}
+              >
+                {renderFreeEl(el)}
+              </div>
+            ))}
+            {els.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">右パネルから要素を追加してください</div>
+            )}
           </div>
         );
       }
@@ -2947,6 +3016,79 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </>
               );
             })()}
+            {block?.type === 'free' && (() => {
+              type El = { id: string; type: 'text' | 'image' | 'button'; x: number; y: number; w: number; text?: string; size?: number; color?: string; weight?: string; align?: string; src?: string; radius?: number; link?: string; bg?: string };
+              const els = (d.elements as El[]) || [];
+              const upd = (i: number, patch: Partial<El>) => onDataChange(block.id, { ...d, elements: els.map((el, j) => j === i ? { ...el, ...patch } : el) });
+              const addEl = (type: El['type']) => {
+                const base = { id: 'e' + Date.now(), x: 10, y: 10, w: 40 };
+                const el: El = type === 'text' ? { ...base, type: 'text', text: '新しいテキスト', size: 24, color: '#0f172a', weight: '400', align: 'left' }
+                  : type === 'image' ? { ...base, type: 'image', src: '', radius: 8 }
+                  : { ...base, type: 'button', text: 'ボタン', link: '#contact', bg: '#2563eb', color: '#ffffff', size: 16 };
+                onDataChange(block.id, { ...d, elements: [...els, el] });
+              };
+              const ipt = 'w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs';
+              return (
+                <>
+                  <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">フリーキャンバス</span>
+                  <div className="flex gap-1.5 mb-3">
+                    <button onClick={() => addEl('text')} className="flex-1 text-[11px] bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">＋テキスト</button>
+                    <button onClick={() => addEl('image')} className="flex-1 text-[11px] bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">＋画像</button>
+                    <button onClick={() => addEl('button')} className="flex-1 text-[11px] bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg transition-colors">＋ボタン</button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <label className="block"><span className="text-slate-500 text-[10px] block mb-0.5">背景色</span>
+                      <input type="color" value={(d.bg as string) || '#f8fafc'} onChange={e => onDataChange(block.id, { ...d, bg: e.target.value })} className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" /></label>
+                    <label className="block"><span className="text-slate-500 text-[10px] block mb-0.5">高さ(px)</span>
+                      <input type="number" min={200} step={50} value={Number(d.height) || 600} onChange={e => onDataChange(block.id, { ...d, height: Math.max(200, Number(e.target.value)) })} className={ipt} /></label>
+                  </div>
+                  <div className="space-y-2">
+                    {els.map((el, i) => (
+                      <div key={el.id} className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 text-[10px]">{el.type === 'text' ? 'テキスト' : el.type === 'image' ? '画像' : 'ボタン'} {i + 1}</span>
+                          <button onClick={() => onDataChange(block.id, { ...d, elements: els.filter((_, j) => j !== i) })} className="text-red-400/60 hover:text-red-400 text-xs">✕</button>
+                        </div>
+                        {el.type === 'text' && (
+                          <>
+                            <textarea rows={2} value={el.text || ''} onChange={e => upd(i, { text: e.target.value })} className={`${ipt} resize-none`} />
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="block"><span className="text-slate-500 text-[9px]">サイズ</span><input type="number" value={el.size || 24} onChange={e => upd(i, { size: Number(e.target.value) })} className={ipt} /></label>
+                              <label className="block"><span className="text-slate-500 text-[9px]">色</span><input type="color" value={el.color || '#0f172a'} onChange={e => upd(i, { color: e.target.value })} className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" /></label>
+                              <select value={el.weight || '400'} onChange={e => upd(i, { weight: e.target.value })} className={ipt}><option value="400">標準</option><option value="700">太字</option><option value="800">極太</option></select>
+                              <select value={el.align || 'left'} onChange={e => upd(i, { align: e.target.value })} className={ipt}><option value="left">左</option><option value="center">中央</option><option value="right">右</option></select>
+                            </div>
+                          </>
+                        )}
+                        {el.type === 'image' && (
+                          <>
+                            <button type="button" onClick={() => onOpenImageLib(url => upd(i, { src: url }))} className="w-full text-xs bg-white/10 hover:bg-white/20 text-white py-1.5 rounded transition-colors">{el.src ? '画像を変更' : '画像を選択'}</button>
+                            {el.src && <img src={el.src} alt="" className="w-full h-16 object-cover rounded" />}
+                            <label className="block"><span className="text-slate-500 text-[9px]">角丸(px)</span><input type="number" value={el.radius || 0} onChange={e => upd(i, { radius: Number(e.target.value) })} className={ipt} /></label>
+                          </>
+                        )}
+                        {el.type === 'button' && (
+                          <>
+                            <input type="text" value={el.text || ''} placeholder="ラベル" onChange={e => upd(i, { text: e.target.value })} className={ipt} />
+                            <input type="text" value={el.link || ''} placeholder="リンク先（#contact 等）" onChange={e => upd(i, { link: e.target.value })} className={ipt} />
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="block"><span className="text-slate-500 text-[9px]">背景</span><input type="color" value={el.bg || '#2563eb'} onChange={e => upd(i, { bg: e.target.value })} className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" /></label>
+                              <label className="block"><span className="text-slate-500 text-[9px]">文字色</span><input type="color" value={el.color || '#ffffff'} onChange={e => upd(i, { color: e.target.value })} className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" /></label>
+                            </div>
+                          </>
+                        )}
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <label className="block"><span className="text-slate-500 text-[9px]">X%</span><input type="number" value={el.x} onChange={e => upd(i, { x: Number(e.target.value) })} className={ipt} /></label>
+                          <label className="block"><span className="text-slate-500 text-[9px]">Y%</span><input type="number" value={el.y} onChange={e => upd(i, { y: Number(e.target.value) })} className={ipt} /></label>
+                          <label className="block"><span className="text-slate-500 text-[9px]">幅%</span><input type="number" value={el.w} onChange={e => upd(i, { w: Number(e.target.value) })} className={ipt} /></label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">プレビュー上で要素を<strong className="text-slate-400">ドラッグ</strong>して配置できます。文字サイズは画面幅に応じて自動でスケールします。</p>
+                </>
+              );
+            })()}
             {block?.type === 'hours' && (() => {
               type SchRow = {day:string;hours:string;closed:boolean};
               const schedule = (d.schedule as SchRow[]) || [];
@@ -3144,7 +3286,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
-            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram','before-after','tabs','team'].includes(block.type) && (
+            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram','before-after','tabs','team','free'].includes(block.type) && (
               <div className="text-slate-500 py-4 text-center">
                 キャンバス上でクリックしてテキストを直接編集できます
               </div>
