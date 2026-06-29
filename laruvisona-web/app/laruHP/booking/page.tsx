@@ -15,6 +15,8 @@ interface BookingConfig {
   slots: Slot[];
   bufferMinutes: number;
   maxAdvanceDays: number;
+  prepayEnabled?: boolean;
+  prepayAmount?: number;
 }
 
 interface Site { id: string; name: string; data: { bookingConfig?: BookingConfig } }
@@ -327,6 +329,25 @@ export default function BookingPage() {
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none">
                   {[7, 14, 30, 60, 90].map(d => <option key={d} value={d}>{d}日</option>)}
                 </select>
+              </div>
+              {/* 事前決済（予約金） */}
+              <div className="pt-3 border-t border-white/10">
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input type="checkbox" checked={!!config.prepayEnabled}
+                    onChange={e => { const c = { ...config, prepayEnabled: e.target.checked }; setConfig(c); save(c); }}
+                    className="w-4 h-4 rounded accent-violet-500" />
+                  <span className="text-white text-sm font-semibold">事前決済（予約金）を有効化</span>
+                </label>
+                {config.prepayEnabled && (
+                  <>
+                    <label className="text-slate-400 text-xs block mb-1">予約金（円）</label>
+                    <input type="number" min={0} step={100} value={config.prepayAmount ?? 0}
+                      onChange={e => { const c = { ...config, prepayAmount: Math.max(0, Number(e.target.value)) }; setConfig(c); save(c); }}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                    <p className="text-slate-500 text-[11px] mt-1.5 leading-relaxed">お客様は予約時にこの金額をカード決済します（Stripe）。決済完了で予約が確定し、無断キャンセル対策になります。決済が未完了の枠は約30分で自動的に解放されます。</p>
+                  </>
+                )}
+                <p className="text-slate-500 text-[11px] mt-2 leading-relaxed">※ 公開サイトで予約を受けるには、ビルダーの<strong className="text-slate-400">「予約フォーム」ブロックを「カレンダー」モード</strong>に設定してください。</p>
               </div>
             </div>
           </div>

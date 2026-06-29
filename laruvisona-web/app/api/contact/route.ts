@@ -117,10 +117,14 @@ function checkRate(ip: string): boolean {
 }
 
 export async function POST(req: Request) {
+  // 内部呼び出し（予約確定など）はレート制限をバイパス
+  const internal = !!process.env.RETENTION_SECRET
+    && req.headers.get('x-internal-secret') === process.env.RETENTION_SECRET;
+
   // Rate limiting
   const forwarded = req.headers.get('x-forwarded-for');
   const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
-  if (!checkRate(ip)) {
+  if (!internal && !checkRate(ip)) {
     return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
   }
 

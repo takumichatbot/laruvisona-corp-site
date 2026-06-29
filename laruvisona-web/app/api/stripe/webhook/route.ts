@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
+import { finalizeBooking } from '@/lib/booking-finalize';
 import { Resend } from 'resend';
 import type Stripe from 'stripe';
 
@@ -36,6 +37,36 @@ export async function POST(req: Request) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // 時間枠予約の事前決済（mode=payment）: 仮押さえ→確定＋通知
+      const bmeta = (session.metadata || {}) as Record<string, string>;
+      if (session.mode === 'payment' && bmeta.kind === 'booking') {
+        const reservationId = bmeta.reservation_id;
+        if (reservationId) {
+          const { data: resv } = await supabase
+            .from('hp_reservations')
+            .select('*')
+            .eq('id', reservationId)
+            .single();
+          if (resv && resv.status !== 'confirmed') {
+            await supabase.from('hp_reservations').update({ status: 'confirmed' }).eq('id', reservationId);
+            await finalizeBooking({
+              baseUrl: process.env.NEXT_PUBLIC_APP_URL || '',
+              siteId: resv.site_id,
+              name: resv.name,
+              email: resv.email,
+              phone: resv.phone,
+              service: resv.service,
+              slotId: resv.slot_id,
+              slotDatetime: resv.slot_datetime,
+              prepaid: true,
+              amount: resv.amount,
+            });
+          }
+        }
+        break;
+      }
+
       if (session.mode !== 'subscription') break;
 
       const meta = (session.metadata || {}) as Record<string, string>;

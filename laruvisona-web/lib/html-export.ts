@@ -484,7 +484,99 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </section>`;
     }
 
-    case 'booking':
+    case 'booking': {
+      if ((raw('mode') || 'simple') === 'calendar') {
+        return `
+<section data-lhp-anim class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
+  <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
+  <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
+  <div id="lhp-bk" style="max-width:560px;margin:0 auto">
+    <div id="lhp-bk-loading" style="text-align:center;color:#94a3b8;padding:24px">空き状況を読み込み中...</div>
+    <div id="lhp-bk-main" style="display:none">
+      <div style="margin-bottom:16px">
+        <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">日付を選択</label>
+        <div id="lhp-bk-dates" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+      <div id="lhp-bk-times-wrap" style="margin-bottom:16px;display:none">
+        <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">時間を選択</label>
+        <div id="lhp-bk-times" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px"></div>
+      </div>
+      <div id="lhp-bk-form" style="display:none">
+        <div class="lhp-form-row">
+          <input id="lhp-bk-name" type="text" placeholder="お名前" required />
+          <input id="lhp-bk-phone" type="tel" placeholder="電話番号" />
+        </div>
+        <input id="lhp-bk-email" type="email" placeholder="メールアドレス" required style="width:100%;margin-bottom:8px" />
+        <input id="lhp-bk-hp" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
+        <p id="lhp-bk-prepay" style="font-size:.85rem;color:#7c3aed;margin:4px 0"></p>
+        <button id="lhp-bk-submit" type="button" style="background-color:${raw('buttonColor')};width:100%">${str('buttonText')}</button>
+        <p class="lhp-form-note" id="lhp-bk-note"></p>
+      </div>
+    </div>
+    <div id="lhp-bk-empty" style="display:none;text-align:center;color:#94a3b8;padding:24px">現在予約可能な枠がありません</div>
+    <div id="lhp-bk-success" style="display:none" class="lhp-form-success">✅ ご予約を受け付けました！確認メールをお送りします。</div>
+  </div>
+</section>
+<script>
+(function(){
+  var sid=window.__LHPSID; if(!sid)return;
+  var root=document.getElementById('lhp-bk'); if(!root)return;
+  var state={slots:[],byDate:{},sel:null,prepay:false,prepayAmount:0};
+  function pad(n){return (''+n).length<2?'0'+n:''+n;}
+  function jst(iso){var d=new Date(iso);return new Date(d.getTime()+9*3600*1000);}
+  function dateKey(iso){var d=jst(iso);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}
+  function dateLabel(key){var p=key.split('-');var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));var days=['日','月','火','水','木','金','土'];return (+p[1])+'/'+(+p[2])+'('+days[d.getUTCDay()]+')';}
+  function timeLabel(iso){var d=jst(iso);return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes());}
+  function show(id,v){var e=document.getElementById(id);if(e)e.style.display=v?'':'none';}
+  fetch('/api/hp/booking/availability?siteId='+encodeURIComponent(sid)).then(function(r){return r.json();}).then(function(data){
+    show('lhp-bk-loading',false);
+    state.slots=data.slots||[];state.prepay=!!data.prepay;state.prepayAmount=data.prepayAmount||0;
+    if(!state.slots.length){show('lhp-bk-empty',true);return;}
+    show('lhp-bk-main',true);
+    state.byDate={};state.slots.forEach(function(s){var k=dateKey(s.datetime);(state.byDate[k]=state.byDate[k]||[]).push(s);});
+    var dc=document.getElementById('lhp-bk-dates');
+    Object.keys(state.byDate).sort().forEach(function(k){
+      var b=document.createElement('button');b.type='button';b.textContent=dateLabel(k);
+      b.style.cssText='padding:8px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
+      b.onclick=function(){selDate(k,b);};dc.appendChild(b);
+    });
+    if(state.prepay&&state.prepayAmount>0){var p=document.getElementById('lhp-bk-prepay');p.textContent='※ ご予約時に予約金 ¥'+state.prepayAmount.toLocaleString()+' のお支払いが必要です';}
+  }).catch(function(){show('lhp-bk-loading',false);show('lhp-bk-empty',true);});
+  function selDate(k,btn){
+    Array.prototype.forEach.call(document.querySelectorAll('#lhp-bk-dates button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
+    btn.style.background='#2563eb';btn.style.color='#fff';btn.style.borderColor='#2563eb';
+    state.sel=null;show('lhp-bk-form',false);
+    var tw=document.getElementById('lhp-bk-times');tw.innerHTML='';
+    state.byDate[k].sort(function(a,b){return a.datetime.localeCompare(b.datetime);}).forEach(function(s){
+      var b=document.createElement('button');b.type='button';b.textContent=timeLabel(s.datetime);
+      b.style.cssText='padding:8px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
+      b.onclick=function(){selTime(s,b);};tw.appendChild(b);
+    });
+    show('lhp-bk-times-wrap',true);
+  }
+  function selTime(s,btn){
+    Array.prototype.forEach.call(document.querySelectorAll('#lhp-bk-times button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
+    btn.style.background='#2563eb';btn.style.color='#fff';btn.style.borderColor='#2563eb';
+    state.sel=s;show('lhp-bk-form',true);
+  }
+  document.getElementById('lhp-bk-submit').addEventListener('click',function(){
+    if(document.getElementById('lhp-bk-hp').value)return;
+    if(!state.sel)return;
+    var name=document.getElementById('lhp-bk-name').value.trim();
+    var email=document.getElementById('lhp-bk-email').value.trim();
+    var phone=document.getElementById('lhp-bk-phone').value.trim();
+    var note=document.getElementById('lhp-bk-note');
+    if(!name||!email){note.textContent='お名前とメールアドレスを入力してください';return;}
+    var btn=this;btn.disabled=true;btn.textContent='送信中...';note.textContent='';
+    fetch('/api/hp/booking/reserve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,slotId:state.sel.id,name:name,email:email,phone:phone,service:state.sel.label})}).then(function(r){return r.json();}).then(function(d){
+      if(d.url){location.href=d.url;return;}
+      if(d.ok){show('lhp-bk-main',false);show('lhp-bk-success',true);return;}
+      note.textContent=d.error||'予約に失敗しました';btn.disabled=false;btn.textContent='${str('buttonText')}';
+    }).catch(function(){note.textContent='予約に失敗しました';btn.disabled=false;btn.textContent='${str('buttonText')}';});
+  });
+})();
+</script>`;
+      }
       return `
 <section data-lhp-anim class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
@@ -540,6 +632,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   });
 })();
 </script>`;
+    }
 
     case 'news': {
       const blockId = block.id;

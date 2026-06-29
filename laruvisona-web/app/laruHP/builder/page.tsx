@@ -261,6 +261,7 @@ const defaultBlock = (type: BlockType): Block => {
     booking: {
       heading: '予約・お問い合わせ',
       subtext: 'ご希望の日時をお選びください',
+      mode: 'simple',
       bgColor: '#f8fafc',
       buttonColor: '#1e3a8a',
       buttonText: '予約を確定する',
@@ -1032,6 +1033,9 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
           <div className="px-8 py-12" style={{ backgroundColor: d.bgColor as string }}>
             {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-2')}
             {editable('subtext', 'p', 'text-gray-500 text-center block mb-8')}
+            {((d.mode as string) || 'simple') === 'calendar' && (
+              <p className="text-center text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-4 max-w-md mx-auto">📅 カレンダーモード：公開サイトでは「予約枠管理」で設定した空き枠が表示されます</p>
+            )}
             <div className="max-w-md mx-auto bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
               <div>
                 <div className="text-sm font-bold text-gray-700 mb-2">サービスを選択</div>
@@ -2424,6 +2428,20 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             )}
             {block?.type === 'booking' && (
               <>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">予約モード</span>
+                  <select value={(d.mode as string) || 'simple'}
+                    onChange={e => onDataChange(block.id, { ...d, mode: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <option value="simple">シンプル（リクエスト送信）</option>
+                    <option value="calendar">カレンダー（空き枠から予約）</option>
+                  </select>
+                </label>
+                {((d.mode as string) || 'simple') === 'calendar' && (
+                  <p className="text-[11px] text-amber-300/80 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 leading-relaxed">
+                    空き枠と<strong>事前決済</strong>は「ダッシュボード → 予約枠管理」で設定します。お客様は公開サイトで空き枠を選んで予約できます。
+                  </p>
+                )}
                 <label className="block">
                   <span className="text-slate-400 block mb-1">ボタン色</span>
                   <input type="color" value={d.buttonColor as string || '#1e3a8a'}
