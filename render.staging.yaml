@@ -21,7 +21,7 @@ services:
     repo: https://github.com/takumichatbot/laruvisona-corp-site
     branch: main
     rootDir: laruvisona-web
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build   # NODE_ENV=production でも devDependencies(tailwind/typescript等)を入れる
     startCommand: npm start
     plan: free                 # 無料インスタンス（テスト時だけ起動・実質¥0。15分無操作でスリープ→次回アクセスで数十秒起動）
     region: singapore
