@@ -137,7 +137,7 @@ const FAQ_ITEMS = [
   },
   {
     q: '年払いプランはありますか？',
-    a: '料金プランページで月払い/年払いを選択できます。年払いは月額換算で約20%お得になります（例：HPプランは月833円）。年払いは一括請求となり、途中解約時の返金はありません。',
+    a: '料金プランページで月払い/年払いを選択できます。年払いは実質2ヶ月分無料でお得です（例：HPプランは年払いで月833円換算）。年払いは一括請求となり、途中解約時の返金はありません。',
   },
 ];
 
@@ -306,7 +306,7 @@ export default function LaruHPLandingPage() {
             </span>
           </h1>
 
-          <p className="lp-hero-sub text-gray-600 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal" style={{ opacity: 0 }}>
+          <p className="lp-hero-sub text-slate-700 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal" style={{ opacity: 0 }}>
             業種情報を入力するだけ。AIが<strong className="text-sky-700 font-semibold">5分以内</strong>にプロ品質のホームページを自動生成。<br className="hidden md:block" />
             SEO・LARUbot連携・ビジュアル編集がすべて月額<strong className="text-sky-700 font-semibold">999円</strong>。
           </p>
@@ -319,14 +319,14 @@ export default function LaruHPLandingPage() {
               <span className="relative">無料で始める（初月無料）</span>
               <span className="relative text-white font-bold">→</span>
             </Link>
-            <Link href="/laruHP/builder"
-              className="lp-hero-cta text-gray-600 hover:text-gray-900 px-9 py-4 rounded-2xl font-medium text-base border border-gray-200 hover:border-sky-300 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center backdrop-blur-sm"
+            <Link href="/laruHP/demo"
+              className="lp-hero-cta text-sky-700 hover:text-sky-800 px-9 py-4 rounded-2xl font-bold text-base border-2 border-sky-600 bg-white hover:bg-sky-50 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center"
               style={{ opacity: 0 }}>
               <span className="text-sky-600">▶</span> デモを体験
             </Link>
           </div>
-          <p className="text-gray-500 text-xs">初月無料 → 月額999円（税別）/ 最低6ヶ月 / クレジットカード決済</p>
-          <p className="text-gray-500 text-xs mt-2">
+          <p className="text-slate-600 text-xs">初月無料 → 月額999円（税別）/ 最低6ヶ月 / クレジットカード決済</p>
+          <p className="text-slate-600 text-xs mt-2">
             既にアカウントをお持ちの方は{' '}
             <Link href="/laruHP/auth/login" className="text-blue-500 hover:text-blue-400 underline underline-offset-2">ログイン</Link>
           </p>
@@ -1140,7 +1140,7 @@ export default function LaruHPLandingPage() {
               className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${annualPricing ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               年払い
-              <span className="text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">20%オフ</span>
+              <span className="text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">2ヶ月無料</span>
             </button>
           </div>
 
@@ -1390,7 +1390,7 @@ export default function LaruHPLandingPage() {
                 <div className="space-y-1.5">
                   <div><Link href="/" className="hover:text-gray-800 transition-colors">会社サイト</Link></div>
                   <div><a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="hover:text-gray-800 transition-colors">LARUbot</a></div>
-                  <div><Link href="/#contact" className="hover:text-gray-800 transition-colors">お問い合わせ</Link></div>
+                  <div><Link href="/laruHP/contact" className="hover:text-gray-800 transition-colors">お問い合わせ</Link></div>
                 </div>
               </div>
               <div>

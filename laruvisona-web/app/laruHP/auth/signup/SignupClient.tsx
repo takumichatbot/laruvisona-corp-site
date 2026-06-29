@@ -12,6 +12,7 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ businessName?: string; email?: string; password?: string }>({});
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/laruHP/onboarding';
@@ -31,10 +32,22 @@ function SignupForm() {
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (password.length < 8) {
-      setError('パスワードは8文字以上で設定してください');
+
+    // 各フィールドを検証し、未入力・不正値の場合はフィールド下部に日本語エラーを表示
+    const errs: { businessName?: string; email?: string; password?: string } = {};
+    if (!businessName.trim()) errs.businessName = '店舗名または会社名を入力してください';
+    if (!email.trim()) errs.email = 'メールアドレスを入力してください';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = '有効なメールアドレスを入力してください';
+    if (!password) errs.password = 'パスワードを入力してください（8文字以上）';
+    else if (password.length < 8) errs.password = 'パスワードは8文字以上で設定してください';
+
+    setFieldErrors(errs);
+    const firstError = (['businessName', 'email', 'password'] as const).find(k => errs[k]);
+    if (firstError) {
+      document.getElementById(`signup-${firstError}`)?.focus();
       return;
     }
+
     setLoading(true);
     setError('');
 
@@ -124,40 +137,45 @@ function SignupForm() {
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-4">
+          <form onSubmit={handleSignup} noValidate className="space-y-4">
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">店舗・会社名</label>
               <input
+                id="signup-businessName"
                 type="text"
-                required
                 value={businessName}
-                onChange={e => setBusinessName(e.target.value)}
+                onChange={e => { setBusinessName(e.target.value); setFieldErrors(f => ({ ...f, businessName: undefined })); }}
                 placeholder="例: 鈴木整体院"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                aria-invalid={!!fieldErrors.businessName}
+                className={`w-full bg-white border rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors ${fieldErrors.businessName ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-sky-500 focus:ring-sky-500'}`}
               />
+              {fieldErrors.businessName && <p className="text-red-500 text-xs mt-1.5">{fieldErrors.businessName}</p>}
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">メールアドレス</label>
               <input
+                id="signup-email"
                 type="email"
-                required
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => { setEmail(e.target.value); setFieldErrors(f => ({ ...f, email: undefined })); }}
                 placeholder="your@email.com"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                aria-invalid={!!fieldErrors.email}
+                className={`w-full bg-white border rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors ${fieldErrors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-sky-500 focus:ring-sky-500'}`}
               />
+              {fieldErrors.email && <p className="text-red-500 text-xs mt-1.5">{fieldErrors.email}</p>}
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">パスワード（8文字以上）</label>
               <input
+                id="signup-password"
                 type="password"
-                required
-                minLength={8}
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={e => { setPassword(e.target.value); setFieldErrors(f => ({ ...f, password: undefined })); }}
                 placeholder="••••••••"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                aria-invalid={!!fieldErrors.password}
+                className={`w-full bg-white border rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors ${fieldErrors.password ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-sky-500 focus:ring-sky-500'}`}
               />
+              {fieldErrors.password && <p className="text-red-500 text-xs mt-1.5">{fieldErrors.password}</p>}
             </div>
             <p className="text-gray-500 text-xs">
               登録することで<a href="/laruHP/terms" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:text-sky-500">利用規約</a>・<a href="/laruHP/privacy" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:text-sky-500">プライバシーポリシー</a>に同意したものとみなします

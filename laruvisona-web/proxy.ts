@@ -17,6 +17,10 @@ const PROTECTED = [
 ];
 const AUTH_PAGES = ['/laruHP/auth/login', '/laruHP/auth/signup'];
 
+// 新規ユーザー向けの導線。未ログインならログインではなく「新規登録」へ誘導する
+// （LPのCTA「初月無料で始める」→ /laruHP/onboarding は新規顧客が大半のため）
+const SIGNUP_FIRST = ['/laruHP/onboarding'];
+
 const MAIN_HOST = (process.env.NEXT_PUBLIC_APP_URL || '')
   .replace(/^https?:\/\//, '')
   .replace(/\/$/, '');
@@ -73,9 +77,11 @@ export async function proxy(request: NextRequest) {
   // Redirect unauthenticated users away from protected pages
   const isProtected = PROTECTED.some(p => pathname.startsWith(p));
   if (isProtected && !user) {
-    const loginUrl = new URL('/laruHP/auth/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    return NextResponse.redirect(loginUrl);
+    const isSignupFirst = SIGNUP_FIRST.some(p => pathname.startsWith(p));
+    const dest = isSignupFirst ? '/laruHP/auth/signup' : '/laruHP/auth/login';
+    const redirectUrl = new URL(dest, request.url);
+    redirectUrl.searchParams.set('redirectTo', pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 
   // Auth pages are always accessible so users can switch accounts

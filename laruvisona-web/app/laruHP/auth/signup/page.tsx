@@ -10,6 +10,9 @@ export const metadata: Metadata = {
     description: '初月無料・月額999円。AIが自動でプロ品質のHPを生成します。',
     images: ['/og-image.png'],
   },
+  alternates: {
+    canonical: 'https://laruvisona.jp/laruHP/auth/signup',
+  },
 };
 
 export default function SignupPage() {

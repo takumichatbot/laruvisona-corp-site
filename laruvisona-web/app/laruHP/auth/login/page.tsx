@@ -10,6 +10,9 @@ export const metadata: Metadata = {
     description: '月額999円・初月無料。小さなお店のためのAI搭載HPビルダー。',
     images: ['/og-image.png'],
   },
+  alternates: {
+    canonical: 'https://laruvisona.jp/laruHP/auth/login',
+  },
 };
 
 export default function LoginPage() {

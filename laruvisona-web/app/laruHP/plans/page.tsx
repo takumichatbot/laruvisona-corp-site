@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -49,6 +50,35 @@ const MONTHLY = { hp: 999, lite: 2980, hpBot: 4980, hpBotSeo: 9800, agency: 1980
 const ANNUAL  = { hp: 833, lite: 2483, hpBot: 4150, hpBotSeo: 8166, agency: 16500 } as const;
 const ANNUAL_TOTAL = { hp: 9990, lite: 29800, hpBot: 49800, hpBotSeo: 98000, agency: 198000 } as const;
 
+// 決済セッションを開始する共通処理。
+// 未ログイン(401)の場合は、選択中のプラン・課金区分を redirectTo に含めてログインへ誘導し、
+// ログイン後にこの /laruHP/plans に戻って自動的に決済を再開できるようにする。
+// 戻り値: エラーメッセージ（画面遷移する場合は null）
+async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promise<string | null> {
+  try {
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, billing }),
+    });
+    if (res.status === 401) {
+      const back = `/laruHP/plans?checkout=${plan}&billing=${billing}`;
+      window.location.href = `/laruHP/auth/login?redirectTo=${encodeURIComponent(back)}`;
+      return null;
+    }
+    if (res.status === 402) return '支払い情報に問題があります。設定からご確認ください。';
+    if (res.status === 429) return 'しばらく待ってからもう一度お試しください。';
+    const data = await res.json().catch(() => ({}));
+    if (data.url) {
+      window.location.href = data.url;
+      return null;
+    }
+    return data.error || 'エラーが発生しました。もう一度お試しください。';
+  } catch {
+    return '接続エラーが発生しました。通信状況をご確認ください。';
+  }
+}
+
 function CheckoutButton({
   plan,
   annual = false,
@@ -66,38 +96,12 @@ function CheckoutButton({
   const handleClick = async () => {
     setLoading(true);
     setError('');
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, billing: annual ? 'annual' : 'monthly' }),
-      });
-      if (res.status === 401) {
-        setLoading(false);
-        window.location.href = `/laruHP/auth/login?redirectTo=/laruHP/plans`;
-        return;
-      }
-      if (res.status === 402) {
-        setError('支払い情報に問題があります。設定からご確認ください。');
-        setLoading(false);
-        return;
-      }
-      if (res.status === 429) {
-        setError('しばらく待ってからもう一度お試しください。');
-        setLoading(false);
-        return;
-      }
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setError(data.error || 'エラーが発生しました。もう一度お試しください。');
-        setLoading(false);
-      }
-    } catch {
-      setError('接続エラーが発生しました。通信状況をご確認ください。');
+    const err = await startCheckout(plan, annual ? 'annual' : 'monthly');
+    if (err) {
+      setError(err);
       setLoading(false);
     }
+    // 成功時は画面遷移するため loading を保持したままにする
   };
 
   return (
@@ -110,12 +114,61 @@ function CheckoutButton({
   );
 }
 
+// ログイン後に ?checkout=<plan>&billing=<...> が付いて戻ってきたら、選んだプランで自動的に決済を再開する
+function CheckoutResume() {
+  const searchParams = useSearchParams();
+  const [resuming, setResuming] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const plan = searchParams.get('checkout');
+    if (!plan) return;
+    const billing = searchParams.get('billing') === 'annual' ? 'annual' : 'monthly';
+    setResuming(true);
+    startCheckout(plan, billing).then(err => {
+      if (err) { setError(err); setResuming(false); }
+    });
+  }, [searchParams]);
+
+  if (!resuming && !error) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-sm flex items-center justify-center px-6">
+      <div className="text-center max-w-sm">
+        {error ? (
+          <>
+            <p className="text-red-600 text-sm mb-2">{error}</p>
+            <p className="text-gray-500 text-sm mb-6">下のプランからもう一度お選びください。</p>
+            <button
+              onClick={() => setError('')}
+              className="bg-sky-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-sky-500 transition-all"
+            >
+              プランを見る
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="w-10 h-10 mx-auto mb-4 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin" />
+            <p className="text-gray-700 text-sm font-semibold">決済ページへ移動しています…</p>
+            <p className="text-gray-400 text-xs mt-1">選択されたプランで手続きを再開しています</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PlansPage() {
   const [annual, setAnnual] = useState(false);
   const P = annual ? ANNUAL : MONTHLY;
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900 overflow-x-hidden">
+
+      {/* ログイン後にプラン選択を保持して決済を自動再開 */}
+      <Suspense fallback={null}>
+        <CheckoutResume />
+      </Suspense>
 
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b border-gray-200">
