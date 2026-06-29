@@ -4,6 +4,13 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
+interface Variant {
+  id: string;
+  name: string;
+  priceDelta: number;
+  stock: number | null;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -14,6 +21,15 @@ interface Product {
   active: boolean;
   category: string;
   createdAt: string;
+  variantLabel?: string;
+  variants?: Variant[];
+}
+
+interface VariantForm {
+  id: string;
+  name: string;
+  priceDelta: string | number;
+  stock: string | number;
 }
 
 interface Site {
@@ -28,6 +44,8 @@ const DEFAULT_FORM = {
   price: 0,
   stock: '' as string | number,
   category: 'その他',
+  variantLabel: '',
+  variants: [] as VariantForm[],
 };
 
 const CATEGORIES = ['その他', 'サービス', '商品', 'デジタルコンテンツ', 'コース・講座', 'チケット'];
@@ -103,6 +121,8 @@ export default function ShopPage() {
           price: form.price,
           stock: form.stock === '' ? null : Number(form.stock),
           category: form.category,
+          variantLabel: form.variantLabel,
+          variants: form.variants.map(v => ({ id: v.id, name: v.name, priceDelta: Number(v.priceDelta) || 0, stock: v.stock === '' ? null : Number(v.stock) })),
         }),
       });
       if (res.ok) {
@@ -282,6 +302,26 @@ export default function ShopPage() {
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* バリエーション（サイズ/色など。任意） */}
+            <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+              <label className="text-xs font-semibold text-gray-600 mb-1.5 block">バリエーション名（任意・例：サイズ／カラー）</label>
+              <input type="text" value={form.variantLabel} onChange={e => setForm(f => ({ ...f, variantLabel: e.target.value }))} className={inputCls} placeholder="例：サイズ" />
+              {form.variantLabel.trim() && (
+                <div className="mt-3 space-y-2">
+                  {form.variants.map((v, i) => (
+                    <div key={v.id} className="flex gap-2 items-center">
+                      <input type="text" value={v.name} onChange={e => setForm(f => ({ ...f, variants: f.variants.map((x, j) => j === i ? { ...x, name: e.target.value } : x) }))} className={inputCls + ' flex-1'} placeholder="選択肢名（例：M）" />
+                      <input type="number" value={v.priceDelta} onChange={e => setForm(f => ({ ...f, variants: f.variants.map((x, j) => j === i ? { ...x, priceDelta: e.target.value } : x) }))} className={inputCls + ' w-24'} placeholder="±円" title="基本価格との差額（円）" />
+                      <input type="number" value={v.stock} onChange={e => setForm(f => ({ ...f, variants: f.variants.map((x, j) => j === i ? { ...x, stock: e.target.value } : x) }))} className={inputCls + ' w-20'} placeholder="在庫" min="0" title="在庫（空=無制限）" />
+                      <button onClick={() => setForm(f => ({ ...f, variants: f.variants.filter((_, j) => j !== i) }))} className="text-red-400 hover:text-red-600 px-1 flex-shrink-0" aria-label="削除">✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => setForm(f => ({ ...f, variants: [...f.variants, { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name: '', priceDelta: '', stock: '' }] }))} className="text-xs text-sky-600 font-semibold hover:text-sky-700">＋ 選択肢を追加</button>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">±円＝基本価格との差額（例：+500）。在庫は選択肢ごとに管理（空=無制限）。バリエーションありの商品は購入時に選択が必須になります。</p>
+                </div>
+              )}
             </div>
 
             {msg && <p className={`text-xs font-semibold ${msgType === 'success' ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}

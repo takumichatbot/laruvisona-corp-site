@@ -33,6 +33,8 @@ interface Product {
   stock: number | null;
   active: boolean;
   category: string;
+  variantLabel?: string;
+  variants?: Array<{ id: string; name: string; priceDelta: number; stock: number | null }>;
 }
 
 export default async function PublicShopPage({ params, searchParams }: Props) {

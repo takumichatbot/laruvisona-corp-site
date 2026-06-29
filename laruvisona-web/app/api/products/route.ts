@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+export interface Variant {
+  id: string;
+  name: string;
+  priceDelta: number;   // 基本価格との差額（円）
+  stock: number | null; // null = 無制限
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -11,6 +18,8 @@ export interface Product {
   active: boolean;
   category: string;
   createdAt: string;
+  variantLabel?: string;   // 例: 「サイズ」「カラー」
+  variants?: Variant[];
 }
 
 async function getProducts(siteId: string, supabase: Awaited<ReturnType<typeof createClient>>): Promise<Product[]> {
@@ -48,15 +57,20 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { siteId, name, description, price, images, stock, category } = await req.json() as {
+  const { siteId, name, description, price, images, stock, category, variantLabel, variants } = await req.json() as {
     siteId: string; name: string; description: string; price: number;
     images?: string[]; stock?: number | null; category?: string;
+    variantLabel?: string; variants?: Variant[];
   };
 
   if (!siteId || !name || price == null) return NextResponse.json({ error: 'siteId, name, price required' }, { status: 400 });
 
   const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const cleanVariants = (variants || [])
+    .filter(v => v && v.name && v.name.trim())
+    .map(v => ({ id: v.id || Date.now().toString() + Math.random().toString(36).slice(2, 6), name: v.name.trim(), priceDelta: Math.round(Number(v.priceDelta) || 0), stock: v.stock == null || (v.stock as unknown) === '' ? null : Number(v.stock) }));
 
   const products = await getProducts(siteId, supabase);
   const newProduct: Product = {
@@ -69,6 +83,7 @@ export async function POST(req: Request) {
     active: true,
     category: category || 'その他',
     createdAt: new Date().toISOString(),
+    ...(variantLabel && cleanVariants.length ? { variantLabel: variantLabel.trim(), variants: cleanVariants } : {}),
   };
   products.push(newProduct);
   await saveProducts(siteId, products, supabase);

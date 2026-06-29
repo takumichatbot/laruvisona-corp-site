@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       if (session.mode === 'payment' && bmeta.kind === 'shop') {
         const shopSiteId = bmeta.laru_site_id;
         if (shopSiteId) {
-          let cart: Array<{ id: string; q: number }> = [];
+          let cart: Array<{ id: string; v?: string; q: number }> = [];
           try { if (bmeta.laru_cart) cart = JSON.parse(bmeta.laru_cart); } catch {}
           if (!cart.length && bmeta.laru_product_id) cart = [{ id: bmeta.laru_product_id, q: 1 }];
 
@@ -82,14 +82,19 @@ export async function POST(req: Request) {
             .single();
           if (shopSite) {
             const settings = (shopSite.settings_json as Record<string, unknown>) || {};
-            const products = (settings.products as Array<{ id: string; name: string; stock: number | null }>) || [];
+            const products = (settings.products as Array<{ id: string; name: string; stock: number | null; variants?: Array<{ id: string; name: string; stock: number | null }> }>) || [];
             const orderLines: string[] = [];
             let changed = false;
             for (const c of cart) {
               const p = products.find(pp => pp.id === c.id);
               if (!p) continue;
-              orderLines.push(`${p.name} × ${c.q}`);
-              if (p.stock !== null && p.stock !== undefined) { p.stock = Math.max(0, p.stock - c.q); changed = true; }
+              const variant = c.v ? p.variants?.find(vv => vv.id === c.v) : undefined;
+              orderLines.push(`${p.name}${variant ? `（${variant.name}）` : ''} × ${c.q}`);
+              if (variant) {
+                if (variant.stock !== null && variant.stock !== undefined) { variant.stock = Math.max(0, variant.stock - c.q); changed = true; }
+              } else if (p.stock !== null && p.stock !== undefined) {
+                p.stock = Math.max(0, p.stock - c.q); changed = true;
+              }
             }
             if (changed) {
               await supabase.from('sites').update({ settings_json: { ...settings, products } }).eq('id', shopSiteId);

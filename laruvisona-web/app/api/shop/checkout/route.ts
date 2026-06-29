@@ -4,16 +4,18 @@ import Stripe from 'stripe';
 
 // POST /api/shop/checkout — カート（複数商品・数量）対応の Stripe Checkout
 // 公開エンドポイント（公開ショップから購入）。単品(productId)も後方互換で受け付ける。
+interface VariantRow { id: string; name: string; priceDelta: number; stock?: number | null }
 interface ProductRow {
   id: string; name: string; description: string; price: number;
   images: string[]; active: boolean; stock?: number | null;
+  variantLabel?: string; variants?: VariantRow[];
 }
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({})) as {
     siteId?: string;
     productId?: string;
-    items?: Array<{ productId: string; quantity: number }>;
+    items?: Array<{ productId: string; variantId?: string; quantity: number }>;
     successUrl?: string;
     cancelUrl?: string;
   };
@@ -34,27 +36,40 @@ export async function POST(req: Request) {
   const products = (((site.settings_json as Record<string, unknown>) || {}).products as ProductRow[]) || [];
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
-  const cart: Array<{ id: string; q: number }> = [];
+  const cart: Array<{ id: string; v?: string; q: number }> = [];
   for (const it of reqItems) {
     const qty = Math.max(1, Math.floor(Number(it.quantity) || 1));
     const product = products.find(p => p.id === it.productId && p.active);
     if (!product) return NextResponse.json({ error: '販売中でない商品が含まれています' }, { status: 404 });
-    if (product.stock !== null && product.stock !== undefined && qty > product.stock) {
-      return NextResponse.json({ error: `「${product.name}」の在庫が不足しています（残り${product.stock}件）` }, { status: 409 });
+
+    // バリエーションあり商品は選択必須
+    let variant: VariantRow | undefined;
+    if (product.variants?.length) {
+      variant = product.variants.find(v => v.id === it.variantId);
+      if (!variant) return NextResponse.json({ error: `「${product.name}」の${product.variantLabel || 'オプション'}を選択してください` }, { status: 400 });
     }
+
+    const stock = variant ? variant.stock : product.stock;
+    if (stock !== null && stock !== undefined && qty > stock) {
+      const label = variant ? `${product.name}（${variant.name}）` : product.name;
+      return NextResponse.json({ error: `「${label}」の在庫が不足しています（残り${stock}件）` }, { status: 409 });
+    }
+
+    const unitAmount = product.price + (variant?.priceDelta || 0);
+    const displayName = variant ? `${product.name}（${variant.name}）` : product.name;
     lineItems.push({
       price_data: {
         currency: 'jpy',
         product_data: {
-          name: product.name,
+          name: displayName,
           ...(product.description ? { description: product.description } : {}),
           ...(product.images?.length ? { images: product.images.slice(0, 8) } : {}),
         },
-        unit_amount: product.price,
+        unit_amount: unitAmount,
       },
       quantity: qty,
     });
-    cart.push({ id: product.id, q: qty });
+    cart.push({ id: product.id, ...(variant ? { v: variant.id } : {}), q: qty });
   }
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
