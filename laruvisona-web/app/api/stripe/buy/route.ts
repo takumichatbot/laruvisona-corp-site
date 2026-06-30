@@ -2,17 +2,35 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 export async function POST(req: Request) {
-  const { priceId, siteUrl } = await req.json() as { priceId: string; siteUrl: string };
+  const { priceId, siteUrl } = await req.json().catch(() => ({})) as { priceId?: string; siteUrl?: string };
   if (!priceId) return NextResponse.json({ error: 'priceId required' }, { status: 400 });
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[stripe/buy] STRIPE_SECRET_KEY is not set');
+    return NextResponse.json({ error: '決済が設定されていません（管理者にお問い合わせください）' }, { status: 500 });
+  }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: siteUrl || `${process.env.NEXT_PUBLIC_APP_URL}/`,
-    cancel_url: siteUrl || `${process.env.NEXT_PUBLIC_APP_URL}/`,
-  });
+  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
+  const base = (siteUrl || origin || 'https://laruvisona.jp/').split('?')[0];
 
-  return NextResponse.json({ url: session.url });
+  try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${base}?payment=success`,
+      cancel_url: `${base}?payment=canceled`,
+      locale: 'ja',
+    });
+    return NextResponse.json({ url: session.url });
+  } catch (err: unknown) {
+    const e = err as { message?: string; code?: string; type?: string };
+    // 多くは priceId がキーのモード/アカウントに存在しない（test鍵にlive priceID等）
+    console.error('[stripe/buy] error:', e?.type, e?.code, e?.message);
+    return NextResponse.json(
+      { error: e?.message || '決済の開始に失敗しました', code: e?.code },
+      { status: 500 }
+    );
+  }
 }

@@ -873,8 +873,8 @@ async function lhpBuy(btn, priceId) {
     var r=await fetch('/api/stripe/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({priceId:priceId,siteUrl:window.location.href})});
     var d=await r.json();
     if(d.url) window.location.href=d.url;
-    else { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; alert('エラーが発生しました'); }
-  } catch(e) { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; }
+    else { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; alert(d.error||'エラーが発生しました'); }
+  } catch(e) { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; alert('通信エラーが発生しました'); }
 }
 </script>` : '';
 
