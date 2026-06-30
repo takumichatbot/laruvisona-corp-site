@@ -15,8 +15,13 @@ export async function POST(req: Request) {
 
   try {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+    // 価格が継続課金(subscription)か単発(payment)かを判定して mode を切り替える
+    const price = await stripe.prices.retrieve(priceId);
+    const mode: Stripe.Checkout.SessionCreateParams.Mode = price.recurring ? 'subscription' : 'payment';
+
     const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
+      mode,
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${base}?payment=success`,
