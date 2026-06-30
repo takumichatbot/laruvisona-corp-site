@@ -81,13 +81,16 @@ export default function AgencyPage() {
   const [brand, setBrand] = useState({ name: '', logo: '', accent: '#0369a1' });
   const [brandSaving, setBrandSaving] = useState(false);
   const [brandSaved, setBrandSaved] = useState(false);
+  const [adminDomain, setAdminDomain] = useState('');
+  const [domainSaving, setDomainSaving] = useState(false);
+  const [domainMsg, setDomainMsg] = useState('');
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace('/laruHP/auth/login?redirectTo=/laruHP/agency'); return; }
 
     const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-    const { data: profile } = await supabase.from('profiles').select('plan, agency_brand_name, agency_logo_url, agency_accent').eq('id', user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('plan, agency_brand_name, agency_logo_url, agency_accent, agency_admin_domain').eq('id', user.id).single();
     if (!isAdmin && profile?.plan !== 'agency') {
       router.replace('/laruHP/plans#agency');
       return;
@@ -97,6 +100,7 @@ export default function AgencyPage() {
       logo: profile?.agency_logo_url || '',
       accent: profile?.agency_accent || '#0369a1',
     });
+    setAdminDomain(profile?.agency_admin_domain || '');
 
     const [{ data: sData }, { data: cData }] = await Promise.all([
       supabase.from('sites').select('id, name, slug, published, view_count, updated_at, created_at, data, settings_json').eq('user_id', user.id),
@@ -115,6 +119,17 @@ export default function AgencyPage() {
   }, [supabase, router]);
 
   useEffect(() => { load(); }, [load]);
+
+  const saveDomain = async () => {
+    setDomainSaving(true); setDomainMsg('');
+    try {
+      const res = await fetch('/api/agency/admin-domain', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: adminDomain }) });
+      const d = await res.json();
+      if (res.ok) setDomainMsg(adminDomain ? `保存しました${d.renderStatus ? `（Render: ${d.renderStatus}）` : ''}。DNSにCNAMEを設定してください。` : '削除しました');
+      else setDomainMsg(d.error || '保存に失敗しました');
+    } catch { setDomainMsg('通信エラー'); }
+    setDomainSaving(false);
+  };
 
   const saveBrand = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -232,6 +247,21 @@ export default function AgencyPage() {
             </button>
             {brandSaved && <span className="text-emerald-400 text-xs">✓ 保存しました（再読み込みで反映）</span>}
             {brand.logo && <img src={brand.logo} alt="" className="h-7 w-auto ml-auto" />}
+          </div>
+
+          {/* 管理画面の独自ドメイン */}
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <span className="text-slate-400 text-[11px] block mb-1">管理画面の独自ドメイン（例: admin.あなたの屋号.com）</span>
+            <div className="flex gap-2">
+              <input type="text" value={adminDomain} onChange={e => setAdminDomain(e.target.value)}
+                placeholder="admin.example.com" className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+              <button onClick={saveDomain} disabled={domainSaving} className="text-sm px-4 py-2 rounded-lg font-bold bg-white/10 hover:bg-white/20 text-white disabled:opacity-50">{domainSaving ? '保存中...' : '保存'}</button>
+            </div>
+            {domainMsg && <p className="text-[11px] text-slate-300 mt-2">{domainMsg}</p>}
+            <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+              保存後、ドメインのDNSに <span className="text-slate-300">CNAME → {(process.env.NEXT_PUBLIC_RENDER_SLUG || 'your-app')}.onrender.com</span> を設定してください。
+              <br />⚠️ Googleログインやメール内リンクは主ドメイン（laruvisona.jp）に飛ぶ仕様です。完全な隠蔽が必要な場合はメール＋パスワードのみでの運用を推奨します。
+            </p>
           </div>
         </div>
 

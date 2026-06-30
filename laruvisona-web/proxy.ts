@@ -25,27 +25,56 @@ const MAIN_HOST = (process.env.NEXT_PUBLIC_APP_URL || '')
   .replace(/^https?:\/\//, '')
   .replace(/\/$/, '');
 
+// 代理店の管理画面ドメイン判定（service roleで参照・5分キャッシュ）
+const adminDomainCache = new Map<string, { v: boolean; t: number }>();
+async function isAgencyAdminDomain(host: string): Promise<boolean> {
+  const c = adminDomainCache.get(host);
+  const now = Date.now();
+  if (c && now - c.t < 5 * 60 * 1000) return c.v;
+  let v = false;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && key) {
+    try {
+      const r = await fetch(`${url}/rest/v1/profiles?agency_admin_domain=eq.${encodeURIComponent(host)}&select=id&limit=1`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+      const d = await r.json();
+      v = Array.isArray(d) && d.length > 0;
+    } catch { /* fail open as non-admin */ }
+  }
+  adminDomainCache.set(host, { v, t: now });
+  return v;
+}
+
 export async function proxy(request: NextRequest) {
   const hostname = (request.headers.get('host') || '').split(':')[0];
   const pathname = request.nextUrl.pathname;
 
-  // Custom domain routing: rewrite non-system hostnames to /hp/by-domain/[domain]
+  const isSystemHost =
+    !hostname ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.endsWith('.vercel.app') ||
+    hostname.endsWith('.onrender.com') ||
+    hostname.endsWith('.local') ||
+    (MAIN_HOST && (hostname === MAIN_HOST || hostname === `www.${MAIN_HOST}`));
+
+  // Custom domain routing: rewrite non-system hostnames（主ドメインは即スキップ＝DB照会なし）
   if (
+    !isSystemHost &&
     !pathname.startsWith('/_next') &&
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/hp') &&
     !pathname.startsWith('/laruHP') &&
     pathname !== '/favicon.ico'
   ) {
-    const isSystemHost =
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname.endsWith('.vercel.app') ||
-      hostname.endsWith('.onrender.com') ||
-      hostname.endsWith('.local') ||
-      (MAIN_HOST && (hostname === MAIN_HOST || hostname === `www.${MAIN_HOST}`));
-
-    if (!isSystemHost && hostname) {
+    // 管理画面の独自ドメインなら、ルートをダッシュボードへ（/laruHP・/api は下で通常処理）
+    if (await isAgencyAdminDomain(hostname)) {
+      if (pathname === '/') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/laruHP/dashboard';
+        return NextResponse.rewrite(url);
+      }
+    } else {
       const url = request.nextUrl.clone();
       url.pathname = `/hp/by-domain/${hostname}`;
       return NextResponse.rewrite(url);
