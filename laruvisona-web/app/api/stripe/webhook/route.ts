@@ -82,14 +82,16 @@ export async function POST(req: Request) {
             .single();
           if (shopSite) {
             const settings = (shopSite.settings_json as Record<string, unknown>) || {};
-            const products = (settings.products as Array<{ id: string; name: string; stock: number | null; variants?: Array<{ id: string; name: string; stock: number | null }> }>) || [];
+            const products = (settings.products as Array<{ id: string; name: string; price: number; stock: number | null; variants?: Array<{ id: string; name: string; priceDelta?: number; stock: number | null }> }>) || [];
             const orderLines: string[] = [];
+            const orderItems: Array<{ name: string; variant: string | null; quantity: number; unit: number }> = [];
             let changed = false;
             for (const c of cart) {
               const p = products.find(pp => pp.id === c.id);
               if (!p) continue;
               const variant = c.v ? p.variants?.find(vv => vv.id === c.v) : undefined;
               orderLines.push(`${p.name}${variant ? `（${variant.name}）` : ''} × ${c.q}`);
+              orderItems.push({ name: p.name, variant: variant ? variant.name : null, quantity: c.q, unit: (p.price || 0) + (variant?.priceDelta || 0) });
               if (variant) {
                 if (variant.stock !== null && variant.stock !== undefined) { variant.stock = Math.max(0, variant.stock - c.q); changed = true; }
               } else if (p.stock !== null && p.stock !== undefined) {
@@ -99,6 +101,27 @@ export async function POST(req: Request) {
             if (changed) {
               await supabase.from('sites').update({ settings_json: { ...settings, products } }).eq('id', shopSiteId);
             }
+
+            // 注文を保存（配送先も取得。webhook再送に備え session_id で重複防止）
+            const cd = session.customer_details;
+            const sdRaw = (session as unknown as { shipping_details?: { name?: string; address?: Record<string, string> } }).shipping_details;
+            const addr = sdRaw?.address || cd?.address || null;
+            const shipping = addr ? {
+              name: sdRaw?.name || cd?.name || '', phone: cd?.phone || '',
+              postal_code: addr.postal_code || '', state: addr.state || '', city: addr.city || '',
+              line1: addr.line1 || '', line2: addr.line2 || '', country: addr.country || '',
+            } : null;
+            await supabase.from('hp_orders').upsert({
+              site_id: shopSiteId,
+              stripe_session_id: session.id,
+              customer_name: cd?.name || null,
+              customer_email: cd?.email || null,
+              customer_phone: cd?.phone || null,
+              amount: session.amount_total || 0,
+              items: orderItems,
+              shipping,
+              status: 'paid',
+            }, { onConflict: 'stripe_session_id', ignoreDuplicates: true });
             const { data: { user: owner } } = await supabase.auth.admin.getUserById(shopSite.user_id);
             const toEmail = (settings.notifyEmail as string) || owner?.email;
             if (toEmail) {

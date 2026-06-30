@@ -65,6 +65,7 @@ export default function ShopPage() {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [showForm, setShowForm] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [collectShipping, setCollectShipping] = useState(false);
 
   const showMsg = (text: string, type: 'success' | 'error' = 'success') => {
     setMsgType(type);
@@ -102,9 +103,22 @@ export default function ShopPage() {
       if (!res.ok) throw new Error('products fetch failed');
       const d = await res.json();
       setProducts(d.products || []);
+      // ショップ設定（配送先収集）も読み込む
+      const { data: siteRow } = await supabase.from('sites').select('settings_json').eq('id', siteId).single();
+      setCollectShipping(!!(siteRow?.settings_json as Record<string, unknown>)?.shopCollectShipping);
     } catch {
       showMsg('商品の読み込みに失敗しました', 'error');
     }
+  };
+
+  const toggleCollectShipping = async (val: boolean) => {
+    if (!selectedSite) return;
+    setCollectShipping(val);
+    const { data: siteRow } = await supabase.from('sites').select('settings_json').eq('id', selectedSite.id).single();
+    const merged = { ...((siteRow?.settings_json as Record<string, unknown>) || {}), shopCollectShipping: val };
+    const { error } = await supabase.from('sites').update({ settings_json: merged }).eq('id', selectedSite.id);
+    if (error) { showMsg('設定の保存に失敗しました', 'error'); setCollectShipping(!val); }
+    else showMsg('設定を保存しました');
   };
 
   const handleCreate = async () => {
@@ -255,6 +269,15 @@ export default function ShopPage() {
             </div>
           </div>
         )}
+
+        {/* ショップ設定 */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-start gap-3">
+          <input id="collectShipping" type="checkbox" checked={collectShipping} onChange={e => toggleCollectShipping(e.target.checked)} className="w-4 h-4 mt-0.5 rounded accent-sky-600" />
+          <label htmlFor="collectShipping" className="text-sm text-gray-700">
+            <span className="font-semibold">配送先住所を集める</span>
+            <span className="block text-xs text-gray-400 mt-0.5">物理商品を発送する場合はオン。決済時にお客様の住所・電話を収集し、注文管理に表示します（サービス・デジタル商品はオフのままでOK）。クーポン入力欄は常に有効です。</span>
+          </label>
+        </div>
 
         {/* Global feedback banner */}
         {msg && (

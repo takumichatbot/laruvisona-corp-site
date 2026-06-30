@@ -33,7 +33,9 @@ export async function POST(req: Request) {
   const { data: site } = await service.from('sites').select('name, settings_json').eq('id', siteId).single();
   if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
 
-  const products = (((site.settings_json as Record<string, unknown>) || {}).products as ProductRow[]) || [];
+  const shopSettings = (site.settings_json as Record<string, unknown>) || {};
+  const products = (shopSettings.products as ProductRow[]) || [];
+  const collectShipping = !!shopSettings.shopCollectShipping;
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
   const cart: Array<{ id: string; v?: string; q: number }> = [];
@@ -81,6 +83,10 @@ export async function POST(req: Request) {
       success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/?payment=success`,
       cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/`,
       locale: 'ja',
+      allow_promotion_codes: true, // クーポン/プロモコード入力を許可（Stripeで作成したコード）
+      phone_number_collection: { enabled: true },
+      // 物販で配送先住所を集める設定の場合のみ収集（デジタル/サービスは不要）
+      ...(collectShipping ? { shipping_address_collection: { allowed_countries: ['JP'] as const } } : {}),
       metadata: {
         kind: 'shop',
         laru_site_id: siteId,
