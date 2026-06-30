@@ -341,6 +341,82 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </script>`;
     }
 
+    case 'member-gate': {
+      const bid = block.id;
+      const requirePaid = d['requirePaid'] ? '1' : '';
+      const priceId = raw('priceId');
+      return `
+<section data-lhp-anim class="lhp-section" id="lhp-mg-${bid}" style="background:${raw('bgColor') || '#f8fafc'}">
+  <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
+  <div style="max-width:480px;margin:0 auto">
+    <!-- 本文（会員のみJSが取得して差し込む。ソースには出力しない） -->
+    <div id="lhp-mg-content-${bid}" style="display:none"></div>
+    <!-- 認証UI（非会員） -->
+    <div id="lhp-mg-auth-${bid}" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;text-align:center">
+      <div style="font-size:32px;margin-bottom:8px">🔒</div>
+      <p style="color:#475569;font-size:14px;margin:0 0 16px">${str('teaser')}</p>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
+        <button type="button" id="lhp-mg-tab-login-${bid}" style="padding:8px 16px;border-radius:10px;border:none;background:#0369a1;color:#fff;font-weight:700;font-size:13px;cursor:pointer">ログイン</button>
+        <button type="button" id="lhp-mg-tab-signup-${bid}" style="padding:8px 16px;border-radius:10px;border:1px solid #bae6fd;background:#fff;color:#0369a1;font-weight:700;font-size:13px;cursor:pointer">無料登録</button>
+      </div>
+      <div id="lhp-mg-form-${bid}" style="text-align:left">
+        <input id="lhp-mg-name-${bid}" type="text" placeholder="お名前（登録時）" style="display:none;width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:8px;box-sizing:border-box" />
+        <input id="lhp-mg-email-${bid}" type="email" placeholder="メールアドレス" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:8px;box-sizing:border-box" />
+        <input id="lhp-mg-pw-${bid}" type="password" placeholder="パスワード" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:8px;box-sizing:border-box" />
+        <input id="lhp-mg-hp-${bid}" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" aria-hidden="true" />
+        <button type="button" id="lhp-mg-submit-${bid}" style="width:100%;padding:12px;border-radius:10px;border:none;background:#0369a1;color:#fff;font-weight:700;cursor:pointer">ログイン</button>
+        <p id="lhp-mg-note-${bid}" style="color:#dc2626;font-size:12px;margin:8px 0 0;text-align:center"></p>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(function(){
+  var sid=window.__LHPSID; if(!sid)return;
+  var bid='${bid}', KEY='laru_member_'+sid, mode='login', REQUIRE_PAID='${requirePaid}', PRICE='${priceId}';
+  var $=function(id){return document.getElementById(id+'-'+bid);};
+  var auth=$('lhp-mg-auth'), content=$('lhp-mg-content'), note=$('lhp-mg-note');
+  function token(){try{return localStorage.getItem(KEY)||''}catch(e){return ''}}
+  function setMode(m){
+    mode=m;
+    $('lhp-mg-name').style.display = m==='signup'?'block':'none';
+    $('lhp-mg-submit').textContent = m==='signup'?'登録する':'ログイン';
+    $('lhp-mg-tab-login').style.background = m==='login'?'#0369a1':'#fff';
+    $('lhp-mg-tab-login').style.color = m==='login'?'#fff':'#0369a1';
+    $('lhp-mg-tab-login').style.border = m==='login'?'none':'1px solid #bae6fd';
+    $('lhp-mg-tab-signup').style.background = m==='signup'?'#0369a1':'#fff';
+    $('lhp-mg-tab-signup').style.color = m==='signup'?'#fff':'#0369a1';
+    $('lhp-mg-tab-signup').style.border = m==='signup'?'none':'1px solid #bae6fd';
+  }
+  $('lhp-mg-tab-login').onclick=function(){setMode('login');};
+  $('lhp-mg-tab-signup').onclick=function(){setMode('signup');};
+  function showContent(html){auth.style.display='none';content.style.display='block';content.innerHTML='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px">'+html+'<div style="text-align:right;margin-top:16px"><a href="#" id="lhp-mg-logout-'+bid+'" style="color:#94a3b8;font-size:12px;text-decoration:underline">ログアウト</a></div></div>';var lo=$('lhp-mg-logout');if(lo)lo.onclick=function(e){e.preventDefault();try{localStorage.removeItem(KEY)}catch(x){}content.style.display='none';auth.style.display='block';};}
+  function showUpgrade(){auth.style.display='none';content.style.display='block';content.innerHTML='<div style="background:#fff;border:1px solid #fde68a;border-radius:16px;padding:24px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⭐</div><p style="color:#475569;font-size:14px;margin:0 0 16px">このコンテンツは<b>有料会員限定</b>です。</p>'+(PRICE?'<button id="lhp-mg-up-'+bid+'" style="padding:12px 24px;border-radius:10px;border:none;background:#f59e0b;color:#fff;font-weight:700;cursor:pointer">有料会員になる</button>':'<p style="color:#94a3b8;font-size:12px">準備中です</p>')+'</div>';var up=$('lhp-mg-up');if(up)up.onclick=function(){up.disabled=true;up.textContent='処理中...';fetch('/api/hp/members/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,token:token(),priceId:PRICE,returnUrl:location.href})}).then(function(r){return r.json()}).then(function(d){if(d.url)location.href=d.url;else{up.disabled=false;up.textContent='有料会員になる';alert(d.error||'開始できませんでした')}}).catch(function(){up.disabled=false;up.textContent='有料会員になる';alert('通信エラー')});};}
+  function loadContent(){
+    var t=token(); if(!t){auth.style.display='block';return;}
+    fetch('/api/hp/members/content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,blockId:bid,token:t})}).then(function(r){return r.json().then(function(d){return{s:r.status,d:d}})}).then(function(x){
+      if(x.s===200&&x.d.html){showContent(x.d.html);}
+      else if(x.s===403){showUpgrade();}
+      else {try{localStorage.removeItem(KEY)}catch(e){}auth.style.display='block';}
+    }).catch(function(){auth.style.display='block';});
+  }
+  $('lhp-mg-submit').onclick=function(){
+    if($('lhp-mg-hp').value)return;
+    var email=$('lhp-mg-email').value.trim(), pw=$('lhp-mg-pw').value, nm=$('lhp-mg-name').value.trim();
+    if(!email||!pw){note.textContent='メールとパスワードを入力してください';return;}
+    var btn=this;btn.disabled=true;var orig=btn.textContent;btn.textContent='送信中...';note.textContent='';
+    var url=mode==='signup'?'/api/hp/members/signup':'/api/hp/members/login';
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,email:email,password:pw,name:nm})}).then(function(r){return r.json().then(function(d){return{s:r.status,d:d}})}).then(function(x){
+      if(x.d.token){try{localStorage.setItem(KEY,x.d.token)}catch(e){}loadContent();}
+      else {btn.disabled=false;btn.textContent=orig;note.textContent=x.d.error||'失敗しました';}
+    }).catch(function(){btn.disabled=false;btn.textContent=orig;note.textContent='通信エラー';});
+  };
+  setMode('login');
+  if(token())loadContent();
+})();
+</script>`;
+    }
+
     case 'contact': {
       const extraFields = (d['extraFields'] as string[]) || [];
       const typeOptions = (d['typeOptions'] as string[])?.filter(Boolean) || [];

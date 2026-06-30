@@ -19,7 +19,7 @@ type BlockType =
   | 'google-reviews'
   | 'announcement-bar' | 'instagram'
   | 'before-after' | 'tabs' | 'team' | 'free'
-  | 'shop-grid' | 'shop-item';
+  | 'shop-grid' | 'shop-item' | 'member-gate';
 
 interface Block {
   id: string;
@@ -218,6 +218,14 @@ const defaultBlock = (type: BlockType): Block => {
       buyText: '購入する',
       bgColor: '#ffffff',
     },
+    'member-gate': {
+      heading: '会員限定コンテンツ',
+      teaser: 'この続きは会員限定です。ログインまたは無料登録してご覧ください。',
+      content: 'ここに会員だけが読める本文を入力します（Markdown対応）。\n\n公開サイトのHTMLには出力されず、ログインした会員のみ取得できます。',
+      requirePaid: false,
+      priceId: '',
+      bgColor: '#f8fafc',
+    },
     free: {
       bg: '#f8fafc',
       height: 600, // 1000幅基準の設計px（aspect-ratio 1000:height で全幅にスケール）
@@ -414,6 +422,7 @@ const BLOCK_PALETTE = [
     { type: 'free' as BlockType, label: 'フリーキャンバス', icon: '🎨' },
     { type: 'shop-grid' as BlockType, label: 'ショップ一覧', icon: '🛍️' },
     { type: 'shop-item' as BlockType, label: '商品（単品）', icon: '🏷️' },
+    { type: 'member-gate' as BlockType, label: '会員限定', icon: '🔒' },
     { type: 'hours' as BlockType, label: '営業時間', icon: '🕐' },
     { type: 'contact' as BlockType, label: 'お問合せ', icon: '📞' },
   ]},
@@ -947,6 +956,23 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
             <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">
               {d.productId ? '🏷️ 公開サイトで選択した商品が表示されます' : '⚠️ 右パネルで商品を選択してください'}
             </p>
+          </div>
+        );
+
+      case 'member-gate':
+        return (
+          <div className="px-8 py-12" style={{ backgroundColor: (d.bgColor as string) || '#f8fafc' }}>
+            {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-3')}
+            <div className="max-w-md mx-auto bg-white rounded-2xl border border-gray-200 p-6 text-center shadow-sm">
+              <div className="text-3xl mb-2">🔒</div>
+              {editable('teaser', 'p', 'text-gray-500 text-sm block mb-4')}
+              <div className="flex gap-2 justify-center">
+                <span className="px-4 py-2 bg-sky-600 text-white rounded-xl text-sm font-bold">ログイン</span>
+                <span className="px-4 py-2 border border-sky-200 text-sky-600 rounded-xl text-sm font-bold">無料登録</span>
+              </div>
+              {(d.requirePaid as boolean) && <p className="text-[11px] text-amber-600 mt-3">★ 有料会員限定</p>}
+            </div>
+            <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">🔒 本文は公開HTMLに出力されず、ログインした会員だけが閲覧できます（右パネルで本文編集）</p>
           </div>
         );
 
@@ -3182,6 +3208,40 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
+            {block?.type === 'member-gate' && (
+              <>
+                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">会員限定コンテンツ</span>
+                <label className="block mb-2">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">ティザー（非会員に見せる案内文）</span>
+                  <textarea rows={2} value={(d.teaser as string) || ''} onChange={e => onDataChange(block.id, { ...d, teaser: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs resize-none" />
+                </label>
+                <label className="block mb-2">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">会員限定の本文（Markdown・公開HTMLには出ません）</span>
+                  <textarea rows={6} value={(d.content as string) || ''} onChange={e => onDataChange(block.id, { ...d, content: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs resize-none" />
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input type="checkbox" checked={!!d.requirePaid} onChange={e => onDataChange(block.id, { ...d, requirePaid: e.target.checked })}
+                    className="w-4 h-4 rounded accent-amber-500" />
+                  <span className="text-white text-xs font-semibold">有料会員限定にする</span>
+                </label>
+                {!!d.requirePaid && (
+                  <label className="block mb-2">
+                    <span className="text-slate-500 text-[10px] block mb-0.5">月額会員の Stripe Price ID（recurring）</span>
+                    <input type="text" value={(d.priceId as string) || ''} placeholder="price_xxxxxxxx"
+                      onChange={e => onDataChange(block.id, { ...d, priceId: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs" />
+                  </label>
+                )}
+                <label className="block">
+                  <span className="text-slate-500 text-[10px] block mb-0.5">背景色</span>
+                  <input type="color" value={(d.bgColor as string) || '#f8fafc'} onChange={e => onDataChange(block.id, { ...d, bgColor: e.target.value })}
+                    className="w-full h-7 rounded cursor-pointer bg-transparent border border-white/20" />
+                </label>
+                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">本文は公開サイトのソースに出力されず、ログインした会員だけがAPI経由で取得します。会員はサイトごとに管理されます。</p>
+              </>
+            )}
             {block?.type === 'hours' && (() => {
               type SchRow = {day:string;hours:string;closed:boolean};
               const schedule = (d.schedule as SchRow[]) || [];
@@ -3379,7 +3439,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 </label>
               </>
             )}
-            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram','before-after','tabs','team','free','shop-grid','shop-item'].includes(block.type) && (
+            {block && !['hero','cta','divider','services','image','gallery','larubot','video','map','countdown','price-table','booking','contact','popup','newsletter','share','stripe-buy','google-reviews','testimonials','faq','hours','heading','paragraph','announcement-bar','instagram','before-after','tabs','team','free','shop-grid','shop-item','member-gate'].includes(block.type) && (
               <div className="text-slate-500 py-4 text-center">
                 キャンバス上でクリックしてテキストを直接編集できます
               </div>

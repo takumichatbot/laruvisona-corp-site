@@ -9,7 +9,7 @@ export type BlockType =
   | 'google-reviews'
   | 'announcement-bar' | 'instagram'
   | 'before-after' | 'tabs' | 'team' | 'free'
-  | 'shop-grid' | 'shop-item';
+  | 'shop-grid' | 'shop-item' | 'member-gate';
 
 export interface Block {
   id: string;

@@ -144,6 +144,20 @@ export async function POST(req: Request) {
         break;
       }
 
+      // 有料会員（mode=subscription, kind=member）: 会員を有料・有効化
+      if (session.mode === 'subscription' && bmeta.kind === 'member') {
+        const memberId = bmeta.member_id;
+        if (memberId) {
+          await supabase.from('hp_members').update({
+            plan: 'paid',
+            status: 'active',
+            stripe_customer_id: typeof session.customer === 'string' ? session.customer : null,
+            stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : null,
+          }).eq('id', memberId);
+        }
+        break;
+      }
+
       if (session.mode !== 'subscription') break;
 
       const meta = (session.metadata || {}) as Record<string, string>;
@@ -351,6 +365,15 @@ export async function POST(req: Request) {
 
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription;
+
+      // 有料会員の解約: 会員を無料に戻す
+      if ((sub.metadata as Record<string, string> | null)?.kind === 'member') {
+        await supabase.from('hp_members')
+          .update({ plan: 'free', stripe_subscription_id: null })
+          .eq('stripe_subscription_id', sub.id);
+        break;
+      }
+
       // stripe_customer_id は変わらないので先に取得
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
       const { data: canceledProfile } = customerId
