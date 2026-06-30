@@ -78,19 +78,25 @@ export default function AgencyPage() {
     referrals: { id: string; plan: string; status: string; joinedAt: string; commission: number }[];
   } | null>(null);
   const [refCopied, setRefCopied] = useState(false);
+  const [brand, setBrand] = useState({ name: '', logo: '', accent: '#0369a1' });
+  const [brandSaving, setBrandSaving] = useState(false);
+  const [brandSaved, setBrandSaved] = useState(false);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace('/laruHP/auth/login?redirectTo=/laruHP/agency'); return; }
 
     const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-    if (!isAdmin) {
-      const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user.id).single();
-      if (profile?.plan !== 'agency') {
-        router.replace('/laruHP/plans#agency');
-        return;
-      }
+    const { data: profile } = await supabase.from('profiles').select('plan, agency_brand_name, agency_logo_url, agency_accent').eq('id', user.id).single();
+    if (!isAdmin && profile?.plan !== 'agency') {
+      router.replace('/laruHP/plans#agency');
+      return;
     }
+    setBrand({
+      name: profile?.agency_brand_name || '',
+      logo: profile?.agency_logo_url || '',
+      accent: profile?.agency_accent || '#0369a1',
+    });
 
     const [{ data: sData }, { data: cData }] = await Promise.all([
       supabase.from('sites').select('id, name, slug, published, view_count, updated_at, created_at, data, settings_json').eq('user_id', user.id),
@@ -109,6 +115,20 @@ export default function AgencyPage() {
   }, [supabase, router]);
 
   useEffect(() => { load(); }, [load]);
+
+  const saveBrand = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setBrandSaving(true);
+    await supabase.from('profiles').update({
+      agency_brand_name: brand.name || null,
+      agency_logo_url: brand.logo || null,
+      agency_accent: brand.accent || null,
+    }).eq('id', user.id);
+    setBrandSaving(false);
+    setBrandSaved(true);
+    setTimeout(() => setBrandSaved(false), 2500);
+  };
 
   const saveClientInfo = async () => {
     if (!selected) return;
@@ -182,6 +202,39 @@ export default function AgencyPage() {
       </div>
 
       <div className="max-w-screen-xl mx-auto px-4 py-6">
+        {/* ホワイトラベル ブランド設定 */}
+        <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-sm font-bold text-white">🏷️ ブランド設定（ホワイトラベル）</h2>
+          </div>
+          <p className="text-[11px] text-slate-500 mb-4">管理画面のロゴ・屋号・アクセント色をあなたのブランドに差し替えます（agencyプラン）。</p>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <label className="block">
+              <span className="text-slate-400 text-[11px] block mb-1">屋号・ブランド名</span>
+              <input type="text" value={brand.name} onChange={e => setBrand(b => ({ ...b, name: e.target.value }))}
+                placeholder="例：〇〇制作所" className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+            </label>
+            <label className="block">
+              <span className="text-slate-400 text-[11px] block mb-1">ロゴ画像URL（任意）</span>
+              <input type="text" value={brand.logo} onChange={e => setBrand(b => ({ ...b, logo: e.target.value }))}
+                placeholder="https://.../logo.png" className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+            </label>
+            <label className="block">
+              <span className="text-slate-400 text-[11px] block mb-1">アクセント色</span>
+              <input type="color" value={brand.accent} onChange={e => setBrand(b => ({ ...b, accent: e.target.value }))}
+                className="w-full h-9 rounded-lg cursor-pointer bg-transparent border border-white/20" />
+            </label>
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <button onClick={saveBrand} disabled={brandSaving}
+              className="text-sm px-5 py-2 rounded-lg font-bold text-white disabled:opacity-50" style={{ background: brand.accent || '#0369a1' }}>
+              {brandSaving ? '保存中...' : 'ブランドを保存'}
+            </button>
+            {brandSaved && <span className="text-emerald-400 text-xs">✓ 保存しました（再読み込みで反映）</span>}
+            {brand.logo && <img src={brand.logo} alt="" className="h-7 w-auto ml-auto" />}
+          </div>
+        </div>
+
         {/* Summary stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[

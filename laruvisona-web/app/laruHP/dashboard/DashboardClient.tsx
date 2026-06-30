@@ -37,6 +37,9 @@ interface Profile {
   plan: string | null;
   contract_ends_at: string | null;
   stripe_customer_id: string | null;
+  agency_brand_name?: string | null;
+  agency_logo_url?: string | null;
+  agency_accent?: string | null;
 }
 
 const INDUSTRY_LABEL: Record<string, string> = {
@@ -283,7 +286,7 @@ export default function DashboardPage() {
 
       const results = await Promise.allSettled([
         fetch('/api/sites').then(r => r.json()),
-        supabase.from('profiles').select('business_name, subscription_status, plan, contract_ends_at, stripe_customer_id').eq('id', user.id).single().then(r => r.data),
+        supabase.from('profiles').select('business_name, subscription_status, plan, contract_ends_at, stripe_customer_id, agency_brand_name, agency_logo_url, agency_accent').eq('id', user.id).single().then(r => r.data),
         fetch('/api/sites/analytics?days=7').then(r => r.json()),
         fetch('/api/contacts').then(r => r.json()),
       ]);
@@ -853,7 +856,14 @@ export default function DashboardPage() {
             <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-30">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
                 <Link href="/laruHP" className="flex items-center gap-2.5">
-                  <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto" />
+                  {rawPlan === 'agency' && (profile?.agency_logo_url || profile?.agency_brand_name) ? (
+                    profile?.agency_logo_url
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={profile.agency_logo_url} alt={profile.agency_brand_name || 'ブランド'} className="h-7 w-auto" />
+                      : <span className="font-black text-lg" style={{ color: profile?.agency_accent || '#0369a1' }}>{profile.agency_brand_name}</span>
+                  ) : (
+                    <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto" />
+                  )}
                 </Link>
                 <div className="flex items-center gap-3">
                   <span className="text-gray-500 text-xs hidden sm:block truncate max-w-[220px]">{userEmail}</span>
