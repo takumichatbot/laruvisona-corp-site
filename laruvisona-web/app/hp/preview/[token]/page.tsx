@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import PublishedSite from '@/components/PublishedSite';
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -34,7 +35,7 @@ export default async function PreviewPage({ params }: Props) {
       <div style={{ background: '#fbbf24', color: '#1e3a8a', padding: '8px 16px', fontSize: '12px', fontWeight: 700, textAlign: 'center', position: 'sticky', top: 0, zIndex: 9999 }}>
         プレビューモード — このURLは関係者のみ共有してください
       </div>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <PublishedSite html={html} />
     </>
   );
 }

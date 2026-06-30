@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import PublishedSite from '@/components/PublishedSite';
 
 interface Props {
   params: Promise<{ domain: string }>;
@@ -123,7 +124,7 @@ export default async function SiteByDomainPage({ params }: Props) {
 
   return (
     <>
-      <div dangerouslySetInnerHTML={{ __html: site.published_html }} style={{ minHeight: '100vh' }} />
+      <PublishedSite html={site.published_html} style={{ minHeight: '100vh' }} />
       {jsonLdStr && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdStr }} />
       )}

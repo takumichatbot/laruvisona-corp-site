@@ -2,6 +2,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import type { Metadata } from 'next';
+import PublishedSite from '@/components/PublishedSite';
 
 // Re-exported so publish route can call it
 export { revalidateTag };
@@ -165,10 +166,7 @@ export default async function PublishedSitePage({ params }: Props) {
 
   return (
     <>
-      <div
-        dangerouslySetInnerHTML={{ __html: eagerHtml }}
-        style={{ minHeight: '100vh' }}
-      />
+      <PublishedSite html={eagerHtml} style={{ minHeight: '100vh' }} />
       {jsonLdStr && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdStr }} />
       )}
