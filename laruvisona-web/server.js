@@ -234,6 +234,7 @@ app.prepare().then(() => {
       await postCron('/api/retention/send');
       await postCron('/api/digest/send');
       await postCron('/api/sms/reminders');
+      await postCron('/api/booking/reminders');
     }
   }
   setInterval(maybeDaily, 30 * 60 * 1000); // 30分ごとに判定

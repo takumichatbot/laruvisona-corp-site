@@ -51,5 +51,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'paid_required', needsUpgrade: true }, { status: 403 });
   }
 
-  return NextResponse.json({ html: renderMarkdown(String(data.content || '')) });
+  return NextResponse.json({ html: renderMarkdown(String(data.content || '')), plan: member.plan });
 }

@@ -33,3 +33,17 @@ export function verifyMemberToken(token: string): MemberToken | null {
     return null;
   }
 }
+
+// パスワードリセット用トークン（短命・専用タイプ）
+export function signResetToken(memberId: string, siteId: string): string {
+  return jwt.sign({ mid: memberId, sid: siteId, typ: 'reset' }, SECRET, { expiresIn: '1h' });
+}
+
+export function verifyResetToken(token: string): { mid: string; sid: string } | null {
+  try {
+    const p = jwt.verify(token, SECRET) as { mid: string; sid: string; typ?: string };
+    return p && p.typ === 'reset' && p.mid && p.sid ? { mid: p.mid, sid: p.sid } : null;
+  } catch {
+    return null;
+  }
+}

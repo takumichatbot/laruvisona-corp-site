@@ -366,6 +366,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
         <input id="lhp-mg-hp-${bid}" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" aria-hidden="true" />
         <button type="button" id="lhp-mg-submit-${bid}" style="width:100%;padding:12px;border-radius:10px;border:none;background:#0369a1;color:#fff;font-weight:700;cursor:pointer">ログイン</button>
         <p id="lhp-mg-note-${bid}" style="color:#dc2626;font-size:12px;margin:8px 0 0;text-align:center"></p>
+        <p style="text-align:center;margin:10px 0 0"><a href="#" id="lhp-mg-forgot-${bid}" style="color:#64748b;font-size:12px;text-decoration:underline">パスワードをお忘れですか？</a></p>
       </div>
     </div>
   </div>
@@ -390,12 +391,18 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   }
   $('lhp-mg-tab-login').onclick=function(){setMode('login');};
   $('lhp-mg-tab-signup').onclick=function(){setMode('signup');};
-  function showContent(html){auth.style.display='none';content.style.display='block';content.innerHTML='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px">'+html+'<div style="text-align:right;margin-top:16px"><a href="#" id="lhp-mg-logout-'+bid+'" style="color:#94a3b8;font-size:12px;text-decoration:underline">ログアウト</a></div></div>';var lo=$('lhp-mg-logout');if(lo)lo.onclick=function(e){e.preventDefault();try{localStorage.removeItem(KEY)}catch(x){}content.style.display='none';auth.style.display='block';};}
+  $('lhp-mg-forgot').onclick=function(e){e.preventDefault();var em=prompt('登録メールアドレスを入力してください');if(!em)return;fetch('/api/hp/members/request-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,email:em})}).then(function(){alert('パスワード再設定メールを送信しました（登録済みの場合）。メールをご確認ください。');}).catch(function(){alert('送信に失敗しました');});};
+  function showContent(html,plan){auth.style.display='none';content.style.display='block';
+    var foot='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">'+(plan==='paid'?'<a href="#" id="lhp-mg-portal-'+bid+'" style="color:#0369a1;font-size:12px;text-decoration:underline">お支払い・解約</a>':'<span></span>')+'<a href="#" id="lhp-mg-logout-'+bid+'" style="color:#94a3b8;font-size:12px;text-decoration:underline">ログアウト</a></div>';
+    content.innerHTML='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px">'+html+foot+'</div>';
+    var lo=$('lhp-mg-logout');if(lo)lo.onclick=function(e){e.preventDefault();try{localStorage.removeItem(KEY)}catch(x){}content.style.display='none';auth.style.display='block';};
+    var po=$('lhp-mg-portal');if(po)po.onclick=function(e){e.preventDefault();fetch('/api/hp/members/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,token:token(),returnUrl:location.href})}).then(function(r){return r.json()}).then(function(d){if(d.url)location.href=d.url;else alert(d.error||'開けませんでした')}).catch(function(){alert('通信エラー')});};
+  }
   function showUpgrade(){auth.style.display='none';content.style.display='block';content.innerHTML='<div style="background:#fff;border:1px solid #fde68a;border-radius:16px;padding:24px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⭐</div><p style="color:#475569;font-size:14px;margin:0 0 16px">このコンテンツは<b>有料会員限定</b>です。</p>'+(PRICE?'<button id="lhp-mg-up-'+bid+'" style="padding:12px 24px;border-radius:10px;border:none;background:#f59e0b;color:#fff;font-weight:700;cursor:pointer">有料会員になる</button>':'<p style="color:#94a3b8;font-size:12px">準備中です</p>')+'</div>';var up=$('lhp-mg-up');if(up)up.onclick=function(){up.disabled=true;up.textContent='処理中...';fetch('/api/hp/members/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,token:token(),priceId:PRICE,returnUrl:location.href})}).then(function(r){return r.json()}).then(function(d){if(d.url)location.href=d.url;else{up.disabled=false;up.textContent='有料会員になる';alert(d.error||'開始できませんでした')}}).catch(function(){up.disabled=false;up.textContent='有料会員になる';alert('通信エラー')});};}
   function loadContent(){
     var t=token(); if(!t){auth.style.display='block';return;}
     fetch('/api/hp/members/content',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,blockId:bid,token:t})}).then(function(r){return r.json().then(function(d){return{s:r.status,d:d}})}).then(function(x){
-      if(x.s===200&&x.d.html){showContent(x.d.html);}
+      if(x.s===200&&x.d.html){showContent(x.d.html,x.d.plan);}
       else if(x.s===403){showUpgrade();}
       else {try{localStorage.removeItem(KEY)}catch(e){}auth.style.display='block';}
     }).catch(function(){auth.style.display='block';});
@@ -1434,7 +1441,9 @@ window.addEventListener('popstate',function(){
     return multiPage
       ? `<div id="${page.id}" class="lhp-page"${idx > 0 ? ' hidden' : ''}>${blocksHtml}</div>`
       : blocksHtml;
-  }).join('\n');
+  }).join('\n')
+    // 画像の遅延読み込み・非同期デコードでLCP/表示速度を改善（loading未指定の<img>のみ）
+    .replace(/<img (?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async" ');
 
   const siteIdScript = businessInfo?.siteId
     ? `<script>window.__LHPSID='${businessInfo.siteId}';</script>`
