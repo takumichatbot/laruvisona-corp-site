@@ -9,27 +9,33 @@ export default function Intro({ onComplete }: { onComplete: () => void }) {
   const taglineRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const tl = gsap.timeline();
+  // onComplete を ref に保持（毎レンダーでeffectが再実行＝アニメ再スタートするのを防ぐ）
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
-    // グロー
+  useEffect(() => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; onCompleteRef.current(); };
+
+    const tl = gsap.timeline();
     tl.to(glowRef.current, { opacity: 1, scale: 1.4, duration: 1.2, ease: 'power2.out' }, 0)
-    // ロゴ出現
       .to(logoRef.current, { opacity: 1, scale: 1, rotate: 0, duration: 0.8, ease: 'back.out(1.4)' }, 0.2)
-    // タグライン
       .to(taglineRef.current, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, 0.8)
-    // ポーズ
       .to({}, { duration: 0.5 }, 1.3)
-    // オーバーレイをスライドアップで退場
       .to(overlayRef.current, {
         yPercent: -100,
         duration: 1.0,
         ease: 'power4.inOut',
-        onComplete,
+        onComplete: finish,
       }, 1.8);
 
-    return () => { tl.kill(); };
-  }, [onComplete]);
+    // 保険: GSAPが完了しなくても必ずイントロを閉じる（オーバーレイ残留を防止）
+    const fallback = setTimeout(finish, 4500);
+
+    return () => { tl.kill(); clearTimeout(fallback); };
+    // 一度だけ実行（onComplete は ref 経由で参照）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div

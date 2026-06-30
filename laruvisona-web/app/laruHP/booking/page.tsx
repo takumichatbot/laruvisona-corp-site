@@ -52,13 +52,22 @@ export default function BookingPage() {
   const [newSlot, setNewSlot] = useState({ date: '', time: '10:00', duration: 60, label: '相談・カウンセリング' });
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [newBooking, setNewBooking] = useState<Booking | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { window.location.href = '/laruHP/auth/login?redirectTo=/laruHP/booking'; return; }
-    const { data } = await supabase.from('sites').select('id, name, data').eq('user_id', user.id);
-    setSites(data ?? []);
-    if (data && data.length > 0 && !siteId) setSiteId(data[0].id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = '/laruHP/auth/login?redirectTo=/laruHP/booking'; return; }
+      const { data, error } = await supabase.from('sites').select('id, name, data').eq('user_id', user.id);
+      if (error) { setLoadError(error.message); return; }
+      setSites(data ?? []);
+      if (data && data.length > 0 && !siteId) setSiteId(data[0].id);
+    } catch (e) {
+      setLoadError((e as Error)?.message || '読み込みに失敗しました');
+    } finally {
+      setLoaded(true);
+    }
   }, [supabase, siteId]);
 
   useEffect(() => { load(); }, [load]);
@@ -147,10 +156,33 @@ export default function BookingPage() {
   const upcoming = config.slots.filter(s => new Date(s.datetime) >= today);
   const past = config.slots.filter(s => new Date(s.datetime) < today);
 
-  if (sites.length === 0 && siteId === '') {
+  // 読み込み完了まで（エラー時も無限ローディングにしない）
+  if (!loaded) {
     return (
       <div className="min-h-screen bg-[#030712] flex items-center justify-center">
         <div className="text-slate-500 text-sm">読み込み中...</div>
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6">
+        <div className="text-center max-w-sm">
+          <p className="text-red-300 text-sm font-semibold mb-3">読み込みに失敗しました</p>
+          <p className="text-slate-500 text-xs mb-4 break-all">{loadError}</p>
+          <button onClick={() => { setLoadError(''); setLoaded(false); load(); }} className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg">再読み込み</button>
+        </div>
+      </div>
+    );
+  }
+  if (sites.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6">
+        <div className="text-center max-w-sm">
+          <p className="text-slate-300 text-sm font-semibold mb-2">サイトがありません</p>
+          <p className="text-slate-500 text-xs mb-4">先にビルダーでサイトを作成・公開してください。</p>
+          <a href="/laruHP/dashboard" className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg">ダッシュボードへ</a>
+        </div>
       </div>
     );
   }
