@@ -12,13 +12,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
 
   // Paywall: require active subscription to publish
+  // 管理者はバイパス（ダッシュボードは管理者を「有効」表示するため、ここも揃えないと
+  // 契約済み表示なのにプラン選択モーダルが出る不整合が起きる）
+  const adminEmails = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || '')
+    .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const isAdmin = adminEmails.includes((user.email || '').toLowerCase());
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('subscription_status')
     .eq('id', user.id)
     .single();
 
-  if (profile?.subscription_status !== 'active') {
+  if (!isAdmin && profile?.subscription_status !== 'active') {
     return NextResponse.json(
       { error: 'subscription_required', message: 'サイトの公開にはサブスクリプションが必要です' },
       { status: 403 }

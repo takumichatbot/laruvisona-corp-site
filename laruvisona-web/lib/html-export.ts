@@ -747,7 +747,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     if(!state.slots.length){show('lhp-bk-empty',true);return;}
     show('lhp-bk-main',true);
     state.byDate={};state.slots.forEach(function(s){var k=dateKey(s.datetime);(state.byDate[k]=state.byDate[k]||[]).push(s);});
-    var dc=$id('lhp-bk-dates');
+    var dc=$id('lhp-bk-dates');dc.innerHTML='';
     Object.keys(state.byDate).sort().forEach(function(k){
       var b=document.createElement('button');b.type='button';b.textContent=dateLabel(k);
       b.style.cssText='padding:8px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
@@ -1453,7 +1453,9 @@ window.addEventListener('popstate',function(){
       : blocksHtml;
   }).join('\n')
     // 画像の遅延読み込み・非同期デコードでLCP/表示速度を改善（loading未指定の<img>のみ）
-    .replace(/<img (?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async" ');
+    .replace(/<img (?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async" ')
+    // ファーストビュー（最初のブロック）はスクロールアニメ対象から外して即時表示（白紙時間対策）
+    .replace('data-lhp-anim', 'data-lhp-instant data-lhp-anim');
 
   const siteIdScript = businessInfo?.siteId
     ? `<script>window.__LHPSID='${businessInfo.siteId}';</script>`
@@ -1591,7 +1593,13 @@ window.addEventListener('popstate',function(){
   // Scroll animation + typewriter + counter script
   const animScript = `<script>
 (function(){
-  /* JSが動いたら CSS の自動表示フォールバック(lhp-auto-reveal)を解除し、スクロール連動に切替 */
+  /* JSが動いたら CSS の自動表示フォールバック(lhp-auto-reveal)を解除し、スクロール連動に切替。
+     解除前に、既に画面内にある要素へ lhp-visible を付けておかないと
+     「フォールバックで表示→lhp-jsで一瞬消える」ちらつきが出る */
+  document.querySelectorAll('[data-lhp-anim]').forEach(function(el){
+    var r=el.getBoundingClientRect();
+    if(r.top<window.innerHeight&&r.bottom>0)el.classList.add('lhp-visible');
+  });
   document.documentElement.classList.add('lhp-js');
   /* ── scroll reveal ── */
   var animLevel='${animLevel}';
@@ -1683,9 +1691,10 @@ ${clarityScript}
 <link href="https://fonts.googleapis.com/css2?family=${font.url}&display=swap" rel="stylesheet">
 <style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern}--lhp-accent:${accentColor};}${CSS}</style>
 <style>${fontCss}
-${animLevel === 'none' ? '[data-lhp-anim]{opacity:1!important;transform:none!important}' : `[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:${animLevel === 'subtle' ? '.4s' : '.6s'};animation:lhp-auto-reveal .6s ease 1.8s forwards}
+${animLevel === 'none' ? '[data-lhp-anim]{opacity:1!important;transform:none!important}' : `[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:${animLevel === 'subtle' ? '.4s' : '.6s'};animation:lhp-auto-reveal .6s ease 1s forwards}
 html.lhp-js [data-lhp-anim]{animation:none}
 @keyframes lhp-auto-reveal{to{opacity:1;transform:none}}
+[data-lhp-instant]{opacity:1!important;transform:none!important;animation:none!important}
 [data-lhp-anim="fade"]{transform:none}
 [data-lhp-anim="slide-up"]{transform:translateY(32px)}
 [data-lhp-anim="slide-left"]{transform:translateX(-32px)}

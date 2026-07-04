@@ -33,9 +33,10 @@ export async function POST(req: Request) {
     const e = err as { message?: string; code?: string; type?: string };
     // 多くは priceId がキーのモード/アカウントに存在しない（test鍵にlive priceID等）
     console.error('[stripe/buy] error:', e?.type, e?.code, e?.message);
-    return NextResponse.json(
-      { error: e?.message || '決済の開始に失敗しました', code: e?.code },
-      { status: 500 }
-    );
+    // Stripeの生メッセージは英語かつ priceID・key mode 等の内部情報を含むため顧客には返さない
+    const friendly = (e?.code === 'resource_missing' || e?.type === 'StripeInvalidRequestError')
+      ? 'この商品は現在購入できません。お手数ですがサイト運営者にお問い合わせください。'
+      : '決済の開始に失敗しました。しばらくしてからもう一度お試しください。';
+    return NextResponse.json({ error: friendly }, { status: 500 });
   }
 }

@@ -36,6 +36,7 @@ interface Site {
   id: string;
   name: string;
   slug: string | null;
+  published?: boolean;
 }
 
 const DEFAULT_FORM = {
@@ -82,7 +83,7 @@ export default function ShopPage() {
         const res = await fetch('/api/sites');
         if (!res.ok) throw new Error('sites fetch failed');
         const d = await res.json();
-        const s: Site[] = (d.sites || []).map((x: Site) => ({ id: x.id, name: x.name, slug: x.slug }));
+        const s: Site[] = (d.sites || []).map((x: Site) => ({ id: x.id, name: x.name, slug: x.slug, published: x.published }));
         setSites(s);
         if (s.length > 0) {
           setSelectedSite(s[0]);
@@ -267,6 +268,11 @@ export default function ShopPage() {
                 コピー
               </button>
             </div>
+            {!selectedSite.published && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                ⚠️ このサイトはまだ未公開のため、上記URLは404になります。ダッシュボードから「公開する」を実行するとアクセスできるようになります。
+              </p>
+            )}
           </div>
         )}
 
