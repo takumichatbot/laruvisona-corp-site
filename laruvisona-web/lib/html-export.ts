@@ -1,5 +1,10 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 
+// 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
+// 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
+// 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
+export const EXPORT_VERSION = 2;
+
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -1858,5 +1863,5 @@ ${settings.globalFooter.links.map(l => `<a href="${escapeHtml(l.href)}" style="c
 </div>
 </footer>` : ''}
 </body>
-</html>`;
+</html><!--lhpv:${EXPORT_VERSION}-->`;
 }

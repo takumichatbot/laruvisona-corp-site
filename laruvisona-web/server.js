@@ -192,6 +192,29 @@ app.prepare().then(() => {
   setTimeout(triggerSequences, 30 * 1000);
   setInterval(triggerSequences, 15 * 60 * 1000);
 
+  // デプロイ後の一括再公開: html-export の EXPORT_VERSION が上がっていたら、
+  // 古いバージョンの published_html だけを自動再生成（オーナーの手動再公開を不要にする）
+  async function triggerRepublishOutdated() {
+    if (!process.env.ADMIN_SECRET) return;
+    try {
+      const r = await fetch(`${SELF}/api/admin/republish-all`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.ADMIN_SECRET}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ onlyOutdated: true }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.total > 0) console.log(`[republish] v${d.version}: ${d.updated}/${d.total} sites regenerated`, d.failed?.length ? JSON.stringify(d.failed) : '');
+      } else {
+        console.warn('[republish] status', r.status);
+      }
+    } catch (e) { console.warn('[republish] error:', e?.message); }
+  }
+  setTimeout(triggerRepublishOutdated, 60 * 1000); // 起動60秒後（Nextのウォームアップ後）
+
   // 週次レポート: JST 月曜 8時台に1回だけ（同一週の二重送信を防ぐ）
   let _lastWeeklyKey = '';
   async function maybeWeeklyReport() {
