@@ -16,9 +16,12 @@ const Scene = dynamic(() => import('@/components/Canvas/Scene'), { ssr: false })
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [inquiryPrefill, setInquiryPrefill] = useState('');
   const horizontalScrollRef = useRef<HTMLDivElement>(null);
-  
-  const handleConsult = () => {
+
+  // 見積もりシミュレーターの内容を問い合わせフォームに引き継いでスクロール
+  const handleConsult = (estimateDetails: string) => {
+    setInquiryPrefill(estimateDetails);
     setTimeout(() => {
       document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -198,7 +201,8 @@ export default function Home() {
           
           <p className="gsap-hero opacity-0 translate-y-10 text-slate-400 text-base md:text-xl font-medium mt-4 max-w-2xl leading-relaxed">
             「想像」を「実装」する。<br />
-            AIとモダンWeb技術を駆使し、あなたのビジネスを次の次元へ。
+            AI・Webアプリの受託開発と、月額999円のHPビルダー「LARU HP」。<br className="hidden sm:block" />
+            あなたのビジネスを次の次元へ。
           </p>
           
           <div className="gsap-hero opacity-0 translate-y-10 mt-12">
@@ -513,7 +517,7 @@ export default function Home() {
             <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">お問い合わせ</h2>
             <p className="text-slate-400 mb-16 text-lg">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
             
-            <InquiryForm dark />
+            <InquiryForm dark prefillMessage={inquiryPrefill} />
 
           </div>
         </section>

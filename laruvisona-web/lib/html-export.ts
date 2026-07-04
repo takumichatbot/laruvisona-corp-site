@@ -713,6 +713,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
         <div id="lhp-bk-times-${bkid}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px"></div>
       </div>
       <div id="lhp-bk-form-${bkid}" style="display:none">
+        <p id="lhp-bk-confirm-${bkid}" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;font-size:.9rem;font-weight:700;color:#1d4ed8;margin:0 0 12px"></p>
         <div class="lhp-form-row">
           <input id="lhp-bk-name-${bkid}" type="text" placeholder="お名前" required />
           <input id="lhp-bk-phone-${bkid}" type="tel" placeholder="電話番号" />
@@ -725,7 +726,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       </div>
     </div>
     <div id="lhp-bk-empty-${bkid}" style="display:none;text-align:center;color:#94a3b8;padding:24px">現在予約可能な枠がありません</div>
-    <div id="lhp-bk-success-${bkid}" style="display:none" class="lhp-form-success">✅ ご予約を受け付けました！確認メールをお送りします。</div>
+    <div id="lhp-bk-success-${bkid}" style="display:none" class="lhp-form-success">✅ ご予約を受け付けました！確認メールをお送りします。<br><a id="lhp-bk-gcal-${bkid}" href="#" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:.875rem;color:#1d4ed8;font-weight:700;text-decoration:underline">📅 Googleカレンダーに追加</a></div>
   </div>
 </section>
 <script>
@@ -749,7 +750,13 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     state.byDate={};state.slots.forEach(function(s){var k=dateKey(s.datetime);(state.byDate[k]=state.byDate[k]||[]).push(s);});
     var dc=$id('lhp-bk-dates');dc.innerHTML='';
     Object.keys(state.byDate).sort().forEach(function(k){
-      var b=document.createElement('button');b.type='button';b.textContent=dateLabel(k);
+      var b=document.createElement('button');b.type='button';
+      var n=state.byDate[k].length;
+      b.textContent=dateLabel(k);
+      var badge=document.createElement('span');
+      badge.textContent='残'+n;
+      badge.style.cssText='margin-left:6px;font-size:.7rem;font-weight:700;padding:1px 6px;border-radius:100px;background:'+(n<=2?'#fef2f2':'#f0f9ff')+';color:'+(n<=2?'#dc2626':'#0369a1');
+      b.appendChild(badge);
       b.style.cssText='padding:8px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
       b.onclick=function(){selDate(k,b);};dc.appendChild(b);
     });
@@ -770,7 +777,10 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   function selTime(s,btn){
     Array.prototype.forEach.call($id('lhp-bk-times').querySelectorAll('button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
     btn.style.background='#2563eb';btn.style.color='#fff';btn.style.borderColor='#2563eb';
-    state.sel=s;show('lhp-bk-form',true);
+    state.sel=s;
+    var cf=$id('lhp-bk-confirm');
+    if(cf)cf.textContent='📅 '+dateLabel(dateKey(s.datetime))+' '+timeLabel(s.datetime)+(s.label?' — '+s.label:'')+' で予約します';
+    show('lhp-bk-form',true);
   }
   $id('lhp-bk-submit').addEventListener('click',function(){
     if($id('lhp-bk-hp').value)return;
@@ -783,7 +793,15 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     var btn=this;btn.disabled=true;btn.textContent='送信中...';note.textContent='';
     fetch('/api/hp/booking/reserve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,slotId:state.sel.id,name:name,email:email,phone:phone,service:state.sel.label})}).then(function(r){return r.json();}).then(function(d){
       if(d.url){location.href=d.url;return;}
-      if(d.ok){show('lhp-bk-main',false);show('lhp-bk-success',true);return;}
+      if(d.ok){
+        var g=$id('lhp-bk-gcal');
+        if(g&&state.sel){
+          var z=function(x){return x.toISOString().replace(/[-:]|\\.\\d{3}/g,'');};
+          var st=new Date(state.sel.datetime);var en=new Date(st.getTime()+3600000);
+          g.href='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('ご予約'+(state.sel.label?'：'+state.sel.label:''))+'&dates='+z(st)+'/'+z(en);
+        }
+        show('lhp-bk-main',false);show('lhp-bk-success',true);return;
+      }
       note.textContent=d.error||'予約に失敗しました';btn.disabled=false;btn.textContent='${str('buttonText')}';
     }).catch(function(){note.textContent='予約に失敗しました';btn.disabled=false;btn.textContent='${str('buttonText')}';});
   });
@@ -1445,6 +1463,14 @@ window.addEventListener('popstate',function(){
 });
 </script>` : '';
 
+  // デザイン設定（pagesHtml より前に宣言が必要 — renderBlock に渡すため。
+  // 以前は宣言前参照になっており、本番ビルドでは undefined が渡って設定が無視される潜在バグだった）
+  const designStyle = settings.designStyle || 'modern';
+  const accentColor = settings.accentColor || '#f59e0b';
+  const heroLayout  = settings.heroLayout  || 'center';
+  const headerStyle = settings.headerStyle || 'transparent';
+  const animLevel   = settings.animLevel   || 'full';
+
   // Page sections
   const pagesHtml = pages.map((page, idx) => {
     const blocksHtml = page.blocks.map(b => renderBlock(b, { heroLayout, accentColor })).filter(Boolean).join('\n');
@@ -1583,12 +1609,6 @@ window.addEventListener('popstate',function(){
   const fontKey = settings.fontFamily || 'noto';
   const font = FONT_MAP[fontKey] || FONT_MAP['noto'];
   const fontCss = `body,input,textarea,select,button{font-family:${font.family},-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}`;
-
-  const designStyle = settings.designStyle || 'modern';
-  const accentColor = settings.accentColor || '#f59e0b';
-  const heroLayout  = settings.heroLayout  || 'center';
-  const headerStyle = settings.headerStyle || 'transparent';
-  const animLevel   = settings.animLevel   || 'full';
 
   // Scroll animation + typewriter + counter script
   const animScript = `<script>

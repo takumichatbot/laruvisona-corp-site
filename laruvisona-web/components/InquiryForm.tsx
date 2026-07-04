@@ -1,10 +1,15 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function InquiryForm({ dark = false }: { dark?: boolean }) {
+export default function InquiryForm({ dark = false, prefillMessage = '' }: { dark?: boolean; prefillMessage?: string }) {
   const [form, setForm] = useState({ name: '', email: '', company: '', message: '', _hp: '' });
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
+
+  // 見積もりシミュレーター等からの引き継ぎ（「この内容で相談する」を押すたびに最新の内容で上書き）
+  useEffect(() => {
+    if (prefillMessage) setForm(f => ({ ...f, message: prefillMessage }));
+  }, [prefillMessage]);
 
   const inputCls = dark
     ? 'w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 transition-colors'

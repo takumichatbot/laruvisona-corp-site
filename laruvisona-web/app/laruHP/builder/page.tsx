@@ -4228,6 +4228,7 @@ function BuilderContent() {
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [pendingSiteId, setPendingSiteId] = useState<string | null>(null);
+  const [publishWarnings, setPublishWarnings] = useState<string[] | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [versions, setVersions] = useState<{ id: string; label: string; created_at: string }[]>([]);
@@ -5117,7 +5118,39 @@ function BuilderContent() {
     setSaving(false);
   };
 
-  const handlePublish = async () => {
+  // 公開前チェック: 未設定・プレースホルダのまま公開して事故になりやすいものを検知
+  const collectPublishWarnings = (): string[] => {
+    const warns: string[] = [];
+    site.pages.forEach(p => {
+      const bookingCount = p.blocks.filter(b => b.type === 'booking').length;
+      if (bookingCount > 1) {
+        warns.push(`ページ「${p.name}」に予約ブロックが${bookingCount}個あります。意図した配置でなければ1つ削除してください`);
+      }
+      p.blocks.forEach(b => {
+        if (b.type === 'stripe-buy') {
+          const d = b.data as Record<string, unknown>;
+          const pid = String(d.priceId ?? '').trim();
+          if (!/^price_[A-Za-z0-9]+$/.test(pid)) {
+            warns.push(`ページ「${p.name}」の購入ボタン: Stripe価格ID（price_...）が未設定のため、公開HPには表示されません`);
+          }
+          if (String(d.label ?? '') === '商品名' || String(d.description ?? '').includes('を入力してください')) {
+            warns.push(`ページ「${p.name}」の購入ボタン: 商品名・説明が初期文言のままです`);
+          }
+        }
+      });
+    });
+    return warns;
+  };
+
+  const handlePublish = async (force?: unknown) => {
+    // onClick から呼ばれると force に MouseEvent が入るため、明示的な true のみ強制公開扱い
+    if (force !== true) {
+      const warns = collectPublishWarnings();
+      if (warns.length > 0) {
+        setPublishWarnings(warns);
+        return;
+      }
+    }
     setPublishing(true);
     let id = dbSiteId;
     if (!id) {
@@ -6543,6 +6576,33 @@ function BuilderContent() {
       )}
 
       {/* Plan picker modal */}
+      {publishWarnings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+            <h2 className="text-white font-bold text-lg mb-1">⚠️ 公開前の確認</h2>
+            <p className="text-slate-400 text-sm mb-4">未設定のまま公開すると訪問者にそのまま表示されます。</p>
+            <ul className="space-y-2 mb-5 max-h-60 overflow-y-auto">
+              {publishWarnings.map((w, i) => (
+                <li key={i} className="text-amber-300 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">{w}</li>
+              ))}
+            </ul>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPublishWarnings(null)}
+                className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-all"
+              >
+                戻って修正する
+              </button>
+              <button
+                onClick={() => { setPublishWarnings(null); void handlePublish(true); }}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all"
+              >
+                このまま公開する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showPlanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
