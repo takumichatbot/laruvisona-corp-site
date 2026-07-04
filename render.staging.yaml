@@ -3,7 +3,9 @@
 #
 # 目的: ログイン＋決済を「実害ゼロ」で検証するためのテスト用サイト。
 #   - Stripe は【テストキー】を使う（テストカード 4242... で課金されない）
-#   - Supabase は本番と同じでOK（テスト登録ユーザーは後で削除）
+#   - Supabase は【必ずステージング専用プロジェクト（またはブランチDB）】を使う
+#     ⚠️ 本番と同じDBを共有すると、ステージングのテスト決済Webhookが
+#        本番ショップの在庫を減らす等、本番データを汚染する（2026-07-04 実際に発生）
 #
 # 使い方:
 #   Render → New → Blueprint → このリポジトリ → Blueprint Path に render.staging.yaml
@@ -58,7 +60,7 @@ services:
       - key: STRIPE_WEBHOOK_SECRET
         sync: false            # テストのwebhook secret（任意・webhook検証する場合）
 
-      # ── Supabase（ログイン検証用。本番と同じ値でOK）──────────────────────
+      # ── Supabase（⚠️ステージング専用プロジェクトの値を入れる。本番の値は禁止）──
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY

@@ -695,67 +695,71 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 
     case 'booking': {
       if ((raw('mode') || 'simple') === 'calendar') {
+        // 同一ページに複数の予約ブロックがあっても衝突しないよう、IDはブロックごとに一意にする
+        const bkid = block.id.replace(/[^a-zA-Z0-9_-]/g, '');
         return `
 <section data-lhp-anim class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
-  <div id="lhp-bk" style="max-width:560px;margin:0 auto">
-    <div id="lhp-bk-loading" style="text-align:center;color:#94a3b8;padding:24px">空き状況を読み込み中...</div>
-    <div id="lhp-bk-main" style="display:none">
+  <div id="lhp-bk-${bkid}" style="max-width:560px;margin:0 auto">
+    <div id="lhp-bk-loading-${bkid}" style="text-align:center;color:#94a3b8;padding:24px">空き状況を読み込み中...</div>
+    <div id="lhp-bk-main-${bkid}" style="display:none">
       <div style="margin-bottom:16px">
         <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">日付を選択</label>
-        <div id="lhp-bk-dates" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div id="lhp-bk-dates-${bkid}" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
-      <div id="lhp-bk-times-wrap" style="margin-bottom:16px;display:none">
+      <div id="lhp-bk-times-wrap-${bkid}" style="margin-bottom:16px;display:none">
         <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">時間を選択</label>
-        <div id="lhp-bk-times" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px"></div>
+        <div id="lhp-bk-times-${bkid}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px"></div>
       </div>
-      <div id="lhp-bk-form" style="display:none">
+      <div id="lhp-bk-form-${bkid}" style="display:none">
         <div class="lhp-form-row">
-          <input id="lhp-bk-name" type="text" placeholder="お名前" required />
-          <input id="lhp-bk-phone" type="tel" placeholder="電話番号" />
+          <input id="lhp-bk-name-${bkid}" type="text" placeholder="お名前" required />
+          <input id="lhp-bk-phone-${bkid}" type="tel" placeholder="電話番号" />
         </div>
-        <input id="lhp-bk-email" type="email" placeholder="メールアドレス" required style="width:100%;margin-bottom:8px" />
-        <input id="lhp-bk-hp" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
-        <p id="lhp-bk-prepay" style="font-size:.85rem;color:#7c3aed;margin:4px 0"></p>
-        <button id="lhp-bk-submit" type="button" style="background-color:${raw('buttonColor')};width:100%">${str('buttonText')}</button>
-        <p class="lhp-form-note" id="lhp-bk-note"></p>
+        <input id="lhp-bk-email-${bkid}" type="email" placeholder="メールアドレス" required style="width:100%;margin-bottom:8px" />
+        <input id="lhp-bk-hp-${bkid}" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
+        <p id="lhp-bk-prepay-${bkid}" style="font-size:.85rem;color:#7c3aed;margin:4px 0"></p>
+        <button id="lhp-bk-submit-${bkid}" type="button" style="background-color:${raw('buttonColor')};width:100%">${str('buttonText')}</button>
+        <p class="lhp-form-note" id="lhp-bk-note-${bkid}"></p>
       </div>
     </div>
-    <div id="lhp-bk-empty" style="display:none;text-align:center;color:#94a3b8;padding:24px">現在予約可能な枠がありません</div>
-    <div id="lhp-bk-success" style="display:none" class="lhp-form-success">✅ ご予約を受け付けました！確認メールをお送りします。</div>
+    <div id="lhp-bk-empty-${bkid}" style="display:none;text-align:center;color:#94a3b8;padding:24px">現在予約可能な枠がありません</div>
+    <div id="lhp-bk-success-${bkid}" style="display:none" class="lhp-form-success">✅ ご予約を受け付けました！確認メールをお送りします。</div>
   </div>
 </section>
 <script>
 (function(){
   var sid=window.__LHPSID; if(!sid)return;
-  var root=document.getElementById('lhp-bk'); if(!root)return;
+  var B='-${bkid}';
+  function $id(s){return document.getElementById(s+B);}
+  var root=$id('lhp-bk'); if(!root)return;
   var state={slots:[],byDate:{},sel:null,prepay:false,prepayAmount:0};
   function pad(n){return (''+n).length<2?'0'+n:''+n;}
   function jst(iso){var d=new Date(iso);return new Date(d.getTime()+9*3600*1000);}
   function dateKey(iso){var d=jst(iso);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}
   function dateLabel(key){var p=key.split('-');var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));var days=['日','月','火','水','木','金','土'];return (+p[1])+'/'+(+p[2])+'('+days[d.getUTCDay()]+')';}
   function timeLabel(iso){var d=jst(iso);return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes());}
-  function show(id,v){var e=document.getElementById(id);if(e)e.style.display=v?'':'none';}
+  function show(id,v){var e=$id(id);if(e)e.style.display=v?'':'none';}
   fetch('/api/hp/booking/availability?siteId='+encodeURIComponent(sid)).then(function(r){return r.json();}).then(function(data){
     show('lhp-bk-loading',false);
     state.slots=data.slots||[];state.prepay=!!data.prepay;state.prepayAmount=data.prepayAmount||0;
     if(!state.slots.length){show('lhp-bk-empty',true);return;}
     show('lhp-bk-main',true);
     state.byDate={};state.slots.forEach(function(s){var k=dateKey(s.datetime);(state.byDate[k]=state.byDate[k]||[]).push(s);});
-    var dc=document.getElementById('lhp-bk-dates');
+    var dc=$id('lhp-bk-dates');
     Object.keys(state.byDate).sort().forEach(function(k){
       var b=document.createElement('button');b.type='button';b.textContent=dateLabel(k);
       b.style.cssText='padding:8px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
       b.onclick=function(){selDate(k,b);};dc.appendChild(b);
     });
-    if(state.prepay&&state.prepayAmount>0){var p=document.getElementById('lhp-bk-prepay');p.textContent='※ ご予約時に予約金 ¥'+state.prepayAmount.toLocaleString()+' のお支払いが必要です';}
+    if(state.prepay&&state.prepayAmount>0){var p=$id('lhp-bk-prepay');p.textContent='※ ご予約時に予約金 ¥'+state.prepayAmount.toLocaleString()+' のお支払いが必要です';}
   }).catch(function(){show('lhp-bk-loading',false);show('lhp-bk-empty',true);});
   function selDate(k,btn){
-    Array.prototype.forEach.call(document.querySelectorAll('#lhp-bk-dates button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
+    Array.prototype.forEach.call($id('lhp-bk-dates').querySelectorAll('button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
     btn.style.background='#2563eb';btn.style.color='#fff';btn.style.borderColor='#2563eb';
     state.sel=null;show('lhp-bk-form',false);
-    var tw=document.getElementById('lhp-bk-times');tw.innerHTML='';
+    var tw=$id('lhp-bk-times');tw.innerHTML='';
     state.byDate[k].sort(function(a,b){return a.datetime.localeCompare(b.datetime);}).forEach(function(s){
       var b=document.createElement('button');b.type='button';b.textContent=timeLabel(s.datetime);
       b.style.cssText='padding:8px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
@@ -764,17 +768,17 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     show('lhp-bk-times-wrap',true);
   }
   function selTime(s,btn){
-    Array.prototype.forEach.call(document.querySelectorAll('#lhp-bk-times button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
+    Array.prototype.forEach.call($id('lhp-bk-times').querySelectorAll('button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
     btn.style.background='#2563eb';btn.style.color='#fff';btn.style.borderColor='#2563eb';
     state.sel=s;show('lhp-bk-form',true);
   }
-  document.getElementById('lhp-bk-submit').addEventListener('click',function(){
-    if(document.getElementById('lhp-bk-hp').value)return;
+  $id('lhp-bk-submit').addEventListener('click',function(){
+    if($id('lhp-bk-hp').value)return;
     if(!state.sel)return;
-    var name=document.getElementById('lhp-bk-name').value.trim();
-    var email=document.getElementById('lhp-bk-email').value.trim();
-    var phone=document.getElementById('lhp-bk-phone').value.trim();
-    var note=document.getElementById('lhp-bk-note');
+    var name=$id('lhp-bk-name').value.trim();
+    var email=$id('lhp-bk-email').value.trim();
+    var phone=$id('lhp-bk-phone').value.trim();
+    var note=$id('lhp-bk-note');
     if(!name||!email){note.textContent='お名前とメールアドレスを入力してください';return;}
     var btn=this;btn.disabled=true;btn.textContent='送信中...';note.textContent='';
     fetch('/api/hp/booking/reserve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,slotId:state.sel.id,name:name,email:email,phone:phone,service:state.sel.label})}).then(function(r){return r.json();}).then(function(d){
@@ -941,7 +945,8 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     }
 
     case 'stripe-buy':
-      return d['priceId'] ? `
+      // priceId が正しい形式（price_xxx）でなければ公開HPには出さない（未設定のまま公開して500になるのを防ぐ）
+      return /^price_[A-Za-z0-9]+$/.test(raw('priceId').trim()) ? `
 <section data-lhp-anim class="lhp-section" style="text-align:center">
   <div class="lhp-buy-card">
     ${d['label'] ? `<h3 class="lhp-buy-label">${str('label')}</h3>` : ''}
@@ -950,14 +955,19 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   </div>
 </section>
 <script>
+function lhpBuyErr(btn,msg){
+  var p=btn.nextElementSibling;
+  if(!p||p.className!=='lhp-buy-err'){p=document.createElement('p');p.className='lhp-buy-err';p.style.cssText='color:#dc2626;font-size:.85rem;margin:10px 0 0';btn.insertAdjacentElement('afterend',p);}
+  p.textContent=msg;
+}
 async function lhpBuy(btn, priceId) {
-  btn.disabled=true; btn.textContent='処理中...';
+  btn.disabled=true; btn.textContent='処理中...'; lhpBuyErr(btn,'');
   try {
     var r=await fetch('/api/stripe/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({priceId:priceId,siteUrl:window.location.href})});
     var d=await r.json();
     if(d.url) window.location.href=d.url;
-    else { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; alert(d.error||'エラーが発生しました'); }
-  } catch(e) { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; alert('通信エラーが発生しました'); }
+    else { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; lhpBuyErr(btn,d.error||'エラーが発生しました'); }
+  } catch(e) { btn.disabled=false; btn.textContent='${str('buttonText') || '今すぐ購入'}'; lhpBuyErr(btn,'通信エラーが発生しました'); }
 }
 </script>` : '';
 
@@ -1581,6 +1591,8 @@ window.addEventListener('popstate',function(){
   // Scroll animation + typewriter + counter script
   const animScript = `<script>
 (function(){
+  /* JSが動いたら CSS の自動表示フォールバック(lhp-auto-reveal)を解除し、スクロール連動に切替 */
+  document.documentElement.classList.add('lhp-js');
   /* ── scroll reveal ── */
   var animLevel='${animLevel}';
   var els=document.querySelectorAll('[data-lhp-anim]');
@@ -1671,7 +1683,9 @@ ${clarityScript}
 <link href="https://fonts.googleapis.com/css2?family=${font.url}&display=swap" rel="stylesheet">
 <style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern}--lhp-accent:${accentColor};}${CSS}</style>
 <style>${fontCss}
-${animLevel === 'none' ? '[data-lhp-anim]{opacity:1!important;transform:none!important}' : `[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:${animLevel === 'subtle' ? '.4s' : '.6s'}}
+${animLevel === 'none' ? '[data-lhp-anim]{opacity:1!important;transform:none!important}' : `[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:${animLevel === 'subtle' ? '.4s' : '.6s'};animation:lhp-auto-reveal .6s ease 1.8s forwards}
+html.lhp-js [data-lhp-anim]{animation:none}
+@keyframes lhp-auto-reveal{to{opacity:1;transform:none}}
 [data-lhp-anim="fade"]{transform:none}
 [data-lhp-anim="slide-up"]{transform:translateY(32px)}
 [data-lhp-anim="slide-left"]{transform:translateX(-32px)}

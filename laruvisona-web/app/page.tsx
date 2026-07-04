@@ -508,7 +508,7 @@ export default function Home() {
         </section>
 
         {/* --- Contact & Footer --- */}
-        <section id="contact" className="py-32 relative bg-transparent z-10">
+        <section id="contact" className="py-32 relative z-10 bg-black/55 backdrop-blur-sm">
           <div className="container mx-auto px-6 max-w-4xl text-center gsap-fade-up">
             <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">お問い合わせ</h2>
             <p className="text-slate-400 mb-16 text-lg">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
