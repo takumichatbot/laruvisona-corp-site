@@ -114,7 +114,9 @@ export default function Home() {
   return (
     <>
     {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
-    <main className="relative min-h-screen [overflow-x:clip] selection:bg-blue-500 selection:text-white">
+    {/* bg必須: globals.css の非レイヤー body{background:#fff} が Tailwind v4 のレイヤー化
+        ユーティリティ(bodyのbg-[#030712])に勝つため、LPはここで暗背景を敷く */}
+    <main className="relative min-h-screen bg-[#030712] [overflow-x:clip] selection:bg-blue-500 selection:text-white">
       
       {/* カスタムカーソル */}
       <div className="hidden md:block" id="cursor-dot" style={{ position: 'fixed', top: 0, left: 0, width: 8, height: 8, background: 'white', borderRadius: '50%', pointerEvents: 'none', zIndex: 10000, transform: 'translate(-50%,-50%)', mixBlendMode: 'difference' }} />
@@ -199,7 +201,7 @@ export default function Home() {
             <span className="gsap-hero opacity-0 translate-y-10 block text-white drop-shadow-[0_0_40px_rgba(59,130,246,0.3)]">IMPLEMENT.</span>
           </h1>
           
-          <p className="gsap-hero opacity-0 translate-y-10 text-slate-400 text-base md:text-xl font-medium mt-4 max-w-2xl leading-relaxed">
+          <p className="gsap-hero opacity-0 translate-y-10 text-slate-200 text-base md:text-xl font-medium mt-4 max-w-2xl leading-relaxed [text-shadow:0_2px_16px_rgba(3,7,18,0.95),0_0_4px_rgba(3,7,18,0.9)]">
             「想像」を「実装」する。<br />
             AI・Webアプリの受託開発と、月額999円のHPビルダー「LARU HP」。<br className="hidden sm:block" />
             あなたのビジネスを次の次元へ。
@@ -397,9 +399,11 @@ export default function Home() {
         {/* --- Voice UI Demo Section --- */}
         <section id="voice" className="py-40 relative flex items-center justify-center min-h-[60vh] border-t border-white/5 z-10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-[#030712] to-[#030712] pointer-events-none"></div>
+          {/* 見出し・説明文の背後を暗くするスクリム（球体が透けても可読性を保つ） */}
+          <div className="absolute inset-x-0 top-0 h-1/2 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 70% at 50% 35%, rgba(3,7,18,0.85) 0%, rgba(3,7,18,0.4) 55%, transparent 78%)' }} aria-hidden="true"></div>
           <div className="container mx-auto px-6 relative z-10 text-center gsap-fade-up">
-            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">声で操る、未来のUI。</h2>
-            <p className="text-slate-400 mb-16 max-w-xl mx-auto text-base">
+            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight [text-shadow:0_2px_16px_rgba(3,7,18,0.95)]">声で操る、未来のUI。</h2>
+            <p className="text-slate-200 mb-16 max-w-xl mx-auto text-base [text-shadow:0_2px_12px_rgba(3,7,18,0.95),0_0_4px_rgba(3,7,18,0.9)]">
               下のコアをクリックし、「サービス」や「見積もり」と話しかけてみてください。<br/>（※マイクの許可が必要です）
             </p>
             {/* 🌟 音声UIコンポーネントを呼び出し */}

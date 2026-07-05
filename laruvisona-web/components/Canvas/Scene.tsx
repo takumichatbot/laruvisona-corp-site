@@ -394,8 +394,8 @@ export default function Scene({ introDone = true }: { introDone?: boolean }) {
       }
       // product: 左端に退避（テキスト右側のChatMockup裏は不可視になるため画面端に半分見せる）
       T.to(story.current, { fx: -0.42, fy: 0, scale: 0.8, duration: seg(sProduct, sVoice) }, sProduct);
-      // voice: 中央背面で「目」= 音声UIコアと重なる
-      T.to(story.current, { fx: 0, fy: -0.02, scale: 0.9, duration: seg(sVoice, sEstimator) }, sVoice);
+      // voice: 見出しテキストの真後ろを避け、下側の音声UIコアの背面に重なる
+      T.to(story.current, { fx: 0, fy: -0.22, scale: 0.72, duration: seg(sVoice, sEstimator) }, sVoice);
       // estimator: 右側（ESTIMATED COSTカードの背後）に定位 + 金額ティッカー
       const estMid = sEstimator + seg(sEstimator, sLaruHP) * 0.3;
       T.to(story.current, { fx: isMobile ? 0.25 : 0.31, fy: 0, scale: 1.2, duration: seg(sEstimator, estMid) }, sEstimator);
