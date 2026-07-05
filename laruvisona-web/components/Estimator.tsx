@@ -29,6 +29,10 @@ export default function Estimator({ onConsult }: EstimatorProps) {
     if (mode === 'custom' && priceRef.current) {
       gsap.to(priceRef.current, { innerText: total, duration: 0.6, snap: { innerText: 1 }, ease: 'power2.out' });
     }
+    // 3D球体ストーリー（Scene3）へ現在の概算金額を通知
+    if (mode === 'custom') {
+      window.dispatchEvent(new CustomEvent('lv-estimate', { detail: total }));
+    }
   }, [total, mode]);
 
   const handleRadio = (key: string, val: number) => setAnswers(prev => ({ ...prev, [key]: val }));

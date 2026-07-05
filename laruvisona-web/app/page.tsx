@@ -120,8 +120,8 @@ export default function Home() {
       <div className="hidden md:block" id="cursor-dot" style={{ position: 'fixed', top: 0, left: 0, width: 8, height: 8, background: 'white', borderRadius: '50%', pointerEvents: 'none', zIndex: 10000, transform: 'translate(-50%,-50%)', mixBlendMode: 'difference' }} />
       <div className="hidden md:block" id="cursor-outline" style={{ position: 'fixed', top: 0, left: 0, width: 40, height: 40, border: '1px solid rgba(255,255,255,0.5)', borderRadius: '50%', pointerEvents: 'none', zIndex: 9999, transform: 'translate(-50%,-50%)' }} />
 
-      {/* 🌟 2. 3D背景レイヤー */}
-      <Scene />
+      {/* 🌟 2. 3D背景レイヤー（球体スクロールストーリー。イントロ終了で誕生シーン開始） */}
+      <Scene introDone={!showIntro} />
 
       {/* 🌟 3. UIレイヤー */}
       <div className="relative z-10">
@@ -293,7 +293,7 @@ export default function Home() {
         </section>
 
         {/* --- Services (Horizontal Scroll) --- */}
-        <section id="services" className="py-32 relative bg-[#030712] border-y border-white/5 [overflow-y:clip]">
+        <section id="services" className="py-32 relative bg-[#030712]/70 border-y border-white/5 [overflow-y:clip]">
           <div className="container mx-auto px-6 max-w-7xl mb-16 gsap-fade-up">
             <div className="flex items-center gap-4 mb-6">
               <div className="h-[1px] w-12 bg-blue-500"></div>
@@ -310,7 +310,7 @@ export default function Home() {
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {/* Service Card 1 */}
-            <div className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
+            <div data-lv-card="0" className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center mb-8 border border-blue-500/20">
@@ -328,7 +328,7 @@ export default function Home() {
             </div>
 
             {/* Service Card 2 */}
-            <div className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-gradient-to-br from-indigo-900/40 to-[#0f172a] rounded-[1.5rem] p-8 border border-indigo-500/20 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
+            <div data-lv-card="1" className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-gradient-to-br from-indigo-900/40 to-[#0f172a] rounded-[1.5rem] p-8 border border-indigo-500/20 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
               <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-4 py-1.5 rounded-bl-xl tracking-widest">主力事業</div>
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-indigo-500/20 text-indigo-300 rounded-2xl flex items-center justify-center mb-8 border border-indigo-400/30">
@@ -348,7 +348,7 @@ export default function Home() {
             </div>
 
             {/* Service Card 3 */}
-            <div className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
+            <div data-lv-card="2" className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center mb-8 border border-purple-500/20">
@@ -409,7 +409,7 @@ export default function Home() {
 
         {/* --- AI Estimator Section --- */}
         {/* ▼ これを追記！ */}
-        <section id="estimator" className="py-32 relative bg-[#030712] border-t border-white/5 z-10">
+        <section id="estimator" className="py-32 relative bg-[#030712]/70 border-t border-white/5 z-10">
           <div className="container mx-auto px-6 max-w-6xl">
             <div className="text-center mb-16 gsap-fade-up">
               <span className="text-blue-500 font-bold text-xs tracking-[0.3em] mb-4 block">AI 開発費見積もり</span>
@@ -424,7 +424,7 @@ export default function Home() {
         </section>
 
         {/* --- LARUvisona HP Product Section --- */}
-        <section id="laruHP" className="py-32 relative bg-gradient-to-b from-[#030712] to-[#0a1628] border-t border-white/5 z-10 overflow-hidden">
+        <section id="laruHP" className="py-32 relative bg-gradient-to-b from-[#030712]/80 to-[#0a1628]/80 border-t border-white/5 z-10 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.05),transparent_70%)] pointer-events-none" />
           <div className="container mx-auto px-6 max-w-7xl relative z-10">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
@@ -461,8 +461,8 @@ export default function Home() {
                 </div>
               </div>
               <div className="lg:w-1/2 w-full gsap-fade-up">
-                {/* Editor preview mockup */}
-                <div className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(6,182,212,0.1)]">
+                {/* Editor preview mockup（球体ストーリーScene4の吸い込み先） */}
+                <div data-lv-mock className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(6,182,212,0.1)]">
                   <div className="bg-[#0f172a] border-b border-white/10 px-4 py-2.5 flex items-center gap-3">
                     <div className="flex gap-1.5">
                       <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
@@ -473,7 +473,12 @@ export default function Home() {
                     <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded font-bold">公開中</span>
                   </div>
                   <div className="bg-white">
-                    <div className="bg-gradient-to-r from-blue-700 to-indigo-700 p-8 text-white text-center">
+                    <div className="relative bg-gradient-to-r from-blue-700 to-indigo-700 p-8 text-white text-center">
+                      {/* 球体が吸い込まれた後に残る「青いドット」（Scene4）。
+                          外側で表示切替（inline opacity）、内側でpulse — 競合させない */}
+                      <span data-lv-dot className="pointer-events-none absolute top-3 right-3 opacity-0 transition-opacity duration-500" aria-hidden="true">
+                        <span className="block w-2.5 h-2.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.9)] animate-pulse" />
+                      </span>
                       <div className="text-xl font-black mb-1">〇〇整体院</div>
                       <div className="text-xs opacity-80 mb-3">地域No.1の施術技術で、あなたの痛みを根本から解決します</div>
                       <div className="inline-block bg-white text-blue-700 text-xs font-bold px-4 py-1.5 rounded-full">無料相談はこちら</div>
