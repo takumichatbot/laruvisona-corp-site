@@ -66,7 +66,8 @@ async function generateImagenToStorage(
   targetH: number,
   label: string,
 ): Promise<string | null> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  // 本番は GEMINI_API_KEY 名で登録されている。旧名 GOOGLE_AI_API_KEY もフォールバックで許容
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) return null;
 
   const controller = new AbortController();
