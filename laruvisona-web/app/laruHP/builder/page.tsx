@@ -4747,36 +4747,50 @@ function BuilderContent() {
         webhookUrl: '',
         sitePassword: '',
       });
-      // Auto-select hero image from Unsplash based on industry
+      // AI画像を自動配置: ヒーローはImagenで専用生成、ギャラリーはUnsplash実写。
+      // 非同期・ベストエフォート。取れた画像だけ後から流し込むのでサイト表示はブロックしない。
       if (d.industry) {
-        const industryQueryMap: Record<string, string> = {
-          restaurant: 'restaurant interior japan', beauty: 'beauty salon interior',
-          clinic: 'medical clinic professional', legal: 'law office professional',
-          construction: 'construction building modern', realestate: 'real estate modern house',
-          retail: 'retail store interior', fitness: 'gym fitness studio',
-          hotel: 'hotel lobby luxury', education: 'classroom school modern',
-          wedding: 'wedding ceremony elegant', pet: 'pet grooming salon',
-          dental: 'dental clinic modern', photo: 'photography studio',
-          accounting: 'office professional business', other: 'professional office',
-        };
-        const query = industryQueryMap[d.industry as string] || 'business professional';
-        fetch(`/api/images/unsplash?q=${encodeURIComponent(query)}`)
+        fetch('/api/ai/site-images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            industry: d.industry,
+            businessName: d.businessName || '',
+            description: d.description || '',
+            keywords: ai.keywords || '',
+          }),
+        })
           .then(r => r.json())
-          .then(({ photos }) => {
-            if (photos?.length) {
-              const img = photos[Math.floor(Math.random() * Math.min(5, photos.length))];
-              setSite(prev => ({
-                ...prev,
-                pages: prev.pages.map((page, pi) => pi === 0 ? {
+          .then(({ heroImage, galleryImages }: { heroImage?: string; galleryImages?: string[] }) => {
+            const gallery = (galleryImages || []).filter(Boolean);
+            if (!heroImage && gallery.length === 0) return;
+            setSite(prev => ({
+              ...prev,
+              pages: prev.pages.map((page, pi) => {
+                if (pi !== 0) return page;
+                let gi = 0; // 使い切り式でギャラリー画像を各スロットに割り当て
+                return {
                   ...page,
-                  blocks: page.blocks.map(block =>
-                    block.type === 'hero' && !(block.data.bgImage as string)
-                      ? { ...block, data: { ...block.data, bgImage: img.url } }
-                      : block
-                  ),
-                } : page),
-              }));
-            }
+                  blocks: page.blocks.map(block => {
+                    // ヒーロー背景（未設定時のみ）
+                    if (block.type === 'hero' && heroImage && !(block.data.bgImage as string)) {
+                      return { ...block, data: { ...block.data, bgImage: heroImage } };
+                    }
+                    // ギャラリーの空スロットを実写で埋める（写真の主戦場はここ）
+                    if (block.type === 'gallery' && Array.isArray(block.data.images) && gallery.length) {
+                      const imgs = (block.data.images as string[]).map(cur => {
+                        if (cur) return cur;
+                        const next = gallery[gi % gallery.length];
+                        gi++;
+                        return next || cur;
+                      });
+                      return { ...block, data: { ...block.data, images: imgs } };
+                    }
+                    return block;
+                  }),
+                };
+              }),
+            }));
           })
           .catch(() => {});
       }
