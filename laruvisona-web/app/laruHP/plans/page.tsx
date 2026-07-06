@@ -1,8 +1,12 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, createContext, useContext } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
+
+// ログイン中ユーザーの現契約。既存契約者はボタンを「このプランに変更／ご利用中」に切り替える。
+const CurrentPlanContext = createContext<{ plan: string | null; subscribed: boolean }>({ plan: null, subscribed: false });
 
 type Availability = 'yes' | 'no' | 'limited' | (string & {});
 
@@ -69,6 +73,11 @@ async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promi
     if (res.status === 402) return '支払い情報に問題があります。設定からご確認ください。';
     if (res.status === 429) return 'しばらく待ってからもう一度お試しください。';
     const data = await res.json().catch(() => ({}));
+    // 既存契約者はサーバー側でプランを差し替え済み（新規サブスクは作らない＝二重課金なし）
+    if (data.upgraded) {
+      window.location.href = '/laruHP/dashboard?upgraded=1';
+      return null;
+    }
     if (data.url) {
       window.location.href = data.url;
       return null;
@@ -92,6 +101,9 @@ function CheckoutButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { plan: currentPlan, subscribed } = useContext(CurrentPlanContext);
+
+  const isCurrent = subscribed && currentPlan === plan;
 
   const handleClick = async () => {
     setLoading(true);
@@ -104,10 +116,24 @@ function CheckoutButton({
     // 成功時は画面遷移するため loading を保持したままにする
   };
 
+  // 既にこのプランを契約中なら押せないようにする（同一プランの重複決済防止）
+  if (isCurrent) {
+    return (
+      <div>
+        <div className={`${className} !bg-gray-100 !text-gray-400 !border-gray-200 cursor-default text-center`}>
+          ご利用中
+        </div>
+      </div>
+    );
+  }
+
+  // 別プラン契約中なら「変更」文言に（新規登録者はデフォルトの children のまま）
+  const label = subscribed ? 'このプランに変更 →' : children;
+
   return (
     <div>
       <button onClick={handleClick} disabled={loading} className={`${className} disabled:opacity-60 disabled:cursor-not-allowed`}>
-        {loading ? '処理中...' : children}
+        {loading ? '処理中...' : label}
       </button>
       {error && <p className="text-red-400 text-[10px] mt-1 text-center">{error}</p>}
     </div>
@@ -160,15 +186,42 @@ function CheckoutResume() {
 
 export default function PlansPage() {
   const [annual, setAnnual] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [subscribed, setSubscribed] = useState(false);
   const P = annual ? ANNUAL : MONTHLY;
 
+  // ログイン中なら現契約を取得（既存契約者のボタン文言・重複決済防止に使う）。
+  // これは進歩的強化であり、失敗しても購入ページ本体は必ず表示する（try/catchで隔離）。
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase.from('profiles').select('plan, subscription_status').eq('id', user.id).single();
+        if (data) {
+          setSubscribed(data.subscription_status === 'active');
+          setCurrentPlan(data.subscription_status === 'active' ? data.plan : null);
+        }
+      } catch { /* Supabase 未設定・未ログイン等でも購入導線は生かす */ }
+    })();
+  }, []);
+
   return (
+    <CurrentPlanContext.Provider value={{ plan: currentPlan, subscribed }}>
     <div className="min-h-screen bg-sky-50 text-gray-900 overflow-x-hidden">
 
       {/* ログイン後にプラン選択を保持して決済を自動再開 */}
       <Suspense fallback={null}>
         <CheckoutResume />
       </Suspense>
+
+      {/* 既存契約者向けの案内 */}
+      {subscribed && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 bg-sky-600 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg">
+          契約中のため、プラン変更は日割りで即時反映されます（新規契約にはなりません）
+        </div>
+      )}
 
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b border-gray-200">
@@ -429,5 +482,6 @@ export default function PlansPage() {
         </div>
       </footer>
     </div>
+    </CurrentPlanContext.Provider>
   );
 }

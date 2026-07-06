@@ -238,7 +238,7 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
-  const [paymentBanner, setPaymentBanner] = useState<'success' | 'canceled' | null>(null);
+  const [paymentBanner, setPaymentBanner] = useState<'success' | 'canceled' | 'upgraded' | null>(null);
   const [domainInputs, setDomainInputs] = useState<Record<string, string>>({});
   const [savingDomain, setSavingDomain] = useState<string | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -273,6 +273,10 @@ export default function DashboardPage() {
     const p = searchParams.get('payment');
     if (p === 'success' || p === 'canceled') {
       setPaymentBanner(p);
+      router.replace('/laruHP/dashboard');
+    }
+    if (searchParams.get('upgraded') === '1') {
+      setPaymentBanner('upgraded');
       router.replace('/laruHP/dashboard');
     }
   }, [searchParams, router]);
@@ -956,6 +960,23 @@ export default function DashboardPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+        {paymentBanner === 'upgraded' && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-4 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-700 mt-0.5">
+                <IcCheck />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-emerald-700 text-sm">プランを変更しました！</p>
+                <p className="text-gray-600 text-xs mt-0.5">
+                  差額は日割りで計算され、次回請求に反映されます（新規契約にはなりません）。
+                  {['lite', 'hp-bot', 'hp-bot-seo', 'agency'].includes(effectivePlan || '') && ' LARUbot をビルダーで有効にしてご利用ください。'}
+                </p>
+              </div>
+              <button onClick={() => setPaymentBanner(null)} className="text-gray-400 hover:text-gray-900 flex-shrink-0 text-lg leading-none">×</button>
+            </div>
           </div>
         )}
         {paymentBanner === 'canceled' && (

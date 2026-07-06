@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { finalizeBooking } from '@/lib/booking-finalize';
+import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { Resend } from 'resend';
 import type Stripe from 'stripe';
 
@@ -220,40 +221,12 @@ export async function POST(req: Request) {
 </body></html>`);
       }
 
-      // Auto-create LARUbot account for bundle/lite plans
-      if ((plan === 'lite' || plan === 'hp-bot' || plan === 'hp-bot-seo' || plan === 'agency') && process.env.LARU_HP_API_SECRET) {
-        try {
-          const { data: { user } } = await supabase.auth.admin.getUserById(userId);
-          let siteName = '';
-          if (siteId) {
-            const { data: site } = await supabase
-              .from('sites')
-              .select('name')
-              .eq('id', siteId)
-              .single();
-            siteName = site?.name || '';
-          }
-
-          const larubotPlan = plan === 'agency' ? 'hp-bot' : plan; // lite はそのまま送る
-          const larubot_base = process.env.LARUBOT_API_URL || 'https://larubot.tokyo';
-          await fetch(`${larubot_base}/api/hp/register`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-laru-secret': process.env.LARU_HP_API_SECRET,
-            },
-            body: JSON.stringify({
-              email: user?.email,
-              plan: larubotPlan,
-              site_name: siteName,
-              user_id: userId,
-              site_id: siteId || '',
-            }),
-          });
-        } catch (err) {
-          console.error('[LARUbot register] failed:', err);
-          // Non-fatal: LARUbot will retry or callback handles public_id later
-        }
+      // Auto-create LARUbot account for bundle/lite plans（新規契約なので prevPlan なし＝必ず登録）
+      try {
+        await provisionLarubotOnPlan({ userId, email: adminCheck?.email, plan: plan || 'hp', siteId });
+      } catch (err) {
+        console.error('[LARUbot register] failed:', err);
+        // Non-fatal: LARUbot will retry or callback handles public_id later
       }
       break;
     }

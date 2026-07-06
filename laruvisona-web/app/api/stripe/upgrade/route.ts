@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
+import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   hp: process.env.STRIPE_PRICE_ID,
@@ -47,6 +48,13 @@ export async function POST(req: Request) {
 
   // Update profile plan immediately
   await supabase.from('profiles').update({ plan }).eq('id', user.id);
+
+  // LARUbot なし → あり への切替時のみ LARUbot を自動登録（アップグレード処理は止めない）
+  try {
+    await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, prevPlan: profile.plan });
+  } catch (e) {
+    console.error('[stripe/upgrade] LARUbot provision failed:', e);
+  }
 
   return NextResponse.json({ ok: true, plan });
 }
