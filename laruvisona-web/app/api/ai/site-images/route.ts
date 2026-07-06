@@ -3,32 +3,18 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 
-// AI生成HP用の画像を1回でまとめて用意する。
-//   hero    … Google Imagen 4.0 で「その店だけ」の専用画像を生成し Supabase Storage に保存 → 公開URL
-//   gallery … Unsplash を業種＋キーワードで検索した実写を複数枚
-// すべてベストエフォート。生成/検索が失敗しても例外は投げず、取れたものだけ返す
-// （ヒーローが生成できなければ Unsplash 実写にフォールバックし、必ず1枚は返す）。
+// AI生成HP用の画像を Google Imagen 4.0 だけで用意する（サードパーティAPIキー不要）。
+//   hero    … 「その店だけ」の専用ヒーロー画像（16:9）
+//   gallery … 業種に合わせた別アングルの画像を複数枚（4:3）
+// ヒーローとギャラリーを1回ずつ prompt を変えて並行生成し、Supabase Storage に保存して
+// 公開URLを返す。すべてベストエフォート：生成できたものだけ返し、失敗しても例外は投げない。
+//
+// コスト注記: 1サイトあたり Imagen を (1 + GALLERY_COUNT) 枚生成する。
+// コストを抑えたい場合は GALLERY_COUNT を下げる（0でヒーローのみ）。
+const GALLERY_COUNT = 4;
 
-const INDUSTRY_QUERY: Record<string, string> = {
-  restaurant: 'restaurant interior japanese cuisine',
-  beauty: 'beauty salon hair styling interior',
-  clinic: 'physiotherapy clinic treatment room',
-  legal: 'law office professional consultation',
-  construction: 'construction craftsmanship building site',
-  realestate: 'modern house interior real estate',
-  retail: 'boutique retail store interior',
-  fitness: 'modern gym fitness studio',
-  hotel: 'hotel lobby luxury interior',
-  education: 'classroom school learning',
-  wedding: 'wedding ceremony elegant venue',
-  pet: 'pet grooming salon dog',
-  dental: 'dental clinic modern interior',
-  photo: 'photography studio lighting',
-  accounting: 'professional office business meeting',
-  other: 'professional business office',
-};
-
-const IMAGEN_STYLE: Record<string, string> = {
+// ヒーロー用の世界観（業種別）
+const HERO_STYLE: Record<string, string> = {
   restaurant: 'warm inviting restaurant interior, soft ambient lighting, beautifully plated cuisine',
   beauty: 'elegant modern hair salon interior, clean bright, stylish mirrors and chairs',
   clinic: 'calm clean therapy clinic room, natural light, professional and reassuring',
@@ -47,59 +33,51 @@ const IMAGEN_STYLE: Record<string, string> = {
   other: 'clean professional business environment, natural light',
 };
 
-// Unsplash 未設定時のフォールバック（業種で少しでも変わるよう、汎用ビジネス写真をずらして返す）
-const UNSPLASH_FALLBACK = [
-  'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80',
-  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80',
-  'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1200&q=80',
-  'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=1200&q=80',
-  'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80',
-  'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=80',
-  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80',
-];
+// ギャラリー用の別アングル（業種別に主題を変えて似た絵にならないようにする）
+const GALLERY_SCENES: Record<string, string[]> = {
+  restaurant: ['signature dish beautifully plated close-up', 'cozy dining interior with warm lighting', 'fresh seasonal ingredients on a wooden table', 'barista or chef preparing food'],
+  beauty: ['stylish salon styling chair and mirror', 'close-up of elegant hair styling result', 'shelf of premium hair care products', 'relaxing shampoo station'],
+  clinic: ['clean treatment room with bed', 'therapist adjusting posture professionally', 'reception area calm and welcoming', 'close-up of hands performing gentle therapy'],
+  legal: ['professional consultation across a desk', 'law bookshelf and documents', 'modern meeting room', 'handshake in an office'],
+  construction: ['modern completed building exterior', 'craftsman working with tools', 'architectural detail close-up', 'construction team on site'],
+  realestate: ['bright modern kitchen interior', 'spacious living room with natural light', 'modern house exterior with garden', 'elegant bedroom interior'],
+  retail: ['curated product display on shelves', 'stylish shop interior', 'close-up of featured products', 'shopping bags and counter'],
+  fitness: ['person training with dumbbells', 'modern gym equipment row', 'group fitness studio', 'close-up of workout in motion'],
+  hotel: ['elegant hotel guest room', 'luxurious bathroom interior', 'hotel restaurant or lounge', 'welcoming reception desk'],
+  education: ['students engaged in a bright classroom', 'study desk with books and laptop', 'teacher guiding a lesson', 'modern school building'],
+  wedding: ['elegant wedding reception table setting', 'bridal bouquet close-up', 'romantic ceremony arch with flowers', 'couple silhouette at golden hour'],
+  pet: ['happy dog being groomed', 'clean pet grooming station', 'cute pet after grooming', 'grooming tools neatly arranged'],
+  dental: ['modern dental treatment chair', 'friendly dentist with patient', 'clean bright reception', 'close-up of dental care tools'],
+  photo: ['professional studio lighting setup', 'photographer at work', 'elegant portrait result', 'camera and lens close-up'],
+  accounting: ['professional reviewing documents', 'modern office desk with laptop', 'business meeting discussion', 'calculator and financial charts'],
+  other: ['modern professional office interior', 'team collaborating at a desk', 'close-up of professional work', 'welcoming reception area'],
+};
 
-async function fetchUnsplash(query: string, count: number): Promise<string[]> {
-  const key = process.env.UNSPLASH_ACCESS_KEY;
-  if (!key) {
-    // キー未設定: 汎用写真をシャッフル的にずらして返す（毎回同じ並びを避ける）
-    const offset = Math.floor(Math.random() * UNSPLASH_FALLBACK.length);
-    return Array.from({ length: count }, (_, i) => UNSPLASH_FALLBACK[(offset + i) % UNSPLASH_FALLBACK.length]);
-  }
-  try {
-    const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${Math.min(20, count + 6)}&orientation=landscape`,
-      { headers: { Authorization: `Client-ID ${key}` } },
-    );
-    if (!res.ok) throw new Error(`unsplash ${res.status}`);
-    const data = await res.json() as { results?: { urls: { regular: string } }[] };
-    const urls = (data.results || []).map(p => p.urls.regular);
-    if (!urls.length) throw new Error('no results');
-    // 先頭に寄りすぎないよう軽くシャッフル
-    return urls.sort(() => Math.random() - 0.5).slice(0, count);
-  } catch {
-    const offset = Math.floor(Math.random() * UNSPLASH_FALLBACK.length);
-    return Array.from({ length: count }, (_, i) => UNSPLASH_FALLBACK[(offset + i) % UNSPLASH_FALLBACK.length]);
-  }
+function getAdminStorage() {
+  return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-async function generateHeroWithImagen(userId: string, industry: string, businessName: string, description: string): Promise<string | null> {
+// Imagen で1枚生成 → WebP化 → Storage保存 → 公開URL。失敗時は null（例外を投げない）。
+async function generateImagenToStorage(
+  userId: string,
+  prompt: string,
+  aspectRatio: '16:9' | '4:3',
+  targetW: number,
+  targetH: number,
+  label: string,
+): Promise<string | null> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) return null;
 
-  const style = IMAGEN_STYLE[industry] || IMAGEN_STYLE.other;
-  const desc = (description || '').slice(0, 200);
-  const prompt = `Professional website hero background photo for a Japanese local business "${businessName}". ${style}. ${desc}. Photorealistic, high quality, cinematic, wide 16:9 composition, no text, no letters, no watermark, no people looking at camera.`;
-
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000); // 25秒でタイムアウト → フォールバックへ
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30秒でタイムアウト
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio: '16:9' } }),
+        body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio } }),
         signal: controller.signal,
       },
     );
@@ -110,17 +88,17 @@ async function generateHeroWithImagen(userId: string, industry: string, business
 
     // base64 をそのまま公開HTMLに埋めると重いので WebP 化して Storage に保存し URL 参照にする
     const webp = await sharp(Buffer.from(b64, 'base64'))
-      .resize({ width: 1600, height: 900, fit: 'cover' })
+      .resize({ width: targetW, height: targetH, fit: 'cover' })
       .webp({ quality: 82 })
       .toBuffer();
 
-    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-    const path = `${userId}/hero-${Date.now()}.webp`;
+    const admin = getAdminStorage();
+    const path = `${userId}/${label}-${Date.now()}-${Math.round(Math.random() * 1e6)}.webp`;
     const { error } = await admin.storage.from('site-images').upload(path, webp, { contentType: 'image/webp', upsert: false });
     if (error) return null;
     return admin.storage.from('site-images').getPublicUrl(path).data.publicUrl;
   } catch {
-    return null; // タイムアウト・生成失敗 → 呼び出し側で Unsplash にフォールバック
+    return null; // タイムアウト・生成失敗
   } finally {
     clearTimeout(timeout);
   }
@@ -131,27 +109,26 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { industry = 'other', businessName = '', description = '', keywords = '' } = await req.json().catch(() => ({}));
-  const baseQuery = INDUSTRY_QUERY[industry] || INDUSTRY_QUERY.other;
-  const galleryQuery = keywords ? `${baseQuery} ${String(keywords).split(',')[0]}` : baseQuery;
+  const { industry = 'other', businessName = '', description = '' } = await req.json().catch(() => ({}));
 
-  // ヒーロー生成（Imagen）とギャラリー（Unsplash）を並行取得
-  const [heroGenerated, gallery] = await Promise.all([
-    generateHeroWithImagen(user.id, industry, businessName, description),
-    fetchUnsplash(galleryQuery, 4),
+  const heroStyle = HERO_STYLE[industry] || HERO_STYLE.other;
+  const scenes = GALLERY_SCENES[industry] || GALLERY_SCENES.other;
+  const desc = String(description || '').slice(0, 200);
+  const brand = businessName ? ` for a Japanese local business "${businessName}"` : '';
+
+  const heroPrompt = `Professional website hero background photo${brand}. ${heroStyle}. ${desc}. Photorealistic, high quality, cinematic, wide 16:9 composition, no text, no letters, no watermark.`;
+
+  const galleryPrompts = scenes.slice(0, GALLERY_COUNT).map(scene =>
+    `Professional website photo${brand}: ${scene}. Photorealistic, high quality, natural light, no text, no letters, no watermark.`,
+  );
+
+  // ヒーロー + ギャラリーを全部並行生成（wall-clock はほぼ最遅1枚ぶん）
+  const [heroImage, ...galleryResults] = await Promise.all([
+    generateImagenToStorage(user.id, heroPrompt, '16:9', 1600, 900, 'hero'),
+    ...galleryPrompts.map((p, i) => generateImagenToStorage(user.id, p, '4:3', 1000, 750, `gallery${i}`)),
   ]);
 
-  // ヒーローが生成できなければ Unsplash 実写を1枚ヒーローに回す（必ず1枚は返す）
-  let heroImage = heroGenerated;
-  let galleryImages = gallery;
-  if (!heroImage) {
-    const heroFallback = await fetchUnsplash(baseQuery, 1);
-    heroImage = heroFallback[0] || gallery[0] || null;
-  }
+  const galleryImages = galleryResults.filter((u): u is string => !!u);
 
-  return NextResponse.json({
-    heroImage,
-    galleryImages,
-    heroSource: heroGenerated ? 'imagen' : 'unsplash', // デバッグ・分析用
-  });
+  return NextResponse.json({ heroImage, galleryImages });
 }

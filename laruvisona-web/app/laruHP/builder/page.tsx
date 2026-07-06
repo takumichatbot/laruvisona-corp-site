@@ -4757,7 +4757,6 @@ function BuilderContent() {
             industry: d.industry,
             businessName: d.businessName || '',
             description: d.description || '',
-            keywords: ai.keywords || '',
           }),
         })
           .then(r => r.json())
