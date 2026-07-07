@@ -15,7 +15,8 @@ export async function POST(req: Request) {
   if (!secretOk) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const adminEmails = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || '')
+    const adminEmails = [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]
+      .filter(Boolean).join(',')
       .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
     if (!user || !adminEmails.includes((user.email || '').toLowerCase())) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

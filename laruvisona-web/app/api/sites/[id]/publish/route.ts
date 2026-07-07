@@ -14,7 +14,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   // Paywall: require active subscription to publish
   // 管理者はバイパス（ダッシュボードは管理者を「有効」表示するため、ここも揃えないと
   // 契約済み表示なのにプラン選択モーダルが出る不整合が起きる）
-  const adminEmails = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || '')
+  const adminEmails = [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]
+    .filter(Boolean).join(',')
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
   const isAdmin = adminEmails.includes((user.email || '').toLowerCase());
 

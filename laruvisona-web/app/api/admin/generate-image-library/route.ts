@@ -40,10 +40,18 @@ export async function POST(req: Request) {
   if (!secretOk) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const adminEmails = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || '')
+    // ADMIN_EMAIL と NEXT_PUBLIC_ADMIN_EMAIL の両方を許可（片方に別の値が入っていても弾かない）
+    const adminEmails = [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]
+      .filter(Boolean).join(',')
       .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
     if (!user || !adminEmails.includes((user.email || '').toLowerCase())) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      // 原因切り分け用のヒントを返す（メール本文は伏せる）
+      return NextResponse.json({
+        error: 'Forbidden',
+        reason: !user ? 'no_session' : 'email_not_in_admin_list',
+        loggedInAs: user?.email ? user.email.replace(/(.).*(@.*)/, '$1***$2') : null,
+        adminConfigured: adminEmails.length > 0,
+      }, { status: 403 });
     }
   }
 
