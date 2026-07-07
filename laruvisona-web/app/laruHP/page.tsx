@@ -8,6 +8,13 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 const LaruHPScene = dynamic(() => import('@/components/Canvas/LaruHPScene'), { ssr: false });
 
+// ショーケースのモックに、業種画像ライブラリ(AI生成)の実写を敷くための公開URL。
+// 管理者が /api/admin/generate-image-library を実行するとプールされる。
+// 未生成の間は画像が404し、下地のグラデーションがそのまま見える（＝グレースフル）。
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const libHero = (industry: string) =>
+  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/hero/0.webp` : '';
+
 const INDUSTRIES = [
   { color: 'from-orange-900/60 to-red-900/60',   name: '飲食店・カフェ', id: 'restaurant' },
   { color: 'from-pink-900/60 to-purple-900/60',  name: '美容室・サロン', id: 'beauty' },
@@ -600,6 +607,8 @@ export default function LaruHPLandingPage() {
               {/* Hero photo area */}
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-rose-900 via-pink-900 to-rose-950" />
+                {libHero('beauty') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('beauty')})` }} />}
+                <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 {/* Decorative SVG shapes simulating salon interior */}
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <ellipse cx="240" cy="40" rx="80" ry="60" fill="rgba(255,200,200,0.4)"/>
@@ -665,6 +674,8 @@ export default function LaruHPLandingPage() {
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-teal-800 to-emerald-950" />
+                {libHero('clinic') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('clinic')})` }} />}
+                <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-15" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <circle cx="260" cy="30" r="70" fill="rgba(110,231,183,0.4)"/>
                   <circle cx="40" cy="160" r="60" fill="rgba(52,211,153,0.3)"/>
@@ -717,6 +728,8 @@ export default function LaruHPLandingPage() {
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-900 via-amber-900 to-orange-950" />
+                {libHero('restaurant') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('restaurant')})` }} />}
+                <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <circle cx="250" cy="50" r="60" fill="rgba(251,191,36,0.3)"/>
                   <circle cx="50" cy="140" r="50" fill="rgba(245,158,11,0.2)"/>
@@ -771,6 +784,8 @@ export default function LaruHPLandingPage() {
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
+                {libHero('legal') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('legal')})` }} />}
+                <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/78 via-black/40 to-black/15" />
                 <svg className="absolute inset-0 w-full h-full opacity-10" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <rect x="0" y="0" width="300" height="180" fill="none" stroke="rgba(200,200,220,0.3)" strokeWidth="0.3"/>
                   {[0,30,60,90,120,150,180].map(y=><line key={y} x1="0" y1={y} x2="300" y2={y} stroke="rgba(200,210,230,0.08)" strokeWidth="0.5"/>)}
@@ -821,6 +836,8 @@ export default function LaruHPLandingPage() {
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-red-900 via-orange-900 to-red-950" />
+                {libHero('fitness') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('fitness')})` }} />}
+                <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <circle cx="150" cy="90" r="80" fill="none" stroke="rgba(255,100,50,0.3)" strokeWidth="1"/>
                   <circle cx="150" cy="90" r="55" fill="none" stroke="rgba(255,120,60,0.2)" strokeWidth="0.5"/>
@@ -871,6 +888,8 @@ export default function LaruHPLandingPage() {
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-800 via-yellow-900 to-amber-950" />
+                {libHero('construction') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('construction')})` }} />}
+                <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   {/* House silhouette */}
                   <polygon points="150,20 240,80 60,80" fill="none" stroke="rgba(255,220,100,0.4)" strokeWidth="1.5"/>
