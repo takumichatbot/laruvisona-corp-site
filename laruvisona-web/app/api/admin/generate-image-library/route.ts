@@ -19,6 +19,20 @@ import {
 // コスト注記: 全業種 × (heroCount + galleryCount) 枚を生成する高コスト処理。
 // 既定で 16業種 × (3+6) = 144枚。overwrite しない限り、既に揃っている業種はスキップする。
 
+// 同時実行数を制限しつつ全タスクを実行（レート制限で取りこぼさないため）
+async function runWithConcurrency<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let next = 0;
+  async function worker() {
+    while (next < tasks.length) {
+      const i = next++;
+      results[i] = await tasks[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
+}
+
 export async function POST(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const secretOk = !!process.env.ADMIN_SECRET && bearer === process.env.ADMIN_SECRET;
@@ -61,11 +75,14 @@ export async function POST(req: Request) {
     const scenes = galleryScenesFor(ind);
     const galleryPrompts = Array.from({ length: galleryCount }, (_, i) => buildGalleryPrompt(scenes[i % scenes.length]));
 
-    const heroUrls = await Promise.all(
-      heroPrompts.map((p, i) => generateImagenToStorage(p, '16:9', 1600, 900, `library/${ind}/hero/${i}.webp`)),
+    // 同時3枚までに制限（レート制限回避）。ヒーロー→ギャラリーの順で実行。
+    const heroUrls = await runWithConcurrency(
+      heroPrompts.map((p, i) => () => generateImagenToStorage(p, '16:9', 1600, 900, `library/${ind}/hero/${i}.webp`)),
+      3,
     );
-    const galleryUrls = await Promise.all(
-      galleryPrompts.map((p, i) => generateImagenToStorage(p, '4:3', 1000, 750, `library/${ind}/gallery/${i}.webp`)),
+    const galleryUrls = await runWithConcurrency(
+      galleryPrompts.map((p, i) => () => generateImagenToStorage(p, '4:3', 1000, 750, `library/${ind}/gallery/${i}.webp`)),
+      3,
     );
 
     results[ind] = {

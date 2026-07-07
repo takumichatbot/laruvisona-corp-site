@@ -76,6 +76,7 @@ export function getAdminStorage() {
 }
 
 // Imagen で1枚生成 → WebP化 → 指定パスに保存 → 公開URL。失敗時は null（例外を投げない）。
+// レート制限(429)や一時的失敗に備えて最大3回リトライ（指数バックオフ）。
 export async function generateImagenToStorage(
   prompt: string,
   aspectRatio: '16:9' | '4:3',
@@ -86,35 +87,46 @@ export async function generateImagenToStorage(
   const apiKey = getGeminiKey();
   if (!apiKey) return null;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30秒でタイムアウト
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio } }),
-        signal: controller.signal,
-      },
-    );
-    if (!res.ok) return null;
-    const data = await res.json() as { predictions?: { bytesBase64Encoded: string }[] };
-    const b64 = data.predictions?.[0]?.bytesBase64Encoded;
-    if (!b64) return null;
+  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-    const webp = await sharp(Buffer.from(b64, 'base64'))
-      .resize({ width: targetW, height: targetH, fit: 'cover' })
-      .webp({ quality: 82 })
-      .toBuffer();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(attempt * 4000); // 4s, 8s のバックオフ
 
-    const admin = getAdminStorage();
-    const { error } = await admin.storage.from('site-images').upload(storagePath, webp, { contentType: 'image/webp', upsert: true });
-    if (error) return null;
-    return admin.storage.from('site-images').getPublicUrl(storagePath).data.publicUrl;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 40000); // 40秒でタイムアウト
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio } }),
+          signal: controller.signal,
+        },
+      );
+      // 429(レート制限)/5xx はリトライ、その他の4xxは即あきらめる
+      if (!res.ok) {
+        if (res.status === 429 || res.status >= 500) continue;
+        return null;
+      }
+      const data = await res.json() as { predictions?: { bytesBase64Encoded: string }[] };
+      const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+      if (!b64) continue;
+
+      const webp = await sharp(Buffer.from(b64, 'base64'))
+        .resize({ width: targetW, height: targetH, fit: 'cover' })
+        .webp({ quality: 82 })
+        .toBuffer();
+
+      const admin = getAdminStorage();
+      const { error } = await admin.storage.from('site-images').upload(storagePath, webp, { contentType: 'image/webp', upsert: true });
+      if (error) return null;
+      return admin.storage.from('site-images').getPublicUrl(storagePath).data.publicUrl;
+    } catch {
+      // タイムアウト/ネットワーク: 次の試行へ
+    } finally {
+      clearTimeout(timeout);
+    }
   }
+  return null;
 }

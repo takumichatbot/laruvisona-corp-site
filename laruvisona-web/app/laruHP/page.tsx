@@ -14,6 +14,10 @@ const LaruHPScene = dynamic(() => import('@/components/Canvas/LaruHPScene'), { s
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const libHero = (industry: string) =>
   SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/hero/0.webp` : '';
+const libGallery = (industry: string, n: number) =>
+  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/gallery/${n}.webp` : '';
+// 画像が404(ライブラリ未生成)なら消して下地グラデを見せる
+const hideOnError = (e: { currentTarget: HTMLImageElement }) => { e.currentTarget.style.display = 'none'; };
 
 const INDUSTRIES = [
   { color: 'from-orange-900/60 to-red-900/60',   name: '飲食店・カフェ', id: 'restaurant' },
@@ -756,9 +760,12 @@ export default function LaruHPLandingPage() {
               <div className="bg-white px-3 py-2">
                 <div className="text-[7px] text-gray-500 mb-1.5 font-medium">🍽 人気メニュー</div>
                 <div className="grid grid-cols-3 gap-1">
-                  {[{bg:'from-orange-100 to-amber-100',name:'フォアグラのテリーヌ',price:'¥1,980'},{bg:'from-amber-100 to-yellow-100',name:'ブイヤベース',price:'¥2,280'},{bg:'from-yellow-100 to-orange-100',name:'シャトーブリアン',price:'¥4,980'}].map(m=>(
+                  {[{bg:'from-orange-100 to-amber-100',name:'フォアグラのテリーヌ',price:'¥1,980'},{bg:'from-amber-100 to-yellow-100',name:'ブイヤベース',price:'¥2,280'},{bg:'from-yellow-100 to-orange-100',name:'シャトーブリアン',price:'¥4,980'}].map((m,i)=>(
                     <div key={m.name} className="rounded-lg overflow-hidden border border-amber-100">
-                      <div className={`h-8 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[16px]`}>🍴</div>
+                      <div className={`relative h-8 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[16px]`}>
+                        🍴
+                        {libGallery('restaurant',i+1) && <img src={libGallery('restaurant',i+1)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      </div>
                       <div className="bg-white p-1"><div className="text-[5.5px] font-medium text-gray-700 leading-tight">{m.name}</div><div className="text-[6px] text-amber-600 font-bold">{m.price}</div></div>
                     </div>
                   ))}
@@ -916,9 +923,12 @@ export default function LaruHPLandingPage() {
                     {bg:'from-amber-100 to-yellow-100',label:'新築住宅',icon:'🏠'},
                     {bg:'from-orange-100 to-amber-100',label:'キッチンリフォーム',icon:'🍳'},
                     {bg:'from-yellow-100 to-orange-100',label:'外壁塗装',icon:'🎨'},
-                  ].map(m=>(
+                  ].map((m,i)=>(
                     <div key={m.label} className="rounded-lg overflow-hidden border border-amber-100">
-                      <div className={`h-9 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[18px]`}>{m.icon}</div>
+                      <div className={`relative h-9 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[18px]`}>
+                        {m.icon}
+                        {libGallery('construction',i+1) && <img src={libGallery('construction',i+1)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      </div>
                       <div className="bg-white p-1 text-center"><div className="text-[5.5px] font-medium text-gray-600">{m.label}</div></div>
                     </div>
                   ))}
