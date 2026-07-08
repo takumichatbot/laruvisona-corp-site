@@ -443,7 +443,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
               </div>
               <div className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-400 flex items-center gap-1.5 max-w-xs mx-auto">
                 <span>🔒</span>
-                <span>your-shop.laruvisona.com</span>
+                <span>your-shop.laruvisona.jp</span>
               </div>
             </div>
             {/* Site content */}

@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: 'Site not published' }, { status: 400 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.com';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
   const targetUrl = `${appUrl}/hp/${site.slug}`;
   const apiKey = process.env.PAGESPEED_API_KEY || '';
   const apiBase = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';

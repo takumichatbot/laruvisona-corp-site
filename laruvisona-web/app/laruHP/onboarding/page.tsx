@@ -362,7 +362,7 @@ function LivePreview({ form }: { form: FormData }) {
           <div className="w-2 h-2 rounded-full bg-green-500/60" />
         </div>
         <div className="flex-1 bg-white/10 rounded text-[9px] text-slate-400 px-2 py-0.5 font-mono truncate">
-          {form.businessName ? `${form.businessName.slice(0, 12).replace(/\s/g, '-').toLowerCase()}.laruvisona.com` : 'your-shop.laruvisona.com'}
+          {form.businessName ? `${form.businessName.slice(0, 12).replace(/\s/g, '-').toLowerCase()}.laruvisona.jp` : 'your-shop.laruvisona.jp'}
         </div>
         <div style={animDot} />
       </div>

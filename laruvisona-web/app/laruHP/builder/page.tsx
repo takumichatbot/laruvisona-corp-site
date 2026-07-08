@@ -3620,7 +3620,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
               <div className="bg-white rounded-xl p-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <div className="w-4 h-4 rounded-full bg-slate-200 flex-shrink-0" />
-                  <span className="text-[10px] text-slate-500 truncate">あなたのサイト.laruvisona.com</span>
+                  <span className="text-[10px] text-slate-500 truncate">あなたのサイト.laruvisona.jp</span>
                 </div>
                 <div className="text-[13px] text-[#1a0dab] font-medium leading-snug truncate">
                   {seo.title || '（タイトル未設定）'}

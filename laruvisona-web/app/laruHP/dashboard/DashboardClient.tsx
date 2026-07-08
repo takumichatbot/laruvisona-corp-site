@@ -1977,21 +1977,30 @@ export default function DashboardPage() {
                         </div>
                         {dnsStatus[site.id] && !dnsStatus[site.id].verified && !dnsStatus[site.id].checking && (
                           <div className="bg-sky-50 border border-sky-100 rounded-md p-2 space-y-1.5">
-                            <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-wide">CNAMEレコードを設定してください</p>
+                            <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-wide">DNSレコードを設定してください</p>
                             <div className="font-mono text-[9px] text-gray-600 space-y-1">
-                              <div><span className="text-gray-400">名前（ホスト）:</span> @ または {site.custom_domain}</div>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-gray-400">値（CNAME先）:</span>
-                                <span>{dnsStatus[site.id].expectedTarget || 'cname.vercel-dns.com'}</span>
+                                <span className="text-gray-400">wwwなどのサブドメイン → CNAME:</span>
+                                <span>{dnsStatus[site.id].expectedTarget || 'laruvisona-corp-site.onrender.com'}</span>
                                 <button
-                                  onClick={() => navigator.clipboard.writeText(dnsStatus[site.id].expectedTarget || 'cname.vercel-dns.com')}
+                                  onClick={() => navigator.clipboard.writeText(dnsStatus[site.id].expectedTarget || 'laruvisona-corp-site.onrender.com')}
+                                  className="text-sky-500 hover:text-sky-700 border border-sky-200 px-1 rounded text-[8px] font-bold transition-colors"
+                                >
+                                  コピー
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-gray-400">ルートドメイン（@） → A:</span>
+                                <span>216.24.57.1</span>
+                                <button
+                                  onClick={() => navigator.clipboard.writeText('216.24.57.1')}
                                   className="text-sky-500 hover:text-sky-700 border border-sky-200 px-1 rounded text-[8px] font-bold transition-colors"
                                 >
                                   コピー
                                 </button>
                               </div>
                             </div>
-                            <p className="text-[9px] text-gray-400">※ DNS反映には24〜48時間かかる場合があります。設定後に再度「DNS確認」を押してください。</p>
+                            <p className="text-[9px] text-gray-400">※ ルートドメインにCNAMEは設定できないレジストラが多いため、Aレコードをご利用ください。DNS反映には24〜48時間かかる場合があります。設定後に再度「DNS確認」を押してください。</p>
                           </div>
                         )}
                       </div>

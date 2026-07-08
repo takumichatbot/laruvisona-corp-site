@@ -78,6 +78,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Render service slug for CNAME target
   const renderServiceSlug = process.env.RENDER_SERVICE_SLUG || process.env.RENDER_SERVICE_ID || 'your-app';
   const expectedTarget = `${renderServiceSlug}.onrender.com`;
+  // Render のルートドメイン用 A レコード（apex は CNAME 不可のレジストラが多い）
+  const expectedApexIp = process.env.RENDER_APEX_IP || '216.24.57.1';
 
   // Check DNS CNAME
   let cname: string | null = null;
@@ -88,6 +90,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     dnsVerified = records.some(r => r.includes('onrender.com') || r.includes(renderServiceSlug));
   } catch {
     // DNS lookup failed — domain not propagated yet
+  }
+
+  // apex ドメインは CNAME を置けないため A レコードでも確認
+  let aRecord: string | null = null;
+  if (!dnsVerified) {
+    try {
+      const addrs = await dns.resolve4(site.custom_domain);
+      aRecord = addrs[0] || null;
+      dnsVerified = addrs.includes(expectedApexIp);
+    } catch {
+      // no A record either
+    }
   }
 
   // Check Render verification status if API key is configured
@@ -111,7 +125,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     dnsVerified,
     renderVerified,
     cname,
+    aRecord,
     expectedTarget,
+    expectedApexIp,
     domain: site.custom_domain,
   });
 }

@@ -10,15 +10,16 @@ function getAdminClient() {
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ domain: string }> }
 ) {
-  const { slug } = await params;
+  const { domain } = await params;
+  const normalized = decodeURIComponent(domain).toLowerCase();
   const supabase = getAdminClient();
 
   const { data: site } = await supabase
     .from('sites')
     .select('slug, updated_at, settings_json')
-    .eq('slug', slug)
+    .eq('custom_domain', normalized)
     .eq('published', true)
     .single();
 
@@ -26,19 +27,16 @@ export async function GET(
     return new Response('Not found', { status: 404 });
   }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
-  const loc = `${base}/hp/${site.slug}`;
+  const loc = `https://${normalized}`;
   const lastmod = site.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0];
 
-  // Check if shop has active products
   const settings = (site.settings_json as Record<string, unknown>) || {};
-  const products = (settings.products as Array<{ active: boolean }>) || [];
-  const hasShop = products.some(p => p.active);
 
   // Check if translations are available
   const translations = (settings.translations as Record<string, { translatedAt: string }>) || {};
   const locales = Object.keys(translations);
 
+  // 独自ドメインでは全パスがトップにリライトされるため /shop は載せない
   const urls: string[] = [
     `  <url>
     <loc>${loc}</loc>
@@ -48,18 +46,9 @@ export async function GET(
   </url>`,
   ];
 
-  if (hasShop) {
-    urls.push(`  <url>
-    <loc>${loc}/shop</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>`);
-  }
-
   for (const locale of locales) {
     urls.push(`  <url>
-    <loc>${loc}?lang=${locale}</loc>
+    <loc>${loc}/?lang=${locale}</loc>
     <lastmod>${translations[locale].translatedAt?.split('T')[0] || lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

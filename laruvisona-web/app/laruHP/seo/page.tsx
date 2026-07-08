@@ -467,7 +467,7 @@ export default function SeoPage() {
                     {form.name || selectedSite?.name || 'サイト名'}
                   </div>
                   <div className="text-[11px] text-[#006621] truncate mt-0.5">
-                    {selectedSite?.slug ? `https://laruvisona.com/hp/${selectedSite.slug}` : 'https://laruvisona.com/hp/...'}
+                    {selectedSite?.slug ? `https://laruvisona.jp/hp/${selectedSite.slug}` : 'https://laruvisona.jp/hp/...'}
                   </div>
                   <div className="text-[12px] text-[#545454] mt-1 leading-snug line-clamp-2">
                     {form.description
@@ -495,7 +495,7 @@ export default function SeoPage() {
                     <div className="px-3 py-2.5">
                       <div className="text-[11px] font-bold text-gray-900 truncate">{form.name || selectedSite?.name || 'サイト名'}</div>
                       <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{form.description.slice(0, 100) || '説明文...'}</div>
-                      <div className="text-[10px] text-gray-400 mt-1 truncate">laruvisona.com</div>
+                      <div className="text-[10px] text-gray-400 mt-1 truncate">laruvisona.jp</div>
                     </div>
                   </div>
                   {/* LINE share card */}
@@ -508,7 +508,7 @@ export default function SeoPage() {
                       <div className="min-w-0">
                         <div className="text-[11px] font-bold text-gray-900 line-clamp-2">{form.name || selectedSite?.name || 'サイト名'}</div>
                         <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{form.description.slice(0, 80) || '説明文...'}</div>
-                        <div className="text-[9px] text-green-600 font-bold mt-1">laruvisona.com</div>
+                        <div className="text-[9px] text-green-600 font-bold mt-1">laruvisona.jp</div>
                       </div>
                     </div>
                   </div>

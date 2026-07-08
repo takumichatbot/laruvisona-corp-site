@@ -473,7 +473,7 @@ export default function Home() {
                       <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
                       <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
                     </div>
-                    <div className="flex-1 bg-white/10 rounded px-2 py-0.5 text-[10px] text-slate-500 font-mono">your-shop.laruvisona.com</div>
+                    <div className="flex-1 bg-white/10 rounded px-2 py-0.5 text-[10px] text-slate-500 font-mono">your-shop.laruvisona.jp</div>
                     <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded font-bold">公開中</span>
                   </div>
                   <div className="bg-white">

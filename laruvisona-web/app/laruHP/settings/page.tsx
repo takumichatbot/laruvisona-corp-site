@@ -300,14 +300,14 @@ export default function SettingsPage() {
     setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'DNS確認中...', type: 'info' } }));
     try {
       const res = await fetch(`/api/sites/${siteId}/domain`);
-      const d = await res.json() as { verified?: boolean; dnsVerified?: boolean; cname?: string | null; expectedTarget?: string; reason?: string };
+      const d = await res.json() as { verified?: boolean; dnsVerified?: boolean; cname?: string | null; aRecord?: string | null; expectedTarget?: string; expectedApexIp?: string; reason?: string };
       if (d.reason === 'no_domain') {
         setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'ドメインが設定されていません', type: 'error' } }));
       } else if (d.verified) {
         setDomainMsg(prev => ({ ...prev, [siteId]: { text: '✓ DNS確認済み！サイトが独自ドメインで表示されています。', type: 'success' } }));
         setDomainVerified(prev => ({ ...prev, [siteId]: { verified: true, cname: d.cname ?? null, expectedTarget: d.expectedTarget ?? '' } }));
       } else {
-        setDomainMsg(prev => ({ ...prev, [siteId]: { text: `DNS未反映。CNAME: ${d.cname || '未設定'} → 期待値: ${d.expectedTarget || '---'}`, type: 'error' } }));
+        setDomainMsg(prev => ({ ...prev, [siteId]: { text: `DNS未反映。現在: CNAME ${d.cname || 'なし'} / A ${d.aRecord || 'なし'} → 期待値: CNAME ${d.expectedTarget || '---'} または A ${d.expectedApexIp || '---'}`, type: 'error' } }));
         setDomainVerified(prev => ({ ...prev, [siteId]: { verified: false, cname: d.cname ?? null, expectedTarget: d.expectedTarget ?? '' } }));
       }
     } catch {
@@ -542,7 +542,7 @@ export default function SettingsPage() {
               </div>
               <h2 className="font-bold text-sm text-gray-900">独自ドメイン設定</h2>
             </div>
-            <p className="text-xs text-gray-500 mb-5">取得済みドメインをサイトに紐付けます。設定後、ドメインのDNSにCNAMEレコードを追加してください。</p>
+            <p className="text-xs text-gray-500 mb-5">取得済みドメインをサイトに紐付けます。設定後、ドメインのDNSにレコードを追加してください（下の手順参照）。</p>
             <div className="space-y-5">
               {domainSites.map(site => (
                 <div key={site.id} className="space-y-2">
@@ -580,14 +580,17 @@ export default function SettingsPage() {
               ))}
             </div>
             <div className="mt-5 bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
-              <p className="text-[11px] font-bold text-gray-700">DNS設定手順（Render）</p>
+              <p className="text-[11px] font-bold text-gray-700">DNS設定手順</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-[11px] text-gray-600">
-                  <thead><tr className="border-b border-gray-200"><th className="text-left pb-1.5 font-semibold">タイプ</th><th className="text-left pb-1.5 font-semibold">ホスト</th><th className="text-left pb-1.5 font-semibold">値</th></tr></thead>
-                  <tbody className="font-mono"><tr><td className="py-1 pr-3">CNAME</td><td className="py-1 pr-3">@（またはwww）</td><td className="py-1 text-sky-600">laruvisona.onrender.com</td></tr></tbody>
+                  <thead><tr className="border-b border-gray-200"><th className="text-left pb-1.5 font-semibold">設定するドメイン</th><th className="text-left pb-1.5 font-semibold">タイプ</th><th className="text-left pb-1.5 font-semibold">ホスト</th><th className="text-left pb-1.5 font-semibold">値</th></tr></thead>
+                  <tbody className="font-mono">
+                    <tr><td className="py-1 pr-3">www.example.com</td><td className="py-1 pr-3">CNAME</td><td className="py-1 pr-3">www</td><td className="py-1 text-sky-600">laruvisona-corp-site.onrender.com</td></tr>
+                    <tr><td className="py-1 pr-3">example.com</td><td className="py-1 pr-3">A</td><td className="py-1 pr-3">@（空欄）</td><td className="py-1 text-sky-600">216.24.57.1</td></tr>
+                  </tbody>
                 </table>
               </div>
-              <p className="text-[10px] text-gray-400">設定後「DNS確認」ボタンで反映状況を確認できます。反映には最大48時間かかる場合があります。</p>
+              <p className="text-[10px] text-gray-400">ルートドメイン（@）にはCNAMEを設定できないレジストラが多いため、Aレコードをご利用ください（ALIAS/ANAME対応のDNSならCNAMEと同じ値でも可）。設定後「DNS確認」ボタンで反映状況を確認できます。反映には最大48時間かかる場合があります。</p>
             </div>
           </section>
         )}

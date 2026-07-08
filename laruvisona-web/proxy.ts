@@ -67,6 +67,17 @@ export async function proxy(request: NextRequest) {
     !pathname.startsWith('/laruHP') &&
     pathname !== '/favicon.ico'
   ) {
+    // サブドメイン: <slug>.MAIN_HOST → /hp/<slug>（robots.txt/sitemap.xml等のサブパスもそのまま透過）
+    // ワイルドカードDNS（*.MAIN_HOST → Render）を設定して初めて到達するホスト名なのでDB照会不要
+    const sub = MAIN_HOST && hostname.endsWith(`.${MAIN_HOST}`)
+      ? hostname.slice(0, -(MAIN_HOST.length + 1))
+      : null;
+    if (sub && !sub.includes('.')) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/hp/${sub}${pathname === '/' ? '' : pathname}`;
+      return NextResponse.rewrite(url);
+    }
+
     // 管理画面の独自ドメインなら、ルートをダッシュボードへ（/laruHP・/api は下で通常処理）
     if (await isAgencyAdminDomain(hostname)) {
       if (pathname === '/') {
@@ -76,7 +87,10 @@ export async function proxy(request: NextRequest) {
       }
     } else {
       const url = request.nextUrl.clone();
-      url.pathname = `/hp/by-domain/${hostname}`;
+      // robots.txt / sitemap.xml は独自ドメイン専用ルートへ（それ以外はトップを表示）
+      url.pathname = (pathname === '/robots.txt' || pathname === '/sitemap.xml')
+        ? `/hp/by-domain/${hostname}${pathname}`
+        : `/hp/by-domain/${hostname}`;
       return NextResponse.rewrite(url);
     }
   }

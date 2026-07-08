@@ -96,7 +96,7 @@ function buildEmailHtml({
 
     <!-- Footer -->
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:16px 32px;text-align:center">
-      <p style="color:#94a3b8;font-size:11px;margin:0">このメールは <strong>${siteName}</strong> のフォームから自動送信されました。<br>LARU HP · <a href="https://laruvisona.com" style="color:#94a3b8">laruvisona.com</a></p>
+      <p style="color:#94a3b8;font-size:11px;margin:0">このメールは <strong>${siteName}</strong> のフォームから自動送信されました。<br>LARU HP · <a href="https://laruvisona.jp" style="color:#94a3b8">laruvisona.jp</a></p>
     </div>
 
   </div>
@@ -234,7 +234,7 @@ export async function POST(req: Request) {
       </div>
     </div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:16px 32px;text-align:center">
-      <p style="color:#94a3b8;font-size:11px;margin:0">このメールは自動送信です。返信はできません。<br>${site.name} · Powered by <a href="https://laruvisona.com" style="color:#94a3b8">LARU HP</a></p>
+      <p style="color:#94a3b8;font-size:11px;margin:0">このメールは自動送信です。返信はできません。<br>${site.name} · Powered by <a href="https://laruvisona.jp" style="color:#94a3b8">LARU HP</a></p>
     </div>
   </div>
 </body>

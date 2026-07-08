@@ -128,7 +128,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'サーバー費用は別途かかりますか？',
-    a: '月額999円の中にサーバー利用料・laruvisona.comサブドメイン・SSL証明書がすべて含まれています。独自ドメインをご希望の場合は別途ドメイン取得費用（年間約1,000〜2,000円）が必要です。',
+    a: '月額999円の中にサーバー利用料・laruvisona.jpサブドメイン・SSL証明書がすべて含まれています。独自ドメインをご希望の場合は別途ドメイン取得費用（年間約1,000〜2,000円）が必要です。',
   },
   {
     q: 'HTMLやCSSの知識が必要ですか？',
@@ -508,7 +508,7 @@ export default function LaruHPLandingPage() {
                 <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
                 <div className="w-3 h-3 rounded-full bg-green-500/50" />
               </div>
-              <div className="flex-1 bg-white rounded-lg px-3 py-1 text-xs text-gray-400 font-mono truncate border border-gray-200">your-shop.laruvisona.com</div>
+              <div className="flex-1 bg-white rounded-lg px-3 py-1 text-xs text-gray-400 font-mono truncate border border-gray-200">your-shop.laruvisona.jp</div>
               <div className="flex gap-2 flex-shrink-0">
                 <button className="hidden sm:block text-xs bg-white border border-sky-200 px-3 py-1 rounded-lg text-gray-500">プレビュー</button>
                 <button className="text-xs bg-blue-500 px-3 py-1 rounded-lg text-white font-medium whitespace-nowrap">公開する</button>
@@ -606,7 +606,7 @@ export default function LaruHPLandingPage() {
             <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 transition-all shadow-md hover:shadow-xl bg-white">
               <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
-                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 salon-an.laruvisona.com</div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 salon-an.laruvisona.jp</div>
               </div>
               {/* Hero photo area */}
               <div className="relative overflow-hidden" style={{height:180}}>
@@ -674,7 +674,7 @@ export default function LaruHPLandingPage() {
             <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-emerald-300 transition-all shadow-md hover:shadow-xl bg-white">
               <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
-                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 midori-sekkotsu.laruvisona.com</div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 midori-sekkotsu.laruvisona.jp</div>
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-teal-800 to-emerald-950" />
@@ -728,7 +728,7 @@ export default function LaruHPLandingPage() {
             <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-amber-300 transition-all shadow-md hover:shadow-xl bg-white">
               <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
-                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 bistro-nakano.laruvisona.com</div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 bistro-nakano.laruvisona.jp</div>
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-900 via-amber-900 to-orange-950" />
@@ -787,7 +787,7 @@ export default function LaruHPLandingPage() {
             <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-slate-400 transition-all shadow-md hover:shadow-xl bg-white">
               <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
-                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 yamamoto-law.laruvisona.com</div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 yamamoto-law.laruvisona.jp</div>
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
@@ -839,7 +839,7 @@ export default function LaruHPLandingPage() {
             <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-red-300 transition-all shadow-md hover:shadow-xl bg-white">
               <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
-                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 studio-iron.laruvisona.com</div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 studio-iron.laruvisona.jp</div>
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-red-900 via-orange-900 to-red-950" />
@@ -891,7 +891,7 @@ export default function LaruHPLandingPage() {
             <div className="group rounded-2xl overflow-hidden border border-gray-200 hover:border-amber-400 transition-all shadow-md hover:shadow-xl bg-white">
               <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
                 <div className="flex gap-1.5"><div className="w-2.5 h-2.5 bg-red-400 rounded-full"/><div className="w-2.5 h-2.5 bg-yellow-400 rounded-full"/><div className="w-2.5 h-2.5 bg-green-400 rounded-full"/></div>
-                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 takumi-koumuten.laruvisona.com</div>
+                <div className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-[9px] text-gray-400 text-center truncate">🔒 takumi-koumuten.laruvisona.jp</div>
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-800 via-yellow-900 to-amber-950" />

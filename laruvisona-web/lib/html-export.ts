@@ -1493,7 +1493,7 @@ window.addEventListener('popstate',function(){
     : '';
 
   // Dynamic OGP image via /api/og, falling back to hero bgImage if available
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.com';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
   const heroBgImage = firstPage.blocks.find(b => b.type === 'hero')?.data?.bgImage as string | undefined;
   const ogImageUrl = heroBgImage && heroBgImage.startsWith('http')
     ? heroBgImage
