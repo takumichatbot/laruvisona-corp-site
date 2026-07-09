@@ -2466,7 +2466,7 @@ export default function DashboardPage() {
             </p>
             <div className="space-y-2 mb-5">
               {[
-                { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980/月', sites: '2サイト', badge: 'おすすめ' },
+                { id: 'hp-bot', label: 'HP + Bot Standard', price: '¥4,980/月', sites: '2サイト', badge: 'おすすめ' },
                 { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800/月', sites: '3サイト', badge: null },
                 { id: 'agency', label: 'エージェンシー', price: '¥19,800/月', sites: '無制限', badge: '代理店向け' },
               ].map(p => (
@@ -2503,7 +2503,7 @@ export default function DashboardPage() {
         const MODAL_PLANS = [
           { id: 'hp',         label: 'LARU HP',          monthlyPrice: 999,   annualPrice: 833,   badge: null,           desc: 'ホームページ作成・公開' },
           { id: 'lite',       label: 'HP + LARUbot Lite', monthlyPrice: 2980,  annualPrice: 2483,  badge: null,           desc: 'HP + AIチャットボット（Q&A15件・ボット2体）' },
-          { id: 'hp-bot',     label: 'HP + LARUbot',      monthlyPrice: 4980,  annualPrice: 4150,  badge: 'おすすめ',     desc: 'HP + AIチャットボット（Q&A30件・ボット3体）' },
+          { id: 'hp-bot',     label: 'HP + Bot Standard',      monthlyPrice: 4980,  annualPrice: 4150,  badge: 'おすすめ',     desc: 'HP + AIチャットボット（Q&A30件・ボット3体）' },
           { id: 'hp-bot-seo', label: 'HP + Bot + SEO',    monthlyPrice: 9800,  annualPrice: 8166,  badge: '半年間限定',   desc: 'HP + チャットボット + AIブログSEO' },
           { id: 'agency',     label: 'エージェンシー',    monthlyPrice: 19800, annualPrice: 16500, badge: '代理店向け',   desc: 'クライアント数無制限・全機能込み' },
         ] as const;

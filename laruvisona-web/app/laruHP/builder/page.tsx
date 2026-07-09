@@ -6625,7 +6625,7 @@ function BuilderContent() {
               {([
                 { id: 'hp', label: 'LARU HP', price: '¥999', sub: '/月', badge: null, desc: 'ホームページ作成・公開' },
                 { id: 'lite', label: 'HP + LARUbot Lite', price: '¥2,980', sub: '/月', badge: null, desc: 'HP + AIチャットボット（Q&A15件・ボット2体）' },
-                { id: 'hp-bot', label: 'HP + LARUbot', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP + AIチャットボット（Q&A30件・ボット3体）' },
+                { id: 'hp-bot', label: 'HP + Bot Standard', price: '¥4,980', sub: '/月', badge: 'おすすめ', desc: 'HP + AIチャットボット（Q&A30件・ボット3体）' },
                 { id: 'hp-bot-seo', label: 'HP + Bot + SEO', price: '¥9,800', sub: '/月', badge: '半年間限定', desc: 'HP + チャットボット + AIブログSEO' },
               ] as const).map(plan => (
                 <button

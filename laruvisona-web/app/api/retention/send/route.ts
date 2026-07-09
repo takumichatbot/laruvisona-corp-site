@@ -15,7 +15,7 @@ function daysSince(isoDate: string) {
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
 
 function emailDay1(plan: string) {
-  const planLabel = plan === 'hp' ? 'HP プラン' : plan === 'lite' ? 'HP + LARUbot Lite' : plan === 'hp-bot' ? 'HP + LARUbot' : plan === 'hp-bot-seo' ? 'HP + Bot + SEO' : 'エージェンシー';
+  const planLabel = plan === 'hp' ? 'HP プラン' : plan === 'lite' ? 'HP + LARUbot Lite' : plan === 'hp-bot' ? 'HP + Bot Standard' : plan === 'hp-bot-seo' ? 'HP + Bot + SEO' : 'エージェンシー';
   return {
     subject: '【LARU HP】サイト公開まであと3ステップ',
     html: `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"></head>

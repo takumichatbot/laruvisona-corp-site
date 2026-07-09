@@ -23,7 +23,7 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: 'AIコンテンツ生成',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'ビジュアルエディタ',      hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'SEO自動最適化',           hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'LARUbot AIチャットボット', hp: 'no',  lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: 'LARUbot Lite AIチャットボット', hp: 'no',  lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: '　└ Q&A 登録数',          hp: 'no',  lite: '15件', hpBot: '30件', hpBotSeo: '30件' },
   { label: '　└ 設置ボット数',        hp: 'no',  lite: '2体',  hpBot: '3体',  hpBotSeo: '3体' },
   { label: '　└ 質問例',              hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
@@ -337,7 +337,7 @@ export default function PlansPage() {
               </CheckoutButton>
             </div>
 
-            {/* HP + LARUbot */}
+            {/* HP + Bot Standard */}
             <div className="p-4 text-center border-2 border-sky-500 bg-white shadow-[0_0_40px_rgba(14,165,233,0.12)] relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <span className="bg-sky-600 text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
@@ -345,7 +345,7 @@ export default function PlansPage() {
                 </span>
               </div>
               <div className="text-xs font-medium text-sky-600 tracking-widest uppercase mb-2">hp-bot</div>
-              <div className="text-base font-semibold mb-1 text-gray-900">HP + LARUbot</div>
+              <div className="text-base font-semibold mb-1 text-gray-900">HP + Bot Standard</div>
               <div className="flex items-baseline justify-center gap-0.5 mb-1">
                 <span className="text-gray-500 text-xs">¥</span>
                 <span className="text-3xl font-bold leading-none text-gray-900">{P.hpBot.toLocaleString()}</span>
@@ -422,7 +422,7 @@ export default function PlansPage() {
                 <ul className="space-y-2">
                   {[
                     'クライアント数無制限',
-                    '全機能（HP + LARUbot + LARUSEO）込み',
+                    '全機能（HP + LARUbot Lite + LARUSEO）込み',
                     'クライアント別ダッシュボード・管理画面',
                     'PV・問い合わせを全サイトまとめて確認',
                     'クライアント連絡先・メモの一元管理',

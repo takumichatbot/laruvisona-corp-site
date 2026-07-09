@@ -68,7 +68,7 @@ export default function Image() {
           <div style={{ display: 'flex', gap: 12, marginBottom: 48 }}>
             {[
               { label: 'HP', price: '¥999/月', color: '#38bdf8' },
-              { label: 'HP + LARUbot', price: '¥4,980/月', color: '#818cf8' },
+              { label: 'HP + Bot Standard', price: '¥4,980/月', color: '#818cf8' },
               { label: 'エージェンシー', price: '¥19,800/月', color: '#c084fc' },
             ].map((p) => (
               <div key={p.label} style={{

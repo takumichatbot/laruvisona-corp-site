@@ -46,7 +46,7 @@ const jsonLd = {
     offerCount: 4,
     offers: [
       { '@type': 'Offer', name: 'HP プラン', price: '999', priceCurrency: 'JPY', description: 'AIホームページ作成・ビジュアルエディタ' },
-      { '@type': 'Offer', name: 'HP + LARUbot', price: '4980', priceCurrency: 'JPY', description: 'HP + AIチャットボット' },
+      { '@type': 'Offer', name: 'HP + Bot Standard', price: '4980', priceCurrency: 'JPY', description: 'HP + AIチャットボット' },
       { '@type': 'Offer', name: 'HP + Bot + SEO', price: '9800', priceCurrency: 'JPY', description: 'HP + AIチャットボット + SEO自動最適化' },
       { '@type': 'Offer', name: 'エージェンシー', price: '19800', priceCurrency: 'JPY', description: 'クライアント数無制限・全機能込み代理店プラン' },
     ],

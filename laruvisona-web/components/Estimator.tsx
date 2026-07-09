@@ -207,7 +207,7 @@ export default function Estimator({ onConsult }: EstimatorProps) {
             </div>
             <div className="bg-gradient-to-br from-indigo-900/40 to-[#0f172a] backdrop-blur-md p-6 md:p-8 rounded-[1.5rem] border border-indigo-500/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[8px] font-bold px-3 py-1 rounded-bl-lg font-en tracking-widest">RECOMMEND</div>
-              <h3 className="text-sm font-bold text-white mb-5 flex items-center gap-3"><span className="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q5</span> 生成AI・LLM連携</h3>
+              <h3 className="text-sm font-bold text-white mb-5 flex items-center gap-3"><span className="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[10px] px-2 py-0.5 rounded font-en">Q4</span> 生成AI・LLM連携</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[{ val: 0, l: 'なし' }, { val: 50, l: 'ボット(GPT等)' }, { val: 150, l: '自社データ(RAG)' }, { val: 300, l: '自律エージェント' }].map(i => (
                   <button key={i.l} onClick={() => handleRadio('ai', i.val)} className={`${btnBase} !py-3 ${answers.ai === i.val ? 'bg-indigo-500/30 border-indigo-400 text-white scale-105' : 'bg-black/20 text-slate-400 hover:bg-white/10'}`}>{i.l}</button>
@@ -216,7 +216,7 @@ export default function Estimator({ onConsult }: EstimatorProps) {
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-[#0f172a]/60 backdrop-blur-md p-6 rounded-[1.5rem] border border-white/5">
-                <h3 className="text-sm font-bold text-white mb-5"><span className="text-blue-400 mr-2 font-en">Q6</span> AIオプション (複数可)</h3>
+                <h3 className="text-sm font-bold text-white mb-5"><span className="text-blue-400 mr-2 font-en">Q5</span> AIオプション (複数可)</h3>
                 <div className="flex flex-col gap-3">
                   {[{ val: 50, l: '音声操作', ic: <Mic className="w-4 h-4" /> }, { val: 40, l: '音声読上', ic: <Volume2 className="w-4 h-4" /> }, { val: 60, l: '画像解析', ic: <Camera className="w-4 h-4" /> }].map(i => (
                     <button key={i.l} onClick={() => handleCheck('voice', i.val)} className={`${btnBase} !py-3 !flex-row justify-start px-4 ${answers.voice.includes(i.val) ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}>{i.ic} {i.l}</button>
@@ -224,7 +224,7 @@ export default function Estimator({ onConsult }: EstimatorProps) {
                 </div>
               </div>
               <div className="bg-[#0f172a]/60 backdrop-blur-md p-6 rounded-[1.5rem] border border-white/5">
-                <h3 className="text-sm font-bold text-white mb-5"><span className="text-blue-400 mr-2 font-en">Q7</span> 外部連携 (複数可)</h3>
+                <h3 className="text-sm font-bold text-white mb-5"><span className="text-blue-400 mr-2 font-en">Q6</span> 外部連携 (複数可)</h3>
                 <div className="flex flex-col gap-3">
                   {[{ val: 50, l: '決済 (Stripe等)', ic: <CreditCard className="w-4 h-4" /> }, { val: 40, l: 'Maps連携', ic: <MapPin className="w-4 h-4" /> }, { val: 80, l: '基幹API連携', ic: <Database className="w-4 h-4" /> }].map(i => (
                     <button key={i.l} onClick={() => handleCheck('ext', i.val)} className={`${btnBase} !py-3 !flex-row justify-start px-4 ${answers.ext.includes(i.val) ? 'bg-blue-600/20 border-blue-500 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}>{i.ic} {i.l}</button>
@@ -233,7 +233,7 @@ export default function Estimator({ onConsult }: EstimatorProps) {
               </div>
             </div>
             <div className="bg-[#0f172a]/60 backdrop-blur-md p-6 rounded-[1.5rem] border border-white/5">
-              <h3 className="text-sm font-bold text-white mb-5"><span className="text-red-400 mr-2 font-en">Q10</span> 希望納期</h3>
+              <h3 className="text-sm font-bold text-white mb-5"><span className="text-red-400 mr-2 font-en">Q7</span> 希望納期</h3>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button onClick={() => handleRadio('speed', 1.0)} className={`${btnBase} !py-4 ${answers.speed === 1.0 ? 'bg-white/10 border-white/30 text-white' : 'bg-black/20 text-slate-400'}`}>通常 (2-3ヶ月)</button>
                 <button onClick={() => handleRadio('speed', 1.3)} className={`${btnBase} !py-4 ${answers.speed === 1.3 ? 'bg-red-500/20 border-red-500 text-white scale-105 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'bg-red-950/20 text-red-300 hover:bg-red-900/30'}`}>特急 (1ヶ月) x1.3</button>

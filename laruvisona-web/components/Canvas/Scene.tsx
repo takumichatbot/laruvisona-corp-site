@@ -15,8 +15,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 //   Scene1 誕生   … イントロ後、パーティクルが収束して球体を形成（スクロール非依存）
 //   Scene2 分裂   … #services で3小球に分裂し各カードの真上へ吸着（hoverで回転加速）
 //   Scene3 金額   … #estimator 右側に定位、概算金額を CanvasTexture→emissiveMap で表面に流す
-//   Scene4 収納   … #laruHP のブラウザモックへ縮小しながら吸い込まれ、モック内ドットが脈動
-//   Scene5 着地   … #contact で再浮上し中央背面で脈動（input focusで脈動加速）
+//   Scene4 収納   … #product のLARU HPカード内ミニモックへ縮小しながら吸い込まれ、モック内ドットが脈動
+//   Scene5 着地   … #voice で再浮上し音声コア背面へ → #contact で中央背面に着地（input focusで脈動加速）
 //
 // 設計上の要点:
 //   - マスタータイムライン（scrub 0.8）は「経路座標(fx,fy)・scale・ブレンド係数」だけを持つ。
@@ -367,10 +367,9 @@ export default function Scene({ introDone = true }: { introDone?: boolean }) {
 
       const sAbout = at('#about');
       const sServices = at('#services');
+      const sEstimator = at('#estimator');
       const sProduct = at('#product');
       const sVoice = at('#voice');
-      const sEstimator = at('#estimator');
-      const sLaruHP = at('#laruHP');
       const sContact = at('#contact', 0.75);
 
       tl = gsap.timeline({
@@ -385,29 +384,27 @@ export default function Scene({ introDone = true }: { introDone?: boolean }) {
       // about → services: 中央上部へ戻りつつ分裂準備
       T.to(story.current, { fx: 0, fy: 0.1, scale: 1.0, duration: seg(sAbout, sServices) }, sAbout);
       // services: 分裂 → カード上に吸着（モバイルは分裂省略で縮小移動のみ）
-      const splitEnd = sServices + seg(sServices, sProduct) * 0.55;
+      const splitEnd = sServices + seg(sServices, sEstimator) * 0.55;
       if (!isMobile) {
         T.to(story.current, { split: 1, duration: seg(sServices, splitEnd) }, sServices);
-        T.to(story.current, { split: 0, duration: seg(splitEnd, sProduct) }, splitEnd); // 抜けるとき再結合
+        T.to(story.current, { split: 0, duration: seg(splitEnd, sEstimator) }, splitEnd); // 抜けるとき再結合
       } else {
         T.to(story.current, { scale: 0.6, fx: 0.3, duration: seg(sServices, splitEnd) }, sServices);
       }
-      // product: 左端に退避（テキスト右側のChatMockup裏は不可視になるため画面端に半分見せる）
-      T.to(story.current, { fx: -0.42, fy: 0, scale: 0.8, duration: seg(sProduct, sVoice) }, sProduct);
-      // voice: 見出しテキストの真後ろを避け、下側の音声UIコアの背面に重なる
-      T.to(story.current, { fx: 0, fy: -0.22, scale: 0.72, duration: seg(sVoice, sEstimator) }, sVoice);
       // estimator: 右側（ESTIMATED COSTカードの背後）に定位 + 金額ティッカー
-      const estMid = sEstimator + seg(sEstimator, sLaruHP) * 0.3;
+      const estMid = sEstimator + seg(sEstimator, sProduct) * 0.3;
       T.to(story.current, { fx: isMobile ? 0.25 : 0.31, fy: 0, scale: 1.2, duration: seg(sEstimator, estMid) }, sEstimator);
       T.to(story.current, { ticker: 1, duration: seg(sEstimator, estMid) }, sEstimator);
-      T.to(story.current, { ticker: 0, duration: seg(estMid, sLaruHP) * 0.6 }, sLaruHP - seg(estMid, sLaruHP) * 0.3);
-      // laruHP: モックへ吸い込まれる（実座標は useFrame でDOM合成）。
-      // 前半50%で吸い込みを完了させ、contactまで absorb=1 を保持する帯を作る
+      T.to(story.current, { ticker: 0, duration: seg(estMid, sProduct) * 0.6 }, sProduct - seg(estMid, sProduct) * 0.3);
+      // product: LARU HPカードのミニモックへ吸い込まれる（実座標は useFrame でDOM合成）。
+      // 前半で吸い込みを完了させ、voiceまで absorb=1 を保持する帯を作る
       // （ここが短いと scrub でドット表示閾値まで到達しない）
-      const absorbEnd = sLaruHP + seg(sLaruHP, sContact) * 0.35;
-      T.to(story.current, { absorb: 1, scale: 0.15, duration: seg(sLaruHP, absorbEnd) }, sLaruHP);
-      // contact: 再浮上して中央背面へ着地
-      T.to(story.current, { absorb: 0, scale: 1.6, fx: 0, fy: -0.03, land: 1, duration: seg(sContact, 1) }, sContact);
+      const absorbEnd = sProduct + seg(sProduct, sVoice) * 0.35;
+      T.to(story.current, { absorb: 1, scale: 0.15, duration: seg(sProduct, absorbEnd) }, sProduct);
+      // voice: 再浮上して音声UIコアの背面に重なる
+      T.to(story.current, { absorb: 0, fx: 0, fy: -0.22, scale: 0.72, duration: seg(sVoice, sContact) * 0.5 }, sVoice);
+      // contact: 中央背面へ着地
+      T.to(story.current, { scale: 1.6, fx: 0, fy: -0.03, land: 1, duration: seg(sContact, 1) }, sContact);
     };
 
     build();

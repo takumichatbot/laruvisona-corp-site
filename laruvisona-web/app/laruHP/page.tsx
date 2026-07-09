@@ -70,15 +70,15 @@ const PLANS = [
       'メールサポート',
     ],
     missing: [
-      'LARUbot AIチャットボット',
+      'LARUbot Lite AIチャットボット',
       'LARUSEO AIブログ',
     ],
   },
   {
     id: 'hp-bot',
-    name: 'HP + LARUbot',
+    name: 'HP + Bot Standard',
     price: 4980,
-    sub: 'HP + AIチャットボット',
+    sub: 'HP + AIチャットボット（Lite版）',
     badge: 'おすすめ',
     highlight: true,
     features: [
@@ -86,7 +86,7 @@ const PLANS = [
       'AIコンテンツ生成',
       'ビジュアルエディタ',
       'SEO自動最適化',
-      'LARUbot AIチャットボット',
+      'LARUbot Lite AIチャットボット',
       '独自ドメイン対応',
       'SSL・サーバー費用込み',
       'Google Analytics連携',
@@ -109,7 +109,7 @@ const PLANS = [
       'AIコンテンツ生成',
       'ビジュアルエディタ',
       'SEO自動最適化',
-      'LARUbot AIチャットボット',
+      'LARUbot Lite AIチャットボット',
       'LARUSEO AIブログ',
       '独自ドメイン対応',
       'SSL・サーバー費用込み',
@@ -137,6 +137,10 @@ const FAQ_ITEMS = [
   {
     q: 'LARUbotとはどうやって連携しますか？',
     a: 'エディタ内の「連携設定」からLARUbotアカウントと接続するだけです。わずか3クリックでAIチャットボットがあなたのサイトに導入されます。',
+  },
+  {
+    q: 'プランに含まれる「LARUbot Lite」とフル版「LARUbot」の違いは？',
+    a: 'laruHPのプランに含まれるのはホームページ用に最適化した機能制限版（LARUbot Lite）で、Q&A登録数や設置ボット数に上限があります。CRM顧客管理・メール自動配信・Web予約/決済・SEO記事自動生成まで含むフル版LARUbot（月額27,500円〜）は別サービスとして larubot.tokyo で提供しています。Liteから始めて、必要になったらフル版へのアップグレードも可能です。',
   },
   {
     q: '作成したサイトのSEO効果は？',
@@ -600,6 +604,7 @@ export default function LaruHPLandingPage() {
             <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">完成イメージ</span>
             <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">こんなサイトが作れます</h2>
             <p className="text-gray-500">AIが業種に最適化したレイアウト・写真・コピーを自動生成。5分でここまで仕上がります。</p>
+            <p className="text-gray-400 text-xs mt-2">※掲載サイトの店舗名・実績数値はすべて架空のデモイメージです</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* ── 美容室 ── */}
@@ -975,9 +980,10 @@ export default function LaruHPLandingPage() {
       <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="lp-fade-up text-center mb-12">
-            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">導入事例</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">お客様の声</h2>
-            <p className="text-gray-500">実際にLARU HPを使ったオーナーから届いたリアルな声</p>
+            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">導入イメージ</span>
+            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">こんな活用ができます</h2>
+            <p className="text-gray-500">導入後の活用シーンを想定したイメージです</p>
+            <p className="text-gray-400 text-xs mt-2">※以下は架空のデモイメージであり、実際のお客様の声・実績ではありません</p>
           </div>
           <div className="lp-stagger grid md:grid-cols-3 gap-6">
             {[
@@ -1007,10 +1013,13 @@ export default function LaruHPLandingPage() {
               },
             ].map((t, i) => (
               <div key={i} className="bg-sky-50 border border-sky-100 rounded-3xl p-7 flex flex-col hover:border-sky-300 hover:shadow-md transition-all">
-                <div className="flex gap-0.5 mb-4">
-                  {Array(t.stars).fill(0).map((_, j) => (
-                    <span key={j} className="text-amber-400 text-sm">★</span>
-                  ))}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex gap-0.5">
+                    {Array(t.stars).fill(0).map((_, j) => (
+                      <span key={j} className="text-amber-400 text-sm">★</span>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-gray-400 border border-gray-200 rounded-full px-2 py-0.5">デモイメージ</span>
                 </div>
                 <div className="bg-sky-100 border border-sky-200 text-sky-700 text-xs font-semibold px-3 py-1 rounded-full self-start mb-4">{t.highlight}</div>
                 <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-6">"{t.quote}"</p>
@@ -1254,6 +1263,39 @@ export default function LaruHPLandingPage() {
             プランを詳しく比較する →
           </Link>
 
+          {/* LARUbot Lite とフル版の違い（価格の誤認防止） */}
+          <div className="max-w-3xl mx-auto text-left bg-slate-50 border border-slate-200 rounded-3xl p-6 md:p-8 mb-12">
+            <h3 className="text-base font-semibold text-gray-900 mb-1.5">
+              <span className="inline-block bg-indigo-100 text-indigo-600 text-xs font-medium px-2.5 py-0.5 rounded-full mr-2">ご注意</span>
+              「LARUbot Lite」とフル版「LARUbot」の違い
+            </h3>
+            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+              laruHPのプランに含まれるのは、ホームページ用に最適化した<strong>機能制限版（LARUbot Lite）</strong>です。
+              CRM顧客管理・メール自動配信（MA）・Web予約/決済・SEO記事自動生成などを含むフル版とは別プランです。
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-2 pr-3 font-medium text-gray-500 w-1/3"></th>
+                    <th className="text-left py-2 px-3 font-semibold text-gray-900">LARUbot Lite<span className="block text-[10px] font-normal text-gray-400">laruHPプランに含む</span></th>
+                    <th className="text-left py-2 px-3 font-semibold text-gray-900">フル版 LARUbot<span className="block text-[10px] font-normal text-gray-400">月額¥27,500〜（別サービス）</span></th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-600">
+                  <tr className="border-b border-slate-100"><td className="py-2 pr-3 text-gray-500">AIチャットボット</td><td className="py-2 px-3">✓（Q&A登録数など制限あり）</td><td className="py-2 px-3">✓ 無制限クラス</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-2 pr-3 text-gray-500">CRM顧客管理・有人チャット</td><td className="py-2 px-3 text-gray-300">−</td><td className="py-2 px-3">✓</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-2 pr-3 text-gray-500">メール自動配信（MA）</td><td className="py-2 px-3 text-gray-300">−</td><td className="py-2 px-3">✓</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-2 pr-3 text-gray-500">Web予約・事前決済</td><td className="py-2 px-3 text-gray-300">−</td><td className="py-2 px-3">✓</td></tr>
+                  <tr><td className="py-2 pr-3 text-gray-500">SEO記事自動生成（LARU SEO）</td><td className="py-2 px-3 text-gray-300">−（SEOプランで一部）</td><td className="py-2 px-3">✓</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <a href="https://larubot.tokyo" target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+              フル版 LARUbot の詳細はこちら →
+            </a>
+          </div>
+
           {/* Competitor comparison */}
           <div className="mt-4 overflow-x-auto rounded-2xl">
             <div className="min-w-[480px] bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
@@ -1286,7 +1328,8 @@ export default function LaruHPLandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <span className="text-sky-200 font-medium text-xs tracking-[0.2em]">安心保証</span>
-            <h2 className="text-2xl md:text-3xl font-bold mt-3 text-white">リスクゼロで始められる理由</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mt-3 text-white">安心して始められる理由</h2>
+            <p className="text-sky-100 text-sm mt-4 font-medium">全プラン最低6ヶ月契約です。初月は無料、7ヶ月目以降は月単位でいつでも解約できます。</p>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -1297,8 +1340,8 @@ export default function LaruHPLandingPage() {
               },
               {
                 icon: '📅',
-                title: '7ヶ月目から解約自由',
-                desc: '6ヶ月後からは月単位でいつでも解約できます。長期縛りなし。',
+                title: '契約は最低6ヶ月',
+                desc: '最低利用期間は6ヶ月です。7ヶ月目以降は月単位でいつでも解約できます。',
               },
               {
                 icon: '💾',
@@ -1324,7 +1367,7 @@ export default function LaruHPLandingPage() {
               href="/laruHP/onboarding"
               className="inline-flex items-center gap-3 bg-white text-sky-700 font-bold px-10 py-4 rounded-2xl text-base hover:bg-sky-50 transition-colors shadow-lg"
             >
-              初月無料で試してみる → <span className="text-xs font-normal text-sky-500">7ヶ月目から解約可能</span>
+              初月無料で試してみる → <span className="text-xs font-normal text-sky-500">最低6ヶ月契約・7ヶ月目以降いつでも解約可</span>
             </Link>
           </div>
         </div>
@@ -1385,7 +1428,7 @@ export default function LaruHPLandingPage() {
             <span>✓ 初月完全無料</span>
             <span>✓ 最短5分で完成</span>
             <span>✓ SSL・サーバー込み</span>
-            <span>✓ 7ヶ月目から解約可</span>
+            <span>✓ 最低6ヶ月契約・7ヶ月目から解約可</span>
             <span>✓ カード情報は当社保存なし</span>
           </div>
 
