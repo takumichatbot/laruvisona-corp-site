@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Estimator from '@/components/Estimator';
 import VoiceUI from '@/components/VoiceUI';
+import { WORKS, ACCENT_STYLES } from '@/lib/works-data';
 import InquiryForm from '@/components/InquiryForm';
 import Intro from '@/components/Intro';
 
@@ -138,6 +139,7 @@ export default function Home() {
               <nav className="hidden md:flex items-center gap-2 font-bold text-xs text-slate-300">
                 <a href="#about" className="hover:text-white px-4 py-2 transition-colors">会社概要</a>
                 <a href="#services" className="hover:text-white px-4 py-2 transition-colors">サービス</a>
+                <a href="#works" className="hover:text-white px-4 py-2 transition-colors">実績</a>
                 <a href="#estimator" className="text-blue-400 hover:text-blue-300 px-4 py-2 transition-colors">見積もり</a>
                 <a href="#product" className="hover:text-white px-4 py-2 transition-colors">プロダクト</a>
                 <a href="/laruHP" className="text-cyan-400 hover:text-cyan-300 px-4 py-2 transition-colors border border-cyan-500/30 rounded-lg">LARU HP ✨</a>
@@ -176,6 +178,7 @@ export default function Home() {
           <div className="flex flex-col space-y-6 font-bold text-3xl text-center tracking-tight w-full px-8">
             <a href="#about" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">会社概要</a>
             <a href="#services" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">サービス</a>
+            <a href="#works" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">実績</a>
             <a href="#estimator" onClick={() => setIsMenuOpen(false)} className="text-blue-400 hover:text-blue-300 transition-colors py-2">見積もり</a>
             <a href="#product" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">プロダクト</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)} className="bg-white text-black px-8 py-4 rounded-2xl font-bold text-xl mt-4 hover:bg-blue-50 transition-colors">お問い合わせ</a>
@@ -369,6 +372,46 @@ export default function Home() {
             
             {/* Spacer for scroll */}
             <div className="min-w-[20px] md:min-w-[100px] flex-shrink-0"></div>
+          </div>
+        </section>
+
+        {/* --- Works Section（開発実績 — 受託営業用ポートフォリオ） --- */}
+        <section id="works" className="py-32 relative bg-[#030712]/80 border-t border-white/5 z-10">
+          <div className="container mx-auto px-6 max-w-7xl">
+            <div className="gsap-fade-up mb-16">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-[1px] w-12 bg-blue-500"></div>
+                <span className="text-blue-500 font-bold text-xs tracking-[0.3em]">開発実績</span>
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold text-white leading-[1.1] tracking-tight">
+                WORKS<span className="text-blue-500">.</span>
+              </h2>
+              <p className="text-slate-400 text-base md:text-lg mt-6">企画から運用まで、1名フルスタックで作り切った自社プロダクト。</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {WORKS.map(work => {
+                const accent = ACCENT_STYLES[work.accent];
+                return (
+                  <a key={work.slug} href={`/works/${work.slug}`} className={`gsap-fade-up group bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 ${accent.border} hover:-translate-y-2 transition-all duration-300 flex flex-col`}>
+                    <div className="flex items-center gap-2 mb-6">
+                      <span className={`inline-flex border text-[10px] font-bold px-3 py-1 rounded-full tracking-widest ${accent.chip}`}>{work.category}</span>
+                      {work.placeholder && <span className="inline-flex bg-white/5 border border-white/10 text-slate-500 text-[10px] font-bold px-2.5 py-1 rounded-full tracking-widest">準備中</span>}
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-bold font-en tracking-tight text-white mb-2">{work.name}</h3>
+                    <p className={`text-sm font-bold mb-4 ${accent.text}`}>{work.tagline}</p>
+                    <p className="text-slate-400 text-sm leading-relaxed flex-grow mb-6 line-clamp-3">{work.overview}</p>
+                    <div className="flex flex-wrap gap-1.5 mb-6">
+                      {work.tech.slice(0, 4).map(t => (
+                        <span key={t} className="bg-white/5 text-slate-400 text-[10px] font-bold px-2.5 py-1 rounded-full font-en">{t}</span>
+                      ))}
+                    </div>
+                    <span className="text-white font-bold text-sm inline-flex items-center gap-2 group-hover:gap-3 transition-all">
+                      詳細を見る <i className="fas fa-arrow-right text-xs"></i>
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </section>
 
