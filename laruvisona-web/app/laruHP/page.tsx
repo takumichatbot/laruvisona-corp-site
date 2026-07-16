@@ -41,7 +41,7 @@ const FEATURES = [
   { num: '01', title: 'AI自動コンテンツ生成',       desc: '業種と情報を入力するだけ。AIが魅力的なコピーと最適なレイアウトを自動生成します。',                                                           color: 'blue' },
   { num: '02', title: '直感的なビジュアルエディタ', desc: 'プログラミング不要。ブロックを追加・編集するだけでプロ品質のサイトに。画像・テキスト・カラム何でも対応。',                             color: 'purple' },
   { num: '03', title: 'SEO最大化エンジン',           desc: 'メタタグ・構造化データ・ページ速度最適化を自動設定。業種別JSON-LDスキーマで検索上位表示を狙います。',                                        color: 'green' },
-  { num: '04', title: 'LARUbot ワンクリック連携',    desc: 'AIチャットボット「LARUbot」をエディタからワンクリックで埋め込み。24時間問い合わせ対応を自動化。',                                             color: 'indigo' },
+  { num: '04', title: 'LARUbot Lite ワンクリック連携',    desc: 'AIチャットボット「LARUbot Lite」（プラン付属の機能限定版）をエディタからワンクリックで埋め込み。24時間問い合わせ対応を自動化。',                                             color: 'indigo' },
   { num: '05', title: 'CRM パイプライン管理',         desc: '問い合わせをカンバン方式で管理。「未対応→対応中→成約→NG」のステータスでリード漏れをゼロに。',                                              color: 'emerald' },
   { num: '06', title: '予約枠カレンダー管理',         desc: '空き枠を管理者が設定。訪問者がカレンダーから予約→管理画面で一元管理。自動メール通知付き。',                                               color: 'cyan' },
   { num: '07', title: 'エージェンシーモード',          desc: '複数クライアントサイトを1アカウントで管理。PV・問い合わせ・公開状況をまとめて確認。',                                                    color: 'blue' },
@@ -135,8 +135,8 @@ const FAQ_ITEMS = [
     a: '一切不要です。ビジュアルエディタで直感的に編集できます。テキストのクリック編集、画像のアップロード、ブロックの追加・削除など、すべてマウス操作で完結します。',
   },
   {
-    q: 'LARUbotとはどうやって連携しますか？',
-    a: 'エディタ内の「連携設定」からLARUbotアカウントと接続するだけです。わずか3クリックでAIチャットボットがあなたのサイトに導入されます。',
+    q: 'LARUbot Liteとはどうやって連携しますか？',
+    a: 'エディタ内の「連携設定」から接続するだけです。わずか3クリックでAIチャットボットがあなたのサイトに導入されます。プランに含まれるのは機能限定版のLARUbot Liteで、CRM・予約決済・MAを含むフル機能版LARUbot（月額27,500円〜・別サービス）へのアップグレードも可能です。',
   },
   {
     q: 'プランに含まれる「LARUbot Lite」とフル版「LARUbot」の違いは？',
@@ -323,7 +323,7 @@ export default function LaruHPLandingPage() {
 
           <p className="lp-hero-sub text-slate-700 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal" style={{ opacity: 0 }}>
             業種情報を入力するだけ。AIが<strong className="text-sky-700 font-semibold">5分以内</strong>にプロ品質のホームページを自動生成。<br className="hidden md:block" />
-            SEO・LARUbot連携・ビジュアル編集がすべて月額<strong className="text-sky-700 font-semibold">999円</strong>。
+            SEO・LARUbot Lite連携・ビジュアル編集がすべて月額<strong className="text-sky-700 font-semibold">999円</strong>。
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
@@ -347,7 +347,7 @@ export default function LaruHPLandingPage() {
           </p>
 
           <div className="lp-hero-tags hidden md:flex justify-center gap-3 mt-8 flex-wrap">
-            {['AI コンテンツ生成', 'SEO 自動最適化', 'LARUbot 連携', 'モバイル完全対応', 'SSL 込み'].map((tag, i) => (
+            {['AI コンテンツ生成', 'SEO 自動最適化', 'LARUbot Lite 連携', 'モバイル完全対応', 'SSL 込み'].map((tag, i) => (
               <span key={i} className="bg-white/80 backdrop-blur-sm border border-sky-100 text-gray-500 text-xs px-3 py-1.5 rounded-full hover:border-sky-200 hover:text-gray-700 transition-all" style={{ opacity: 0 }}>
                 {tag}
               </span>
@@ -449,7 +449,7 @@ export default function LaruHPLandingPage() {
                   { icon: '✏️', label: '更新作業', value: '自分でいつでも', sub: 'ビジュアルエディタで即反映' },
                   { icon: '🚀', label: 'SEO設定', value: '完全自動化', sub: 'JSON-LD・メタタグをAIが設定' },
                   { icon: '💎', label: '維持費', value: '月額999円〜', sub: 'サーバー・SSL・AI全込み' },
-                  { icon: '🤖', label: 'AI機能', value: 'LARUbot連携', sub: '24時間365日、自動で問い合わせ対応' },
+                  { icon: '🤖', label: 'AI機能', value: 'LARUbot Lite連携', sub: '24時間365日、自動で問い合わせ対応' },
                 ].map((row, i) => (
                   <li key={i} className="flex items-start gap-4">
                     <span className="text-2xl flex-shrink-0 mt-0.5">{row.icon}</span>
@@ -562,7 +562,7 @@ export default function LaruHPLandingPage() {
                   <div className="border-t border-sky-100 pt-3">
                     <div className="text-[10px] font-medium text-gray-500 mb-2 uppercase tracking-wider">SEO設定</div>
                     <div className="bg-gray-100 rounded px-2 py-1 mb-1 text-gray-500">SEOスコア: 87/100</div>
-                    <div className="text-[10px] text-emerald-600">LARUbot オン</div>
+                    <div className="text-[10px] text-emerald-600">LARUbot Lite オン</div>
                   </div>
                 </div>
               </div>
@@ -976,66 +976,6 @@ export default function LaruHPLandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="lp-fade-up text-center mb-12">
-            <span className="text-sky-600 font-medium text-xs tracking-[0.2em]">導入イメージ</span>
-            <h2 className="text-3xl md:text-4xl font-bold mt-3 mb-3 text-gray-900">こんな活用ができます</h2>
-            <p className="text-gray-500">導入後の活用シーンを想定したイメージです</p>
-            <p className="text-gray-400 text-xs mt-2">※以下は架空のデモイメージであり、実際のお客様の声・実績ではありません</p>
-          </div>
-          <div className="lp-stagger grid md:grid-cols-3 gap-6">
-            {[
-              {
-                name: '田中 美里',
-                role: '美容室オーナー（東京・新宿）',
-                avatar: '💇',
-                stars: 5,
-                quote: '以前はWordPressで毎月8,000円払っていましたが、LARU HPに移行したら月999円で全機能が使えるようになりました。AIでコンテンツを作ってくれるので更新も楽になり、お問い合わせも月30件から55件に増えました。',
-                highlight: 'お問い合わせが1.8倍に',
-              },
-              {
-                name: '中村 大輔',
-                role: '整体院院長（大阪・天王寺）',
-                avatar: '💆',
-                stars: 5,
-                quote: 'ホームページを持っていなかったので、Instagramだけで集客していました。LARU HPで自社HPを持って3ヶ月で月20件以上の新規予約がネット経由で入るようになりました。費用対効果が素晴らしい。',
-                highlight: '月20件以上の新規予約',
-              },
-              {
-                name: '渡辺 健太',
-                role: '個人事業主・税理士（名古屋）',
-                avatar: '📊',
-                stars: 5,
-                quote: 'SEOの知識がなくても、AIが全部やってくれるのが助かります。「名古屋 税理士 相続」で検索1ページ目に表示されるようになり、問い合わせが月5件程度から安定して入るようになりました。',
-                highlight: 'Google検索1ページ目へ',
-              },
-            ].map((t, i) => (
-              <div key={i} className="bg-sky-50 border border-sky-100 rounded-3xl p-7 flex flex-col hover:border-sky-300 hover:shadow-md transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex gap-0.5">
-                    {Array(t.stars).fill(0).map((_, j) => (
-                      <span key={j} className="text-amber-400 text-sm">★</span>
-                    ))}
-                  </div>
-                  <span className="text-[10px] text-gray-400 border border-gray-200 rounded-full px-2 py-0.5">デモイメージ</span>
-                </div>
-                <div className="bg-sky-100 border border-sky-200 text-sky-700 text-xs font-semibold px-3 py-1 rounded-full self-start mb-4">{t.highlight}</div>
-                <p className="text-gray-600 text-sm leading-relaxed flex-1 mb-6">"{t.quote}"</p>
-                <div className="flex items-center gap-3 border-t border-sky-100 pt-4">
-                  <div className="w-10 h-10 bg-sky-200 rounded-full flex items-center justify-center text-[18px] flex-shrink-0">{t.avatar}</div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">{t.name}</div>
-                    <div className="text-xs text-gray-400">{t.role}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* LARUbot + LARUSEO Integration */}
       <section className="py-16 md:py-24 px-6 border-t border-sky-100 bg-sky-50">
         <div className="max-w-5xl mx-auto">
@@ -1046,18 +986,21 @@ export default function LaruHPLandingPage() {
           </div>
           <div className="lp-stagger grid md:grid-cols-2 gap-8">
             <div className="bg-indigo-50 border border-indigo-200 rounded-3xl p-8 hover:border-indigo-300 transition-all">
-              <div className="inline-block bg-indigo-100 text-indigo-600 text-xs font-medium px-3 py-1 rounded-full mb-4">LARUbot 連携</div>
+              <div className="inline-block bg-indigo-100 text-indigo-600 text-xs font-medium px-3 py-1 rounded-full mb-4">LARUbot Lite 連携</div>
               <h3 className="text-xl font-semibold mb-3 text-gray-900">AIチャットボットを即導入</h3>
               <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                LARUVisonaのAIチャットボット「LARUbot」をワンクリックで埋め込み。24時間365日、問い合わせ対応・予約受付・FAQ対応を自動化します。
+                AIチャットボット「LARUbot Lite」（プラン付属の機能限定版）をワンクリックで埋め込み。24時間365日、問い合わせ対応・FAQ対応を自動化します。
               </p>
               <div className="bg-white rounded-2xl p-4 text-sm text-gray-600 font-mono space-y-1.5">
                 <div className="text-gray-600">① エディタ → 連携設定</div>
-                <div className="text-gray-600">② LARUbotアカウントを接続</div>
+                <div className="text-gray-600">② LARUbot Liteを接続</div>
                 <div className="text-gray-600">③ ウィジェットをオン → 完了</div>
               </div>
-              <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 text-sm mt-4 transition-colors">
-                LARUbot公式サイト →
+              <p className="text-gray-500 text-xs mt-4 leading-relaxed">
+                CRM顧客管理・Web予約/事前決済・メール自動配信まで必要な方は、フル機能版LARUbot（月額27,500円〜・別サービス）にアップグレードできます。
+              </p>
+              <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 text-sm mt-2 transition-colors">
+                フル機能版LARUbotの詳細 →
               </a>
             </div>
             <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-8 hover:border-emerald-300 transition-all">
@@ -1320,6 +1263,7 @@ export default function LaruHPLandingPage() {
               ))}
             </div>
           </div>
+          <p className="text-gray-400 text-[11px] mt-2 text-right">※2026年7月時点・当社調べ</p>
         </div>
       </section>
 
@@ -1446,7 +1390,7 @@ export default function LaruHPLandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
             <div className="flex-shrink-0">
               <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto mb-2" />
-              <p className="text-gray-500 text-xs max-w-xs leading-relaxed">AIで最高のホームページを最短で。株式会社LARUVisonaが提供するHP作成SaaSサービスです。</p>
+              <p className="text-gray-500 text-xs max-w-xs leading-relaxed">AIで最高のホームページを最短で。株式会社LaruVisonaが提供するHP作成SaaSサービスです。</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-6 text-xs w-full md:w-auto">
               <div>
@@ -1458,7 +1402,7 @@ export default function LaruHPLandingPage() {
                 </div>
               </div>
               <div>
-                <div className="text-gray-600 font-medium mb-2">LARUVisona</div>
+                <div className="text-gray-600 font-medium mb-2">LaruVisona</div>
                 <div className="space-y-1.5">
                   <div><Link href="/" className="hover:text-gray-800 transition-colors">会社サイト</Link></div>
                   <div><a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="hover:text-gray-800 transition-colors">LARUbot</a></div>
@@ -1484,7 +1428,7 @@ export default function LaruHPLandingPage() {
             </div>
           </div>
           <div className="border-t border-sky-100 pt-6 text-center text-xs text-gray-400">
-            © 2026 株式会社LARUVisona. All Rights Reserved.
+            © 2026 株式会社LaruVisona. All Rights Reserved.
           </div>
         </div>
       </footer>

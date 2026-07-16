@@ -131,7 +131,7 @@ export default function Home() {
         <header className="fixed w-full z-50 p-4 md:p-6 transition-all duration-500">
           <div className="container mx-auto max-w-7xl flex justify-between items-center bg-[#030712]/60 backdrop-blur-xl rounded-2xl p-3 pl-5 md:pl-6 border border-white/10 shadow-2xl">
             <a href="/" className="flex items-center group">
-              <img src="/images/logo_dark.png" alt="LARUVisona" className="h-10 w-auto transition-transform duration-300 group-hover:scale-105" />
+              <img src="/images/logo_dark.png" alt="LaruVisona" className="h-10 w-auto transition-transform duration-300 group-hover:scale-105" />
             </a>
             
             <div className="flex items-center gap-4">
@@ -238,7 +238,7 @@ export default function Home() {
                   未来の景色を、<br />テクノロジーで描く。
                 </h2>
                 <p className="text-slate-400 leading-relaxed mb-6 text-base md:text-lg">
-                  LARUVisona（ラルビゾナ）は、「Vision（展望）」と「Persona（人格）」を掛け合わせた造語です。
+                  LaruVisona（ラルビゾナ）は、「Vision（展望）」と「Persona（人格）」を掛け合わせた造語です。
                 </p>
                 <p className="text-slate-400 leading-relaxed mb-10 text-base md:text-lg">
                   私たちは単なるシステム開発会社ではありません。AIという新たな「人格」をビジネスに宿らせ、御社が描く「展望」を最短距離で実現するパートナーです。
@@ -249,7 +249,7 @@ export default function Home() {
                     <tbody>
                       <tr className="border-b border-white/5">
                         <th className="py-4 text-slate-500 w-32 font-normal">会社名</th>
-                        <td className="py-4 text-white font-bold">株式会社LARUVisona</td>
+                        <td className="py-4 text-white font-bold">株式会社LaruVisona</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <th className="py-4 text-slate-500 font-normal">代表取締役</th>
@@ -273,7 +273,7 @@ export default function Home() {
               </div>
               <div className="gsap-fade-up lg:mt-0 mt-12 flex justify-center items-center">
                  <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-gradient-to-br from-blue-500/10 to-transparent backdrop-blur-md p-10 flex flex-col items-center gap-8">
-                   <img src="/images/logo_dark.png" alt="LARUVisona" className="w-44 h-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.15)]" />
+                   <img src="/images/logo_dark.png" alt="LaruVisona" className="w-44 h-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.15)]" />
                    <div className="grid grid-cols-2 gap-3 w-full">
                      {[
                        { value: 'AI', label: 'AI駆動' },
@@ -481,7 +481,7 @@ export default function Home() {
               <a href="/terms" className="hover:text-white transition-colors">Terms</a>
               <a href="#about" className="hover:text-white transition-colors">Company</a>
             </div>
-            <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LARUVisona All Rights Reserved.</p>
+            <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LaruVisona All Rights Reserved.</p>
           </div>
         </footer>
 

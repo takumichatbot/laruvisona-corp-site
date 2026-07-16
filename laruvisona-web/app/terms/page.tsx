@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: '利用規約 | LARUVisona' };
+export const metadata: Metadata = { title: '利用規約 | LaruVisona' };
 
 const SECTIONS = [
   {
     title: '第1条（適用）',
-    content: `本利用規約（以下「本規約」）は、株式会社LARUVisona（以下「当社」）が提供するWebサービス・SaaS・その他デジタルサービス（以下「本サービス」）の利用条件を定めるものです。ユーザーは本規約に同意の上、本サービスをご利用ください。`,
+    content: `本利用規約（以下「本規約」）は、株式会社LaruVisona（以下「当社」）が提供するWebサービス・SaaS・その他デジタルサービス（以下「本サービス」）の利用条件を定めるものです。ユーザーは本規約に同意の上、本サービスをご利用ください。`,
   },
   {
     title: '第2条（利用登録）',
@@ -48,7 +48,7 @@ export default function TermsPage() {
       <header className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
           <Link href="/">
-            <img src="/images/logo_dark.png" alt="LARUVisona" className="h-8 w-auto" />
+            <img src="/images/logo_dark.png" alt="LaruVisona" className="h-8 w-auto" />
           </Link>
           <span className="text-slate-600">/</span>
           <span className="text-slate-400 text-sm">利用規約</span>
@@ -70,7 +70,7 @@ export default function TermsPage() {
 
         <div className="mt-16 p-6 bg-white/5 border border-white/10 rounded-2xl text-sm text-slate-400">
           制定日: 2026年6月19日<br />
-          株式会社LARUVisona
+          株式会社LaruVisona
         </div>
 
         <div className="mt-8 text-center">

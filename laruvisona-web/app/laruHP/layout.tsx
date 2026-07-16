@@ -55,7 +55,7 @@ const jsonLd = {
   url: 'https://laruvisona.jp/laruHP',
   publisher: {
     '@type': 'Organization',
-    name: '株式会社LARUVisona',
+    name: '株式会社LaruVisona',
     url: 'https://laruvisona.jp',
   },
 };

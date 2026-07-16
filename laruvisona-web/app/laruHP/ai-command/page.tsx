@@ -1212,7 +1212,7 @@ export default function AiCommandPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
                     { l: 'ID',   ph: 'laruvisona-site', k: 'id', mono: false, dis: sessions.some(s => s.id === editForm.id) },
-                    { l: 'NAME', ph: 'LARUvisona HP', k: 'name', mono: false },
+                    { l: 'NAME', ph: 'LaruVisona HP', k: 'name', mono: false },
                     { l: 'PATH', ph: '/Users/you/project', k: 'cwd', mono: true },
                     { l: 'NOTE', ph: 'Next.js + Supabase', k: 'description', mono: false },
                   ].map(({ l, ph, k, mono, dis }) => (

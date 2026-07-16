@@ -71,7 +71,7 @@ export default function InquiryForm({ dark = false, prefillMessage = '' }: { dar
         {status === 'sending' ? '送信中...' : '送信する'}
       </button>
       <p className={`text-xs text-center ${dark ? 'text-slate-500' : 'text-gray-400'}`}>
-        または <a href="mailto:laruvisona@gmail.com" className={dark ? 'text-blue-400 underline' : 'text-sky-600 underline'}>laruvisona@gmail.com</a> まで直接ご連絡ください
+        または <a href="mailto:info@laruvisona.jp" className={dark ? 'text-blue-400 underline' : 'text-sky-600 underline'}>info@laruvisona.jp</a> まで直接ご連絡ください
       </p>
     </form>
   );

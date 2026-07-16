@@ -11,7 +11,7 @@ const PLAN_LABEL: Record<string, string> = {
   'hp-bot': 'HP + Bot Standard (¥4,980/月)',
   'hp-bot-seo': 'HP + Bot + SEO (¥9,800/月)',
   agency: 'エージェンシー (¥19,800/月)',
-  lite: 'HP + LARUbot Lite (¥4,980/月)',
+  lite: 'HP + LARUbot Lite (¥2,980/月)',
 };
 
 async function sendEmail(to: string, subject: string, html: string) {

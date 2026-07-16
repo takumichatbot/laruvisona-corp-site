@@ -6,7 +6,7 @@ export const metadata = { title: '利用規約 | LARU HP' };
 const SECTIONS = [
   {
     title: '第1条（適用）',
-    content: `本利用規約（以下「本規約」）は、株式会社LARUVisona（以下「当社」）が提供するホームページ作成SaaSサービス「LARU HP」（以下「本サービス」）の利用条件を定めるものです。ユーザーは本規約に同意の上、本サービスをご利用ください。`,
+    content: `本利用規約（以下「本規約」）は、株式会社LaruVisona（以下「当社」）が提供するホームページ作成SaaSサービス「LARU HP」（以下「本サービス」）の利用条件を定めるものです。ユーザーは本規約に同意の上、本サービスをご利用ください。`,
   },
   {
     title: '第2条（利用登録）',
@@ -18,7 +18,7 @@ const SECTIONS = [
   },
   {
     title: '第4条（解約）',
-    content: `最低利用期間（6ヶ月）経過後、翌月末までに解約申請いただいた場合、翌月より課金を停止します。解約申請はダッシュボード内の「サブスクリプション管理」または、メール（laruvisona@gmail.com）にて承ります。`,
+    content: `最低利用期間（6ヶ月）経過後、翌月末までに解約申請いただいた場合、翌月より課金を停止します。解約申請はダッシュボード内の「サブスクリプション管理」または、メール（info@laruvisona.jp）にて承ります。`,
   },
   {
     title: '第5条（禁止事項）',
@@ -78,7 +78,7 @@ export default function TermsPage() {
 
         <div className="mt-16 p-6 bg-white/5 border border-white/10 rounded-2xl text-sm text-slate-400">
           制定日: 2026年6月17日<br />
-          株式会社LARUVisona
+          株式会社LaruVisona
         </div>
 
         <div className="mt-8 text-center">

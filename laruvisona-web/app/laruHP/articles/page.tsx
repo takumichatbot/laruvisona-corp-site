@@ -96,7 +96,7 @@ export default function ArticlesPage() {
       </main>
 
       <footer className="border-t border-gray-200 bg-white py-8 text-center text-xs text-gray-400">
-        © 2026 株式会社LARUVisona. All Rights Reserved. ·{' '}
+        © 2026 株式会社LaruVisona. All Rights Reserved. ·{' '}
         <Link href="/laruHP" className="hover:text-gray-600">LARU HP トップ</Link>
       </footer>
     </div>

@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'プライバシーポリシー | LARUVisona' };
+export const metadata: Metadata = { title: 'プライバシーポリシー | LaruVisona' };
 
 const SECTIONS = [
   {
     title: '1. 事業者情報',
-    content: `株式会社LARUVisona（以下「当社」）は、個人情報の保護に関する法律（個人情報保護法）を遵守し、ユーザーの個人情報を適切に管理します。`,
+    content: `株式会社LaruVisona（以下「当社」）は、個人情報の保護に関する法律（個人情報保護法）を遵守し、ユーザーの個人情報を適切に管理します。`,
   },
   {
     title: '2. 収集する個人情報',
@@ -30,7 +30,7 @@ const SECTIONS = [
   },
   {
     title: '7. 開示・訂正・削除',
-    content: `ユーザーは自身の個人情報の開示・訂正・削除をリクエストできます。ご希望の場合は laruvisona@gmail.com までご連絡ください。本人確認の上、合理的な期間内に対応いたします。`,
+    content: `ユーザーは自身の個人情報の開示・訂正・削除をリクエストできます。ご希望の場合は info@laruvisona.jp までご連絡ください。本人確認の上、合理的な期間内に対応いたします。`,
   },
   {
     title: '8. ポリシーの変更',
@@ -38,7 +38,7 @@ const SECTIONS = [
   },
   {
     title: 'お問い合わせ窓口',
-    content: `個人情報の取り扱いに関するお問い合わせは以下までご連絡ください。\n株式会社LARUVisona\nメール: laruvisona@gmail.com`,
+    content: `個人情報の取り扱いに関するお問い合わせは以下までご連絡ください。\n株式会社LaruVisona\nメール: info@laruvisona.jp`,
   },
 ];
 
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
       <header className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
           <Link href="/">
-            <img src="/images/logo_dark.png" alt="LARUVisona" className="h-8 w-auto" />
+            <img src="/images/logo_dark.png" alt="LaruVisona" className="h-8 w-auto" />
           </Link>
           <span className="text-slate-600">/</span>
           <span className="text-slate-400 text-sm">プライバシーポリシー</span>
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
 
         <div className="mt-16 p-6 bg-white/5 border border-white/10 rounded-2xl text-sm text-slate-400">
           制定日: 2026年6月19日<br />
-          株式会社LARUVisona
+          株式会社LaruVisona
         </div>
 
         <div className="mt-8 text-center">

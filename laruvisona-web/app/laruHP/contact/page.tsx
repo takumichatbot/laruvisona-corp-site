@@ -57,8 +57,8 @@ export default function ContactPage() {
                 こちらのページ
               </a>{' '}
               からご入力いただくか、{' '}
-              <a href="mailto:laruvisona@gmail.com" className="text-sky-700 font-semibold underline underline-offset-2 hover:text-sky-800">
-                laruvisona@gmail.com
+              <a href="mailto:info@laruvisona.jp" className="text-sky-700 font-semibold underline underline-offset-2 hover:text-sky-800">
+                info@laruvisona.jp
               </a>{' '}
               までメールでご連絡ください。
             </p>

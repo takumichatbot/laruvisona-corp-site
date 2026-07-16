@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import fs from 'fs';
 import path from 'path';
 
-export const alt = 'LARUVisona | 「想像」を「実装」する';
+export const alt = 'LaruVisona | 「想像」を「実装」する';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -49,7 +49,7 @@ export default function Image() {
         }}>
           {/* Logo */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoSrc} style={{ height: 70, width: 'auto', marginBottom: 'auto', objectFit: 'contain' }} alt="LARUVisona" />
+          <img src={logoSrc} style={{ height: 70, width: 'auto', marginBottom: 'auto', objectFit: 'contain' }} alt="LaruVisona" />
 
           {/* Headline */}
           <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 36 }}>

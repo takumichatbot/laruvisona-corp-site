@@ -150,7 +150,7 @@ export default async function VsPage({ params }: { params: Promise<{ competitor:
           </div>
 
           {/* Comparison table */}
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-14 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-2 shadow-sm">
             <div className="grid grid-cols-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
               <div className="p-4">機能</div>
               <div className="p-4 text-center text-sky-600">LARU HP</div>
@@ -180,11 +180,12 @@ export default async function VsPage({ params }: { params: Promise<{ competitor:
               </div>
             ))}
           </div>
+          <p className="text-gray-400 text-[11px] mb-14 text-right">※2026年7月時点・当社調べ</p>
 
           {/* CTA */}
           <div className="bg-gradient-to-br from-sky-600 to-indigo-600 rounded-2xl p-10 text-center text-white">
             <h2 className="text-2xl md:text-3xl font-black mb-3">まずは初月無料で試す</h2>
-            <p className="text-sky-100 text-sm mb-8">クレジットカード登録のみ。初月は完全無料。いつでも解約可。</p>
+            <p className="text-sky-100 text-sm mb-8">クレジットカード登録のみ。初月は完全無料。最低6ヶ月契約・7ヶ月目以降いつでも解約可。</p>
             <Link
               href="/laruHP/onboarding"
               className="inline-block bg-white text-sky-600 font-black text-base px-10 py-4 rounded-2xl hover:bg-sky-50 transition-colors shadow-lg"
@@ -215,7 +216,7 @@ export default async function VsPage({ params }: { params: Promise<{ competitor:
       </main>
 
       <footer className="border-t border-gray-200 bg-white py-8 text-center text-xs text-gray-400">
-        © 2026 株式会社LARUVisona. All Rights Reserved. ·{' '}
+        © 2026 株式会社LaruVisona. All Rights Reserved. ·{' '}
         <Link href="/laruHP" className="hover:text-gray-600">LARU HP トップ</Link>
       </footer>
     </div>

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-// コーポレートサイトのお問い合わせ（LARUVisona宛にメール送信）。
+// コーポレートサイトのお問い合わせ（LaruVisona宛にメール送信）。
 // 公開サイトのフォーム(/api/contact)とは別。siteId 不要。
-const COMPANY_EMAIL = process.env.ADMIN_EMAIL || 'laruvisona@gmail.com';
+const COMPANY_EMAIL = process.env.INQUIRY_EMAIL || process.env.ADMIN_EMAIL || 'info@laruvisona.jp';
 
 // 簡易レート制限: 同一IP 1時間に5件
 const _rateMap = new Map<string, number[]>();
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   const html = `<!DOCTYPE html><html lang="ja"><body style="margin:0;background:#f1f5f9;font-family:-apple-system,'Hiragino Sans',sans-serif">
     <div style="max-width:600px;margin:40px auto;padding:0 16px">
       <div style="background:#0f172a;border-radius:12px 12px 0 0;padding:24px 32px">
-        <div style="color:#93c5fd;font-size:12px;font-weight:700;letter-spacing:.05em">LARUVisona</div>
+        <div style="color:#93c5fd;font-size:12px;font-weight:700;letter-spacing:.05em">LaruVisona</div>
         <div style="color:#fff;font-size:20px;font-weight:700">サイトからお問い合わせ</div>
       </div>
       <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:24px 32px">
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   try {
     const resend = new Resend(apiKey);
     await resend.emails.send({
-      from: 'LARUVisona <noreply@laruvisona.jp>',
+      from: 'LaruVisona <noreply@laruvisona.jp>',
       to: COMPANY_EMAIL,
       replyTo: email,
       subject: `【お問い合わせ】${name} 様より`,

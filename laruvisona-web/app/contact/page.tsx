@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import InquiryForm from '@/components/InquiryForm';
 
 export const metadata: Metadata = {
-  title: 'お問い合わせ | LARUVisona',
-  description: 'LARUVisona（AI・モダンWeb開発／LARU HP）へのご相談・ご質問はこちらのフォームからお気軽にお問い合わせください。',
+  title: 'お問い合わせ | LaruVisona',
+  description: 'LaruVisona（AI・モダンWeb開発／LARU HP）へのご相談・ご質問はこちらのフォームからお気軽にお問い合わせください。',
   alternates: { canonical: 'https://laruvisona.jp/contact' },
 };
 
@@ -13,7 +13,7 @@ export default function ContactPage() {
       <header className="p-4 md:p-6">
         <div className="container mx-auto max-w-7xl">
           <a href="/" className="inline-flex items-center">
-            <img src="/images/logo_dark.png" alt="LARUVisona" className="h-9 w-auto" />
+            <img src="/images/logo_dark.png" alt="LaruVisona" className="h-9 w-auto" />
           </a>
         </div>
       </header>
@@ -40,7 +40,7 @@ export default function ContactPage() {
       </section>
 
       <footer className="border-t border-white/5 py-8 text-center">
-        <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LARUVisona All Rights Reserved.</p>
+        <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LaruVisona All Rights Reserved.</p>
       </footer>
     </main>
   );

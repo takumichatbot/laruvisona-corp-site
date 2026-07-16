@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
 import { exportToHTML } from '@/lib/html-export';
 import { createClient } from '@/lib/supabase/client';
+import { hasFeature } from '@/lib/plan-limits';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -3712,7 +3713,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             {/* LARUbot */}
             {(() => {
-              const canUse = userPlan === 'hp-bot' || userPlan === 'hp-bot-seo';
+              const canUse = hasFeature(userPlan, 'larubot'); // lite/hp-bot/hp-bot-seo/agency（PLAN_FEATURESと同期）
               return (
                 <div className="rounded-xl mb-3 overflow-hidden border border-indigo-500/20" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(17,24,39,0.8) 100%)' }}>
                   {/* Header */}
@@ -3726,7 +3727,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                           <div className="flex items-center gap-1.5">
                             <span className="font-black text-white text-[13px]">LARUbot</span>
                             {canUse && larubot && <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full font-bold">連携中</span>}
-                            {!canUse && <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded-full font-bold">HP+Bot プラン</span>}
+                            {!canUse && <span className="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded-full font-bold">Bot付きプラン限定</span>}
                           </div>
                           <div className="text-slate-400 text-[10px] mt-0.5">AIチャットボット — 問い合わせを24時間自動対応</div>
                         </div>

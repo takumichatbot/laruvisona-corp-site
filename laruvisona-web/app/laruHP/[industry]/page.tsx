@@ -609,7 +609,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
           </div>
         </div>
         <div className="max-w-4xl mx-auto mt-6 pt-6 border-t border-gray-800 text-xs text-center">
-          © 2026 株式会社LARUVisona. All Rights Reserved.
+          © 2026 株式会社LaruVisona. All Rights Reserved.
         </div>
       </footer>
     </div>

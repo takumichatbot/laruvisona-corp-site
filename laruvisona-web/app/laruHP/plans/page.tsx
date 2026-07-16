@@ -478,7 +478,7 @@ export default function PlansPage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 py-8 text-gray-500 text-sm">
         <div className="max-w-6xl mx-auto px-6 text-center text-xs">
-          © 2026 株式会社LARUVisona. All Rights Reserved.
+          © 2026 株式会社LaruVisona. All Rights Reserved.
         </div>
       </footer>
     </div>

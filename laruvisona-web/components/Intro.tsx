@@ -89,7 +89,7 @@ export default function Intro({ onComplete }: { onComplete: () => void }) {
           className="flex-shrink-0 drop-shadow-[0_0_40px_rgba(255,255,255,0.2)]"
           style={{ opacity: 0, scale: 0.6, transform: 'scale(0.6) rotate(-15deg)' }}
         >
-          <img src="/images/logo_dark.png" alt="LARUVisona" className="w-40 sm:w-52 h-auto" />
+          <img src="/images/logo_dark.png" alt="LaruVisona" className="w-40 sm:w-52 h-auto" />
         </div>
 
         {/* タグライン */}
