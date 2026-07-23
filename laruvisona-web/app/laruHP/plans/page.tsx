@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/analytics';
 
 // ログイン中ユーザーの現契約。既存契約者はボタンを「このプランに変更／ご利用中」に切り替える。
 const CurrentPlanContext = createContext<{ plan: string | null; subscribed: boolean }>({ plan: null, subscribed: false });
@@ -59,6 +60,7 @@ const ANNUAL_TOTAL = { hp: 9990, lite: 29800, hpBot: 49800, hpBotSeo: 98000, age
 // ログイン後にこの /laruHP/plans に戻って自動的に決済を再開できるようにする。
 // 戻り値: エラーメッセージ（画面遷移する場合は null）
 async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promise<string | null> {
+  track('begin_checkout', { plan, billing });
   try {
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',

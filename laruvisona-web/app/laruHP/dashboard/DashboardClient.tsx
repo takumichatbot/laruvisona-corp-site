@@ -9,6 +9,7 @@ import QRCodeModal from '@/components/QRCodeModal';
 import CommandPalette from '@/components/CommandPalette';
 import OnboardingTour from '@/components/OnboardingTour';
 import { getSiteLimit } from '@/lib/plan-limits';
+import { track } from '@/lib/analytics';
 
 interface SiteSettings {
   larubot?: boolean;
@@ -272,6 +273,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const p = searchParams.get('payment');
     if (p === 'success' || p === 'canceled') {
+      if (p === 'success') track('purchase_complete');
       setPaymentBanner(p);
       router.replace('/laruHP/dashboard');
     }

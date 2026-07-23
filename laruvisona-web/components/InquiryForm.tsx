@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { track } from '@/lib/analytics';
 
 export default function InquiryForm({ dark = false, prefillMessage = '' }: { dark?: boolean; prefillMessage?: string }) {
   const [form, setForm] = useState({ name: '', email: '', company: '', message: '', _hp: '' });
@@ -28,7 +29,7 @@ export default function InquiryForm({ dark = false, prefillMessage = '' }: { dar
         body: JSON.stringify(form),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d.ok) setStatus('success');
+      if (res.ok && d.ok) { track('inquiry_submit'); setStatus('success'); }
       else { setError(d.error || '送信に失敗しました'); setStatus('error'); }
     } catch { setError('ネットワークエラーが発生しました'); setStatus('error'); }
   };

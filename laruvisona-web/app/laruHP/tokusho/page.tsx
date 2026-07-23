@@ -8,6 +8,7 @@ export default function TokushoPage() {
     { label: '販売業者', value: '株式会社LaruVisona' },
     { label: '代表責任者', value: '齋藤 匠' },
     { label: '所在地', value: '東京都板橋区南常盤台1丁目11-6-101号室' },
+    { label: '電話番号', value: 'ご請求があれば遅滞なく開示いたします。お問い合わせは下記メールアドレスにて承っております。' },
     { label: 'メールアドレス', value: 'info@laruvisona.jp' },
     { label: 'サービス名', value: 'LARU HP（ホームページ作成SaaS）' },
     { label: '販売価格', value: '初月0円（無料）、2ヶ月目以降 月額999円（税別）\n※消費税は別途申し受けます' },

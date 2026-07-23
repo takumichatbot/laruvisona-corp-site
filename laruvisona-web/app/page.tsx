@@ -9,6 +9,16 @@ import VoiceUI from '@/components/VoiceUI';
 import { WORKS, ACCENT_STYLES } from '@/lib/works-data';
 import InquiryForm from '@/components/InquiryForm';
 import Intro from '@/components/Intro';
+import { track } from '@/lib/analytics';
+
+// 受託開発の進め方（#process セクション）
+const PROCESS_STEPS = [
+  { step: '01', title: '無料相談', duration: '即日〜3日', desc: 'フォームから課題やご要望をお送りください。ヒアリングで要件と優先順位を一緒に整理します。この段階まで費用は一切かかりません。' },
+  { step: '02', title: 'ご提案・お見積もり', duration: '〜1週間', desc: '実現方法・費用・スケジュールを明記したご提案書をお出しします。ご納得いただけるまで調整します。' },
+  { step: '03', title: '開発', duration: '2週間〜', desc: '週次で進捗をご報告。動く画面を実際に確認いただきながら進めるので、完成イメージのズレを防げます。' },
+  { step: '04', title: '検収・公開', duration: '約1週間', desc: '実際の環境でご確認いただき、修正対応のうえ公開・納品します。' },
+  { step: '05', title: '運用・保守', duration: '継続', desc: '公開後の改善・機能追加も継続してサポート。作って終わりにしません。' },
+];
 
 // 3D背景（SSRオフ）
 const Scene = dynamic(() => import('@/components/Canvas/Scene'), { ssr: false });
@@ -21,6 +31,7 @@ export default function Home() {
 
   // 見積もりシミュレーターの内容を問い合わせフォームに引き継いでスクロール
   const handleConsult = (estimateDetails: string) => {
+    track('estimator_consult');
     setInquiryPrefill(estimateDetails);
     setTimeout(() => {
       document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' });
@@ -141,6 +152,7 @@ export default function Home() {
                 <a href="#services" className="hover:text-white px-4 py-2 transition-colors">サービス</a>
                 <a href="#works" className="hover:text-white px-4 py-2 transition-colors">実績</a>
                 <a href="#estimator" className="text-blue-400 hover:text-blue-300 px-4 py-2 transition-colors">見積もり</a>
+                <a href="#process" className="hover:text-white px-4 py-2 transition-colors">ご依頼の流れ</a>
                 <a href="#product" className="hover:text-white px-4 py-2 transition-colors">プロダクト</a>
                 <a href="/laruHP" className="text-cyan-400 hover:text-cyan-300 px-4 py-2 transition-colors border border-cyan-500/30 rounded-lg">LARU HP ✨</a>
               </nav>
@@ -180,6 +192,7 @@ export default function Home() {
             <a href="#services" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">サービス</a>
             <a href="#works" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">実績</a>
             <a href="#estimator" onClick={() => setIsMenuOpen(false)} className="text-blue-400 hover:text-blue-300 transition-colors py-2">見積もり</a>
+            <a href="#process" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">ご依頼の流れ</a>
             <a href="#product" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">プロダクト</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)} className="bg-white text-black px-8 py-4 rounded-2xl font-bold text-xl mt-4 hover:bg-blue-50 transition-colors">お問い合わせ</a>
           </div>
@@ -268,7 +281,7 @@ export default function Home() {
                       </tr>
                       <tr>
                         <th className="py-4 text-slate-500 align-top font-normal">事業内容</th>
-                        <td className="py-4 text-white leading-relaxed">AI SaaS事業（LARUbot）<br />Webシステム・アルゴリズム開発</td>
+                        <td className="py-4 text-white leading-relaxed">Webシステム・AIアプリケーションの受託開発<br />自社SaaSの企画・運営（LARUbot / LARU HP）</td>
                       </tr>
                     </tbody>
                   </table>
@@ -426,6 +439,34 @@ export default function Home() {
 
             <div className="gsap-fade-up">
               <Estimator onConsult={handleConsult} />
+            </div>
+          </div>
+        </section>
+
+        {/* --- Process Section（受託開発の進め方） --- */}
+        <section id="process" className="py-32 relative bg-[#030712]/80 border-t border-white/5 z-10">
+          <div className="container mx-auto px-6 max-w-6xl">
+            <div className="text-center mb-16 gsap-fade-up">
+              <span className="text-blue-500 font-bold text-xs tracking-[0.3em] mb-4 block">ご依頼の流れ</span>
+              <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">開発の進め方</h2>
+              <p className="text-slate-400 text-base md:text-lg">ご相談から公開後の運用まで、すべて代表エンジニアが直接担当します。</p>
+            </div>
+            <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {PROCESS_STEPS.map(({ step, title, duration, desc }) => (
+                <div key={step} className="gsap-fade-up bg-white/5 rounded-2xl p-6 border border-white/5 backdrop-blur-xl flex flex-col">
+                  <div className="flex items-baseline justify-between mb-4">
+                    <span className="text-blue-500 font-en font-bold text-2xl">{step}</span>
+                    <span className="text-slate-500 text-[10px] font-bold tracking-widest">{duration}</span>
+                  </div>
+                  <h3 className="text-white font-bold mb-3">{title}</h3>
+                  <p className="text-slate-400 text-xs leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-12 gsap-fade-up">
+              <a href="#contact" className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all">
+                まずは無料相談から <i className="fas fa-arrow-right"></i>
+              </a>
             </div>
           </div>
         </section>
