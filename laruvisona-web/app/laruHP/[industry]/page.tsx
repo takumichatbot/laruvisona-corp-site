@@ -3,13 +3,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
-// 業種画像ライブラリ（AI生成・Supabase Storage）。未生成の間は404し、
-// CSS背景が描画されないだけなので下地のグラデーションが見える（グレースフル）。
-const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const libHero = (industry: string) =>
-  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/hero/0.webp` : '';
-const libGallery = (industry: string, n: number) =>
-  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/gallery/${n}.webp` : '';
+// 業種画像ライブラリ（AI生成・Supabase Storage）。
+// /api/library-image は未生成ならその場でImagen生成してリダイレクトする（セルフヒーリング）。
+// 生成失敗時のみ404し、CSS背景が描画されないだけなので下地のグラデーションが見える。
+const libHero = (industry: string) => `/api/library-image?industry=${industry}&kind=hero&n=0`;
+const libGallery = (industry: string, n: number) => `/api/library-image?industry=${industry}&kind=gallery&n=${n}`;
 
 // ─── Industry Data ─────────────────────────────────────────────────────────────
 const INDUSTRY_DATA = {

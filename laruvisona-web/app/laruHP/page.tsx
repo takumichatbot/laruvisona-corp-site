@@ -8,14 +8,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 const LaruHPScene = dynamic(() => import('@/components/Canvas/LaruHPScene'), { ssr: false });
 
-// ショーケースのモックに、業種画像ライブラリ(AI生成)の実写を敷くための公開URL。
-// 管理者が /api/admin/generate-image-library を実行するとプールされる。
-// 未生成の間は画像が404し、下地のグラデーションがそのまま見える（＝グレースフル）。
-const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const libHero = (industry: string) =>
-  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/hero/0.webp` : '';
-const libGallery = (industry: string, n: number) =>
-  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/gallery/${n}.webp` : '';
+// ショーケースのモックに、業種画像ライブラリ(AI生成)の実写を敷く。
+// /api/library-image は未生成ならその場でImagen生成してリダイレクトする（セルフヒーリング）。
+// 生成に失敗した場合のみ404し、下地のグラデーション＋絵文字が見える（＝グレースフル）。
+const libHero = (industry: string) => `/api/library-image?industry=${industry}&kind=hero&n=0`;
+const libGallery = (industry: string, n: number) => `/api/library-image?industry=${industry}&kind=gallery&n=${n}`;
 // 画像が404(ライブラリ未生成)なら消して下地グラデを見せる
 const hideOnError = (e: { currentTarget: HTMLImageElement }) => { e.currentTarget.style.display = 'none'; };
 
