@@ -73,6 +73,90 @@ function riskLabel(score: number) {
 
 type Tab = 'overview' | 'users' | 'churn';
 
+// 画像ライブラリの対象業種（lib/imagen.ts の IMAGE_INDUSTRIES と同一。
+// lib/imagen はサーバー専用依存があるためクライアントでは直接importしない）
+const LIB_INDUSTRIES = [
+  'restaurant', 'beauty', 'clinic', 'legal', 'construction', 'realestate',
+  'retail', 'fitness', 'hotel', 'education', 'wedding', 'pet',
+  'dental', 'photo', 'accounting', 'other',
+];
+
+// 業種別画像ライブラリの生成カード。1業種ずつ順番にAPIを叩く（タイムアウト回避）
+function ImageLibraryCard() {
+  const [running, setRunning] = useState(false);
+  const [lines, setLines] = useState<Record<string, string>>({});
+
+  const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const [pooled, setPooled] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!supaUrl) return;
+    LIB_INDUSTRIES.forEach(ind => {
+      fetch(`${supaUrl}/storage/v1/object/public/site-images/library/${ind}/hero/0.webp`, { method: 'HEAD' })
+        .then(r => setPooled(p => ({ ...p, [ind]: r.ok })))
+        .catch(() => setPooled(p => ({ ...p, [ind]: false })));
+    });
+  }, [supaUrl]);
+
+  const run = async () => {
+    setRunning(true);
+    setLines({});
+    for (const ind of LIB_INDUSTRIES) {
+      setLines(prev => ({ ...prev, [ind]: '生成中…' }));
+      try {
+        const res = await fetch('/api/admin/generate-image-library', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ industry: ind }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setLines(prev => ({ ...prev, [ind]: `エラー: ${d.error || res.status}` }));
+        } else {
+          const r = (d.results || {})[ind] || {};
+          setLines(prev => ({ ...prev, [ind]: r.skipped ? 'スキップ（生成済み）' : `完了（hero ${r.hero ?? '-'} / gallery ${r.gallery ?? '-'}）` }));
+          setPooled(prev => ({ ...prev, [ind]: true }));
+        }
+      } catch {
+        setLines(prev => ({ ...prev, [ind]: '通信エラー' }));
+      }
+    }
+    setRunning(false);
+  };
+
+  const missing = LIB_INDUSTRIES.filter(i => pooled[i] === false).length;
+
+  return (
+    <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">業種別 画像ライブラリ（Imagen）</h2>
+          <p className="text-[11px] text-slate-500 mt-1">
+            LP・業種ページのモックとAIサイト生成が使う画像プール。未生成の業種はLPで画像が表示されません。
+            {missing > 0 && <span className="text-amber-400 ml-1">未生成: {missing}業種</span>}
+          </p>
+        </div>
+        <button
+          onClick={run}
+          disabled={running}
+          className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+        >
+          {running ? '生成中…' : '未生成の業種を一括生成'}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {LIB_INDUSTRIES.map(ind => (
+          <div key={ind} className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-slate-300 font-mono">{ind}</span>
+            <span className={`text-[10px] ${lines[ind]?.startsWith('エラー') || lines[ind] === '通信エラー' ? 'text-red-400' : lines[ind] ? 'text-sky-400' : pooled[ind] ? 'text-green-400' : pooled[ind] === false ? 'text-amber-400' : 'text-slate-600'}`}>
+              {lines[ind] || (pooled[ind] ? '生成済み' : pooled[ind] === false ? '未生成' : '確認中')}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -196,6 +280,9 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+
+            {/* Image library */}
+            <ImageLibraryCard />
 
             {/* Plan breakdown */}
             <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6">

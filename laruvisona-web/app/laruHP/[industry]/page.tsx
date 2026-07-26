@@ -3,6 +3,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
+// 業種画像ライブラリ（AI生成・Supabase Storage）。未生成の間は404し、
+// CSS背景が描画されないだけなので下地のグラデーションが見える（グレースフル）。
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const libHero = (industry: string) =>
+  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/hero/0.webp` : '';
+const libGallery = (industry: string, n: number) =>
+  SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/site-images/library/${industry}/gallery/${n}.webp` : '';
+
 // ─── Industry Data ─────────────────────────────────────────────────────────────
 const INDUSTRY_DATA = {
   restaurant: {
@@ -458,6 +466,8 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
               </div>
               {/* Hero */}
               <div className={`bg-gradient-to-br ${d.heroGrad} px-8 py-10 text-white relative overflow-hidden`}>
+                {libHero(industry) && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${libHero(industry)})` }} />}
+                <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15" />
                 <div className="absolute inset-0 opacity-10"
                   style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
                 <div className="relative max-w-lg">
@@ -482,6 +492,19 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
                       <div className={`text-xs font-bold ${ac.text} mb-1`}>{s.label}</div>
                       <div className="text-[11px] text-gray-500 leading-relaxed">{s.desc}</div>
                     </div>
+                  ))}
+                </div>
+              </div>
+              {/* Photo gallery */}
+              <div className="bg-gray-50 px-6 py-6">
+                <div className="text-center mb-4">
+                  <div className="text-xs text-gray-400 font-medium tracking-widest mb-2">ギャラリー</div>
+                  <div className="w-8 h-0.5 bg-gray-200 mx-auto" />
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[0, 1, 2, 3].map(n => (
+                    <div key={n} className="aspect-[4/3] rounded-lg bg-gradient-to-br from-gray-200 to-gray-300 bg-cover bg-center"
+                      style={libGallery(industry, n) ? { backgroundImage: `url(${libGallery(industry, n)})` } : undefined} />
                   ))}
                 </div>
               </div>
