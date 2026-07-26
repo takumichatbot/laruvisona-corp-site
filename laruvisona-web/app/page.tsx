@@ -218,7 +218,7 @@ export default function Home() {
           
           <p className="gsap-hero opacity-0 translate-y-10 text-slate-200 text-base md:text-xl font-medium mt-4 max-w-2xl leading-relaxed [text-shadow:0_2px_16px_rgba(3,7,18,0.95),0_0_4px_rgba(3,7,18,0.9)]">
             「想像」を「実装」する。<br />
-            AI・Webアプリの受託開発パートナー。<br className="hidden sm:block" />
+            AI・Webアプリの受託開発パートナー。<br />
             あなたのビジネスを次の次元へ。
           </p>
           
