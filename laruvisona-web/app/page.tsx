@@ -317,7 +317,7 @@ export default function Home() {
               <span className="text-blue-500 font-bold text-xs tracking-[0.3em]">サービス内容</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-bold text-white leading-[1.1] tracking-tight">
-              論理と、<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">感情。</span>
+              課題を、<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">技術で解く。</span>
             </h2>
           </div>
 
