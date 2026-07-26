@@ -97,29 +97,55 @@ function ImageLibraryCard() {
     });
   }, [supaUrl]);
 
+  const [passNote, setPassNote] = useState('');
+
   const run = async () => {
     setRunning(true);
     setLines({});
-    for (const ind of LIB_INDUSTRIES) {
-      setLines(prev => ({ ...prev, [ind]: '生成中…' }));
-      try {
-        const res = await fetch('/api/admin/generate-image-library', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ industry: ind }),
-        });
-        const d = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setLines(prev => ({ ...prev, [ind]: `エラー: ${d.error || res.status}` }));
-        } else {
-          const r = (d.results || {})[ind] || {};
-          setLines(prev => ({ ...prev, [ind]: r.skipped ? 'スキップ（生成済み）' : `完了（hero ${r.hero ?? '-'} / gallery ${r.gallery ?? '-'}）` }));
-          setPooled(prev => ({ ...prev, [ind]: true }));
+    setPassNote('');
+    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+    const done = new Set<string>();
+
+    // Imagenのレート制限(429)で一部が失敗することがあるため、最大4周まで
+    // 「欠けている画像だけ」を生成し直す。周回の間はクォータ回復を30秒待つ。
+    for (let pass = 1; pass <= 4; pass++) {
+      for (const ind of LIB_INDUSTRIES) {
+        if (done.has(ind)) continue;
+        setLines(prev => ({ ...prev, [ind]: pass === 1 ? '生成中…' : `再試行${pass - 1}回目…` }));
+        try {
+          // hero と gallery を分けて呼ぶ（1リクエストを短くしてタイムアウト回避）
+          let last: { hero?: number; gallery?: number; complete?: boolean; skipped?: boolean } = {};
+          for (const only of ['hero', 'gallery'] as const) {
+            const res = await fetch('/api/admin/generate-image-library', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ industry: ind, only }),
+            });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
+            last = (d.results || {})[ind] || {};
+          }
+          if (last.complete) {
+            done.add(ind);
+            setLines(prev => ({ ...prev, [ind]: last.skipped ? '生成済み' : `完了（hero ${last.hero} / gallery ${last.gallery}）` }));
+            setPooled(prev => ({ ...prev, [ind]: true }));
+          } else {
+            setLines(prev => ({ ...prev, [ind]: `不足あり（hero ${last.hero ?? '?'}/3, gallery ${last.gallery ?? '?'}/6）` }));
+          }
+        } catch (e) {
+          setLines(prev => ({ ...prev, [ind]: `エラー: ${e instanceof Error ? e.message : '通信失敗'}` }));
         }
-      } catch {
-        setLines(prev => ({ ...prev, [ind]: '通信エラー' }));
+      }
+      if (done.size === LIB_INDUSTRIES.length) break;
+      if (pass < 4) {
+        setPassNote(`一部失敗（レート制限の可能性）。30秒待って未完了分だけ再試行します…（${pass}/3回目の待機）`);
+        await sleep(30000);
+        setPassNote('');
       }
     }
+
+    const remaining = LIB_INDUSTRIES.length - done.size;
+    setPassNote(remaining === 0 ? '全業種の生成が完了しました 🎉' : `${remaining}業種が未完了のまま終了しました。時間をおいて（APIクォータ回復後に）もう一度実行してください。`);
     setRunning(false);
   };
 
@@ -143,6 +169,8 @@ function ImageLibraryCard() {
           {running ? '生成中…' : '未生成の業種を一括生成'}
         </button>
       </div>
+      {passNote && <p className="text-[11px] text-amber-400 mb-3">{passNote}</p>}
+      {running && <p className="text-[11px] text-slate-500 mb-3">⚠️ 完了までこのタブを前面に表示したままにしてください（バックグラウンドにすると処理が止まります）</p>}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {LIB_INDUSTRIES.map(ind => (
           <div key={ind} className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">

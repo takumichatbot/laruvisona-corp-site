@@ -59,44 +59,49 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'GEMINI_API_KEY (or GOOGLE_AI_API_KEY) is not set' }, { status: 500 });
   }
 
-  const { industry, heroCount = 3, galleryCount = 6, overwrite = false } =
-    await req.json().catch(() => ({})) as { industry?: string; heroCount?: number; galleryCount?: number; overwrite?: boolean };
+  const { industry, heroCount = 3, galleryCount = 6, overwrite = false, only } =
+    await req.json().catch(() => ({})) as {
+      industry?: string; heroCount?: number; galleryCount?: number; overwrite?: boolean;
+      only?: 'hero' | 'gallery'; // 指定時はその種別のみ生成（1リクエストを短くしてタイムアウト回避）
+    };
 
   const industries = industry ? [industry] : [...IMAGE_INDUSTRIES];
   const admin = getAdminStorage();
-  const results: Record<string, { hero: number; gallery: number; skipped?: boolean }> = {};
+  // hero/gallery = 生成後に実在する枚数, complete = 目標枚数に達したか
+  const results: Record<string, { hero: number; gallery: number; complete: boolean; skipped?: boolean }> = {};
 
   for (const ind of industries) {
-    // 既に十分な枚数があればスキップ（overwrite時は無視して再生成）
-    if (!overwrite) {
-      const { data: existingHero } = await admin.storage.from('site-images').list(`library/${ind}/hero`);
-      const { data: existingGal } = await admin.storage.from('site-images').list(`library/${ind}/gallery`);
-      if ((existingHero?.length || 0) >= heroCount && (existingGal?.length || 0) >= galleryCount) {
-        results[ind] = { hero: existingHero!.length, gallery: existingGal!.length, skipped: true };
-        continue;
-      }
+    const { data: existingHero } = await admin.storage.from('site-images').list(`library/${ind}/hero`);
+    const { data: existingGal } = await admin.storage.from('site-images').list(`library/${ind}/gallery`);
+    const haveHero = new Set((existingHero || []).map(f => f.name));
+    const haveGal = new Set((existingGal || []).map(f => f.name));
+
+    // 欠けているインデックスだけを生成する（再実行時に生成済み分のコストを消費しない）
+    const heroIdx = only === 'gallery' ? [] : Array.from({ length: heroCount }, (_, i) => i)
+      .filter(i => overwrite || !haveHero.has(`${i}.webp`));
+    const galIdx = only === 'hero' ? [] : Array.from({ length: galleryCount }, (_, i) => i)
+      .filter(i => overwrite || !haveGal.has(`${i}.webp`));
+
+    if (heroIdx.length === 0 && galIdx.length === 0) {
+      results[ind] = { hero: haveHero.size, gallery: haveGal.size, complete: haveHero.size >= heroCount && haveGal.size >= galleryCount, skipped: true };
+      continue;
     }
 
-    // ヒーロー: 世界観promptを少し振って heroCount 枚（店名は入れない＝業種汎用）
-    const heroPrompts = Array.from({ length: heroCount }, () => buildHeroPrompt(ind));
-    // ギャラリー: 業種のシーン配列から galleryCount 個（足りなければ循環）
+    // ヒーローは世界観promptを少し振る（店名は入れない＝業種汎用）。
+    // ギャラリーは業種のシーン配列から（足りなければ循環）。同時2枚まで（レート制限対策）。
     const scenes = galleryScenesFor(ind);
-    const galleryPrompts = Array.from({ length: galleryCount }, (_, i) => buildGalleryPrompt(scenes[i % scenes.length]));
-
-    // 同時3枚までに制限（レート制限回避）。ヒーロー→ギャラリーの順で実行。
     const heroUrls = await runWithConcurrency(
-      heroPrompts.map((p, i) => () => generateImagenToStorage(p, '16:9', 1600, 900, `library/${ind}/hero/${i}.webp`)),
-      3,
+      heroIdx.map(i => () => generateImagenToStorage(buildHeroPrompt(ind), '16:9', 1600, 900, `library/${ind}/hero/${i}.webp`)),
+      2,
     );
     const galleryUrls = await runWithConcurrency(
-      galleryPrompts.map((p, i) => () => generateImagenToStorage(p, '4:3', 1000, 750, `library/${ind}/gallery/${i}.webp`)),
-      3,
+      galIdx.map(i => () => generateImagenToStorage(buildGalleryPrompt(scenes[i % scenes.length]), '4:3', 1000, 750, `library/${ind}/gallery/${i}.webp`)),
+      2,
     );
 
-    results[ind] = {
-      hero: heroUrls.filter(Boolean).length,
-      gallery: galleryUrls.filter(Boolean).length,
-    };
+    const hero = haveHero.size + heroUrls.filter(Boolean).length;
+    const gallery = haveGal.size + galleryUrls.filter(Boolean).length;
+    results[ind] = { hero, gallery, complete: hero >= heroCount && gallery >= galleryCount };
   }
 
   return NextResponse.json({ industries: industries.length, results });
