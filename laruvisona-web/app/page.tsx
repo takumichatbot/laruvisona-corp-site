@@ -332,14 +332,14 @@ export default function Home() {
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center mb-8 border border-blue-500/20">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                    <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-4">Web / SaaS 開発</h3>
-                <p className="text-slate-400 leading-relaxed text-sm mb-8 flex-grow">Next.jsやPythonを用いたモダンな技術選定により、高速かつ拡張性の高いWebアプリケーションを構築します。</p>
+                <h3 className="text-2xl font-bold text-white mb-4">オーダーメイドHP制作</h3>
+                <p className="text-slate-400 leading-relaxed text-sm mb-8 flex-grow">企業・店舗の顔になるホームページを、デザインから完全オーダーメイドで制作。公開後の更新・運用まで伴走します。</p>
                 <ul className="space-y-3 text-sm text-slate-300 font-medium">
-                  <li className="flex items-center"><i className="fas fa-check text-blue-500 mr-3"></i>モダンフロントエンド (React)</li>
-                  <li className="flex items-center"><i className="fas fa-check text-blue-500 mr-3"></i>堅牢なバックエンド (Python)</li>
+                  <li className="flex items-center"><i className="fas fa-check text-blue-500 mr-3"></i>オリジナルデザイン設計</li>
+                  <li className="flex items-center"><i className="fas fa-check text-blue-500 mr-3"></i>SEO・スマホ最適化</li>
                 </ul>
               </div>
             </div>
@@ -350,16 +350,14 @@ export default function Home() {
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-indigo-500/20 text-indigo-300 rounded-2xl flex items-center justify-center mb-8 border border-indigo-400/30">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.4 2.1-1.1 2.8A5 5 0 0 1 17 13v1a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-1a5 5 0 0 1 2.1-4.2A4 4 0 0 1 8 6a4 4 0 0 1 4-4z"/>
-                    <line x1="9" y1="16" x2="9" y2="21"/><line x1="15" y1="16" x2="15" y2="21"/>
-                    <line x1="7" y1="21" x2="17" y2="21"/>
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-4">AIソリューション</h3>
-                <p className="text-indigo-200/80 leading-relaxed text-sm mb-8 flex-grow">自社SaaS「LARUbot」のノウハウを活かし、Gemini APIなどのLLMを組み込んだ業務効率化システムを開発。</p>
+                <h3 className="text-2xl font-bold text-white mb-4">プラットフォーム / SaaS 受注開発</h3>
+                <p className="text-indigo-200/80 leading-relaxed text-sm mb-8 flex-grow">予約・マッチング・ECなどのWebプラットフォームや、御社サービスのSaaS化をNext.js・Pythonで受注生産。自社SaaSを企画から運用まで作り切ったノウハウで、設計から保守まで一気通貫で担当します。</p>
                 <ul className="space-y-3 text-sm text-indigo-100 font-medium">
-                  <li className="flex items-center"><i className="fas fa-check text-indigo-400 mr-3"></i>チャットボット導入支援</li>
-                  <li className="flex items-center"><i className="fas fa-check text-indigo-400 mr-3"></i>社内ナレッジ検索AI (RAG)</li>
+                  <li className="flex items-center"><i className="fas fa-check text-indigo-400 mr-3"></i>モダンフロントエンド (Next.js / React)</li>
+                  <li className="flex items-center"><i className="fas fa-check text-indigo-400 mr-3"></i>堅牢なバックエンド (Python)</li>
                 </ul>
               </div>
             </div>
@@ -370,19 +368,41 @@ export default function Home() {
               <div className="relative z-10 flex flex-col h-full">
                 <div className="w-16 h-16 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center mb-8 border border-purple-500/20">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-                    <polyline points="16 7 22 7 22 13"/>
+                    <path d="M12 2a4 4 0 0 1 4 4c0 1.1-.4 2.1-1.1 2.8A5 5 0 0 1 17 13v1a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-1a5 5 0 0 1 2.1-4.2A4 4 0 0 1 8 6a4 4 0 0 1 4-4z"/>
+                    <line x1="9" y1="16" x2="9" y2="21"/><line x1="15" y1="16" x2="15" y2="21"/>
+                    <line x1="7" y1="21" x2="17" y2="21"/>
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-4">アルゴリズム・HFT</h3>
-                <p className="text-slate-400 leading-relaxed text-sm mb-8 flex-grow">Hyperliquid等のプラットフォームに向けた、高速処理が求められるアルゴリズムトレードシステムの設計と実装。</p>
+                <h3 className="text-2xl font-bold text-white mb-4">AIソリューション</h3>
+                <p className="text-slate-400 leading-relaxed text-sm mb-8 flex-grow">自社SaaS「LARUbot」のノウハウを活かし、生成AI・LLMを組み込んだチャットボットや業務効率化システムを開発します。</p>
                 <ul className="space-y-3 text-sm text-slate-300 font-medium">
-                  <li className="flex items-center"><i className="fas fa-check text-purple-500 mr-3"></i>ボット戦略構築</li>
-                  <li className="flex items-center"><i className="fas fa-check text-purple-500 mr-3"></i>データ解析・バックテスト</li>
+                  <li className="flex items-center"><i className="fas fa-check text-purple-500 mr-3"></i>チャットボット導入支援</li>
+                  <li className="flex items-center"><i className="fas fa-check text-purple-500 mr-3"></i>社内ナレッジ検索AI (RAG)</li>
                 </ul>
               </div>
             </div>
-            
+
+            {/* Service Card 4（自社SaaSへの送客） */}
+            <a href="#product" className="w-[72vw] max-w-[260px] sm:max-w-none sm:min-w-[320px] md:min-w-[400px] h-[450px] flex-shrink-0 bg-[#0f172a] rounded-[1.5rem] p-8 border border-white/5 relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300 block">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="w-16 h-16 bg-cyan-500/10 text-cyan-400 rounded-2xl flex items-center justify-center mb-8 border border-cyan-500/20">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">自社SaaSプロダクト</h3>
+                <p className="text-slate-400 leading-relaxed text-sm mb-8 flex-grow">月額制ですぐ使える自社サービスも提供。オーダーメイドの前に、まず手軽に始めたい方はこちら。</p>
+                <ul className="space-y-3 text-sm text-slate-300 font-medium">
+                  <li className="flex items-center"><i className="fas fa-check text-cyan-500 mr-3"></i>LARUbot — AI接客チャットボット</li>
+                  <li className="flex items-center"><i className="fas fa-check text-cyan-500 mr-3"></i>LARU HP — 月額999円のAIホームページ</li>
+                </ul>
+                <span className="text-white font-bold text-sm inline-flex items-center gap-2 group-hover:gap-3 transition-all mt-6">
+                  プロダクトを見る <i className="fas fa-arrow-down text-xs"></i>
+                </span>
+              </div>
+            </a>
+
             {/* Spacer for scroll */}
             <div className="min-w-[20px] md:min-w-[100px] flex-shrink-0"></div>
           </div>
