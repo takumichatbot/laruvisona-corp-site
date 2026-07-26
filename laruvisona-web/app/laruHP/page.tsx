@@ -632,17 +632,14 @@ export default function LaruHPLandingPage() {
                   <div className="text-[8px] text-rose-200 mb-3">カット ¥4,400〜 / カラー ¥8,800〜</div>
                   <span className="inline-block text-[8px] bg-rose-400 text-white px-3 py-1 rounded-full font-bold">今すぐ予約する →</span>
                 </div>
-                {/* Photo grid overlay at bottom */}
-                <div className="absolute bottom-0 right-0 flex gap-1 p-2 opacity-70">
-                  <div className="w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-rose-300 to-pink-200 flex items-end justify-center">
-                    <div className="text-[18px] mb-1">✂️</div>
-                  </div>
-                  <div className="w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-pink-200 to-rose-300 flex items-end justify-center">
-                    <div className="text-[18px] mb-1">💇</div>
-                  </div>
-                  <div className="w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-rose-200 to-pink-300 flex items-end justify-center">
-                    <div className="text-[18px] mb-1">🌸</div>
-                  </div>
+                {/* Photo grid overlay at bottom（ライブラリ画像。404時は絵文字タイルにフォールバック） */}
+                <div className="absolute bottom-0 right-0 flex gap-1 p-2 opacity-80 z-10">
+                  {[{icon:'✂️',bg:'from-rose-300 to-pink-200'},{icon:'💇',bg:'from-pink-200 to-rose-300'},{icon:'🌸',bg:'from-rose-200 to-pink-300'}].map((t,i)=>(
+                    <div key={i} className={`relative w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br ${t.bg} flex items-end justify-center`}>
+                      <div className="text-[18px] mb-1">{t.icon}</div>
+                      {libGallery('beauty',i) && <img src={libGallery('beauty',i)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                    </div>
+                  ))}
                 </div>
               </div>
               {/* Nav */}
@@ -653,11 +650,16 @@ export default function LaruHPLandingPage() {
               {/* Services */}
               <div className="bg-white px-3 py-3">
                 <div className="grid grid-cols-3 gap-1.5">
-                  {[{icon:'✂️',name:'カット',price:'¥4,400'},{icon:'🎨',name:'カラー',price:'¥8,800'},{icon:'💆',name:'トリート',price:'¥3,300'}].map(s=>(
-                    <div key={s.name} className="bg-rose-50 rounded-xl p-2 text-center border border-rose-100">
-                      <div className="text-[14px] mb-0.5">{s.icon}</div>
-                      <div className="text-[7px] font-semibold text-gray-700">{s.name}</div>
-                      <div className="text-[7px] text-rose-500 font-bold">{s.price}〜</div>
+                  {[{icon:'✂️',name:'カット',price:'¥4,400'},{icon:'🎨',name:'カラー',price:'¥8,800'},{icon:'💆',name:'トリート',price:'¥3,300'}].map((s,i)=>(
+                    <div key={s.name} className="rounded-xl overflow-hidden border border-rose-100">
+                      <div className="relative h-8 bg-rose-50 flex items-center justify-center text-[14px]">
+                        {s.icon}
+                        {libGallery('beauty',i+3) && <img src={libGallery('beauty',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      </div>
+                      <div className="bg-white p-1 text-center">
+                        <div className="text-[7px] font-semibold text-gray-700">{s.name}</div>
+                        <div className="text-[7px] text-rose-500 font-bold">{s.price}〜</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -697,9 +699,13 @@ export default function LaruHPLandingPage() {
                   <div className="text-[8px] text-emerald-200 mb-3">整体・骨盤矯正・鍼灸 / 初回 ¥1,500</div>
                   <span className="inline-block text-[8px] bg-white text-emerald-700 px-3 py-1 rounded font-bold">初回限定で予約 →</span>
                 </div>
-                <div className="absolute bottom-2 right-2 flex gap-1 opacity-60">
-                  <div className="w-11 h-13 rounded-lg bg-gradient-to-b from-emerald-300 to-teal-200 flex items-end justify-center pb-1"><div className="text-[16px]">💆</div></div>
-                  <div className="w-11 h-13 rounded-lg bg-gradient-to-b from-teal-200 to-emerald-300 flex items-end justify-center pb-1"><div className="text-[16px]">🌿</div></div>
+                <div className="absolute bottom-2 right-2 flex gap-1 opacity-80 z-10">
+                  {[{icon:'💆',bg:'from-emerald-300 to-teal-200'},{icon:'🌿',bg:'from-teal-200 to-emerald-300'}].map((t,i)=>(
+                    <div key={i} className={`relative w-11 h-13 rounded-lg overflow-hidden bg-gradient-to-b ${t.bg} flex items-end justify-center pb-1`}>
+                      <div className="text-[16px]">{t.icon}</div>
+                      {libGallery('clinic',i) && <img src={libGallery('clinic',i)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                    </div>
+                  ))}
                 </div>
               </div>
               <div className="bg-white border-b border-emerald-50 px-3 py-1.5 flex items-center justify-between">
@@ -710,10 +716,13 @@ export default function LaruHPLandingPage() {
               <div className="bg-white px-3 py-2.5">
                 <div className="text-[7px] text-gray-500 mb-1.5 font-medium">対応症状</div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {[{icon:'💆',label:'肩こり・首こり'},{icon:'🦴',label:'腰痛・ぎっくり'},{icon:'🦵',label:'ひざ・股関節'}].map(s=>(
-                    <div key={s.label} className="bg-emerald-50 border border-emerald-100 rounded-lg p-1.5 text-center">
-                      <div className="text-[12px] mb-0.5">{s.icon}</div>
-                      <div className="text-[6px] text-emerald-700 font-medium leading-tight">{s.label}</div>
+                  {[{icon:'💆',label:'肩こり・首こり'},{icon:'🦴',label:'腰痛・ぎっくり'},{icon:'🦵',label:'ひざ・股関節'}].map((s,i)=>(
+                    <div key={s.label} className="rounded-lg overflow-hidden border border-emerald-100">
+                      <div className="relative h-8 bg-emerald-50 flex items-center justify-center text-[12px]">
+                        {s.icon}
+                        {libGallery('clinic',i+2) && <img src={libGallery('clinic',i+2)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      </div>
+                      <div className="bg-white p-1 text-center"><div className="text-[6px] text-emerald-700 font-medium leading-tight">{s.label}</div></div>
                     </div>
                   ))}
                 </div>
@@ -751,9 +760,12 @@ export default function LaruHPLandingPage() {
                   <div className="text-[8px] text-amber-200 mb-3">ランチ ¥1,500〜 / ディナー ¥4,800〜</div>
                   <span className="inline-block text-[8px] bg-amber-500 text-white px-3 py-1 rounded font-bold">席を予約する →</span>
                 </div>
-                <div className="absolute bottom-2 right-2 grid grid-cols-3 gap-1 opacity-60">
-                  {[{bg:'from-orange-200 to-amber-200',icon:'🍽'},{bg:'from-amber-200 to-yellow-200',icon:'🥂'},{bg:'from-yellow-200 to-orange-200',icon:'🥩'}].map((m,i)=>(
-                    <div key={i} className={`w-11 h-12 rounded-lg bg-gradient-to-br ${m.bg} flex items-end justify-center pb-1`}><div className="text-[16px]">{m.icon}</div></div>
+                <div className="absolute bottom-2 right-2 grid grid-cols-3 gap-1 opacity-80 z-10">
+                  {[{bg:'from-orange-200 to-amber-200',icon:'🍽',n:4},{bg:'from-amber-200 to-yellow-200',icon:'🥂',n:5},{bg:'from-yellow-200 to-orange-200',icon:'🥩',n:0}].map((m,i)=>(
+                    <div key={i} className={`relative w-11 h-12 rounded-lg overflow-hidden bg-gradient-to-br ${m.bg} flex items-end justify-center pb-1`}>
+                      <div className="text-[16px]">{m.icon}</div>
+                      {libGallery('restaurant',m.n) && <img src={libGallery('restaurant',m.n)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -822,10 +834,13 @@ export default function LaruHPLandingPage() {
               <div className="bg-slate-50 px-3 py-2.5">
                 <div className="text-[7px] text-gray-500 mb-1.5 font-medium">専門分野</div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {[{icon:'📜',label:'相続・遺言'},{icon:'💼',label:'企業法務'},{icon:'🏠',label:'不動産法務'}].map(a=>(
-                    <div key={a.label} className="bg-white border border-slate-200 p-2 text-center shadow-sm">
-                      <div className="text-[12px] mb-0.5">{a.icon}</div>
-                      <div className="text-[6px] text-slate-600 font-medium">{a.label}</div>
+                  {[{icon:'📜',label:'相続・遺言'},{icon:'💼',label:'企業法務'},{icon:'🏠',label:'不動産法務'}].map((a,i)=>(
+                    <div key={a.label} className="bg-white border border-slate-200 text-center shadow-sm overflow-hidden">
+                      <div className="relative h-8 bg-slate-100 flex items-center justify-center text-[12px]">
+                        {a.icon}
+                        {libGallery('legal',i+3) && <img src={libGallery('legal',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      </div>
+                      <div className="p-1"><div className="text-[6px] text-slate-600 font-medium">{a.label}</div></div>
                     </div>
                   ))}
                 </div>
@@ -873,11 +888,16 @@ export default function LaruHPLandingPage() {
               <div className="bg-white px-3 py-2.5">
                 <div className="text-[7px] text-gray-500 mb-1.5 font-medium">プログラム</div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {[{icon:'🏋️',label:'筋力UP',price:'¥8,800'},{icon:'🏃',label:'ダイエット',price:'¥9,800'},{icon:'🧘',label:'体質改善',price:'¥7,800'}].map(s=>(
-                    <div key={s.label} className="bg-red-50 border border-red-100 rounded-lg p-2 text-center">
-                      <div className="text-[12px] mb-0.5">{s.icon}</div>
-                      <div className="text-[6px] font-bold text-gray-700">{s.label}</div>
-                      <div className="text-[6px] text-red-500 font-bold">{s.price}〜</div>
+                  {[{icon:'🏋️',label:'筋力UP',price:'¥8,800'},{icon:'🏃',label:'ダイエット',price:'¥9,800'},{icon:'🧘',label:'体質改善',price:'¥7,800'}].map((s,i)=>(
+                    <div key={s.label} className="rounded-lg overflow-hidden border border-red-100">
+                      <div className="relative h-8 bg-red-50 flex items-center justify-center text-[12px]">
+                        {s.icon}
+                        {libGallery('fitness',i+3) && <img src={libGallery('fitness',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      </div>
+                      <div className="bg-white p-1 text-center">
+                        <div className="text-[6px] font-bold text-gray-700">{s.label}</div>
+                        <div className="text-[6px] text-red-500 font-bold">{s.price}〜</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -932,7 +952,7 @@ export default function LaruHPLandingPage() {
                     <div key={m.label} className="rounded-lg overflow-hidden border border-amber-100">
                       <div className={`relative h-9 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[18px]`}>
                         {m.icon}
-                        {libGallery('construction',i+1) && <img src={libGallery('construction',i+1)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                        {libGallery('construction',i+3) && <img src={libGallery('construction',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="bg-white p-1 text-center"><div className="text-[5.5px] font-medium text-gray-600">{m.label}</div></div>
                     </div>
