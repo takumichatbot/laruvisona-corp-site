@@ -7,7 +7,8 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default function Image() {
-  const logoData = fs.readFileSync(path.join(process.cwd(), 'public/images/logo_light.png'));
+  // 背景が暗いグラデーションなので暗背景用（白文字）ロゴを使う
+  const logoData = fs.readFileSync(path.join(process.cwd(), 'public/images/logo_dark.png'));
   const logoSrc = `data:image/png;base64,${logoData.toString('base64')}`;
 
   return new ImageResponse(

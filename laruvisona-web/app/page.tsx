@@ -289,7 +289,7 @@ export default function Home() {
               </div>
               <div className="gsap-fade-up lg:mt-0 mt-12 flex justify-center items-center">
                  <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-gradient-to-br from-blue-500/10 to-transparent backdrop-blur-md p-10 flex flex-col items-center gap-8">
-                   <img src="/images/logo_dark.png" alt="LaruVisona" className="w-44 h-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.15)]" />
+                   <img src="/images/logo_dark.png" alt="LaruVisona" className="w-72 max-w-full h-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.15)]" />
                    <div className="grid grid-cols-2 gap-3 w-full">
                      {[
                        { value: 'AI', label: 'AI駆動' },
