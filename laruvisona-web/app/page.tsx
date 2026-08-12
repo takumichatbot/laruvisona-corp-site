@@ -150,6 +150,7 @@ export default function Home() {
               <nav className="hidden md:flex items-center gap-2 font-bold text-xs text-slate-300">
                 <a href="#about" className="hover:text-white px-4 py-2 transition-colors">会社概要</a>
                 <a href="#services" className="hover:text-white px-4 py-2 transition-colors">サービス</a>
+                <a href="/services" className="hover:text-white px-4 py-2 transition-colors">受託開発</a>
                 <a href="#works" className="hover:text-white px-4 py-2 transition-colors">実績</a>
                 <a href="#estimator" className="text-blue-400 hover:text-blue-300 px-4 py-2 transition-colors">見積もり</a>
                 <a href="#process" className="hover:text-white px-4 py-2 transition-colors">ご依頼の流れ</a>
@@ -190,6 +191,7 @@ export default function Home() {
           <div className="flex flex-col space-y-6 font-bold text-3xl text-center tracking-tight w-full px-8">
             <a href="#about" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">会社概要</a>
             <a href="#services" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">サービス</a>
+            <a href="/services" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">受託開発</a>
             <a href="#works" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">実績</a>
             <a href="#estimator" onClick={() => setIsMenuOpen(false)} className="text-blue-400 hover:text-blue-300 transition-colors py-2">見積もり</a>
             <a href="#process" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">ご依頼の流れ</a>
@@ -406,6 +408,15 @@ export default function Home() {
             {/* Spacer for scroll */}
             <div className="min-w-[20px] md:min-w-[100px] flex-shrink-0"></div>
           </div>
+
+          {/* 受託開発の詳細ページへの導線 */}
+          <div className="container mx-auto px-6 max-w-7xl mt-14 gsap-fade-up">
+            <a href="/services" className="group inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all">
+              受託開発のサービスと料金を見る
+              <span className="transition-transform group-hover:translate-x-1">→</span>
+            </a>
+            <p className="text-slate-500 text-xs mt-3">AIシステムの点検・修理から、HP制作・AI開発・保守まで。料金の目安をまとめています。</p>
+          </div>
         </section>
 
         {/* --- Works Section（開発実績 — 受託営業用ポートフォリオ） --- */}
@@ -581,6 +592,7 @@ export default function Home() {
               <img src="/images/logo_dark.png" alt="LaruVisona" className="h-8 w-auto object-contain" />
             </div>
             <div className="flex flex-wrap justify-center gap-8 text-xs font-bold mb-10 tracking-widest uppercase">
+              <a href="/services" className="hover:text-white transition-colors">Services</a>
               <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-white transition-colors">Terms</a>
               <a href="#about" className="hover:text-white transition-colors">Company</a>
