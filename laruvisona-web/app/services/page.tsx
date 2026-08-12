@@ -226,12 +226,14 @@ export default function ServicesPage() {
                       : 'bg-[#0f172a] border-white/5'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div>
+                  {/* スマホ幅では縦積み、sm以上で横並び。価格は縮まないため、狭い幅で横並びにすると
+                      長いサービス名に押されてカード外へはみ出す（実測 375/320/390px）。縦積みで解消する。 */}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-4 mb-4">
+                    <div className="min-w-0">
                       <span className="text-slate-500 font-en font-bold text-xs tracking-widest">{s.no}</span>
-                      <h3 className="text-xl font-bold mt-1">{s.title}</h3>
+                      <h3 className="text-xl font-bold mt-1 break-words">{s.title}</h3>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="sm:text-right">
                       <div className="text-2xl font-bold text-blue-300 whitespace-nowrap">{s.price}</div>
                     </div>
                   </div>
@@ -361,9 +363,9 @@ export default function ServicesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {PROCESS.map(p => (
                 <div key={p.step} className="bg-[#0f172a] border border-white/5 rounded-2xl p-6 flex flex-col">
-                  <div className="flex items-baseline justify-between mb-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
                     <span className="text-blue-400 font-en font-bold text-sm tracking-widest">{p.step}</span>
-                    {p.note && <span className="text-emerald-400 text-[10px] font-bold border border-emerald-400/30 rounded-full px-2 py-0.5">{p.note}</span>}
+                    {p.note && <span className="shrink-0 text-emerald-400 text-[10px] font-bold border border-emerald-400/30 rounded-full px-2 py-0.5">{p.note}</span>}
                   </div>
                   <h3 className="font-bold text-lg mb-2">{p.title}</h3>
                   <p className="text-slate-400 text-xs leading-relaxed">{p.desc}</p>
