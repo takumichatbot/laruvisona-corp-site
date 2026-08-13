@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import InquiryForm from '@/components/InquiryForm';
+import LarubotContactForm from '@/components/LarubotContactForm';
 
 export const metadata: Metadata = {
   title: '受託開発サービスと料金 | 株式会社LaruVisona',
@@ -390,8 +390,8 @@ export default function ServicesPage() {
                 内容を確認のうえ、通常2営業日以内にご返信いたします。
               </p>
             </div>
-            <div className="bg-[#0a0a0a]/80 border border-white/10 rounded-2xl md:rounded-3xl p-6 sm:p-8">
-              <InquiryForm dark />
+            <div className="bg-white border border-white/10 rounded-2xl md:rounded-3xl overflow-hidden">
+              <LarubotContactForm />
             </div>
           </div>
         </section>

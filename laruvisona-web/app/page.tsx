@@ -7,7 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Estimator from '@/components/Estimator';
 import VoiceUI from '@/components/VoiceUI';
 import { WORKS, ACCENT_STYLES } from '@/lib/works-data';
-import InquiryForm from '@/components/InquiryForm';
+import LarubotContactForm from '@/components/LarubotContactForm';
 import Intro from '@/components/Intro';
 import { track } from '@/lib/analytics';
 
@@ -26,13 +26,11 @@ const Scene = dynamic(() => import('@/components/Canvas/Scene'), { ssr: false })
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
-  const [inquiryPrefill, setInquiryPrefill] = useState('');
   const horizontalScrollRef = useRef<HTMLDivElement>(null);
 
-  // 見積もりシミュレーターの内容を問い合わせフォームに引き継いでスクロール
-  const handleConsult = (estimateDetails: string) => {
+  // 見積もりシミュレーターから問い合わせフォーム（#contact）へスクロール誘導
+  const handleConsult = () => {
     track('estimator_consult');
-    setInquiryPrefill(estimateDetails);
     setTimeout(() => {
       document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -583,7 +581,7 @@ export default function Home() {
             <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">お問い合わせ</h2>
             <p className="text-slate-400 mb-16 text-lg">未来を共に創るパートナーとして、まずはお気軽にご相談ください。</p>
             
-            <InquiryForm dark prefillMessage={inquiryPrefill} />
+            <LarubotContactForm />
 
           </div>
         </section>

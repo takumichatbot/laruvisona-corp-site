@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import InquiryForm from '@/components/InquiryForm';
+import LarubotContactForm from '@/components/LarubotContactForm';
 
 export const metadata: Metadata = {
   title: 'お問い合わせ | LaruVisona',
@@ -29,8 +29,8 @@ export default function ContactPage() {
             </p>
           </div>
 
-          <div className="bg-[#0a0a0a]/80 backdrop-blur-xl p-6 sm:p-8 md:p-10 rounded-3xl border border-white/10 shadow-2xl">
-            <InquiryForm dark />
+          <div className="bg-white rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+            <LarubotContactForm />
           </div>
 
           <div className="mt-8 text-center">
