@@ -24,6 +24,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // 受託開発サービス
     { url: `${base}/services`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
 
+    // ブログ（LARU SEO 記事一覧）
+    { url: `${base}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+
     // LARU HP メイン
     { url: `${base}/laruHP`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
 

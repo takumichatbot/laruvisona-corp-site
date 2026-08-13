@@ -2,6 +2,7 @@ import './globals.css';
 import { Space_Grotesk, Noto_Sans_JP } from 'next/font/google';
 import SmoothScroll from '@/components/SmoothScroll';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
+import LarubotWidget from '@/components/LarubotWidget';
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -62,6 +63,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SmoothScroll>
           {children}
         </SmoothScroll>
+        {/* LARUbot AIチャットボット（全ページ / イントロ完了後に遅延ロード） */}
+        <LarubotWidget />
       </body>
     </html>
   );

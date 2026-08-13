@@ -124,7 +124,7 @@ export default function Home() {
 
   return (
     <>
-    {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
+    {showIntro && <Intro onComplete={() => { setShowIntro(false); window.dispatchEvent(new Event('lv:intro-done')); }} />}
     {/* bg必須: globals.css の非レイヤー body{background:#fff} が Tailwind v4 のレイヤー化
         ユーティリティ(bodyのbg-[#030712])に勝つため、LPはここで暗背景を敷く */}
     <main className="relative min-h-screen bg-[#030712] [overflow-x:clip] selection:bg-blue-500 selection:text-white">
@@ -155,6 +155,7 @@ export default function Home() {
                 <a href="#estimator" className="text-blue-400 hover:text-blue-300 px-4 py-2 transition-colors">見積もり</a>
                 <a href="#process" className="hover:text-white px-4 py-2 transition-colors">ご依頼の流れ</a>
                 <a href="#product" className="hover:text-white px-4 py-2 transition-colors">プロダクト</a>
+                <a href="/blog" className="hover:text-white px-4 py-2 transition-colors">ブログ</a>
                 <a href="/laruHP" className="text-cyan-400 hover:text-cyan-300 px-4 py-2 transition-colors border border-cyan-500/30 rounded-lg">LARU HP ✨</a>
               </nav>
               <a href="#contact" className="hidden md:flex bg-white text-black px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all items-center gap-2">
@@ -196,6 +197,7 @@ export default function Home() {
             <a href="#estimator" onClick={() => setIsMenuOpen(false)} className="text-blue-400 hover:text-blue-300 transition-colors py-2">見積もり</a>
             <a href="#process" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">ご依頼の流れ</a>
             <a href="#product" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">プロダクト</a>
+            <a href="/blog" onClick={() => setIsMenuOpen(false)} className="text-white hover:text-blue-400 transition-colors py-2">ブログ</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)} className="bg-white text-black px-8 py-4 rounded-2xl font-bold text-xl mt-4 hover:bg-blue-50 transition-colors">お問い合わせ</a>
           </div>
         </div>
@@ -593,6 +595,7 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap justify-center gap-8 text-xs font-bold mb-10 tracking-widest uppercase">
               <a href="/services" className="hover:text-white transition-colors">Services</a>
+              <a href="/blog" className="hover:text-white transition-colors">Blog</a>
               <a href="/privacy" className="hover:text-white transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-white transition-colors">Terms</a>
               <a href="#about" className="hover:text-white transition-colors">Company</a>
