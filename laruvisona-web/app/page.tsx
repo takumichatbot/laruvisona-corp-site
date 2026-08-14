@@ -275,7 +275,7 @@ export default function Home() {
                       </tr>
                       <tr className="border-b border-white/5">
                         <th className="py-4 text-slate-500 font-normal">設立</th>
-                        <td className="py-4 text-white">2026年4月1日</td>
+                        <td className="py-4 text-white">2026年4月6日</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <th className="py-4 text-slate-500 align-top font-normal">所在地</th>
