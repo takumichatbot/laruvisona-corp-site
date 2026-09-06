@@ -278,8 +278,12 @@ export default function Home() {
                         <td className="py-4 text-white">2026年4月6日</td>
                       </tr>
                       <tr className="border-b border-white/5">
-                        <th className="py-4 text-slate-500 align-top font-normal">所在地</th>
-                        <td className="py-4 text-white leading-relaxed text-sm">東京都豊島区南大塚1丁目22-3<br />CASA南大塚101号室</td>
+                        <th className="py-4 text-slate-500 align-top font-normal">本店所在地</th>
+                        <td className="py-4 text-white leading-relaxed text-sm">〒174-0072<br />東京都板橋区南常盤台1丁目11-6-101号室</td>
+                      </tr>
+                      <tr className="border-b border-white/5">
+                        <th className="py-4 text-slate-500 align-top font-normal">オフィス</th>
+                        <td className="py-4 text-white leading-relaxed text-sm">〒170-0005<br />東京都豊島区南大塚1丁目22-3 CASA南大塚101号室</td>
                       </tr>
                       <tr>
                         <th className="py-4 text-slate-500 align-top font-normal">事業内容</th>
