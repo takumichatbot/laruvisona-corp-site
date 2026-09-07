@@ -4484,58 +4484,85 @@ function BuilderContent() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Save (Cmd/Ctrl+S)
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      const target = e.target as HTMLElement;
+      const tag = target.tagName;
+      const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+      const mod = e.metaKey || e.ctrlKey;
+      // Shift を押すと e.key は大文字になる（'z' → 'Z'）。
+      // 小文字で比較していたため Cmd+Shift+Z（やり直し）が一度も効いていなかった。
+      const k = e.key.toLowerCase();
+
+      // Save (Cmd/Ctrl+S) — 文字入力中でも保存できてよい
+      if (mod && k === 's') {
         e.preventDefault();
         handleSave();
         return;
       }
-      // Undo / Redo
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+
+      // Undo / Redo。文字入力中は横取りしない。
+      // 以前は入力欄の中でも効いてしまい、打ち間違いを戻したつもりが
+      // サイト全体が一手前まで巻き戻っていた（入力中の文字は戻せない）。
+      if (mod && (k === 'z' || k === 'y')) {
+        if (inField) return;
         e.preventDefault();
-        if (e.shiftKey) redo(); else undo();
+        if (k === 'y' || e.shiftKey) redo(); else undo();
         return;
       }
+
       // Copy selected block
-      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && selectedId) {
-        const tag2 = (e.target as HTMLElement).tagName;
-        const editable2 = (e.target as HTMLElement).isContentEditable;
-        if (tag2 !== 'INPUT' && tag2 !== 'TEXTAREA' && !editable2) {
-          const block = currentPage?.blocks.find(b => b.id === selectedId);
-          if (block) {
-            setCopiedBlock(structuredClone(block));
-            setCopyToast(true);
-            setTimeout(() => setCopyToast(false), 1500);
-          }
-          return;
+      if (mod && k === 'c' && selectedId && !inField) {
+        const block = currentPage?.blocks.find(b => b.id === selectedId);
+        if (block) {
+          setCopiedBlock(structuredClone(block));
+          setCopyToast(true);
+          setTimeout(() => setCopyToast(false), 1500);
         }
+        return;
       }
+
+      // Duplicate selected block (Cmd/Ctrl+D) — 編集ツールの標準操作
+      if (mod && k === 'd' && selectedId && !inField) {
+        e.preventDefault();
+        const block = currentPage?.blocks.find(b => b.id === selectedId);
+        if (!block) return;
+        pushHistory(siteRef.current);
+        const copy: Block = { ...structuredClone(block), id: crypto.randomUUID() };
+        setSite(prev => ({
+          ...prev,
+          pages: prev.pages.map(p => {
+            if (p.id !== currentPageId) return p;
+            const blocks = [...p.blocks];
+            const idx = blocks.findIndex(b => b.id === selectedId);
+            blocks.splice(idx + 1, 0, copy);
+            return { ...p, blocks };
+          }),
+        }));
+        setSelectedId(copy.id);
+        return;
+      }
+
       // Paste copied block after selected (or at end)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'v' && copiedBlock) {
-        const tag3 = (e.target as HTMLElement).tagName;
-        const editable3 = (e.target as HTMLElement).isContentEditable;
-        if (tag3 !== 'INPUT' && tag3 !== 'TEXTAREA' && !editable3) {
-          e.preventDefault();
-          pushHistory(siteRef.current);
-          const newBlock: Block = { ...structuredClone(copiedBlock), id: crypto.randomUUID() };
-          setSite(prev => ({
-            ...prev,
-            pages: prev.pages.map(p => {
-              if (p.id !== currentPageId) return p;
-              const blocks = [...p.blocks];
-              const idx = selectedId ? blocks.findIndex(b => b.id === selectedId) : blocks.length - 1;
-              blocks.splice(idx + 1, 0, newBlock);
-              return { ...p, blocks };
-            }),
-          }));
-          setSelectedId(newBlock.id);
-          return;
-        }
+      if (mod && k === 'v' && copiedBlock && !inField) {
+        e.preventDefault();
+        pushHistory(siteRef.current);
+        const newBlock: Block = { ...structuredClone(copiedBlock), id: crypto.randomUUID() };
+        setSite(prev => ({
+          ...prev,
+          pages: prev.pages.map(p => {
+            if (p.id !== currentPageId) return p;
+            const blocks = [...p.blocks];
+            const idx = selectedId ? blocks.findIndex(b => b.id === selectedId) : blocks.length - 1;
+            blocks.splice(idx + 1, 0, newBlock);
+            return { ...p, blocks };
+          }),
+        }));
+        setSelectedId(newBlock.id);
+        return;
       }
-      // Skip when focus is inside an input / editable element
-      const tag = (e.target as HTMLElement).tagName;
-      const editable = (e.target as HTMLElement).isContentEditable;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || editable) return;
+
+      // ここから先は、文字入力中には効かせない
+      if (inField) return;
+
       // Delete / Backspace → delete selected block(s)
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedIds.size > 0) {
