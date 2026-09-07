@@ -184,6 +184,30 @@ export default function LaruHPLandingPage() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
 
+    // ヒーローの見出し・説明・CTAは、演出のために一度隠してから出す。
+    // 隠したまま演出が完走しないと、ファーストビュー に何も無い状態になる
+    // （以前は JSX に opacity:0 を直接書いていたため、実際にそうなっていた）。
+    // そこで「隠すのは演出できる時だけ」「万一のときは必ず出す」を両方入れる。
+    const html = document.documentElement;
+    const HERO_SEL = '.lp-hero-badge,.lp-hero-h1 span,.lp-hero-sub,.lp-hero-cta,.lp-hero-tags span';
+    const revealHero = () => {
+      html.classList.remove('lp-anim');
+      document.querySelectorAll<HTMLElement>(HERO_SEL).forEach(el => {
+        el.style.opacity = '1';
+        el.style.transform = 'none';
+      });
+    };
+
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const notVisible = document.visibilityState !== 'visible';
+    if (reduceMotion || notVisible) {
+      // 動きを減らす設定の人、別タブで開かれた場合（描画が止まり演出が進まない）は
+      // 演出をあきらめて内容を見せる。
+      revealHero();
+      registerScrollAnimations();
+      return () => { ScrollTrigger.getAll().forEach(t => t.kill()); };
+    }
+
     // Hero entrance
     const tl = gsap.timeline({ delay: 0.1 });
     tl.fromTo('.lp-hero-badge',
@@ -202,6 +226,19 @@ export default function LaruHPLandingPage() {
       { y: 12, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.4, stagger: 0.07, ease: 'power2.out' }, '-=0.2');
 
+    // 保険: 3.5秒経っても演出が終わっていなければ、強制的に見せる。
+    const fuse = window.setTimeout(revealHero, 3500);
+    tl.eventCallback('onComplete', () => {
+      (window as unknown as { __lpAnimDone?: boolean }).__lpAnimDone = true;
+      window.clearTimeout(fuse);
+      html.classList.remove('lp-anim');
+    });
+
+    registerScrollAnimations();
+    return () => { window.clearTimeout(fuse); tl.kill(); ScrollTrigger.getAll().forEach(t => t.kill()); };
+
+    // ── 以下、スクロール連動のアニメーション ─────────────────
+    function registerScrollAnimations() {
     // Scroll fade-up
     gsap.utils.toArray<Element>('.lp-fade-up').forEach(el => {
       gsap.fromTo(el,
@@ -228,12 +265,34 @@ export default function LaruHPLandingPage() {
         onEnter: () => { el.style.opacity = '1'; gsap.fromTo(el, { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.7)' }); },
       });
     });
-
-    return () => { ScrollTrigger.getAll().forEach(t => t.kill()); };
+    }
   }, []);
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900 overflow-x-hidden">
+
+      {/* ヒーローの初期状態。JSが動く環境でだけ隠す。
+          JS無効・動きを減らす設定・別タブで開かれた場合は、この class が付かないので
+          見出しもCTAも最初から見えている。 */}
+      <style>{`
+.lp-anim .lp-hero-badge,
+.lp-anim .lp-hero-h1 span,
+.lp-anim .lp-hero-sub,
+.lp-anim .lp-hero-cta,
+.lp-anim .lp-hero-tags span{opacity:0}
+`}</style>
+      <script dangerouslySetInnerHTML={{ __html: `(function(){try{
+var d=document.documentElement;
+if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+if(document.visibilityState!=='visible')return;
+d.classList.add('lp-anim');
+setTimeout(function(){
+  if(window.__lpAnimDone)return;
+  d.classList.remove('lp-anim');
+  document.querySelectorAll('.lp-hero-badge,.lp-hero-h1 span,.lp-hero-sub,.lp-hero-cta,.lp-hero-tags span')
+    .forEach(function(el){el.style.opacity='1';el.style.transform='none';});
+},3500);
+}catch(e){}})();` }} />
 
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
@@ -303,7 +362,7 @@ export default function LaruHPLandingPage() {
         </div>
 
         <div className="max-w-5xl mx-auto relative z-10">
-          <div className="lp-hero-badge inline-flex items-center gap-2.5 bg-sky-100/90 backdrop-blur-sm border border-sky-300 px-5 py-2.5 rounded-full text-sky-700 text-xs font-medium tracking-widest mb-10 shadow-[0_0_30px_rgba(14,165,233,0.15)]" style={{ opacity: 0 }}>
+          <div className="lp-hero-badge inline-flex items-center gap-2.5 bg-sky-100/90 backdrop-blur-sm border border-sky-300 px-5 py-2.5 rounded-full text-sky-700 text-xs font-medium tracking-widest mb-10 shadow-[0_0_30px_rgba(14,165,233,0.15)]">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-500/75 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-600" />
@@ -312,13 +371,13 @@ export default function LaruHPLandingPage() {
           </div>
 
           <h1 className="lp-hero-h1 text-[2.8rem] sm:text-6xl md:text-[6.5rem] font-bold tracking-tighter mb-6 leading-[1.05] md:leading-[1.02]">
-            <span className="block text-gray-900" style={{ opacity: 0 }}>最高のHPを、</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500" style={{ opacity: 0 }}>
+            <span className="block text-gray-900">最高のHPを、</span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500">
               最短5分で。
             </span>
           </h1>
 
-          <p className="lp-hero-sub text-slate-700 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal" style={{ opacity: 0 }}>
+          <p className="lp-hero-sub text-slate-700 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed font-normal">
             業種情報を入力するだけ。AIが<strong className="text-sky-700 font-semibold">5分以内</strong>にプロ品質のホームページを自動生成。<br className="hidden md:block" />
             SEO・LARUbot Lite連携・ビジュアル編集がすべて月額<strong className="text-sky-700 font-semibold">999円</strong>。
           </p>
@@ -326,14 +385,14 @@ export default function LaruHPLandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
             <Link href="/laruHP/onboarding"
               className="lp-hero-cta relative bg-sky-600 text-white px-9 py-4 rounded-2xl font-bold text-base hover:scale-105 transition-transform shadow-[0_4px_20px_rgba(2,132,199,0.3)] flex items-center gap-3 w-full sm:w-auto justify-center overflow-hidden group"
-              style={{ opacity: 0 }}>
+             >
               <span className="absolute inset-0 bg-gradient-to-r from-sky-500 to-sky-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               <span className="relative">無料で始める（初月無料）</span>
               <span className="relative text-white font-bold">→</span>
             </Link>
             <Link href="/laruHP/demo"
               className="lp-hero-cta text-sky-700 hover:text-sky-800 px-9 py-4 rounded-2xl font-bold text-base border-2 border-sky-600 bg-white hover:bg-sky-50 transition-all flex items-center gap-2.5 w-full sm:w-auto justify-center"
-              style={{ opacity: 0 }}>
+             >
               <span className="text-sky-600">▶</span> デモを体験
             </Link>
           </div>
@@ -345,7 +404,7 @@ export default function LaruHPLandingPage() {
 
           <div className="lp-hero-tags hidden md:flex justify-center gap-3 mt-8 flex-wrap">
             {['AI コンテンツ生成', 'SEO 自動最適化', 'LARUbot Lite 連携', 'モバイル完全対応', 'SSL 込み'].map((tag, i) => (
-              <span key={i} className="bg-white/80 backdrop-blur-sm border border-sky-100 text-gray-500 text-xs px-3 py-1.5 rounded-full hover:border-sky-200 hover:text-gray-700 transition-all" style={{ opacity: 0 }}>
+              <span key={i} className="bg-white/80 backdrop-blur-sm border border-sky-100 text-gray-500 text-xs px-3 py-1.5 rounded-full hover:border-sky-200 hover:text-gray-700 transition-all">
                 {tag}
               </span>
             ))}
