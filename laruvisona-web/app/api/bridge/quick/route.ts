@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/adminAuth';
 
 interface MacEntry { ws: { send: (s: string) => void; readyState: number }; name: string }
 
@@ -56,7 +57,9 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   // @ts-ignore
   const queue = global.bridgeQuickQueue || [];
   // @ts-ignore

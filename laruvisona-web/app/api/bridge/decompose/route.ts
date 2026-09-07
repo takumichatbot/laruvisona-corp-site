@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { requireAdmin } from '@/lib/adminAuth';
 
 const client = new Anthropic();
 
@@ -28,10 +29,9 @@ function topoGroups(tasks: DecomposeTask[]): string[][] {
 
 export async function POST(req: Request) {
   try {
-    const { goal, project, secret } = await req.json() as { goal: string; project: string; secret: string };
-    if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = await requireAdmin(req);
+    if (denied) return denied;
+    const { goal, project } = await req.json() as { goal: string; project: string };
     if (!goal?.trim()) return NextResponse.json({ error: 'goal required' }, { status: 400 });
 
     const response = await client.messages.create({

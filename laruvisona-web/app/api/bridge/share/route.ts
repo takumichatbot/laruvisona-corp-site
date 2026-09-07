@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
+import { requireAdmin } from '@/lib/adminAuth';
 
 // メモリストア（サーバー再起動で消える）
 // @ts-ignore
 if (!global.bridgeShares) global.bridgeShares = new Map<string, { content: string; ts: number }>();
 
 export async function POST(req: Request) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   const { content } = await req.json() as { content: string };
   if (!content) return NextResponse.json({ error: 'content required' }, { status: 400 });
   const id = randomBytes(6).toString('hex');

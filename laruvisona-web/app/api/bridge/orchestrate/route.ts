@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { requireAdmin } from '@/lib/adminAuth';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -12,6 +13,8 @@ function parsePlan(text: string) {
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   const { directive, projectName, fileTree, model = 'claude-sonnet-4-6', agentConfig = '' } = await req.json();
 
   if (!directive?.trim()) {

@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS public.watcher_health (
   last_commit_msg text,
   updated_at timestamptz DEFAULT now()
 );
-ALTER TABLE public.watcher_health DISABLE ROW LEVEL SECURITY;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.watcher_health;
+ALTER TABLE public.watcher_health ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.watcher_health FROM anon, authenticated;

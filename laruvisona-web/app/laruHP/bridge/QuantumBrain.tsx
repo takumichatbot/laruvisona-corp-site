@@ -8,7 +8,6 @@ interface Props {
   onClose: () => void;
   onApply: (text: string) => void;
   project: string;
-  adminSecret: string;
 }
 
 // ── Bloch Sphere (SVG 3D illusion) ────────────────────────────────────────────
@@ -160,7 +159,7 @@ function BranchCard({ branch, index, revealed }: { branch: QuantumBranch; index:
 // ── Main Component ─────────────────────────────────────────────────────────────
 type Phase = 'init' | 'superpos' | 'entangle' | 'collapse' | 'done' | 'error';
 
-export default function QuantumBrain({ goal, onClose, onApply, project, adminSecret }: Props) {
+export default function QuantumBrain({ goal, onClose, onApply, project }: Props) {
   const [phase, setPhase] = useState<Phase>('init');
   const [branches, setBranches] = useState<QuantumBranch[]>([]);
   const [revealedCount, setRevealedCount] = useState(0);
@@ -178,7 +177,7 @@ export default function QuantumBrain({ goal, onClose, onApply, project, adminSec
         const res = await fetch('/api/bridge/quantum', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ goal, project, secret: adminSecret, numBranches: 3 }),
+          body: JSON.stringify({ goal, project, numBranches: 3 }),
         });
         if (cancelled) return;
         const data = await res.json() as { branches?: QuantumBranch[]; synthesis?: string; error?: string };

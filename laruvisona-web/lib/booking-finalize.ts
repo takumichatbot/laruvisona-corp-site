@@ -4,6 +4,17 @@
 //
 // /api/contact はレート制限があるため、内部呼び出しは x-internal-secret
 // （= RETENTION_SECRET）でバイパスする。
+//
+// 宛先は必ず自プロセス（ループバック）に固定する。リクエストの Origin を
+// 宛先に使うと、匿名の予約リクエストから任意ドメインへ内部秘密ヘッダーを
+// 送らせることができてしまうため、呼び出し側から URL は受け取らない。
+
+/** 内部 API の宛先。外部入力からは決して組み立てない。 */
+function internalBaseUrl(): string {
+  const explicit = process.env.INTERNAL_API_BASE_URL;
+  if (explicit) return explicit.replace(/\/$/, '');
+  return `http://127.0.0.1:${process.env.PORT || 3000}`;
+}
 
 function fmtJst(iso: string): string {
   const d = new Date(iso);
@@ -14,7 +25,6 @@ function fmtJst(iso: string): string {
 }
 
 export async function finalizeBooking(opts: {
-  baseUrl: string;
   siteId: string;
   name: string;
   email: string;
@@ -24,7 +34,7 @@ export async function finalizeBooking(opts: {
   slotDatetime: string;
   prepaid: boolean;
   amount?: number;
-}): Promise<void> {
+}): Promise<boolean> {
   const dt = fmtJst(opts.slotDatetime);
   const messageLines = [
     opts.service ? `メニュー: ${opts.service}` : '',
@@ -33,7 +43,7 @@ export async function finalizeBooking(opts: {
   ].filter(Boolean);
 
   try {
-    await fetch(`${opts.baseUrl}/api/contact`, {
+    const res = await fetch(`${internalBaseUrl()}/api/contact`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,7 +63,13 @@ export async function finalizeBooking(opts: {
         },
       }),
     });
+    if (!res.ok) {
+      console.error('[booking-finalize] notify failed: status', res.status);
+      return false;
+    }
+    return true;
   } catch (e) {
     console.error('[booking-finalize] notify failed:', (e as Error)?.message);
+    return false;
   }
 }

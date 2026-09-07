@@ -18,8 +18,39 @@ const HOLD_MS = 30 * 60 * 1000;
 interface Slot { id: string; datetime: string; duration: number; label: string; available: boolean }
 interface BookingConfig { slots?: Slot[]; prepayEnabled?: boolean; prepayAmount?: number }
 
+// Stripe の戻り先に使う Origin。リクエストの Origin をそのまま信用すると、
+// 攻撃者ドメインへ決済後の利用者を飛ばせてしまうため、
+// このサイトが正当に配信されているホストだけを許可する。
+function safeOrigin(rawOrigin: string | null, site: { slug: string | null; custom_domain: string | null }): string {
+  const fallback = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '');
+  if (!rawOrigin) return fallback;
+  let host: string;
+  let proto: string;
+  try {
+    const u = new URL(rawOrigin);
+    host = u.hostname.toLowerCase();
+    proto = u.protocol;
+  } catch {
+    return fallback;
+  }
+  if (proto !== 'https:' && proto !== 'http:') return fallback;
+
+  const mainHost = (process.env.NEXT_PUBLIC_APP_URL || '')
+    .replace(/^https?:\/\//, '').replace(/\/$/, '').split(':')[0].toLowerCase();
+  const allowed = new Set<string>();
+  if (mainHost) {
+    allowed.add(mainHost);
+    allowed.add(`www.${mainHost}`);
+    if (site.slug) allowed.add(`${site.slug.toLowerCase()}.${mainHost}`);
+  }
+  if (site.custom_domain) {
+    const d = site.custom_domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (d) { allowed.add(d); allowed.add(`www.${d}`); }
+  }
+  return allowed.has(host) ? rawOrigin.replace(/\/$/, '') : fallback;
+}
+
 export async function POST(req: Request) {
-  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
   const { siteId, slotId, name, email, phone, service, _hp } = await req.json().catch(() => ({}));
 
   if (_hp) return NextResponse.json({ ok: true }); // ハニーポット
@@ -30,12 +61,13 @@ export async function POST(req: Request) {
   const supabase = admin();
   const { data: site } = await supabase
     .from('sites')
-    .select('name, data')
+    .select('name, data, slug, custom_domain')
     .eq('id', siteId)
     .eq('published', true)
     .single();
   if (!site) return NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 });
 
+  const origin = safeOrigin(req.headers.get('origin'), site as { slug: string | null; custom_domain: string | null });
   const cfg = ((site.data as Record<string, unknown>)?.bookingConfig as BookingConfig) || {};
   const slot = (cfg.slots || []).find(s => s.id === slotId);
   if (!slot || !slot.available) {
@@ -115,8 +147,7 @@ export async function POST(req: Request) {
   }
 
   // 事前決済なし: 即確定して通知
-  await finalizeBooking({
-    baseUrl: origin,
+  const notified = await finalizeBooking({
     siteId,
     name,
     email,
@@ -126,5 +157,9 @@ export async function POST(req: Request) {
     slotDatetime: slot.datetime,
     prepaid: false,
   });
-  return NextResponse.json({ ok: true });
+  if (!notified) {
+    // 予約自体は成立しているので 200 のまま。オーナーへの通知だけが未達であることを伝える。
+    console.error('[booking/reserve] notification failed for reservation', reservation.id);
+  }
+  return NextResponse.json({ ok: true, notified });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { signResetToken } from '@/lib/member-auth';
+import { clientIp, rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,11 @@ function admin() {
 }
 
 export async function POST(req: Request) {
+  // 送信の乱発・メール列挙を防ぐ（応答は常に ok なので回数だけ制限する）
+  if (!rateLimit(`member-reset:${clientIp(req)}`, 5, 60 * 60 * 1000).ok) {
+    return NextResponse.json({ ok: true });
+  }
+
   const { siteId, email } = await req.json().catch(() => ({}));
   // 存在有無を漏らさないため常に ok を返す
   if (!siteId || !email) return NextResponse.json({ ok: true });
@@ -18,14 +24,14 @@ export async function POST(req: Request) {
   const emailNorm = String(email).trim().toLowerCase();
   const { data: member } = await supabase
     .from('hp_members')
-    .select('id')
+    .select('id, password_hash')
     .eq('site_id', siteId)
     .eq('email', emailNorm)
     .maybeSingle();
   const { data: site } = await supabase.from('sites').select('name').eq('id', siteId).single();
 
   if (member && process.env.RESEND_API_KEY) {
-    const token = signResetToken(member.id, siteId);
+    const token = signResetToken(member.id, siteId, member.password_hash);
     const link = `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/hp/member-reset?site=${siteId}&token=${encodeURIComponent(token)}`;
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);

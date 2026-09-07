@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/adminAuth';
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
@@ -21,6 +22,8 @@ async function ghFetch(path: string, opts: RequestInit = {}) {
 }
 
 export async function GET(req: Request) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   if (!GITHUB_TOKEN) return NextResponse.json({ error: 'GITHUB_TOKEN が未設定です' }, { status: 500 });
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action');
@@ -81,6 +84,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   if (!GITHUB_TOKEN) return NextResponse.json({ error: 'GITHUB_TOKEN が未設定です' }, { status: 500 });
   try {
     const { action, repo, pr, body, event } = await req.json();

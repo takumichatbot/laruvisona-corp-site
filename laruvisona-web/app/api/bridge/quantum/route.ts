@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { requireAdmin } from '@/lib/adminAuth';
 
 const client = new Anthropic();
 
@@ -51,14 +52,12 @@ export interface QuantumBranch {
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   try {
-    const { goal, project, secret, numBranches = 3 } = await req.json() as {
-      goal: string; project: string; secret: string; numBranches?: number;
+    const { goal, project, numBranches = 3 } = await req.json() as {
+      goal: string; project: string; numBranches?: number;
     };
-
-    if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     if (!goal?.trim()) return NextResponse.json({ error: 'goal required' }, { status: 400 });
 
     const bases = QUANTUM_BASES.slice(0, Math.min(Math.max(numBranches, 2), 5));

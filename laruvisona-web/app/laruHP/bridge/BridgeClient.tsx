@@ -19,9 +19,6 @@ import QuantumBrain from './QuantumBrain';
 import { addRecord, getRecords } from './TaskHistoryStore';
 import { Home, Copy, Check } from 'lucide-react';
 
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
-const BRIDGE_PIN = process.env.NEXT_PUBLIC_BRIDGE_PIN || ADMIN_SECRET;
-
 const PROJECT_ICONS: Record<string, React.ReactNode> = {
   laruvisona: <Globe size={28} />,
   larubot: <Bot size={28} />,
@@ -102,14 +99,34 @@ function PinScreen({ onUnlock }: { onUnlock: () => void }) {
     return () => clearInterval(id);
   }, []);
 
-  const submit = () => {
-    if (value === BRIDGE_PIN) {
-      sessionStorage.setItem('bridge_unlocked', '1');
-      onUnlock();
-    } else {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  // PIN はサーバーで検証する（クライアント側の文字列比較だと、
+  // 比較対象の秘密が公開バンドルに焼き込まれてしまうため）。
+  const submit = async () => {
+    if (busy || !value) return;
+    setBusy(true);
+    setError('');
+    const fail = (msg: string) => {
+      setError(msg);
       setShake(true);
       setValue('');
       setTimeout(() => setShake(false), 600);
+    };
+    try {
+      const res = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: value }),
+      });
+      if (res.ok) { onUnlock(); return; }
+      const d = await res.json().catch(() => ({} as { error?: string }));
+      fail(d.error || 'PINが正しくありません');
+    } catch {
+      fail('サーバーに接続できません');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -144,11 +161,12 @@ function PinScreen({ onUnlock }: { onUnlock: () => void }) {
           className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-white text-center text-lg tracking-widest outline-none focus:border-sky-500 transition-all"
           style={{ backdropFilter: 'blur(10px)' }}
         />
-        <button onClick={submit}
-          className="mt-3 w-full py-3.5 rounded-xl font-semibold text-white transition-all active:scale-95"
+        <button onClick={submit} disabled={busy}
+          className="mt-3 w-full py-3.5 rounded-xl font-semibold text-white transition-all active:scale-95 disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, #0ea5e9, #6366f1)', boxShadow: '0 0 20px rgba(14,165,233,0.3)' }}>
-          アンロック
+          {busy ? '確認中…' : 'アンロック'}
         </button>
+        {error && <p className="mt-3 text-center text-sm text-red-400">{error}</p>}
       </div>
 
       <style>{`
@@ -557,7 +575,11 @@ export default function BridgeClient() {
   }, [mode]);
 
   useEffect(() => {
-    if (sessionStorage.getItem('bridge_unlocked') === '1') setUnlocked(true);
+    // 管理者セッションの有効性はサーバーに問い合わせる（期限切れを画面に反映する）
+    fetch('/api/admin/verify')
+      .then(r => r.json())
+      .then(d => setUnlocked(!!d.ok))
+      .catch(() => setUnlocked(false));
     // プリセット読み込み
     try {
       const saved = JSON.parse(localStorage.getItem('bridge_presets') || '[]');
@@ -626,11 +648,10 @@ export default function BridgeClient() {
     if (!unlocked) return;
     const stored = localStorage.getItem('bridge_token');
     if (stored) { setToken(stored); setTokenReady(true); return; }
-    if (!ADMIN_SECRET) { setInitError('NEXT_PUBLIC_ADMIN_SECRET 未設定'); return; }
     fetch('/api/bridge/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: ADMIN_SECRET }),
+      body: JSON.stringify({ role: 'client' }),
     }).then(r => r.json()).then(d => {
       if (d.token) { localStorage.setItem('bridge_token', d.token); setToken(d.token); setTokenReady(true); }
       else setInitError('トークン取得失敗');
@@ -1458,7 +1479,7 @@ export default function BridgeClient() {
       const res = await fetch('/api/bridge/decompose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal, project: currentProject.name, secret: ADMIN_SECRET }),
+        body: JSON.stringify({ goal, project: currentProject.name }),
       });
       const plan = await res.json() as DecomposePlan & { error?: string };
       if (plan.error) throw new Error(plan.error);
@@ -1528,7 +1549,10 @@ export default function BridgeClient() {
   };
 
   const handleLock = () => {
-    sessionStorage.removeItem('bridge_unlocked');
+    localStorage.removeItem('bridge_token');
+    setToken('');
+    setTokenReady(false);
+    fetch('/api/admin/verify', { method: 'DELETE' }).catch(() => {});
     setUnlocked(false);
   };
 
@@ -2345,7 +2369,6 @@ export default function BridgeClient() {
             <QuantumBrain
               goal={quantumGoal}
               project={currentProject?.name || ''}
-              adminSecret={ADMIN_SECRET}
               onClose={() => setShowQuantumBrain(false)}
               onApply={(text) => {
                 setInput(text);

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/adminAuth';
 
 function getModel(modelName = 'gemini-2.0-flash') {
   const key = process.env.GEMINI_API_KEY;
@@ -8,6 +9,8 @@ function getModel(modelName = 'gemini-2.0-flash') {
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const { action } = body;

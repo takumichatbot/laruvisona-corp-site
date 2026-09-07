@@ -52,7 +52,6 @@ export async function POST(req: Request) {
           if (resv && resv.status !== 'confirmed') {
             await supabase.from('hp_reservations').update({ status: 'confirmed' }).eq('id', reservationId);
             await finalizeBooking({
-              baseUrl: process.env.NEXT_PUBLIC_APP_URL || '',
               siteId: resv.site_id,
               name: resv.name,
               email: resv.email,

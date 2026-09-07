@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifyResetToken, hashPassword, signMemberToken } from '@/lib/member-auth';
+import { verifyResetToken, hashPassword, signMemberToken, passwordFingerprint } from '@/lib/member-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +17,19 @@ export async function POST(req: Request) {
   if (!payload) return NextResponse.json({ error: 'リンクが無効か期限切れです。もう一度お試しください。' }, { status: 400 });
 
   const supabase = admin();
+
+  // 現在のパスワードハッシュと突き合わせる。既に再設定済みならトークンは無効
+  // （＝リンクは一度きり。期限内でも使い回せない）。
+  const { data: current } = await supabase
+    .from('hp_members')
+    .select('password_hash')
+    .eq('id', payload.mid)
+    .eq('site_id', payload.sid)
+    .maybeSingle();
+  if (!current || passwordFingerprint(current.password_hash) !== payload.pwv) {
+    return NextResponse.json({ error: 'リンクが無効か期限切れです。もう一度お試しください。' }, { status: 400 });
+  }
+
   const { data: member, error } = await supabase
     .from('hp_members')
     .update({ password_hash: hashPassword(String(password)) })

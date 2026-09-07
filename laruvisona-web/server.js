@@ -2,14 +2,19 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
-const jwt = require('jsonwebtoken');
+const { verifyBridgeToken } = require('./lib/bridge-relay-auth');
 const webpush = require('web-push');
 const fs = require('fs');
 const path = require('path');
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '3000', 10);
-const SECRET_KEY = process.env.JWT_SECRET || 'change-me';
+// Bridge relay 専用の鍵。会員サイトの JWT_SECRET とは共有しない。
+// 未設定なら誰も relay に接続できない（fail-closed）。
+const BRIDGE_SECRET = process.env.BRIDGE_JWT_SECRET || '';
+if (!BRIDGE_SECRET) {
+  console.warn('[relay] BRIDGE_JWT_SECRET が未設定のため relay 接続を全て拒否します');
+}
 const SUB_FILE = path.join('/tmp', 'bridge_push_sub.json');
 
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -18,10 +23,6 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
   );
-}
-
-function verify(token) {
-  try { jwt.verify(token, SECRET_KEY); return true; } catch { return false; }
 }
 
 function safeSend(ws, data) {
@@ -75,7 +76,13 @@ app.prepare().then(() => {
     const macId = url.searchParams.get('mac_id') || 'default';
     const macName = url.searchParams.get('mac_name') || macId;
 
-    if (!verify(token)) {
+    if (role !== 'mac' && role !== 'client') {
+      safeSend(ws, { type: 'auth_error' });
+      ws.close(4001);
+      return;
+    }
+
+    if (!verifyBridgeToken(token, role, BRIDGE_SECRET)) {
       safeSend(ws, { type: 'auth_error' });
       ws.close(4001);
       return;

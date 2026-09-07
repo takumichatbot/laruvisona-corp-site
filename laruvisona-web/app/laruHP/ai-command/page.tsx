@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -176,7 +175,6 @@ const CSS = `
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function AiCommandPage() {
-  const supabase = createClient();
 
   // PIN auth
   const [pinVerified, setPinVerified] = useState(false);
@@ -328,51 +326,60 @@ export default function AiCommandPage() {
       .then(r => r.json()).then((d: Command[]) => setCommands(d));
   }, [activeId]);
 
+  // 運用テーブル（ai_commands / watcher_*）はブラウザの anon クライアントから
+  // 読めないよう遮断した（supabase/ai_command_lockdown.sql）。
+  // 代わりに管理者セッションを検証するサーバー API を短間隔でポーリングする。
   useEffect(() => {
-    if (!activeId) return;
-    const ch = supabase.channel(`cmd-${activeId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_commands', filter: `session_id=eq.${activeId}` }, (pl) => {
-        const row = pl.new as Command;
-        if (pl.eventType === 'INSERT') setCommands(p => [...p, row]);
-        else if (pl.eventType === 'UPDATE') {
-          setCommands(p => p.map(c => c.id === row.id ? row : c));
-          const old = pl.old as Command;
-          if ((row.status === 'done' || row.status === 'error') && old.status !== row.status
-              && typeof document !== 'undefined' && document.hidden && Notification.permission === 'granted') {
-            new Notification(row.status === 'done' ? '✓ Done' : '✕ Error', { body: row.message.slice(0, 80) });
+    if (!activeId || !pinVerified) return;
+    let stopped = false;
+
+    const poll = async () => {
+      try {
+        const r = await fetch(`/api/ai-command/commands?session_id=${activeId}`);
+        if (!r.ok) return;
+        const next: Command[] = await r.json();
+        if (stopped) return;
+        setCommands(prev => {
+          // 完了/失敗に変わったものだけ通知する（バックグラウンド時）
+          if (typeof document !== 'undefined' && document.hidden && Notification.permission === 'granted') {
+            const before = new Map(prev.map(c => [c.id, c.status]));
+            for (const c of next) {
+              const was = before.get(c.id);
+              if (was && was !== c.status && (c.status === 'done' || c.status === 'error')) {
+                new Notification(c.status === 'done' ? '✓ Done' : '✕ Error', { body: c.message.slice(0, 80) });
+              }
+            }
           }
-        } else if (pl.eventType === 'DELETE') {
-          setCommands(p => p.filter(c => c.id !== (pl.old as Command).id));
-        }
-      }).subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [activeId, supabase]);
+          return next;
+        });
+      } catch { /* 一時的な失敗は次回に回す */ }
+    };
+
+    poll();
+    const iv = setInterval(poll, 2500);
+    return () => { stopped = true; clearInterval(iv); };
+  }, [activeId, pinVerified]);
 
   useEffect(() => {
-    supabase.from('watcher_health').select('*').then(({ data }) => {
-      if (data) setHealth(Object.fromEntries(data.map((h: Health) => [h.session_id, h])));
-    });
-    const ch = supabase.channel('hlth').on('postgres_changes', { event: '*', schema: 'public', table: 'watcher_health' }, (pl) => {
-      const row = pl.new as Health; setHealth(p => ({ ...p, [row.session_id]: row }));
-    }).subscribe();
-    return () => { supabase.removeChannel(ch); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!pinVerified) return;
+    let stopped = false;
 
-  useEffect(() => {
-    supabase.from('watcher_heartbeat').select('last_seen').eq('id', 'main').single().then(({ data }) => {
-      if (data?.last_seen) { setWatcherLastSeen(data.last_seen); setWatcherOnline(Date.now() - new Date(data.last_seen).getTime() < 20_000); }
-      else setWatcherOnline(false);
-    });
-    const ch = supabase.channel('hb').on('postgres_changes', { event: '*', schema: 'public', table: 'watcher_heartbeat' }, (pl) => {
-      const r = pl.new as { last_seen: string }; if (r?.last_seen) { setWatcherLastSeen(r.last_seen); setWatcherOnline(true); }
-    }).subscribe();
-    const iv = setInterval(() => {
-      setWatcherLastSeen(p => { if (p) setWatcherOnline(Date.now() - new Date(p).getTime() < 20_000); return p; });
-    }, 15_000);
-    return () => { supabase.removeChannel(ch); clearInterval(iv); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const poll = async () => {
+      try {
+        const r = await fetch('/api/ai-command/status');
+        if (!r.ok) return;
+        const d = await r.json() as { health: Health[]; lastSeen: string | null };
+        if (stopped) return;
+        setHealth(Object.fromEntries((d.health ?? []).map(h => [h.session_id, h])));
+        setWatcherLastSeen(d.lastSeen);
+        setWatcherOnline(!!d.lastSeen && Date.now() - new Date(d.lastSeen).getTime() < 20_000);
+      } catch { /* 一時的な失敗は次回に回す */ }
+    };
+
+    poll();
+    const iv = setInterval(poll, 5000);
+    return () => { stopped = true; clearInterval(iv); };
+  }, [pinVerified]);
 
   useEffect(() => {
     const iv = setInterval(() => {
