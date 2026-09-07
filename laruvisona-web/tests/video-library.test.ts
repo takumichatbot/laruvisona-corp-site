@@ -65,3 +65,24 @@ test('生成の待ち時間に上限がある（無限に待たない）', () =>
   assert.match(veoLib, /while \(Date\.now\(\) < deadline\)/);
   assert.match(veoLib, /reason: 'timeout_or_no_uri'/);
 });
+
+test('LPショーケースの動画は条件が揃った時だけ読み込む', () => {
+  const lp = read('../app/laruHP/page.tsx');
+  assert.match(lp, /function ShowcaseHeroMedia/, '静止画＋動画の切り替えコンポーネントが無い');
+  assert.match(lp, /prefers-reduced-motion: reduce/);
+  assert.match(lp, /min-width: 768px/, 'スマホにも動画を読ませてしまう');
+  assert.match(lp, /new IntersectionObserver/, '画面外でも読み込んでしまう');
+  assert.match(lp, /preload="none"/);
+  // 静止画は常に背景として残る＝動画が無い/失敗しても絵が消えない
+  assert.match(lp, /backgroundImage: `url\(\$\{libHero\(industry\)\}\)`/);
+  assert.ok(!/\{libHero\('\w+'\) && <div className="absolute inset-0 z-\[1\] bg-cover/.test(lp),
+    '差し替え漏れのショーケースがある');
+});
+
+test('動画は自社LP専用で、顧客サイト生成には使わない', () => {
+  const adminUi = read('../app/admin/page.tsx');
+  assert.match(adminRoute, /顧客サイトの生成では使わない/);
+  assert.match(adminUi, /顧客サイトには使いません/);
+  const siteImages = read('../app/api/library-image/route.ts');
+  assert.ok(!/veo|library-video/i.test(siteImages), '顧客向けの画像経路に動画が混ざっている');
+});

@@ -167,6 +167,49 @@ const COLOR_NUM: Record<string, string> = {
   indigo: 'text-indigo-400', emerald: 'text-emerald-400', cyan: 'text-cyan-400',
 };
 
+// ショーケースのヒーロー領域。既定は静止画（Imagen）。
+// 同じ業種のループ動画（Veo・自社用に手動生成）が用意されている場合だけ、
+// 条件を満たしたときに重ねて再生する。
+//   - 画面に入ったとき（ショーケースはずっと下にあるので大半の訪問者は読み込まない）
+//   - 広い画面のとき（スマホは通信量を使わせない）
+//   - 動きを減らす設定でないとき
+// 未生成なら /api/library-video が404を返すので、静止画のままになる。
+function ShowcaseHeroMedia({ industry }: { industry: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(min-width: 768px)').matches) return;
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(entries => {
+      if (!entries.some(e => e.isIntersecting)) return;
+      io.disconnect();
+      const url = `/api/library-video?industry=${industry}`;
+      fetch(url, { method: 'HEAD' })
+        .then(r => { if (r.ok) setVideoSrc(url); })
+        .catch(() => { /* 取れなければ静止画のまま */ });
+    }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [industry]);
+
+  return (
+    <div ref={ref} className="absolute inset-0 z-[1]">
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${libHero(industry)})` }} />
+      {videoSrc && (
+        <video
+          src={videoSrc}
+          autoPlay muted loop playsInline preload="none"
+          onError={e => { e.currentTarget.style.display = 'none'; }}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
+    </div>
+  );
+}
+
 export default function LaruHPLandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeIndustry, setActiveIndustry] = useState(0);
@@ -672,7 +715,7 @@ setTimeout(function(){
               {/* Hero photo area */}
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-rose-900 via-pink-900 to-rose-950" />
-                {libHero('beauty') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('beauty')})` }} />}
+                <ShowcaseHeroMedia industry="beauty" />
                 <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 {/* Decorative SVG shapes simulating salon interior */}
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
@@ -741,7 +784,7 @@ setTimeout(function(){
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-teal-800 to-emerald-950" />
-                {libHero('clinic') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('clinic')})` }} />}
+                <ShowcaseHeroMedia industry="clinic" />
                 <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-15" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <circle cx="260" cy="30" r="70" fill="rgba(110,231,183,0.4)"/>
@@ -802,7 +845,7 @@ setTimeout(function(){
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-900 via-amber-900 to-orange-950" />
-                {libHero('restaurant') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('restaurant')})` }} />}
+                <ShowcaseHeroMedia industry="restaurant" />
                 <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <circle cx="250" cy="50" r="60" fill="rgba(251,191,36,0.3)"/>
@@ -864,7 +907,7 @@ setTimeout(function(){
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
-                {libHero('legal') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('legal')})` }} />}
+                <ShowcaseHeroMedia industry="legal" />
                 <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/78 via-black/40 to-black/15" />
                 <svg className="absolute inset-0 w-full h-full opacity-10" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <rect x="0" y="0" width="300" height="180" fill="none" stroke="rgba(200,200,220,0.3)" strokeWidth="0.3"/>
@@ -919,7 +962,7 @@ setTimeout(function(){
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-red-900 via-orange-900 to-red-950" />
-                {libHero('fitness') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('fitness')})` }} />}
+                <ShowcaseHeroMedia industry="fitness" />
                 <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   <circle cx="150" cy="90" r="80" fill="none" stroke="rgba(255,100,50,0.3)" strokeWidth="1"/>
@@ -976,7 +1019,7 @@ setTimeout(function(){
               </div>
               <div className="relative overflow-hidden" style={{height:180}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-800 via-yellow-900 to-amber-950" />
-                {libHero('construction') && <div className="absolute inset-0 z-[1] bg-cover bg-center" style={{ backgroundImage: `url(${libHero('construction')})` }} />}
+                <ShowcaseHeroMedia industry="construction" />
                 <div className="absolute inset-0 z-[2] bg-gradient-to-br from-black/75 via-black/35 to-black/10" />
                 <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">
                   {/* House silhouette */}

@@ -222,7 +222,7 @@ function VideoLibraryCard() {
         <div>
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">業種別 ループ動画（Veo 3.1）</h2>
           <p className="text-[11px] text-slate-500 mt-1">
-            ショーケース用の数秒ループ。同じ業種のヒーロー画像を種にするので、静止画と絵柄が揃います。
+            LARU HP のLPショーケース専用の数秒ループ（顧客サイトには使いません）。同じ業種のヒーロー画像を種にするので、静止画と絵柄が揃います。
             <span className="text-amber-400 ml-1">画像より高コスト・低速なため、1回につき1業種だけ生成します。</span>
           </p>
         </div>

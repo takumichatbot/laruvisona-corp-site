@@ -5,6 +5,9 @@ import { generateVeoToStorage, listAvailableModels, videoStoragePath } from '@/l
 
 // 業種ショーケース用の短尺ループ動画を Veo で作って Supabase Storage に貯める。
 //
+// 用途は LARU HP 自身のLPのショーケースだけ。顧客サイトの生成では使わない
+// （顧客向けは従来どおり Imagen の静止画）。動画を機能として売るものではない。
+//
 // 画像ライブラリ（/api/library-image）と違って自己修復方式にはしない。
 // 動画は生成に数十秒〜数分かかり、単価も一桁上。表示のたびに走らせるのは危険なので、
 // 管理画面から業種を1つずつ明示的に作る。
