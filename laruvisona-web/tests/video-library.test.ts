@@ -86,3 +86,39 @@ test('動画は自社LP専用で、顧客サイト生成には使わない', () 
   const siteImages = read('../app/api/library-image/route.ts');
   assert.ok(!/veo|library-video/i.test(siteImages), '顧客向けの画像経路に動画が混ざっている');
 });
+
+// ── LPファーストビューの背景映像 ────────────────────────────────
+const lpSrc = read('../app/laruHP/page.tsx');
+const publicRoute2 = read('../app/api/library-video/route.ts');
+
+test('ヒーロー映像は先頭の描画を邪魔しない', () => {
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
+  assert.match(comp, /document\.readyState === 'complete'/, '描画完了を待たずに読み込んでいる');
+  assert.match(comp, /addEventListener\('load', start/, 'load を待っていない');
+  assert.match(comp, /preload="none"/);
+});
+
+test('動きを減らす設定・通信量節約・低速回線では読まない', () => {
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
+  assert.match(comp, /prefers-reduced-motion: reduce/);
+  assert.match(comp, /conn\?\.saveData/);
+  assert.match(comp, /2g\$\/\.test\(conn\.effectiveType\)/);
+});
+
+test('映像が無くても失敗しても、絵は消えない', () => {
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
+  assert.match(comp, /if \(!src\) return null;/, '取得できないときに何か描いてしまう');
+  assert.match(comp, /onError=\{\(\) => setSrc\(null\)\}/, '再生失敗で黒い箱が残る');
+});
+
+test('見出しの可読性を映像より優先する', () => {
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
+  assert.match(comp, /opacity-30/, '映像が濃すぎて文字が読みにくい');
+  assert.match(comp, /bg-gradient-to-b from-sky-50\//, '文字を守る膜が無い');
+  assert.match(comp, /aria-hidden="true"/, '装飾が読み上げ対象になっている');
+});
+
+test('ヒーロー映像も公開側では生成しない', () => {
+  assert.ok(!/generateVeo/.test(publicRoute2));
+  assert.match(publicRoute2, /target === 'lp-hero'/);
+});

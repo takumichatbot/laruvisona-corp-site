@@ -38,3 +38,26 @@ export function buildShowcaseVideoPrompt(industry: string): string {
     'No text, no letters, no logos, no watermark, no on-screen graphics.',
   ].join(' ');
 }
+
+/** LPのファーストビュー用の1本。業種ライブラリとは別枠で1本だけ持つ。 */
+export const HERO_VIDEO_PATH = 'videos/lp-hero.mp4';
+
+/**
+ * LPの背景に敷く映像。
+ * 主役は見出しとCTAなので、映像は「動きすぎない」「明るい」「無人」を守る。
+ *   - 動きすぎると文字が読みにくくなる
+ *   - 暗いとページ全体（sky-50 の明るい配色）から浮く
+ *   - 人が写ると視線が持っていかれるうえ、生成も安全フィルタで落ちやすい
+ */
+export function buildHeroVideoPrompt(): string {
+  return [
+    'Cinematic ambient background loop for a website hero section.',
+    'A bright, empty Japanese small shop interior in early morning light, just before opening.',
+    'Clean wooden counter, plants, large windows with soft daylight, dust motes drifting in the light.',
+    'Camera: extremely slow forward drift, almost still. The scene never changes.',
+    'High-key, airy, bright and calm. Soft pastel tones, gentle blue-grey daylight.',
+    'No people, no faces, no hands.',
+    'No cuts, no scene change, no zoom burst, no camera shake.',
+    'No text, no letters, no logos, no watermark, no on-screen graphics.',
+  ].join(' ');
+}

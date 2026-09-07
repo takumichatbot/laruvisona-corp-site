@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { IMAGE_INDUSTRIES, getAdminStorage, getGeminiKey } from '@/lib/imagen';
 import { generateVeoToStorage, listAvailableModels, videoStoragePath } from '@/lib/veo';
+import { HERO_VIDEO_PATH, buildHeroVideoPrompt } from '@/lib/veo-prompt';
 
 // 業種ショーケース用の短尺ループ動画を Veo で作って Supabase Storage に貯める。
 //
@@ -37,14 +38,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'GEMINI_API_KEY (or GOOGLE_AI_API_KEY) is not set' }, { status: 500 });
   }
 
-  const { industry, overwrite = false, durationSeconds = '4', model, action } =
+  const { industry, overwrite = false, durationSeconds = '4', model, action, target } =
     await req.json().catch(() => ({})) as {
       industry?: string; overwrite?: boolean; durationSeconds?: '4' | '6' | '8';
-      model?: string; action?: 'list-models';
+      model?: string; action?: 'list-models'; target?: 'lp-hero';
     };
 
   // 診断: この鍵で使える動画モデルを確認する（モデルIDの取り違えを潰すため）
   if (action === 'list-models') return NextResponse.json(await listAvailableModels());
+
+  // LPのファーストビュー用の1本。業種ライブラリとは別枠で1本だけ持つ。
+  if (target === 'lp-hero') {
+    const admin0 = getAdminStorage();
+    const { data: heroFiles } = await admin0.storage.from('site-images').list('videos');
+    if ((heroFiles || []).some(f => f.name === 'lp-hero.mp4') && !overwrite) {
+      return NextResponse.json({
+        target, skipped: true,
+        url: admin0.storage.from('site-images').getPublicUrl(HERO_VIDEO_PATH).data.publicUrl,
+        note: '既にあります。作り直すなら overwrite: true',
+      });
+    }
+    const t0 = Date.now();
+    const r = await generateVeoToStorage({
+      industry: 'other',
+      promptOverride: buildHeroVideoPrompt(),
+      storagePathOverride: HERO_VIDEO_PATH,
+      durationSeconds: durationSeconds || '8',
+      model,
+    });
+    const sec = Math.round((Date.now() - t0) / 1000);
+    if (!r.url) return NextResponse.json({ target, ok: false, reason: r.reason, detail: r.detail, elapsedSec: sec }, { status: 502 });
+    return NextResponse.json({ target, ok: true, url: r.url, elapsedSec: sec, durationSeconds: durationSeconds || '8' });
+  }
 
   // 一括生成は用意しない。1リクエスト1業種に固定して、事故で全業種ぶんの費用が出ないようにする。
   if (!industry || !(IMAGE_INDUSTRIES as readonly string[]).includes(industry)) {

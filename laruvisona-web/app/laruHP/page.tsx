@@ -167,6 +167,49 @@ const COLOR_NUM: Record<string, string> = {
   indigo: 'text-indigo-400', emerald: 'text-emerald-400', cyan: 'text-cyan-400',
 };
 
+// ファーストビューの背景に敷く映像。
+// 主役は見出しとCTAなので、映像は「後から静かに現れる」ものとして扱う。
+//   - 先頭の描画が終わってから読みに行く（LCPと取り合わない）
+//   - 動きを減らす設定・通信量の節約設定・低速回線では読まない
+//   - 下地のグラデーションは常に残す。読めなくても絵が消えない
+//   - 低い不透明度＋上に薄い膜。見出しの可読性を映像より優先する
+function HeroBackgroundVideo() {
+  const [src, setSrc] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (conn?.saveData) return;
+    if (typeof conn?.effectiveType === 'string' && /(^|-)2g$/.test(conn.effectiveType)) return;
+
+    const url = '/api/library-video?target=lp-hero';
+    const start = () => {
+      fetch(url, { method: 'HEAD' })
+        .then(r => { if (r.ok) setSrc(url); })
+        .catch(() => { /* 無ければ下地のまま */ });
+    };
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+    return () => window.removeEventListener('load', start);
+  }, []);
+
+  if (!src) return null;
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
+      <video
+        src={src}
+        autoPlay muted loop playsInline preload="none"
+        onCanPlay={() => setReady(true)}
+        onError={() => setSrc(null)}
+        className={`w-full h-full object-cover transition-opacity duration-[1200ms] ${ready ? 'opacity-30' : 'opacity-0'}`}
+      />
+      {/* 見出しの可読性を守る膜。映像より文字を優先する */}
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-sky-50/85" />
+    </div>
+  );
+}
+
 // ショーケースのヒーロー領域。既定は静止画（Imagen）。
 // 同じ業種のループ動画（Veo・自社用に手動生成）が用意されている場合だけ、
 // 条件を満たしたときに重ねて再生する。
@@ -394,6 +437,8 @@ setTimeout(function(){
 
       {/* Hero */}
       <section ref={heroRef} className="pt-28 md:pt-36 pb-16 md:pb-28 px-6 text-center relative overflow-hidden">
+        {/* 背景映像（読めたときだけ静かに現れる） */}
+        <HeroBackgroundVideo />
         {/* 3D scene background */}
         <LaruHPScene />
 

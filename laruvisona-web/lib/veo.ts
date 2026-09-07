@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { getGeminiKey, getAdminStorage } from '@/lib/imagen';
-import { buildShowcaseVideoPrompt, videoStoragePath } from '@/lib/veo-prompt';
+import { HERO_VIDEO_PATH, buildHeroVideoPrompt, buildShowcaseVideoPrompt, videoStoragePath } from '@/lib/veo-prompt';
 
 // Google Veo 3.1 での短尺ループ動画の生成＋Supabase Storage保存。
 //
@@ -11,7 +11,7 @@ import { buildShowcaseVideoPrompt, videoStoragePath } from '@/lib/veo-prompt';
 // 重要: 生成は遅く（数十秒〜数分）、画像より一桁高い。
 // 表示のたびに生成する自己修復方式にはせず、管理画面から明示的に作って貯める。
 
-export { buildShowcaseVideoPrompt, videoStoragePath };
+export { buildShowcaseVideoPrompt, videoStoragePath, buildHeroVideoPrompt, HERO_VIDEO_PATH };
 
 const VEO_MODEL = 'veo-3.1-generate-preview';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
@@ -35,6 +35,9 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
  */
 export async function generateVeoToStorage(opts: {
   industry: string;
+  /** 指定するとこのプロンプト・保存先で作る（LPヒーローなど業種以外の用途） */
+  promptOverride?: string;
+  storagePathOverride?: string;
   seedImageUrl?: string | null;
   durationSeconds?: '4' | '6' | '8';
   maxWaitMs?: number;
@@ -71,7 +74,7 @@ export async function generateVeoToStorage(opts: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt: buildShowcaseVideoPrompt(opts.industry), ...(withImage && image ? { image } : {}) }],
+        instances: [{ prompt: opts.promptOverride || buildShowcaseVideoPrompt(opts.industry), ...(withImage && image ? { image } : {}) }],
         parameters: { aspectRatio: '16:9', durationSeconds: Number(duration) },
       }),
     });
@@ -134,7 +137,7 @@ export async function generateVeoToStorage(opts: {
     const mp4 = Buffer.from(await dl.arrayBuffer());
 
     const admin = getAdminStorage();
-    const path = videoStoragePath(opts.industry);
+    const path = opts.storagePathOverride || videoStoragePath(opts.industry);
     const { error } = await admin.storage.from('site-images')
       .upload(path, mp4, { contentType: 'video/mp4', upsert: true });
     if (error) return { url: null, reason: 'storage_upload_failed' };
