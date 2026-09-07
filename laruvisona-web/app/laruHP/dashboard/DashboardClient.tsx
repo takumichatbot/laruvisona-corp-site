@@ -229,6 +229,72 @@ function MiniChart({ data }: { data: DayView[] }) {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
+
+// Tailwind はビルド時にソースを走査するので、`hover:border-${x}-300` のように
+// 組み立てたクラス名は生成されない（＝色が効かない）。必ず literal で持つ。
+const TOOL_ACCENT: Record<string, string> = {
+  sky:     'hover:border-sky-300 hover:text-sky-600',
+  indigo:  'hover:border-indigo-300 hover:text-indigo-600',
+  purple:  'hover:border-purple-300 hover:text-purple-600',
+  green:   'hover:border-green-300 hover:text-green-600',
+  emerald: 'hover:border-emerald-300 hover:text-emerald-600',
+  amber:   'hover:border-amber-300 hover:text-amber-600',
+  orange:  'hover:border-orange-300 hover:text-orange-600',
+  rose:    'hover:border-rose-300 hover:text-rose-600',
+};
+
+// ダッシュボードから開ける機能。以前は21個を1本の横スクロール帯に同じ見た目で
+// 並べていたため、何があるのか・どれが自分に要るのかが分からなかった。
+// 仕事の流れ（集客→応対→販売→顧客→分析）で束ねて、全部を一画面に出す。
+const TOOL_GROUPS: { title: string; caption: string; items: { href: string; label: string; accent: string; badge?: 'contacts'; icon: React.ReactNode }[] }[] = [
+  {
+    title: '集客', caption: '見つけてもらう',
+    items: [
+      { href: '/laruHP/blog', label: 'ブログ', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+      { href: '/laruHP/seo', label: 'SEO設定', accent: 'emerald', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
+      { href: '/laruHP/translate', label: '多言語翻訳', accent: 'indigo', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg> },
+      { href: '/laruHP/popups', label: 'ポップアップ', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" fillOpacity="0.15"/></svg> },
+      { href: '/laruHP/ab-test', label: 'A/Bテスト', accent: 'orange', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg> },
+    ],
+  },
+  {
+    title: '応対', caption: '来た人に応える',
+    items: [
+      { href: '/laruHP/contacts', label: '問い合わせ', accent: 'sky', badge: 'contacts', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+      { href: '/laruHP/larubot-logs', label: '会話ログ', accent: 'indigo', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg> },
+      { href: '/laruHP/booking', label: '予約管理', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+      { href: '/laruHP/calendar', label: 'カレンダー', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+    ],
+  },
+  {
+    title: '販売', caption: '売る・受け取る',
+    items: [
+      { href: '/laruHP/shop', label: 'ショップ', accent: 'green', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> },
+      { href: '/laruHP/orders', label: '注文管理', accent: 'emerald', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg> },
+      { href: '/laruHP/payments', label: '決済リンク', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> },
+      { href: '/laruHP/loyalty', label: 'ポイントカード', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
+    ],
+  },
+  {
+    title: '顧客', caption: '関係を続ける',
+    items: [
+      { href: '/laruHP/crm', label: 'CRM', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> },
+      { href: '/laruHP/newsletter', label: 'メール', accent: 'sky', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> },
+      { href: '/laruHP/sequences', label: 'シーケンス', accent: 'amber', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
+      { href: '/laruHP/members', label: '会員管理', accent: 'purple', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+    ],
+  },
+  {
+    title: '分析・運営', caption: '見て、まわす',
+    items: [
+      { href: '/laruHP/analytics', label: 'BI分析', accent: 'purple', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
+      { href: '/laruHP/heatmap', label: 'ヒートマップ', accent: 'rose', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M12 6v6l4 2"/></svg> },
+      { href: '/laruHP/agency', label: 'エージェンシー', accent: 'purple', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+      { href: '/laruHP/onboarding', label: 'AIウィザード', accent: 'sky', icon: <IcSparkle /> },
+    ],
+  },
+];
+
 export default function DashboardPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -285,17 +351,37 @@ export default function DashboardPage() {
 
   useEffect(() => {
     (async () => {
+      // API 側は Cookie で自前に認証するので、ユーザー確認の往復を待つ必要がない。
+      // 以前は getUser() の完了後に4本を投げていたため、画面が出るまでに
+      // 往復が2回ぶん直列に積まれ、その間ずっとスケルトンだった。
+      const sitesP     = fetch('/api/sites').then(r => r.json());
+      const analyticsP = fetch('/api/sites/analytics?days=7').then(r => r.json());
+      const contactsP  = fetch('/api/contacts').then(r => r.json());
+      // 失敗を握りつぶしておく（後で allSettled で拾う。未処理の rejection を出さない）
+      for (const p of [sitesP, analyticsP, contactsP]) p.catch(() => {});
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/laruHP/auth/login'); return; }
       setUserEmail(user.email || '');
       setUserId(user.id);
 
-      const results = await Promise.allSettled([
-        fetch('/api/sites').then(r => r.json()),
+      const profileP = Promise.resolve(
         supabase.from('profiles').select('business_name, subscription_status, plan, contract_ends_at, stripe_customer_id, agency_brand_name, agency_logo_url, agency_accent').eq('id', user.id).single().then(r => r.data),
-        fetch('/api/sites/analytics?days=7').then(r => r.json()),
-        fetch('/api/contacts').then(r => r.json()),
-      ]);
+      );
+      profileP.catch(() => {});
+
+      // サイト一覧が来た時点で画面を出す。
+      // 問い合わせや分析が遅くても、一覧の表示までは待たせない。
+      const sitesSettled = await Promise.allSettled([sitesP]);
+      const sitesEarly = sitesSettled[0].status === 'fulfilled' ? sitesSettled[0].value : { sites: [] };
+      const sitesForView: Site[] = sitesEarly.sites || [];
+      setSites(sitesForView);
+      const initDomainsEarly: Record<string, string> = {};
+      for (const s of sitesForView) initDomainsEarly[s.id] = s.custom_domain || '';
+      setDomainInputs(initDomainsEarly);
+      setLoading(false);
+
+      const results = await Promise.allSettled([sitesP, profileP, analyticsP, contactsP]);
 
       const sitesData  = results[0].status === 'fulfilled' ? results[0].value : { sites: [] };
       const profileData = results[1].status === 'fulfilled' ? results[1].value : null;
@@ -1459,160 +1545,36 @@ export default function DashboardPage() {
               )}
             </button>
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-            <Link
-              href="/laruHP/contacts"
-              data-tour="contacts"
-              className="relative flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              問い合わせ
-              {contacts.filter(c => !c.read).length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-sky-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {contacts.filter(c => !c.read).length}
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/laruHP/crm"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-              CRM
-            </Link>
-            <Link
-              href="/laruHP/booking"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              予約管理
-            </Link>
-            <Link
-              href="/laruHP/newsletter"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              メール
-            </Link>
-            <Link
-              href="/laruHP/blog"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              ブログ
-            </Link>
-            <Link
-              href="/laruHP/larubot-logs"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-indigo-300 hover:text-indigo-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
-              会話ログ
-            </Link>
-            <Link
-              href="/laruHP/agency"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-purple-300 hover:text-purple-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              エージェンシー
-            </Link>
-            <Link
-              href="/laruHP/calendar"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              カレンダー
-            </Link>
-            <Link
-              href="/laruHP/payments"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              決済リンク
-            </Link>
-            <Link
-              href="/laruHP/popups"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" fillOpacity="0.15"/></svg>
-              ポップアップ
-            </Link>
-            <Link
-              href="/laruHP/loyalty"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              ポイントカード
-            </Link>
-            <Link
-              href="/laruHP/onboarding"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-sky-300 hover:text-sky-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <IcSparkle />
-              AIウィザード
-            </Link>
-            <Link
-              href="/laruHP/shop"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-green-300 hover:text-green-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-              ショップ
-            </Link>
-            <Link
-              href="/laruHP/orders"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-emerald-300 hover:text-emerald-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
-              注文管理
-            </Link>
-            <Link
-              href="/laruHP/members"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-purple-300 hover:text-purple-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              会員管理
-            </Link>
-            <Link
-              href="/laruHP/translate"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-indigo-300 hover:text-indigo-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
-              多言語翻訳
-            </Link>
-            <Link
-              href="/laruHP/analytics"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-purple-300 hover:text-purple-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              BI分析
-            </Link>
-            <Link
-              href="/laruHP/sequences"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-amber-300 hover:text-amber-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              シーケンス
-            </Link>
-            <Link
-              href="/laruHP/seo"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-emerald-300 hover:text-emerald-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              SEO設定
-            </Link>
-            <Link
-              href="/laruHP/ab-test"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-orange-300 hover:text-orange-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
-              A/Bテスト
-            </Link>
-            <Link
-              href="/laruHP/heatmap"
-              className="flex items-center gap-1.5 text-xs border border-gray-200 hover:border-rose-300 hover:text-rose-600 px-3 py-1.5 rounded-lg transition-all text-gray-600 whitespace-nowrap flex-shrink-0"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
-              ヒートマップ
-            </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-5 gap-y-4">
+            {TOOL_GROUPS.map(group => (
+              <div key={group.title}>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <h3 className="text-[11px] font-bold text-gray-900 tracking-wide">{group.title}</h3>
+                  <span className="text-[10px] text-gray-400">{group.caption}</span>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-1 gap-1.5">
+                  {group.items.map(item => {
+                    const unread = item.badge === 'contacts' ? contacts.filter(c => !c.read).length : 0;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        {...(item.badge === 'contacts' ? { 'data-tour': 'contacts' } : {})}
+                        className={`relative flex items-center gap-2 text-xs border border-gray-200 ${TOOL_ACCENT[item.accent] ?? TOOL_ACCENT.sky} px-3 py-2.5 rounded-lg transition-all text-gray-600 min-h-[44px]`}
+                      >
+                        <span className="flex-shrink-0 text-gray-400">{item.icon}</span>
+                        <span className="truncate">{item.label}</span>
+                        {unread > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-sky-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                            {unread}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
