@@ -35,7 +35,18 @@ export default function SettingsPage() {
   useEffect(() => {
     const gscParam = searchParams.get('gsc');
     if (gscParam === 'connected') setGscMsg('Googleアカウントを連携しました。プロパティを選択してください。');
-    if (gscParam === 'error') setGscMsg('error:Google連携に失敗しました。もう一度お試しください。');
+    if (gscParam === 'error') {
+      // reason はコールバック側が付ける。原因ごとに次の行動が変わるので出し分ける。
+      const reasons: Record<string, string> = {
+        state_mismatch: '連携の途中でセッションが切れました。この画面から連携し直してください。',
+        not_signed_in: 'ログインが切れていました。ログインし直してから連携してください。',
+        no_refresh_token: 'Googleから連携情報を取得できませんでした。Googleアカウントの連携済みアプリからLaruVisonaを解除して、もう一度お試しください。',
+        not_configured: 'Google連携が未設定です。運営にお問い合わせください。',
+        save_failed: '連携情報の保存に失敗しました。もう一度お試しください。',
+      };
+      const reason = searchParams.get('reason') || '';
+      setGscMsg('error:' + (reasons[reason] || 'Google連携に失敗しました。もう一度お試しください。'));
+    }
     router.replace('/laruHP/settings');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

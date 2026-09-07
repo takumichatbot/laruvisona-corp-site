@@ -5,13 +5,18 @@ import { Resend } from 'resend';
 // GET /api/cron/weekly-report
 // Called weekly by Render Cron or cron-job.org.
 // Requires header: Authorization: Bearer CRON_SECRET
+//
+// CRON_SECRET が未設定のときに素通りさせてはいけない（このエンドポイントは
+// 全アクティブ契約者へ一斉メールを送るため、誰でも叩けると配信を乱発できる）。
+// 鍵が無ければ実行しない fail-closed にする。
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization') ?? '';
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
+  }
+  const auth = req.headers.get('authorization') ?? '';
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   if (!process.env.RESEND_API_KEY) {
