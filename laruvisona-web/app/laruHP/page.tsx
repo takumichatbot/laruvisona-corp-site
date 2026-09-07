@@ -772,7 +772,7 @@ setTimeout(function(){
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                 <div><div className="text-sm font-semibold text-gray-900">美容室・サロン</div><div className="text-[11px] text-gray-400">AI生成のサンプルデザイン</div></div>
-                <Link href="/laruHP/onboarding?industry=beauty" className="text-[11px] bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+                <Link href="/laruHP/onboarding?industry=beauty" className="text-[11px] bg-rose-50 text-rose-600 border border-rose-200 inline-flex items-center min-h-[44px] px-4 py-2 rounded-lg hover:bg-rose-100 transition-all whitespace-nowrap">このテンプレで →</Link>
               </div>
             </div>
 
@@ -833,7 +833,7 @@ setTimeout(function(){
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                 <div><div className="text-sm font-semibold text-gray-900">整体・接骨院</div><div className="text-[11px] text-gray-400">AI生成のサンプルデザイン</div></div>
-                <Link href="/laruHP/onboarding?industry=clinic" className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+                <Link href="/laruHP/onboarding?industry=clinic" className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 inline-flex items-center min-h-[44px] px-4 py-2 rounded-lg hover:bg-emerald-100 transition-all whitespace-nowrap">このテンプレで →</Link>
               </div>
             </div>
 
@@ -893,7 +893,7 @@ setTimeout(function(){
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                 <div><div className="text-sm font-semibold text-gray-900">飲食店・カフェ</div><div className="text-[11px] text-gray-400">AI生成のサンプルデザイン</div></div>
-                <Link href="/laruHP/onboarding?industry=restaurant" className="text-[11px] bg-amber-50 text-amber-600 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+                <Link href="/laruHP/onboarding?industry=restaurant" className="text-[11px] bg-amber-50 text-amber-600 border border-amber-200 inline-flex items-center min-h-[44px] px-4 py-2 rounded-lg hover:bg-amber-100 transition-all whitespace-nowrap">このテンプレで →</Link>
               </div>
             </div>
           </div>
@@ -950,7 +950,7 @@ setTimeout(function(){
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                 <div><div className="text-sm font-semibold text-gray-900">士業・法律事務所</div><div className="text-[11px] text-gray-400">AI生成のサンプルデザイン</div></div>
-                <Link href="/laruHP/onboarding?industry=legal" className="text-[11px] bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-all whitespace-nowrap">このテンプレで →</Link>
+                <Link href="/laruHP/onboarding?industry=legal" className="text-[11px] bg-slate-100 text-slate-600 border border-slate-200 inline-flex items-center min-h-[44px] px-4 py-2 rounded-lg hover:bg-slate-200 transition-all whitespace-nowrap">このテンプレで →</Link>
               </div>
             </div>
 
@@ -1007,7 +1007,7 @@ setTimeout(function(){
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                 <div><div className="text-sm font-semibold text-gray-900">フィットネス・ジム</div><div className="text-[11px] text-gray-400">AI生成のサンプルデザイン</div></div>
-                <Link href="/laruHP/onboarding?industry=fitness" className="text-[11px] bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+                <Link href="/laruHP/onboarding?industry=fitness" className="text-[11px] bg-red-50 text-red-600 border border-red-200 inline-flex items-center min-h-[44px] px-4 py-2 rounded-lg hover:bg-red-100 transition-all whitespace-nowrap">このテンプレで →</Link>
               </div>
             </div>
 
@@ -1065,7 +1065,7 @@ setTimeout(function(){
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                 <div><div className="text-sm font-semibold text-gray-900">建設・工務店</div><div className="text-[11px] text-gray-400">AI生成のサンプルデザイン</div></div>
-                <Link href="/laruHP/onboarding?industry=construction" className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-all whitespace-nowrap">このテンプレで →</Link>
+                <Link href="/laruHP/onboarding?industry=construction" className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center min-h-[44px] px-4 py-2 rounded-lg hover:bg-amber-100 transition-all whitespace-nowrap">このテンプレで →</Link>
               </div>
             </div>
           </div>

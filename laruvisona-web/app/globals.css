@@ -68,3 +68,36 @@ h2.font-en {
 .builder-canvas::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
+/* ─── スマホ実機での操作性 ───────────────────────────────────────────
+   実機幅(390px)で管理画面を測ったところ、入力欄の文字が 10px / 12px で
+   置かれていた。iOS Safari は 16px 未満の入力欄にフォーカスすると
+   ページ全体を自動で拡大するため、文字を打つたびに画面が飛ぶ。
+   見た目の小ささより、入力できることを優先する。 */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* 管理画面まわりのタップ領域と最小文字サイズ。
+   .laru-touch を付けた範囲にだけ効かせる。公開サイトのプレビューや
+   LPのモック（見せるための偽ボタン）にまで広げると、意図した縮尺が壊れる。 */
+@media (max-width: 767px) {
+  .laru-touch a[href],
+  .laru-touch button,
+  .laru-touch [role="button"] {
+    min-height: 44px;
+  }
+  /* 44px を確保しても中身が上下中央に来るように */
+  .laru-touch a[href],
+  .laru-touch button {
+    display: inline-flex;
+    align-items: center;
+  }
+  /* 10px の文字は実機で読めない。管理画面では 11px を下限にする。 */
+  .laru-touch .text-\[9px\],
+  .laru-touch .text-\[10px\] {
+    font-size: 11px;
+  }
+}

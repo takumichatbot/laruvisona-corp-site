@@ -829,7 +829,7 @@ export default function DashboardPage() {
   const planSiteLimit = getSiteLimit(isAdmin ? 'agency' : rawPlan);
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
+    <div className="laru-touch min-h-screen bg-sky-50 text-gray-900">
 
       {/* ── Publish toast ── */}
       {publishToast && (
