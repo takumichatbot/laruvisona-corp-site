@@ -74,9 +74,9 @@ export async function POST(req: Request) {
     : null;
 
   const startedAt = Date.now();
-  const { url, reason, detail } = await generateVeoToStorage({ industry, seedImageUrl, durationSeconds, model });
+  const { url, reason, detail, usedSeed } = await generateVeoToStorage({ industry, seedImageUrl, durationSeconds, model });
   const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
 
   if (!url) return NextResponse.json({ industry, ok: false, reason, detail, elapsedSec, seedUsed: !!seedImageUrl }, { status: 502 });
-  return NextResponse.json({ industry, ok: true, url, elapsedSec, durationSeconds, seedUsed: !!seedImageUrl });
+  return NextResponse.json({ industry, ok: true, url, elapsedSec, durationSeconds, seedUsed: !!usedSeed });
 }

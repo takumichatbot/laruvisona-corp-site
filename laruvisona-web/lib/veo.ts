@@ -39,7 +39,7 @@ export async function generateVeoToStorage(opts: {
   durationSeconds?: '4' | '6' | '8';
   maxWaitMs?: number;
   model?: string;
-}): Promise<{ url: string | null; reason?: string; detail?: string }> {
+}): Promise<{ url: string | null; reason?: string; detail?: string; usedSeed?: boolean }> {
   const apiKey = getGeminiKey();
   if (!apiKey) return { url: null, reason: 'no_api_key' };
 
@@ -47,7 +47,7 @@ export async function generateVeoToStorage(opts: {
   const maxWait = opts.maxWaitMs ?? 4 * 60 * 1000;
 
   // 種画像（Imagenで作ったヒーロー）を JPEG にして渡す。webp のままだと受け付けない。
-  let image: { inlineData: { mimeType: string; data: string } } | undefined;
+  let image: { bytesBase64Encoded: string; mimeType: string } | undefined;
   if (opts.seedImageUrl) {
     try {
       const res = await fetch(opts.seedImageUrl);
@@ -56,7 +56,8 @@ export async function generateVeoToStorage(opts: {
           .resize({ width: 1280, height: 720, fit: 'cover' })
           .jpeg({ quality: 90 })
           .toBuffer();
-        image = { inlineData: { mimeType: 'image/jpeg', data: jpeg.toString('base64') } };
+        // predictLongRunning は inlineData を受け付けない（あれは generateContent 用）。
+        image = { bytesBase64Encoded: jpeg.toString('base64'), mimeType: 'image/jpeg' };
       }
     } catch {
       // 種画像が取れなくても text-to-video で続行する
@@ -65,18 +66,35 @@ export async function generateVeoToStorage(opts: {
 
   // 1) 生成を開始（長時間処理なので即座に operation 名が返る）
   const model = opts.model || VEO_MODEL;
-  let opName: string;
-  try {
-    const start = await fetch(`${API_BASE}/models/${model}:predictLongRunning?key=${apiKey}`, {
+  const startOnce = async (withImage: boolean) =>
+    fetch(`${API_BASE}/models/${model}:predictLongRunning?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt: buildShowcaseVideoPrompt(opts.industry), ...(image ? { image } : {}) }],
+        instances: [{ prompt: buildShowcaseVideoPrompt(opts.industry), ...(withImage && image ? { image } : {}) }],
         parameters: { aspectRatio: '16:9', durationSeconds: Number(duration) },
       }),
     });
+
+  let opName: string;
+  let usedSeed = !!image;
+  try {
+    let start = await startOnce(true);
+    if (!start.ok && image) {
+      // 種画像が原因で弾かれたなら、画像なしで一度だけ作り直す。
+      // 絵柄の一致より「動画が1本できること」を優先する。
+      const body = await start.text().catch(() => '');
+      if (start.status === 400 && /image|inlineData|bytesBase64Encoded/i.test(body)) {
+        usedSeed = false;
+        start = await startOnce(false);
+      } else {
+        return {
+          url: null, reason: `start_failed_${start.status}`,
+          detail: body.replace(/key=[^&"\s]+/g, 'key=***').slice(0, 500),
+        };
+      }
+    }
     if (!start.ok) {
-      // API のエラー本文をそのまま返す。鍵は含まれないが、念のため URL 断片は落とす。
       const body = (await start.text().catch(() => '')).replace(/key=[^&"\s]+/g, 'key=***').slice(0, 500);
       return { url: null, reason: `start_failed_${start.status}`, detail: body };
     }
@@ -117,7 +135,7 @@ export async function generateVeoToStorage(opts: {
     const { error } = await admin.storage.from('site-images')
       .upload(path, mp4, { contentType: 'video/mp4', upsert: true });
     if (error) return { url: null, reason: 'storage_upload_failed' };
-    return { url: admin.storage.from('site-images').getPublicUrl(path).data.publicUrl };
+    return { url: admin.storage.from('site-images').getPublicUrl(path).data.publicUrl, usedSeed };
   } catch {
     return { url: null, reason: 'download_error' };
   }
