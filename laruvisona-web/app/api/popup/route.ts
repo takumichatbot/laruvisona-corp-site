@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
   let resolvedSiteId = siteId;
   if (!resolvedSiteId && slug) {
-    const { data: site } = await service.from('sites').select('id').eq('slug', slug).single();
+    const { data: site } = await service.from('sites').select('id').eq('slug', slug).eq('published', true).single();
     resolvedSiteId = site?.id ?? null;
   }
 
@@ -29,10 +29,12 @@ export async function GET(req: Request) {
     });
   }
 
+  // 未公開サイトの設定は配信しない（公開前のポップアップ文面が読めてしまう）
   const { data: site } = await service
     .from('sites')
     .select('settings_json')
     .eq('id', resolvedSiteId)
+    .eq('published', true)
     .single();
 
   const settings = (site?.settings_json as Record<string, unknown>) || {};

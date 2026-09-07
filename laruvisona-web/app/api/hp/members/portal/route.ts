@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { verifyMemberToken } from '@/lib/member-auth';
+import { safeReturnUrl } from '@/lib/site-origin';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +22,17 @@ export async function POST(req: Request) {
   const { data: member } = await supabase.from('hp_members').select('stripe_customer_id').eq('id', payload.mid).eq('site_id', siteId).maybeSingle();
   if (!member?.stripe_customer_id) return NextResponse.json({ error: 'お支払い情報がありません' }, { status: 400 });
 
-  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
+  const { data: site } = await supabase.from('sites').select('slug, custom_domain').eq('id', siteId).single();
+  if (!site) return NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 });
+
+  // 戻り先はそのサイトの正当なホストのみ。クライアントの returnUrl を
+  // そのまま渡すと、決済画面から任意のドメインへ飛ばせてしまう。
+  const returnTo = safeReturnUrl(returnUrl, req.headers.get('origin'), site);
   try {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const session = await stripe.billingPortal.sessions.create({
       customer: member.stripe_customer_id,
-      return_url: (returnUrl || origin || 'https://laruvisona.jp/').split('?')[0],
+      return_url: returnTo,
     });
     return NextResponse.json({ url: session.url });
   } catch (e) {
