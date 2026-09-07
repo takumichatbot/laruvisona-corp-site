@@ -114,7 +114,10 @@ export async function generateVeoToStorage(opts: {
       const res = await fetch(`${API_BASE}/${opName}?key=${apiKey}`);
       if (!res.ok) continue;
       const op = await res.json() as VeoOperation;
-      if (op.error?.message) return { url: null, reason: 'generation_error' };
+      if (op.error?.message) {
+        // 何で落ちたのかを残す（安全フィルタ・入力画像の拒否などは本文にしか出ない）
+        return { url: null, reason: 'generation_error', detail: op.error.message.slice(0, 500) };
+      }
       if (!op.done) continue;
       videoUri = op.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
       break;
