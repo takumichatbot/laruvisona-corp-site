@@ -3,7 +3,7 @@ import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 2;
+export const EXPORT_VERSION = 3;
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1106,7 +1106,8 @@ const STYLE_EXTRAS: Record<string, string> = {
 .lhp-card{transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .35s ease}
 .lhp-card:hover{transform:translateY(-10px);box-shadow:0 32px 72px rgba(0,0,0,.14)!important}
 @keyframes lhpPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.5)}70%{box-shadow:0 0 0 14px rgba(255,255,255,0)}}
-.lhp-btn-primary{animation:lhpPulse 2.8s ease-in-out infinite}
+.lhp-btn-primary{animation:lhpPulse 2.8s ease-in-out 3}
+.lhp-btn-primary:hover{animation:lhpPulse 2.8s ease-in-out infinite}
 /* subtle gradient overlay on hero */
 .lhp-hero{position:relative;overflow:hidden}
 .lhp-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,0,0,.25) 0%,transparent 55%);pointer-events:none;z-index:0}
@@ -1136,7 +1137,8 @@ const STYLE_EXTRAS: Record<string, string> = {
 .lhp-card{transition:transform .3s cubic-bezier(.25,.8,.25,1),box-shadow .3s ease;transform-style:preserve-3d;will-change:transform}
 .lhp-card:hover{transform:translateY(-18px) perspective(700px) rotateX(5deg) rotateY(-3deg);box-shadow:0 40px 80px rgba(0,0,0,.28)!important}
 @keyframes lhpGlow{0%,100%{box-shadow:0 0 12px rgba(255,255,255,.2),0 6px 24px rgba(0,0,0,.2)}50%{box-shadow:0 0 36px rgba(255,255,255,.55),0 6px 24px rgba(0,0,0,.2)}}
-.lhp-btn-primary{animation:lhpGlow 2.2s ease-in-out infinite;font-size:1.05rem;padding:16px 48px}
+.lhp-btn-primary{animation:lhpGlow 2.2s ease-in-out 3;font-size:1.05rem;padding:16px 48px}
+.lhp-btn-primary:hover{animation:lhpGlow 2.2s ease-in-out infinite}
 .lhp-cta{clip-path:polygon(0 7%,100% 0,100% 93%,0 100%);padding:100px 24px!important;margin:-35px 0!important;position:relative;z-index:1}`,
 
   elegant: `
@@ -1163,26 +1165,27 @@ body::after{content:'';position:fixed;bottom:-15vh;right:-15vw;width:50vw;height
 .lhp-card{transition:transform .45s cubic-bezier(.34,1.56,.64,1),box-shadow .35s ease}
 .lhp-card:hover{transform:translateY(-14px) scale(1.025);box-shadow:0 28px 64px rgba(0,0,0,.13)!important}
 @keyframes lhpBounce{0%,100%{transform:translateY(0)}45%{transform:translateY(-5px)}55%{transform:translateY(-4px)}}
-.lhp-btn-primary{animation:lhpBounce 2.4s ease-in-out infinite}
+.lhp-btn-primary{animation:lhpBounce 2.4s ease-in-out 3}
+.lhp-btn-primary:hover{animation:lhpBounce 2.4s ease-in-out infinite}
 .lhp-section-title{background:linear-gradient(90deg,currentColor 0%,currentColor 100%);-webkit-background-clip:text;background-clip:text}`,
 
   sharp: `
 /* sharp: hard diagonal cuts, offset-shadow 3D, scan line, glitch CTA */
 .lhp-hero{clip-path:polygon(0 0,100% 0,100% 84%,0 100%);padding-bottom:110px!important;margin-bottom:-55px;position:relative;z-index:2;overflow:hidden}
-.lhp-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:rgba(255,255,255,.35);animation:lhpScan 2.8s linear infinite;pointer-events:none;z-index:3}
+.lhp-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:rgba(255,255,255,.22);animation:lhpScan 5.5s linear infinite;pointer-events:none;z-index:3}
 @keyframes lhpScan{0%{transform:translateY(0)}100%{transform:translateY(100vh)}}
 .lhp-card{transition:transform .18s ease,box-shadow .18s ease;border:2px solid #111!important}
 .lhp-card:hover{transform:translate(6px,-6px);box-shadow:8px 14px 0 #111!important}
 .lhp-cta{clip-path:polygon(0 10%,100% 0,100% 90%,0 100%);padding:100px 24px!important;margin:-40px 0!important;position:relative;z-index:1}
 @keyframes lhpGlitch{0%,88%,100%{transform:none;clip-path:none}90%{transform:translateX(3px);clip-path:polygon(0 20%,100% 20%,100% 40%,0 40%)}92%{transform:translateX(-3px);clip-path:polygon(0 60%,100% 60%,100% 80%,0 80%)}94%{transform:none;clip-path:none}}
-.lhp-btn-primary{animation:lhpGlitch 4.5s ease-in-out infinite;font-family:monospace!important;letter-spacing:.12em!important;text-transform:uppercase!important;font-size:.9rem}
+.lhp-btn-primary{animation:lhpGlitch 4.5s ease-in-out 2;font-family:monospace!important;letter-spacing:.12em!important;text-transform:uppercase!important;font-size:.9rem}
 .lhp-section-title{position:relative}
 .lhp-section-title::before{content:'//';margin-right:8px;opacity:.35;font-weight:400}`,
 };
 
 const CSS = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;line-height:1.6}
+body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;line-height:1.75}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
 .lhp-navbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e5e7eb;box-shadow:0 1px 4px rgba(0,0,0,.06)}
@@ -1404,6 +1407,52 @@ details[open] .lhp-faq-q::after{content:'−'}
   .lhp-faq-q{padding:14px 16px}
   .lhp-faq-a{padding:12px 16px}
 }
+
+/* ─── 仕上げ層：和文タイポグラフィ・可読性・アクセシビリティ ───────────
+   ここは最後に置く。デザインスタイル固有の指定より後に効かせたい共通の
+   底上げだけを入れる（色や形はスタイル側の裁量を奪わない）。 */
+
+/* palt: 和文の約物と仮名の字間を詰める。入れていない和文サイトは、
+   内容が同じでも「素人が作った」ように見える。効果が一番大きい一行。 */
+body{font-feature-settings:'palt' 1;font-kerning:normal;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+/* 和文の折り返し。禁則を守り、見出しは行の長さを均す（1文字だけ落ちるのを防ぐ）。 */
+h1,h2,h3,h4,.lhp-section-title,.lhp-hero h1,.lhp-cta h2,.lhp-price-name,.lhp-card h3{
+  text-wrap:balance;line-break:strict;word-break:normal;overflow-wrap:anywhere}
+p,li,.lhp-hero-sub,.lhp-card p,.lhp-col p{line-break:strict;word-break:normal;overflow-wrap:anywhere}
+
+/* 見出しは字間を詰め、小さい文字はわずかに開ける（和文の可読性）。 */
+.lhp-hero h1{letter-spacing:-.01em}
+.lhp-hero-sub{line-height:1.8}
+.lhp-card p,.lhp-col p,.lhp-testimonial p{line-height:1.85}
+
+/* キーボード操作の現在地を必ず見せる（inputの outline:none を打ち消す）。 */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,
+textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{
+  outline:3px solid var(--lhp-accent,#f59e0b);outline-offset:2px}
+
+/* 指で押せる大きさを確保する。 */
+@media(max-width:768px){
+  .lhp-btn-primary,.lhp-btn-cta,.lhp-form button,.lhp-mform-btn,.lhp-nav-link{min-height:44px}
+}
+
+::selection{background:var(--lhp-accent,#f59e0b);color:#fff}
+html{scroll-behavior:smooth}
+
+/* 常時動く装飾はスマホでは止める（発熱とスクロールのカクつきの原因）。 */
+@media(max-width:768px){
+  body::before,body::after{animation:none!important;display:none!important}
+}
+
+/* 動きを減らす設定の人には動かさない。スクロール表示アニメは
+   透明のままにならないよう、必ず見えている状態に固定する。 */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+  [data-lhp-anim]{opacity:1!important;transform:none!important}
+}
 `;
 
 export function exportToHTML(
@@ -1477,14 +1526,20 @@ window.addEventListener('popstate',function(){
   const animLevel   = settings.animLevel   || 'full';
 
   // Page sections
+  let imgCount = 0;
   const pagesHtml = pages.map((page, idx) => {
     const blocksHtml = page.blocks.map(b => renderBlock(b, { heroLayout, accentColor })).filter(Boolean).join('\n');
     return multiPage
       ? `<div id="${page.id}" class="lhp-page"${idx > 0 ? ' hidden' : ''}>${blocksHtml}</div>`
       : blocksHtml;
   }).join('\n')
-    // 画像の遅延読み込み・非同期デコードでLCP/表示速度を改善（loading未指定の<img>のみ）
-    .replace(/<img (?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async" ')
+    // 画像の遅延読み込み・非同期デコードで表示速度を改善（loading未指定の<img>のみ）。
+    // ただし先頭の1枚はファーストビューに出るため遅延させない。
+    // 遅延させると LCP がその分だけ遅れ、体感が明確に悪くなる。
+    .replace(/<img (?![^>]*\bloading=)/gi, () =>
+      ++imgCount === 1
+        ? '<img fetchpriority="high" decoding="async" '
+        : '<img loading="lazy" decoding="async" ')
     // ファーストビュー（最初のブロック）はスクロールアニメ対象から外して即時表示（白紙時間対策）
     .replace('data-lhp-anim', 'data-lhp-instant data-lhp-anim');
 
