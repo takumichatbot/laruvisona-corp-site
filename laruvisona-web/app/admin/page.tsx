@@ -185,6 +185,77 @@ function ImageLibraryCard() {
   );
 }
 
+function VideoLibraryCard() {
+  const [industry, setIndustry] = useState<string>(LIB_INDUSTRIES[0]);
+  const [running, setRunning] = useState(false);
+  const [note, setNote] = useState('');
+  const [url, setUrl] = useState<string | null>(null);
+  const [overwrite, setOverwrite] = useState(false);
+
+  const run = async () => {
+    setRunning(true);
+    setNote('生成中… 数十秒〜数分かかります。このタブを前面にしたままお待ちください。');
+    setUrl(null);
+    try {
+      const res = await fetch('/api/admin/generate-video-library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry, overwrite }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.reason || d.error || `HTTP ${res.status}`);
+      setUrl(d.url || null);
+      setNote(
+        d.skipped
+          ? '既に生成済みでした（作り直すなら「上書き」をオンに）'
+          : `完了（${d.elapsedSec}秒 / ${d.durationSeconds}秒尺 / 種画像 ${d.seedUsed ? 'あり' : 'なし'}）`,
+      );
+    } catch (e) {
+      setNote(`失敗: ${e instanceof Error ? e.message : '通信失敗'}`);
+    }
+    setRunning(false);
+  };
+
+  return (
+    <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">業種別 ループ動画（Veo 3.1）</h2>
+          <p className="text-[11px] text-slate-500 mt-1">
+            ショーケース用の数秒ループ。同じ業種のヒーロー画像を種にするので、静止画と絵柄が揃います。
+            <span className="text-amber-400 ml-1">画像より高コスト・低速なため、1回につき1業種だけ生成します。</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={industry}
+            onChange={e => setIndustry(e.target.value)}
+            disabled={running}
+            className="bg-white/[0.05] border border-white/[0.1] text-slate-200 text-xs rounded-lg px-3 py-2"
+          >
+            {LIB_INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+          </select>
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer">
+            <input type="checkbox" checked={overwrite} onChange={e => setOverwrite(e.target.checked)} disabled={running} />
+            上書き
+          </label>
+          <button
+            onClick={run}
+            disabled={running}
+            className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+          >
+            {running ? '生成中…' : 'この業種を1本生成'}
+          </button>
+        </div>
+      </div>
+      {note && <p className="text-[11px] text-slate-400 mb-3">{note}</p>}
+      {url && (
+        <video src={url} controls loop muted playsInline className="w-full max-w-md rounded-xl border border-white/[0.08]" />
+      )}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -311,6 +382,7 @@ export default function AdminPage() {
 
             {/* Image library */}
             <ImageLibraryCard />
+            <VideoLibraryCard />
 
             {/* Plan breakdown */}
             <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6">
