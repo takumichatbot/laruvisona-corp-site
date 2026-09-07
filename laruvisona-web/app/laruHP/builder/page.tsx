@@ -1624,12 +1624,12 @@ function MobileOverlay() {
         営業時間やメニューの修正なら、こちらで完結します。
       </p>
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <a href="/laruHP/edit" className="block bg-white text-black font-bold py-3.5 px-6 rounded-xl text-sm">
+        <Link href="/laruHP/edit" className="block bg-white text-black font-bold py-3.5 px-6 rounded-xl text-sm">
           スマホで編集する →
-        </a>
-        <a href="/laruHP/dashboard" className="block border border-white/20 text-white font-semibold py-3.5 px-6 rounded-xl text-sm">
+        </Link>
+        <Link href="/laruHP/dashboard" className="block border border-white/20 text-white font-semibold py-3.5 px-6 rounded-xl text-sm">
           ダッシュボードへ
-        </a>
+        </Link>
         <button onClick={() => setDismissed(true)} className="text-slate-500 hover:text-slate-300 text-sm transition-colors py-3">
           このままビルダーを開く（表示が崩れます）
         </button>
