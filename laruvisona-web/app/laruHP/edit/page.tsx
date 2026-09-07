@@ -59,8 +59,24 @@ function isText(k: string, v: unknown): v is string {
 
 function keyLabel(k: string) { return KEY_LABEL[k] || k; }
 
+// 中身のあるサイトを探す。公開済みを先に見る。
+async function firstSiteWithBlocks(arr: { id: string; published?: boolean }[]): Promise<string | null> {
+  const ordered = [...arr].sort((a, b) => Number(!!b.published) - Number(!!a.published));
+  for (const s of ordered.slice(0, 8)) {
+    try {
+      const d = await fetch(`/api/sites/${s.id}`).then(r => r.json());
+      const bj = d.site?.blocks_json;
+      const n = Array.isArray(bj)
+        ? bj.length
+        : (bj?.pages || []).reduce((a: number, p: { blocks?: unknown[] }) => a + (p.blocks?.length || 0), 0);
+      if (n > 0) return s.id;
+    } catch { /* 次を見る */ }
+  }
+  return null;
+}
+
 export default function MobileEditPage() {
-  const [sites, setSites] = useState<{ id: string; name: string }[]>([]);
+  const [sites, setSites] = useState<{ id: string; name: string; published?: boolean }[]>([]);
   const [site, setSite] = useState<SiteRow | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
   const [pageIdx, setPageIdx] = useState(0);
@@ -74,9 +90,16 @@ export default function MobileEditPage() {
     (async () => {
       try {
         const list = await fetch('/api/sites').then(r => r.json());
-        const arr: { id: string; name: string }[] = list.sites || [];
+        const arr: { id: string; name: string; published?: boolean }[] = list.sites || [];
         setSites(arr);
-        const wanted = new URLSearchParams(location.search).get('site') || arr[0]?.id;
+        const asked = new URLSearchParams(location.search).get('site');
+        // 既定は「中身のあるサイト」。先頭が空のサイトだと、開いた瞬間まっさらで
+        // 壊れているように見える（実際に7件中2件が空だった）。公開済みを優先する。
+        let wanted = asked;
+        if (!wanted) {
+          const withBlocks = await firstSiteWithBlocks(arr);
+          wanted = withBlocks || arr[0]?.id;
+        }
         if (!wanted) { setLoading(false); return; }
         await load(wanted);
       } catch {
@@ -222,6 +245,13 @@ export default function MobileEditPage() {
               </button>
             ))}
           </div>
+        )}
+
+        {!loading && site && (page?.blocks.length ?? 0) === 0 && (
+          <p className="text-sm text-gray-500 bg-white border border-gray-200 rounded-xl p-4">
+            このサイトにはまだ中身がありません。パソコンのビルダーで作成するか、
+            上の選択から別のサイトを選んでください。
+          </p>
         )}
 
         <div className="space-y-3">

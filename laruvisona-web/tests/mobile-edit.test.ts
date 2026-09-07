@@ -52,3 +52,13 @@ test('ビルダーのスマホ案内から編集画面へ行ける', () => {
   assert.ok(!builder.includes('このまま続ける（表示が崩れます）'),
     '案内が「崩れます」だけのまま＝代替手段を示せていない');
 });
+
+test('既定で中身のあるサイトを開く（空のサイトで壊れて見えない）', () => {
+  assert.match(edit, /async function firstSiteWithBlocks/,
+    '先頭のサイトが空だと、開いた瞬間まっさらで壊れて見える');
+  assert.match(edit, /Number\(!!b\.published\) - Number\(!!a\.published\)/, '公開済みを優先していない');
+});
+
+test('中身が無いときは理由を出す', () => {
+  assert.match(edit, /このサイトにはまだ中身がありません/);
+});
