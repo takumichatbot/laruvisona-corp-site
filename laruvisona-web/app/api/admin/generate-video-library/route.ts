@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { IMAGE_INDUSTRIES, getAdminStorage, getGeminiKey } from '@/lib/imagen';
-import { generateVeoToStorage, videoStoragePath } from '@/lib/veo';
+import { generateVeoToStorage, listAvailableModels, videoStoragePath } from '@/lib/veo';
 
 // 業種ショーケース用の短尺ループ動画を Veo で作って Supabase Storage に貯める。
 //
@@ -34,8 +34,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'GEMINI_API_KEY (or GOOGLE_AI_API_KEY) is not set' }, { status: 500 });
   }
 
-  const { industry, overwrite = false, durationSeconds = '4' } =
-    await req.json().catch(() => ({})) as { industry?: string; overwrite?: boolean; durationSeconds?: '4' | '6' | '8' };
+  const { industry, overwrite = false, durationSeconds = '4', model, action } =
+    await req.json().catch(() => ({})) as {
+      industry?: string; overwrite?: boolean; durationSeconds?: '4' | '6' | '8';
+      model?: string; action?: 'list-models';
+    };
+
+  // 診断: この鍵で使える動画モデルを確認する（モデルIDの取り違えを潰すため）
+  if (action === 'list-models') return NextResponse.json(await listAvailableModels());
 
   // 一括生成は用意しない。1リクエスト1業種に固定して、事故で全業種ぶんの費用が出ないようにする。
   if (!industry || !(IMAGE_INDUSTRIES as readonly string[]).includes(industry)) {
@@ -68,9 +74,9 @@ export async function POST(req: Request) {
     : null;
 
   const startedAt = Date.now();
-  const { url, reason } = await generateVeoToStorage({ industry, seedImageUrl, durationSeconds });
+  const { url, reason, detail } = await generateVeoToStorage({ industry, seedImageUrl, durationSeconds, model });
   const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
 
-  if (!url) return NextResponse.json({ industry, ok: false, reason, elapsedSec, seedUsed: !!seedImageUrl }, { status: 502 });
+  if (!url) return NextResponse.json({ industry, ok: false, reason, detail, elapsedSec, seedUsed: !!seedImageUrl }, { status: 502 });
   return NextResponse.json({ industry, ok: true, url, elapsedSec, durationSeconds, seedUsed: !!seedImageUrl });
 }

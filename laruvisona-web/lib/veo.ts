@@ -38,7 +38,8 @@ export async function generateVeoToStorage(opts: {
   seedImageUrl?: string | null;
   durationSeconds?: '4' | '6' | '8';
   maxWaitMs?: number;
-}): Promise<{ url: string | null; reason?: string }> {
+  model?: string;
+}): Promise<{ url: string | null; reason?: string; detail?: string }> {
   const apiKey = getGeminiKey();
   if (!apiKey) return { url: null, reason: 'no_api_key' };
 
@@ -63,17 +64,22 @@ export async function generateVeoToStorage(opts: {
   }
 
   // 1) 生成を開始（長時間処理なので即座に operation 名が返る）
+  const model = opts.model || VEO_MODEL;
   let opName: string;
   try {
-    const start = await fetch(`${API_BASE}/models/${VEO_MODEL}:predictLongRunning?key=${apiKey}`, {
+    const start = await fetch(`${API_BASE}/models/${model}:predictLongRunning?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         instances: [{ prompt: buildShowcaseVideoPrompt(opts.industry), ...(image ? { image } : {}) }],
-        parameters: { aspectRatio: '16:9', resolution: '720p', durationSeconds: duration },
+        parameters: { aspectRatio: '16:9', durationSeconds: Number(duration) },
       }),
     });
-    if (!start.ok) return { url: null, reason: `start_failed_${start.status}` };
+    if (!start.ok) {
+      // API のエラー本文をそのまま返す。鍵は含まれないが、念のため URL 断片は落とす。
+      const body = (await start.text().catch(() => '')).replace(/key=[^&"\s]+/g, 'key=***').slice(0, 500);
+      return { url: null, reason: `start_failed_${start.status}`, detail: body };
+    }
     const op = await start.json() as VeoOperation;
     if (!op.name) return { url: null, reason: 'no_operation_name' };
     opName = op.name;
@@ -114,5 +120,24 @@ export async function generateVeoToStorage(opts: {
     return { url: admin.storage.from('site-images').getPublicUrl(path).data.publicUrl };
   } catch {
     return { url: null, reason: 'download_error' };
+  }
+}
+
+
+/** この鍵で使えるモデル名の一覧。Veo のモデルIDを実地で確認するための診断用。 */
+export async function listAvailableModels(): Promise<{ models: string[] } | { error: string }> {
+  const apiKey = getGeminiKey();
+  if (!apiKey) return { error: 'no_api_key' };
+  try {
+    const res = await fetch(`${API_BASE}/models?key=${apiKey}&pageSize=200`);
+    if (!res.ok) return { error: `list_failed_${res.status}` };
+    const data = await res.json() as { models?: { name?: string; supportedGenerationMethods?: string[] }[] };
+    return {
+      models: (data.models || [])
+        .filter(m => /veo|video/i.test(m.name || '') || (m.supportedGenerationMethods || []).includes('predictLongRunning'))
+        .map(m => `${m.name} [${(m.supportedGenerationMethods || []).join(',')}]`),
+    };
+  } catch {
+    return { error: 'list_error' };
   }
 }
