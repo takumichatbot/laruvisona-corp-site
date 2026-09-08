@@ -16,6 +16,8 @@ type Variant = { variant: string; exists: boolean; url: string; prompt: string }
 type ListRes = { variants: Variant[]; current: { exists: boolean; url: string } };
 
 const LABEL: Record<string, string> = {
+  build: '画面でHPが組み上がる',
+  desk: 'できたHPが机の上で光る',
   paper: '紙が整列する',
   blueprint: '光の線が矩形を組む',
   glass: 'すりガラスが重なる',

@@ -154,10 +154,10 @@ test('ヒーロー映像も公開側では生成しない', () => {
 });
 
 // ── LPファーストビュー映像の候補（3案から選ぶ） ──────────────────
-test('候補は3案あり、それぞれ別ファイルに保存される', async () => {
+test('候補はそれぞれ別ファイルに保存される', async () => {
   const m = await import('../lib/veo-prompt.ts');
   const keys = Object.keys(m.HERO_VARIANTS);
-  assert.deepEqual(keys.sort(), ['blueprint', 'glass', 'paper']);
+  assert.deepEqual(keys.sort(), ['blueprint', 'build', 'desk', 'glass', 'paper']);
   for (const k of keys) {
     assert.equal(m.heroVariantPath(k as never), `videos/lp-hero-${k}.mp4`);
   }
@@ -165,13 +165,19 @@ test('候補は3案あり、それぞれ別ファイルに保存される', asyn
   assert.notEqual(m.heroVariantPath('paper' as never), m.HERO_VIDEO_PATH);
 });
 
-test('どの案も「浮いているだけ」ではなく組み上がる動きを持つ', async () => {
+test('どの案も「浮いているだけ」で終わらない', async () => {
   const m = await import('../lib/veo-prompt.ts');
   // 3Dの浮遊オブジェクトを外したのと同じ失敗を繰り返さないための固定。
-  const assembly = /(settle|align|form|stack|layer|meet|draw themselves|into place)/i;
+  // 満たし方は2通りある:
+  //   組み上がる動きがある（paper / blueprint / glass / build）か、
+  //   商品そのもの＝完成したサイトが写っている（desk）か。
+  // どちらも無いものは、意味のない抽象なので通さない。
+  const assembly = /(settle|align|form|stack|layer|meet|draw themselves|into place|builds itself)/i;
+  const product = /(website|web page|layout on both|the page)/i;
   for (const k of Object.keys(m.HERO_VARIANTS)) {
     const p = m.buildHeroVariantPrompt(k as never);
-    assert.match(p, assembly, `${k}: 整列・構築の動きが指示されていない`);
+    assert.ok(assembly.test(p) || product.test(p),
+      `${k}: 組み上がる動きも、完成した商品の姿も無い。ただの抽象になっている`);
   }
 });
 
@@ -181,7 +187,14 @@ test('禁止するのは文字・UI・人・カット割りの4つだけ', async
     const p = m.buildHeroVariantPrompt(k as never);
     // Veoは読める文字やUIを描けない。頼むと崩れた偽の文字になる
     assert.match(p, /No text, no letters/, `${k}: 文字禁止が無い`);
-    assert.match(p, /no user interface/, `${k}: UI禁止が無い`);
+    // 画面を写す案（build/desk）はUIが主役なので、代わりに
+    // 「文字は最後まで解像しない」ことを条件として書き込む
+    if (k === 'build' || k === 'desk') {
+      assert.match(p, /never resolves into readable text/, `${k}: 文字が解像しない指定が無い`);
+      assert.match(p, /unreadable by design/, `${k}: 崩れた偽文字への備えが無い`);
+    } else {
+      assert.match(p, /No user interface/, `${k}: UI禁止が無い`);
+    }
     // 人は視線を持っていくし、安全フィルタにも落ちやすい
     assert.match(p, /No people, no faces/, `${k}: 人物禁止が無い`);
     // カットが割れるとループにならない

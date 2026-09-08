@@ -77,9 +77,30 @@ const CINEMA = [
 /** どの案でも守る禁止事項。ここだけは緩めない。 */
 const HERO_COMMON = [
   'No people, no faces, no hands, no bodies.',
-  'No text, no letters, no numbers, no logos, no watermark, no user interface, no on-screen graphics.',
+  'No text, no letters, no numbers, no logos, no watermark.',
   'One continuous take. No cuts, no scene change, no whip pan, no zoom burst.',
   'No audio.',
+].join(' ');
+
+/**
+ * 画面を写さない案に付ける。UIらしきものが紛れ込むのを防ぐ。
+ */
+const NO_UI = 'No user interface, no screens, no on-screen graphics.';
+
+/**
+ * 画面を写す案に付ける。
+ *
+ * Veoは読める文字を描けない。画面を出せば必ず崩れた偽の文字になり、
+ * ホームページを作るサービスのLPに偽物のUIが映るのは本来まずい。
+ * ただしこの映像は濃さ30%＋膜＋ぼかしで背景に敷くので、文字が読めるか
+ * どうかは最初から問題にならない。
+ * そこで「画面は終始ピントの外にあり、形と色だけが動く」と明示して、
+ * 弱点を演出として使い切る。文字が解像しないことを条件として書き込む。
+ */
+const SCREEN_SOFT = [
+  'The interface never resolves into readable text.',
+  'It stays soft, defocused and impressionistic — only clean blocks of colour, soft rectangles and glowing light.',
+  'Any lettering is far out of focus and unreadable by design.',
 ].join(' ');
 
 export const HERO_VARIANTS = {
@@ -112,6 +133,25 @@ export const HERO_VARIANTS = {
     'Palette: clear glass, cool sky-blue refraction, warm highlight on the bevels.',
     'The glass is blank and unmarked.',
   ],
+  // 案D: LARU HPで作って、できた。サービスの中身そのもの。
+  // 画面は終始ピントの外に置き、ブロックが積み上がって完成する流れだけを見せる。
+  build: [
+    'Cinematic, extreme close.',
+    'A slim laptop sits on a pale oak desk in low morning light, seen from a low three-quarter angle so the screen is steeply foreshortened.',
+    'The screen wakes and a website builds itself: a wide banner block glows into place, then a row of cards slides in and settles, then a large image panel resolves, until the whole page is complete and softly luminous.',
+    'The screen light spills across the desk grain and warms as the page fills; a faint reflection of the layout lies on the polished wood.',
+    'Camera: a slow, weighted push in toward the screen, focus racking from the desk edge to the glow.',
+    'Palette: warm oak, white page, sky-blue accents in the screen light.',
+  ],
+  // 案E: 完成したものが静かに置かれている「できた」の余韻。引きで、道具として見せる。
+  desk: [
+    'Cinematic.',
+    'A finished website glows on a laptop and, beside it, on a phone propped against a cup — the same soft blue-and-white layout on both, seen slightly from the side.',
+    'Late morning light rakes across a quiet workspace; steam drifts from the cup and crosses the screen light; dust turns in the sunbeam.',
+    'The page scrolls by itself, unhurried, blocks gliding up and out of frame.',
+    'Camera: a slow lateral dolly past the desk, the laptop drifting from soft focus into sharp and away again.',
+    'Palette: warm neutrals, white page, sky-blue accents, one small green plant out of focus behind.',
+  ],
 } as const;
 
 export type HeroVariant = keyof typeof HERO_VARIANTS;
@@ -125,8 +165,12 @@ export function heroVariantPath(v: HeroVariant): string {
   return `videos/lp-hero-${v}.mp4`;
 }
 
+/** 画面（UI）を被写体にする案 */
+const SCREEN_VARIANTS: ReadonlySet<string> = new Set(['build', 'desk']);
+
 export function buildHeroVariantPrompt(v: HeroVariant): string {
-  return [...HERO_VARIANTS[v], CINEMA, HERO_COMMON].join(' ');
+  const extra = SCREEN_VARIANTS.has(v) ? SCREEN_SOFT : NO_UI;
+  return [...HERO_VARIANTS[v], CINEMA, extra, HERO_COMMON].join(' ');
 }
 
 /**
