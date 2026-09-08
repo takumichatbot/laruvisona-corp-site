@@ -175,18 +175,51 @@ test('どの案も「浮いているだけ」ではなく組み上がる動き�
   }
 });
 
-test('どの案も文字・UI・人・暗部を禁止している', async () => {
+test('禁止するのは文字・UI・人・カット割りの4つだけ', async () => {
   const m = await import('../lib/veo-prompt.ts');
   for (const k of Object.keys(m.HERO_VARIANTS)) {
     const p = m.buildHeroVariantPrompt(k as never);
     // Veoは読める文字やUIを描けない。頼むと崩れた偽の文字になる
     assert.match(p, /No text, no letters/, `${k}: 文字禁止が無い`);
     assert.match(p, /no user interface/, `${k}: UI禁止が無い`);
+    // 人は視線を持っていくし、安全フィルタにも落ちやすい
     assert.match(p, /No people, no faces/, `${k}: 人物禁止が無い`);
-    // 見出しは濃い色。映像に暗部があると文字が読みにくくなる
-    assert.match(p, /Nothing dark/, `${k}: 暗部の禁止が無い`);
-    assert.match(p, /High-key/, `${k}: 高キー指定が無い`);
+    // カットが割れるとループにならない
+    assert.match(p, /One continuous take/, `${k}: 1カット指定が無い`);
   }
+});
+
+test('映像を退屈にする指示を入れない', async () => {
+  const m = await import('../lib/veo-prompt.ts');
+  // 最初の版は「暗部を作るな」「情景を変えるな」「カメラを止めろ」と
+  // 映画的な質感を作る要素を全部潰していた。結果、平坦で安い絵しか出なかった。
+  // 可読性は映像ではなくCSS（不透明度・膜・ぼかし・彩度）で解く。
+  const banned = [/Nothing dark/, /no heavy shadows/, /no vignette/, /The scene never changes/, /almost still/, /locked off/];
+  for (const k of Object.keys(m.HERO_VARIANTS)) {
+    const p = m.buildHeroVariantPrompt(k as never);
+    for (const b of banned) {
+      assert.equal(b.test(p), false, `${k}: 「${b.source}」が残っている。映像の自由を奪う指示`);
+    }
+  }
+});
+
+test('どの案にも撮影の指示が入っている（これが「映画みたい」の実体）', async () => {
+  const m = await import('../lib/veo-prompt.ts');
+  for (const k of Object.keys(m.HERO_VARIANTS)) {
+    const p = m.buildHeroVariantPrompt(k as never);
+    assert.match(p, /shallow depth of field/i, `${k}: 被写界深度の指示が無い`);
+    assert.match(p, /motion blur/i, `${k}: モーションブラーの指示が無い`);
+    assert.match(p, /Volumetric light/i, `${k}: 空気中の光の指示が無い`);
+    assert.match(p, /Camera: /, `${k}: カメラワークの指示が無い`);
+    assert.match(p, /texture/i, `${k}: 素材の質感の指示が無い`);
+  }
+});
+
+test('可読性はCSS側で調整できる', () => {
+  const preview = read('../app/laruHP/hero-preview/page.tsx');
+  assert.match(preview, /setBlur/, 'ぼかしで調整できない');
+  assert.match(preview, /setGray/, '彩度で調整できない');
+  assert.match(preview, /blur\(\$\{blur\}px\) grayscale\(\$\{gray\}%\)/);
 });
 
 test('未知のvariantは受け付けない', async () => {

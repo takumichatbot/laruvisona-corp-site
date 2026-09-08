@@ -45,55 +45,76 @@ export const HERO_VIDEO_PATH = 'videos/lp-hero.mp4';
 /**
  * LPファーストビュー用の候補。3案を作って見比べてから1本を選ぶ。
  *
- * 選定の前提（ここを外すと前回と同じ失敗をする）:
- *   1. 「浮いているだけの抽象」にしない。3Dの浮遊オブジェクトを外したのは
- *      商品の説明を何もしていなかったからで、同じものを動画で作り直しても
- *      意味がない。どの案も「バラバラのものが整列して1枚になる」という
- *      組み上がりの動きを持たせる。
- *   2. Veoは読める文字やUIを描けない。頼むと必ず崩れた偽の文字になるので、
- *      画面・文字・ロゴは一切出さず、素材と光だけで「構築」を表す。
- *   3. 見出しは濃い色で、下地は sky-50 の明るい配色。映像は高キー（明るい）で
- *      暗部を持たないこと。暗いと文字が読みにくくなり、ページからも浮く。
+ * 【書き直しの経緯】
+ * 最初の版は「カメラは固定でほぼ静止」「情景は変わらない」「暗い部分を作るな」
+ * 「影を作るな」「ハイキーで」と、映画的な質感を作る要素を片っ端から禁止していた。
+ * コントラスト・光の落ち方・被写界深度・レンズの癖・空気中の粒子・モーションブラー、
+ * これらこそが「映画みたい」の正体なのに、見出しの可読性を守ることだけを考えて
+ * 全部潰していた。結果、平坦で安っぽい絵しか出なかった。
+ *
+ * 可読性は映像側ではなくCSS側（不透明度・上に重ねる膜・ぼかし）で解く。
+ * 映像には、良い絵を作るのに必要な自由を返す。
+ *
+ * もうひとつの反省: 被写体が「白い面の上の線」だった。Veoが強いのは
+ * 実在する素材と光の相互作用であって、平面的なベクター風の絵はいちばん安く見える。
+ * どの案も、厚みと表面を持った実在の素材に光が当たっている状態にする。
+ *
+ * 変わらない制約は3つだけ:
+ *   - 文字・UI・ロゴを出さない（Veoは読める文字を描けない。必ず崩れた偽物になる）
+ *   - 人を出さない（視線を持っていかれる。安全フィルタにも落ちやすい）
+ *   - カットを割らない（ループにならない）
  */
+
+/** 全案に共通の撮影仕様。ここが「映画みたい」の実体。 */
+const CINEMA = [
+  'Shot on ARRI Alexa, anamorphic prime lens, shot wide open for a very shallow depth of field.',
+  'Natural motion blur at 24fps, creamy bokeh, delicate lens flare, a whisper of film grain.',
+  'Volumetric light with fine particles drifting through the beams.',
+  'Rich micro-texture on every surface. Physically accurate light, real specular highlights, soft shadow falloff.',
+  'Elegant, expensive, restrained. Premium commercial cinematography.',
+].join(' ');
+
+/** どの案でも守る禁止事項。ここだけは緩めない。 */
+const HERO_COMMON = [
+  'No people, no faces, no hands, no bodies.',
+  'No text, no letters, no numbers, no logos, no watermark, no user interface, no on-screen graphics.',
+  'One continuous take. No cuts, no scene change, no whip pan, no zoom burst.',
+  'No audio.',
+].join(' ');
+
 export const HERO_VARIANTS = {
-  // 案A: 紙 = ページ。「ホームページ」の直訳的な比喩で、いちばん意味が近い。
+  // 案A: 紙 = ページ。マクロで繊維まで見せて、朝の斜光で影を作る。
   paper: [
-    'Cinematic ambient background loop for a website hero section.',
-    'Clean sheets of white paper float down and settle into a neat, perfectly aligned grid on a bright white surface.',
-    'Soft daylight from a large window, gentle soft-edged shadows, a few sheets still drifting into place.',
-    'Camera: locked off, almost still, an extremely slow drift.',
-    'High-key, airy, bright. White and pale sky-blue, soft pastel tones.',
-    'The sheets are completely blank.',
+    'Extreme macro, cinematic.',
+    'Thick sheets of heavy cotton paper with visible fibre texture and torn deckled edges drift down through a shaft of low morning sunlight and settle one by one into a precise aligned grid on a pale limestone surface.',
+    'The raking light catches the fibres and the paper edges glow; long soft shadows sweep and settle as each sheet lands.',
+    'Dust motes turn slowly in the sunbeam.',
+    'Camera: a slow, weighted dolly in, drifting just past the nearest sheet as it comes to rest.',
+    'Palette: warm white paper, pale limestone, a cool sky-blue bounce in the shadows.',
+    'The sheets are blank.',
   ],
-  // 案B: 光の線が矩形を描く。設計図が引かれていく感じ。
+  // 案B: 光そのものを被写体にする。ヘイズに通した光でしか出ない絵。
   blueprint: [
-    'Cinematic ambient background loop for a website hero section.',
-    'Thin luminous pale-blue lines draw themselves across a bright white surface, extending and meeting to form clean empty rectangular frames that stack into a calm ordered layout.',
-    'Soft glow where the lines cross, faint depth of field, everything precise and geometric.',
-    'Camera: locked off, almost still, an extremely slow drift.',
-    'High-key, airy, bright. White and pale sky-blue.',
-    'The frames stay completely empty.',
+    'Cinematic, atmospheric.',
+    'Thin blades of pale blue light cut through a haze-filled void, extending and meeting each other to draw luminous rectangular frames that glide into perfect alignment and lock into a calm architectural stack.',
+    'Where the beams cross they bloom; the haze carries the light so every beam has body and depth; fine particles drift across them.',
+    'Deep space falling away behind, bright core, gentle anamorphic streaks.',
+    'Camera: a slow crane move rising as the last frame locks into place.',
+    'Palette: pale cyan and white light against soft blue-grey depth.',
+    'The frames stay empty.',
   ],
-  // 案C: すりガラスの板が重なる。レイヤーが積み重なってひとつになる感じ。
+  // 案C: 分厚いガラス。屈折・コースティクス・色収差で、素材の質感を出す。
   glass: [
-    'Cinematic ambient background loop for a website hero section.',
-    'Translucent frosted glass panels slide in from different directions and layer themselves into one aligned stack on a bright white surface.',
-    'Soft blue light refracting through the frosted edges, gentle caustics, smooth premium material.',
-    'Camera: locked off, almost still, an extremely slow drift.',
-    'High-key, airy, bright. White and pale sky-blue, soft pastel tones.',
-    'The panels are completely blank.',
+    'Extreme macro, cinematic.',
+    'Slabs of thick frosted glass with polished bevelled edges slide in from the darkness and layer themselves into one perfectly aligned stack on a bright surface.',
+    'Light refracts through the bevels into sharp caustics and faint chromatic fringing that ripple across the surface as the slabs settle; the frosted faces glow from within.',
+    'Camera: a slow orbit around the stack, the focus racking from the front bevel to the depths of the glass.',
+    'Palette: clear glass, cool sky-blue refraction, warm highlight on the bevels.',
+    'The glass is blank and unmarked.',
   ],
 } as const;
 
 export type HeroVariant = keyof typeof HERO_VARIANTS;
-
-/** 全案に共通で付ける禁止条件。Veoが崩しやすいものをまとめて弾く。 */
-const HERO_COMMON = [
-  'No people, no faces, no hands, no bodies.',
-  'No cuts, no scene change, no zoom burst, no camera shake.',
-  'No text, no letters, no numbers, no logos, no watermark, no user interface, no on-screen graphics.',
-  'Nothing dark: no black areas, no heavy shadows, no vignette.',
-];
 
 export function isHeroVariant(v: string): v is HeroVariant {
   return Object.prototype.hasOwnProperty.call(HERO_VARIANTS, v);
@@ -105,7 +126,7 @@ export function heroVariantPath(v: HeroVariant): string {
 }
 
 export function buildHeroVariantPrompt(v: HeroVariant): string {
-  return [...HERO_VARIANTS[v], ...HERO_COMMON].join(' ');
+  return [...HERO_VARIANTS[v], CINEMA, HERO_COMMON].join(' ');
 }
 
 /**

@@ -33,6 +33,9 @@ export default function HeroPreviewPage() {
   const [denied, setDenied] = useState(false);
   const [sel, setSel] = useState<string | null>(null);
   const [opacity, setOpacity] = useState(30);
+  // 可読性は映像側ではなくここで解く。映像を退屈にして解かない。
+  const [blur, setBlur] = useState(0);
+  const [gray, setGray] = useState(0);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -66,7 +69,9 @@ export default function HeroPreviewPage() {
     const r = await api({ action: 'promote-hero', variant: sel });
     const j = await r.json();
     setBusy(false);
-    setMsg(r.ok ? `「${LABEL[sel] ?? sel}」を決定版にしました。不透明度は ${opacity}% を採用値として伝えてください。` : `失敗: ${j.error ?? r.status}`);
+    setMsg(r.ok
+      ? `「${LABEL[sel] ?? sel}」を決定版にしました。見た目の設定は 濃さ${opacity}% / ぼかし${blur}px / 彩度を落とす${gray}% です。この3つを伝えてください。`
+      : `失敗: ${j.error ?? r.status}`);
   };
 
   if (denied) {
@@ -100,15 +105,26 @@ export default function HeroPreviewPage() {
               >{LABEL[v.variant] ?? v.variant}</button>
             ))}
           </div>
-          <label className="flex items-center gap-2 text-sm ml-auto">
-            濃さ
-            <input
-              type="range" min={0} max={60} value={opacity}
-              onChange={e => setOpacity(Number(e.target.value))}
-              className="w-32"
-            />
-            <span className="tabular-nums w-10">{opacity}%</span>
-          </label>
+          <div className="flex flex-wrap items-center gap-4 ml-auto">
+            <label className="flex items-center gap-2 text-sm">
+              濃さ
+              <input type="range" min={0} max={80} value={opacity}
+                onChange={e => setOpacity(Number(e.target.value))} className="w-24" />
+              <span className="tabular-nums w-10">{opacity}%</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              ぼかし
+              <input type="range" min={0} max={12} value={blur}
+                onChange={e => setBlur(Number(e.target.value))} className="w-20" />
+              <span className="tabular-nums w-10">{blur}px</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              彩度↓
+              <input type="range" min={0} max={100} value={gray}
+                onChange={e => setGray(Number(e.target.value))} className="w-20" />
+              <span className="tabular-nums w-10">{gray}%</span>
+            </label>
+          </div>
           <button
             onClick={promote}
             disabled={!sel || busy}
@@ -127,7 +143,7 @@ export default function HeroPreviewPage() {
               src={current.url}
               autoPlay muted loop playsInline preload="auto"
               className="w-full h-full object-cover"
-              style={{ opacity: opacity / 100 }}
+              style={{ opacity: opacity / 100, filter: `blur(${blur}px) grayscale(${gray}%)`, transform: blur ? `scale(${1 + blur / 100})` : undefined }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-sky-50/85" />
           </div>
@@ -163,8 +179,9 @@ export default function HeroPreviewPage() {
         <h2 className="font-bold text-gray-900 mb-2">見るべき点</h2>
         <ul className="list-disc pl-5 space-y-1 mb-6">
           <li>見出しが読みにくくなっていないか（濃さを上げて限界を探る）</li>
-          <li>暗い部分が出ていないか。ページ全体が明るい配色なので浮く</li>
-          <li>動きが強すぎて視線を持っていかれないか</li>
+          <li>暗い部分は禁止していない。濃さ・ぼかし・彩度で見出しを守れるかを見る</li>
+          <li>動きが強すぎて視線を持っていかれないか（強ければぼかしを上げる）</li>
+          <li>安っぽくないか。素材の質感・光の落ち方・奥行きが出ているか</li>
           <li>「組み上がっている」と読めるか。ただ浮いているだけなら没</li>
           <li>文字やUIらしきものが写り込んでいないか（Veoは文字を書けない）</li>
         </ul>
