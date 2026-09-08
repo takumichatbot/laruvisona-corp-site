@@ -59,8 +59,15 @@ test('LPのファーストビューに3D(WebGL)を載せない', () => {
   assert.equal(/@react-three|from 'three'|Canvas\//.test(src), false, 'three系がLPに混ざっている');
 });
 
-test('ファーストビューの背景は映像1枚に絞る', () => {
+// 背景映像も外した。Veoで作った1本が「開店前の無人の店内」で、
+// 業種ショーケース用の6本と同じジャンルだった。HPを作るサービスの
+// ファーストビューで「お客さんのお店」を流しても商品の説明にならない。
+// 3Dを外したのと同じ理由。素材と配信経路は残してあるので復帰は数行。
+test('ファーストビューは装飾レイヤーを重ねない', () => {
   const at = src.indexOf('<section ref={heroRef}');
-  const hero = src.slice(at, at + 1200);
-  assert.match(hero, /<HeroBackgroundVideo \/>/);
+  const hero = src.slice(at, at + 1400);
+  assert.equal(/<HeroBackgroundVideo/.test(hero), false, '背景映像が戻っている');
+  assert.equal(/<LaruHPScene/.test(hero), false, '3Dが戻っている');
+  // 下地（放射グラデ・ぼかし円・グリッド）は残す。ここが無いと素っ気なくなる
+  assert.match(hero, /radial-gradient\(ellipse_at_top/, 'ファーストビューの下地が消えている');
 });

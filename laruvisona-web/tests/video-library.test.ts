@@ -91,27 +91,30 @@ test('動画は自社LP専用で、顧客サイト生成には使わない', () 
 const lpSrc = read('../app/laruHP/page.tsx');
 const publicRoute2 = read('../app/api/library-video/route.ts');
 
-// HeroBackgroundVideo 本体だけを切り出す（後ろに続く LoopVideo は含めない）
-const heroComp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
-// 実際に <video> を描いている共通部品
+// 実際に <video> を描いている共通部品（業種ショーケースが使う）
 const loopComp = lpSrc.slice(lpSrc.indexOf('function LoopVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
 
-test('ヒーロー映像は先頭の描画を邪魔しない', () => {
-  assert.match(heroComp, /document\.readyState === 'complete'/, '描画完了を待たずに読み込んでいる');
-  assert.match(heroComp, /addEventListener\('load', start/, 'load を待っていない');
+// ── LPのファーストビューには映像を敷かない ────────────────────
+// Veoで作った lp-hero.mp4 は「開店前の無人の店内」で、業種ショーケース用の
+// 6本と同じジャンルだった。「HPを作るサービス」のファーストビューで
+// 「お客さんのお店」を流しても、商品の説明にならない。3Dを外したのと
+// 同じ理由で外している。素材と配信経路は残してあるので復帰は数行。
+test('LPのファーストビューに背景映像を敷かない', () => {
+  assert.equal(/HeroBackgroundVideo/.test(lpSrc), false, 'ヒーロー映像が戻っている');
+  // コメント中の説明は許す。実際に取りに行く文字列リテラルが無いことを見る
+  assert.equal(/['\`"][^'\`"\n]*library-video\?target=lp-hero/.test(lpSrc), false,
+    'LPからLP用動画を読みに行っている');
 });
 
-test('背景ループ映像は preload="none" にしない（本番で再生されなくなる）', () => {
-  // Chrome は preload="none" を尊重して1バイトも読まないため、autoPlay が
-  // あっても readyState が 0 のまま止まり、canplay が来ず永久に opacity:0 に
-  // なる。本番のLPで実際にこれが起きていた。
-  // ここに来る時点で「動きを減らす設定でない・省データでない・2gでない・
-  // 動画が存在する」ことは確認済みなので preload は auto でよい。
-  assert.equal(/preload="none"/.test(loopComp), false, 'preload="none" だと読み込みが始まらない');
-  assert.match(loopComp, /preload="auto"/);
-  assert.match(loopComp, /\.play\(\)/, 'autoPlay 属性だけに頼らず play() も呼ぶこと');
-  assert.match(loopComp, /catch\(/, 'play() が拒否されたときに握りつぶすこと');
-  assert.match(loopComp, /el\.muted = true/, 'ミュートを属性だけに頼らないこと');
+test('業種ショーケース側の映像は残す（あちらは意味が合っている）', () => {
+  assert.match(lpSrc, /function ShowcaseHeroMedia/);
+  assert.match(lpSrc, /\/api\/library-video\?industry=/);
+  assert.match(lpSrc, /<LoopVideo/);
+});
+
+test('LP用動画の素材と配信経路は残す（内容を決め直したら戻せるように）', () => {
+  assert.match(read('../lib/veo-prompt.ts'), /HERO_VIDEO_PATH = 'videos\/lp-hero\.mp4'/);
+  assert.match(publicRoute2, /target === 'lp-hero'/);
 });
 
 test('タブが裏のときは再生しない（読み込みが止まるため）', () => {
@@ -130,24 +133,19 @@ test('表示の合図は canplay だけに頼らない', () => {
   assert.match(loopComp, /onCanPlay=\{onReady\}/);
 });
 
-test('動きを減らす設定・通信量節約・低速回線では読まない', () => {
-  const comp = heroComp;
-  assert.match(comp, /prefers-reduced-motion: reduce/);
-  assert.match(comp, /conn\?\.saveData/);
-  assert.match(comp, /2g\$\/\.test\(conn\.effectiveType\)/);
+// ショーケース側（業種別の映像）の条件。ここは残っている。
+const showComp = lpSrc.slice(lpSrc.indexOf('function ShowcaseHeroMedia'), lpSrc.indexOf('export default function LaruHPLandingPage'));
+
+test('ショーケース映像は動きを減らす設定・スマホでは読まない', () => {
+  assert.match(showComp, /prefers-reduced-motion: reduce/);
+  assert.match(showComp, /min-width: 768px/, 'スマホに通信量を使わせない条件が無い');
+  assert.match(showComp, /IntersectionObserver/, '画面に入る前から読み込んでいる');
 });
 
-test('映像が無くても失敗しても、絵は消えない', () => {
-  assert.match(heroComp, /if \(!src\) return null;/, '取得できないときに何か描いてしまう');
-  assert.match(heroComp, /onFail=\{\(\) => setSrc\(null\)\}/, '再生失敗で黒い箱が残る');
+test('映像が取れなくても静止画は消えない', () => {
+  assert.match(showComp, /backgroundImage: `url\(\$\{libHero\(industry\)\}\)`/, '下地の静止画が無い');
+  assert.match(showComp, /onFail=\{\(\) => setVideoSrc\(null\)\}/, '再生失敗で黒い箱が残る');
   assert.match(loopComp, /onError=\{onFail\}/, '再生失敗が上に伝わっていない');
-});
-
-test('見出しの可読性を映像より優先する', () => {
-  const comp = heroComp;
-  assert.match(comp, /opacity-30/, '映像が濃すぎて文字が読みにくい');
-  assert.match(comp, /bg-gradient-to-b from-sky-50\//, '文字を守る膜が無い');
-  assert.match(comp, /aria-hidden="true"/, '装飾が読み上げ対象になっている');
 });
 
 test('ヒーロー映像も公開側では生成しない', () => {
