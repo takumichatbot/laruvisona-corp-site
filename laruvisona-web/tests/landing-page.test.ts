@@ -63,10 +63,11 @@ test('LPのファーストビューに3D(WebGL)を載せない', () => {
 // 業種ショーケース用の6本と同じジャンルだった。HPを作るサービスの
 // ファーストビューで「お客さんのお店」を流しても商品の説明にならない。
 // 3Dを外したのと同じ理由。素材と配信経路は残してあるので復帰は数行。
-test('ファーストビューは装飾レイヤーを重ねない', () => {
+test('ファーストビューに重ねる装飾は映像1枚だけ', () => {
   const at = src.indexOf('<section ref={heroRef}');
   const hero = src.slice(at, at + 1400);
-  assert.equal(/<HeroBackgroundVideo/.test(hero), false, '背景映像が戻っている');
+  assert.match(hero, /<HeroBackgroundVideo \/>/, '採用した映像が敷かれていない');
+  // 3Dは外したまま。映像と3Dが二重に重なるのが元の問題だった
   assert.equal(/<LaruHPScene/.test(hero), false, '3Dが戻っている');
   // 下地（放射グラデ・ぼかし円・グリッド）は残す。ここが無いと素っ気なくなる
   assert.match(hero, /radial-gradient\(ellipse_at_top/, 'ファーストビューの下地が消えている');

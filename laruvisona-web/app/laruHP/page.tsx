@@ -165,20 +165,71 @@ const COLOR_NUM: Record<string, string> = {
   indigo: 'text-indigo-400', emerald: 'text-emerald-400', cyan: 'text-cyan-400',
 };
 
-// ファーストビューの背景映像は、いったん外している。
+// ファーストビューの背景映像。
 //
-// Veoで1本作って敷いていたが、内容が「開店前の無人の店内」で、
-// 業種ショーケース用に作った6本と同じジャンルだった。つまり
-// 「HPを作るサービス」のファーストビューで「お客さんのお店」を流しており、
-// 商品の説明を何もしていなかった。3Dを外したのと同じ理由で外す。
+// 採用したのは「画面でHPが組み上がる」の1本（Veo 3.1 / 1920x1080 / 8秒）。
+// ノートPCの画面でバナー・カード・画像パネルが順に収まってページが完成する、
+// つまりこのサービスがやることそのものを映している。
+// 前に載せていた「開店前の無人の店内」は、業種ショーケース用の映像と
+// 見分けがつかず、商品の説明を何もしていなかったので外した。
 //
-// 素材(videos/lp-hero.mp4)と配信経路(/api/library-video?target=lp-hero)は
-// 残してあるので、内容を決め直したら復帰は数行。
-// 下地の放射グラデーション＋ぼかし円＋グリッドは元からあるので、
-// 映像が無くてもファーストビューは成立する。
+// 読み込みの条件（1つでも外れたら映像は読まない。下地だけで成立する）:
+//   - 先頭の描画が終わってから（LCPと取り合わない）
+//   - 動きを減らす設定でない
+//   - 通信量の節約設定でない、2g回線でない
+//   - 画面幅 1024px 以上。スマホには5MBを一切読ませない。
+//     ここが実はいちばん効く。モバイルの通信量はゼロになる
+//   - 実際にファイルが存在する（HEADで確認）
 //
-// 業種ショーケース側の映像は残す。あちらは「その業種のお店」を映すのが
-// まさに正しい場所なので、意味が合っている。
+// 見え方は3つの数字で決める。映像を弱いものに差し替えるのではなく、
+// ここで抑える。可読性は常に映像より優先する。
+const HERO_VIDEO_OPACITY = 0.30;
+const HERO_VIDEO_BLUR_PX = 0;
+const HERO_VIDEO_GRAYSCALE = 0;
+
+function HeroBackgroundVideo() {
+  const [src, setSrc] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    // スマホには読ませない。5MBの装飾に通信量を使わせない
+    if (!window.matchMedia?.('(min-width: 1024px)').matches) return;
+    const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (conn?.saveData) return;
+    if (typeof conn?.effectiveType === 'string' && /(^|-)2g$/.test(conn.effectiveType)) return;
+
+    const url = '/api/library-video?target=lp-hero';
+    const start = () => {
+      fetch(url, { method: 'HEAD' })
+        .then(r => { if (r.ok) setSrc(url); })
+        .catch(() => { /* 無ければ下地のまま */ });
+    };
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+    return () => window.removeEventListener('load', start);
+  }, []);
+
+  if (!src) return null;
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
+      <LoopVideo
+        src={src}
+        onReady={() => setReady(true)}
+        onFail={() => setSrc(null)}
+        className="w-full h-full object-cover transition-opacity duration-[1200ms]"
+        style={{
+          opacity: ready ? HERO_VIDEO_OPACITY : 0,
+          filter: `blur(${HERO_VIDEO_BLUR_PX}px) grayscale(${HERO_VIDEO_GRAYSCALE}%)`,
+          // ぼかすと縁が透けるので、そのぶん拡大して隠す
+          transform: HERO_VIDEO_BLUR_PX ? `scale(${1 + HERO_VIDEO_BLUR_PX / 100})` : undefined,
+        }}
+      />
+      {/* 見出しの可読性を守る膜。映像より文字を優先する */}
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-sky-50/85" />
+    </div>
+  );
+}
 
 // 背景ループ映像の共通部品。
 //
@@ -190,9 +241,10 @@ const COLOR_NUM: Record<string, string> = {
 // 動画が存在する」ことは確認済みなので、preload は auto にしてよい。
 // さらに autoPlay 属性だけに頼らず play() も自分で呼ぶ（ミュート再生は
 // 自動再生ポリシー上許可されるが、拒否されても catch して静止画に戻る）。
-function LoopVideo({ src, className, onReady, onFail }: {
+function LoopVideo({ src, className, style, onReady, onFail }: {
   src: string;
   className: string;
+  style?: React.CSSProperties;
   onReady?: () => void;
   onFail?: () => void;
 }) {
@@ -232,6 +284,7 @@ function LoopVideo({ src, className, onReady, onFail }: {
       onCanPlay={onReady}
       onError={onFail}
       className={className}
+      style={style}
     />
   );
 }
@@ -462,6 +515,7 @@ setTimeout(function(){
 
       {/* Hero */}
       <section ref={heroRef} className="pt-28 md:pt-36 pb-16 md:pb-28 px-6 text-center relative overflow-hidden">
+        <HeroBackgroundVideo />
 
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.12),transparent_65%)]" />

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { IMAGE_INDUSTRIES, getAdminStorage, getGeminiKey } from '@/lib/imagen';
 import { generateVeoToStorage, listAvailableModels, videoStoragePath } from '@/lib/veo';
+import { faststart } from '@/lib/mp4-faststart';
 import {
   HERO_VIDEO_PATH, buildHeroVideoPrompt,
   HERO_VARIANTS, isHeroVariant, heroVariantPath, buildHeroVariantPrompt,
@@ -24,6 +25,7 @@ import {
 //   { target: 'lp-hero', variant: 'paper' }      … 候補 videos/lp-hero-paper.mp4 を作る
 //   { action: 'list-hero-variants' }             … 候補の一覧と、あるかどうか（生成しない）
 //   { action: 'promote-hero', variant: 'paper' } … 選んだ候補を lp-hero.mp4 にコピー（生成しない）
+//   { action: 'faststart-hero' }                 … lp-hero.mp4 の moov を先頭へ移す（生成しない）
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -50,7 +52,7 @@ export async function POST(req: Request) {
   const { industry, overwrite = false, durationSeconds = '4', model, action, target, variant, resolution } =
     await req.json().catch(() => ({})) as {
       industry?: string; overwrite?: boolean; durationSeconds?: '4' | '6' | '8';
-      model?: string; action?: 'list-models' | 'list-hero-variants' | 'promote-hero';
+      model?: string; action?: 'list-models' | 'list-hero-variants' | 'promote-hero' | 'faststart-hero';
       target?: 'lp-hero'; variant?: string; resolution?: '720p' | '1080p';
     };
 
@@ -73,6 +75,30 @@ export async function POST(req: Request) {
         exists: names.has('lp-hero.mp4'),
         url: admin0.storage.from('site-images').getPublicUrl(HERO_VIDEO_PATH).data.publicUrl,
       },
+    });
+  }
+
+  // 決定版の moov を先頭へ移す。Veoの出力は moov が末尾にあるため、
+  // ブラウザが索引を読むのにファイル末尾まで往復してしまう。生成はしない。
+  if (action === 'faststart-hero') {
+    const admin0 = getAdminStorage();
+    const { data: blob, error: dlErr } = await admin0.storage.from('site-images').download(HERO_VIDEO_PATH);
+    if (dlErr || !blob) return NextResponse.json({ error: '決定版が見つかりません' }, { status: 404 });
+    const before = Buffer.from(await blob.arrayBuffer());
+    const r = faststart(before);
+    if (!r.changed) {
+      return NextResponse.json({ ok: true, changed: false, reason: r.reason, atoms: r.atoms, bytes: before.length });
+    }
+    const { error: upErr } = await admin0.storage.from('site-images')
+      .upload(HERO_VIDEO_PATH, r.buffer, { contentType: 'video/mp4', upsert: true });
+    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+    return NextResponse.json({
+      ok: true, changed: true,
+      atomsBefore: r.atoms,
+      atomsAfter: faststart(r.buffer).atoms,
+      moovWasAtByte: r.moovWasAt,
+      bytes: r.buffer.length,
+      sameSize: r.buffer.length === before.length,
     });
   }
 

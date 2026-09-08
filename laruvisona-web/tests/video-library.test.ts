@@ -99,11 +99,25 @@ const loopComp = lpSrc.slice(lpSrc.indexOf('function LoopVideo'), lpSrc.indexOf(
 // 6本と同じジャンルだった。「HPを作るサービス」のファーストビューで
 // 「お客さんのお店」を流しても、商品の説明にならない。3Dを外したのと
 // 同じ理由で外している。素材と配信経路は残してあるので復帰は数行。
-test('LPのファーストビューに背景映像を敷かない', () => {
-  assert.equal(/HeroBackgroundVideo/.test(lpSrc), false, 'ヒーロー映像が戻っている');
-  // コメント中の説明は許す。実際に取りに行く文字列リテラルが無いことを見る
-  assert.equal(/['\`"][^'\`"\n]*library-video\?target=lp-hero/.test(lpSrc), false,
-    'LPからLP用動画を読みに行っている');
+test('ファーストビューの映像はスマホに読ませない', () => {
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
+  // 5MBの装飾。モバイルの通信量をゼロにするのがいちばん効く
+  assert.match(comp, /min-width: 1024px/, 'スマホ除外の条件が無い');
+  assert.match(comp, /prefers-reduced-motion: reduce/);
+  assert.match(comp, /conn\?\.saveData/);
+  assert.match(comp, /2g\$\/\.test\(conn\.effectiveType\)/);
+  assert.match(comp, /addEventListener\('load', start/, '先頭の描画を待っていない');
+});
+
+test('見え方は3つの数字で決める（映像を弱いものに差し替えない）', () => {
+  assert.match(lpSrc, /const HERO_VIDEO_OPACITY = /);
+  assert.match(lpSrc, /const HERO_VIDEO_BLUR_PX = /);
+  assert.match(lpSrc, /const HERO_VIDEO_GRAYSCALE = /);
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
+  assert.match(comp, /bg-gradient-to-b from-sky-50\//, '文字を守る膜が無い');
+  assert.match(comp, /aria-hidden="true"/, '装飾が読み上げ対象になっている');
+  assert.match(comp, /if \(!src\) return null;/, '取れないときに何か描いてしまう');
+  assert.match(comp, /onFail=\{\(\) => setSrc\(null\)\}/, '再生失敗で黒い箱が残る');
 });
 
 test('業種ショーケース側の映像は残す（あちらは意味が合っている）', () => {
