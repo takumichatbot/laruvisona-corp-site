@@ -210,3 +210,28 @@ test('候補の生成は決定版を上書きしない', () => {
   assert.match(heroBlock, /const path = variant \? heroVariantPath\(variant\) : HERO_VIDEO_PATH;/);
   assert.match(heroBlock, /!isHeroVariant\(variant\)/, 'variantの検証が無い');
 });
+
+// ── 候補を見比べる管理者ページ ──────────────────────────────────
+const preview = read('../app/laruHP/hero-preview/page.tsx');
+
+test('見比べページは本番と同じ条件で重ねて見せる', () => {
+  // 動画を単体で開いても、見出しの可読性は判断できない。
+  // 前回はそこを確かめずに1本に決めて、趣旨と違う映像を本番に載せた。
+  assert.match(preview, /最短5分で。/, '実際の見出しを再現していない');
+  assert.match(preview, /bg-gradient-to-b from-sky-50\//, '本番と同じ膜が無い');
+  assert.match(preview, /radial-gradient\(ellipse_at_top/, '本番と同じ下地が無い');
+  assert.match(preview, /opacity: opacity \/ 100/, '濃さを変えて限界を探れない');
+});
+
+test('見比べページは管理者以外に何も見せない', () => {
+  assert.match(preview, /r\.status === 403/);
+  assert.match(preview, /if \(denied\)/);
+  assert.equal(/lp-hero-(paper|glass|blueprint)\.mp4/.test(preview), false,
+    '候補URLをページに直書きしている（管理APIから受け取ること）');
+});
+
+test('見比べページ自体は動画を生成しない', () => {
+  assert.equal(/target: *'lp-hero'/.test(preview), false, 'ページから生成できてしまう');
+  assert.match(preview, /action: 'list-hero-variants'/);
+  assert.match(preview, /action: 'promote-hero'/);
+});
