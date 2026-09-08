@@ -106,7 +106,32 @@ test('ファーストビューの映像はスマホに読ませない', () => {
   assert.match(comp, /prefers-reduced-motion: reduce/);
   assert.match(comp, /conn\?\.saveData/);
   assert.match(comp, /2g\$\/\.test\(conn\.effectiveType\)/);
-  assert.match(comp, /addEventListener\('load', start/, '先頭の描画を待っていない');
+});
+
+test('動画を読む前に存在確認の往復をしない', () => {
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
+  // HEAD は /api/library-video → 302 → Supabase と1往復してから返る。
+  // その後にようやく動画の読み込みが始まるので、往復が丸ごと待ち時間になっていた。
+  assert.equal(/method: 'HEAD'/.test(comp), false, '存在確認の往復が復活している');
+  assert.match(comp, /requestIdleCallback/, 'ページが暇になった時点で読み始めていない');
+  assert.match(comp, /onFail=\{\(\) => setSrc\(null\)\}/, '無かったときに下地へ戻れない');
+});
+
+test('自動再生される装飾には止める手段がある（WCAG 2.2.2 レベルA）', () => {
+  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
+  // 自動的に始まり5秒を超えて動き続け、他のコンテンツと並行して出るものには
+  // 一時停止/停止/非表示の手段が要る。ループする背景映像はこれに該当する。
+  assert.match(comp, /aria-label=\{paused \?/, '停止ボタンに読み上げ名が無い');
+  assert.match(comp, /setPaused/, '止められない');
+  assert.match(comp, /min-h-\[44px\] min-w-\[44px\]/, 'タップ領域が小さい');
+  assert.match(comp, /focus-visible:outline/, 'キーボードで到達したときに見えない');
+  assert.match(lpSrc, /paused\?: boolean;/, 'LoopVideo が停止状態を受け取れない');
+});
+
+test('現れるまでの時間を短く保つ', () => {
+  assert.match(lpSrc, /const HERO_VIDEO_FADE_MS = /);
+  const m = lpSrc.match(/const HERO_VIDEO_FADE_MS = (\d+)/);
+  assert.ok(m && Number(m[1]) <= 700, `フェードが長すぎる（${m?.[1]}ms）。遅いと感じる原因になる`);
 });
 
 test('見え方は3つの数字で決める（映像を弱いものに差し替えない）', () => {

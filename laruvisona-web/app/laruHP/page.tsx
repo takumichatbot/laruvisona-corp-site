@@ -170,63 +170,86 @@ const COLOR_NUM: Record<string, string> = {
 // 採用したのは「画面でHPが組み上がる」の1本（Veo 3.1 / 1920x1080 / 8秒）。
 // ノートPCの画面でバナー・カード・画像パネルが順に収まってページが完成する、
 // つまりこのサービスがやることそのものを映している。
-// 前に載せていた「開店前の無人の店内」は、業種ショーケース用の映像と
-// 見分けがつかず、商品の説明を何もしていなかったので外した。
+//
+// 【出てくるのが遅かった件の原因】
+// 以前は動画を読む前に HEAD で存在確認していた。この HEAD は
+// /api/library-video → 302 → Supabase と1往復してから返ってくるので、
+// 動画の読み込みが始まるのはその後。往復が丸ごと無駄だった。
+// いまは src を直接渡し、無ければ onError で下地に戻す。
+// 開始の合図も window.load から requestIdleCallback（最大800ms待ち）に変え、
+// ページが暇になった時点ですぐ読み始める。
 //
 // 読み込みの条件（1つでも外れたら映像は読まない。下地だけで成立する）:
-//   - 先頭の描画が終わってから（LCPと取り合わない）
 //   - 動きを減らす設定でない
 //   - 通信量の節約設定でない、2g回線でない
-//   - 画面幅 1024px 以上。スマホには5MBを一切読ませない。
-//     ここが実はいちばん効く。モバイルの通信量はゼロになる
-//   - 実際にファイルが存在する（HEADで確認）
+//     ※ ただし Safari は Network Information API 非対応なので、
+//       iPhone ではこの判定は効かない。回線判定を頼りにはできない。
+//   - 画面幅 1024px 以上
 //
-// 見え方は3つの数字で決める。映像を弱いものに差し替えるのではなく、
-// ここで抑える。可読性は常に映像より優先する。
-const HERO_VIDEO_OPACITY = 0.30;
+// 見え方は3つの数字で決める。映像を弱いものに差し替えるのではなく、ここで抑える。
+const HERO_VIDEO_OPACITY = 0.34;
 const HERO_VIDEO_BLUR_PX = 0;
 const HERO_VIDEO_GRAYSCALE = 0;
+/** 現れるまでの時間。長いと「遅い」と感じる */
+const HERO_VIDEO_FADE_MS = 500;
 
 function HeroBackgroundVideo() {
   const [src, setSrc] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    // スマホには読ませない。5MBの装飾に通信量を使わせない
     if (!window.matchMedia?.('(min-width: 1024px)').matches) return;
     const conn = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     if (conn?.saveData) return;
     if (typeof conn?.effectiveType === 'string' && /(^|-)2g$/.test(conn.effectiveType)) return;
 
-    const url = '/api/library-video?target=lp-hero';
-    const start = () => {
-      fetch(url, { method: 'HEAD' })
-        .then(r => { if (r.ok) setSrc(url); })
-        .catch(() => { /* 無ければ下地のまま */ });
-    };
-    if (document.readyState === 'complete') start();
-    else window.addEventListener('load', start, { once: true });
-    return () => window.removeEventListener('load', start);
+    // 存在確認はしない。無ければ onError で下地に戻る（往復1回ぶん速い）
+    const start = () => setSrc('/api/library-video?target=lp-hero');
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
+      .requestIdleCallback;
+    if (ric) { ric(start, { timeout: 800 }); return; }
+    const t = setTimeout(start, 300);
+    return () => clearTimeout(t);
   }, []);
 
   if (!src) return null;
   return (
-    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
-      <LoopVideo
-        src={src}
-        onReady={() => setReady(true)}
-        onFail={() => setSrc(null)}
-        className="w-full h-full object-cover transition-opacity duration-[1200ms]"
-        style={{
-          opacity: ready ? HERO_VIDEO_OPACITY : 0,
-          filter: `blur(${HERO_VIDEO_BLUR_PX}px) grayscale(${HERO_VIDEO_GRAYSCALE}%)`,
-          // ぼかすと縁が透けるので、そのぶん拡大して隠す
-          transform: HERO_VIDEO_BLUR_PX ? `scale(${1 + HERO_VIDEO_BLUR_PX / 100})` : undefined,
-        }}
-      />
-      {/* 見出しの可読性を守る膜。映像より文字を優先する */}
-      <div className="absolute inset-0 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-sky-50/85" />
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <LoopVideo
+          src={src}
+          paused={paused}
+          onReady={() => setReady(true)}
+          onFail={() => setSrc(null)}
+          className="w-full h-full object-cover transition-opacity"
+          style={{
+            opacity: ready ? HERO_VIDEO_OPACITY : 0,
+            transitionDuration: `${HERO_VIDEO_FADE_MS}ms`,
+            filter: `blur(${HERO_VIDEO_BLUR_PX}px) grayscale(${HERO_VIDEO_GRAYSCALE}%)`,
+            transform: HERO_VIDEO_BLUR_PX ? `scale(${1 + HERO_VIDEO_BLUR_PX / 100})` : undefined,
+          }}
+        />
+        {/* 見出しの可読性を守る膜。濃くしすぎると映像がぼやけて見えるので、
+            文字が読める範囲でいちばん薄くする */}
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-50/45 via-sky-50/25 to-sky-50/75" />
+      </div>
+
+      {/* WCAG 2.2.2（レベルA）: 自動再生され5秒を超えて動き続ける装飾には、
+          止める手段が要る。目立たせないが、キーボードでも到達できるようにする。 */}
+      {ready && (
+        <button
+          type="button"
+          onClick={() => setPaused(p => !p)}
+          aria-label={paused ? '背景の映像を再生する' : '背景の映像を止める'}
+          className="absolute bottom-3 right-3 z-20 min-h-[44px] min-w-[44px] grid place-items-center rounded-full bg-white/70 hover:bg-white text-slate-500 hover:text-slate-800 backdrop-blur-sm border border-slate-200/70 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+        >
+          {paused
+            ? <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+            : <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>}
+        </button>
+      )}
     </div>
   );
 }
@@ -241,10 +264,12 @@ function HeroBackgroundVideo() {
 // 動画が存在する」ことは確認済みなので、preload は auto にしてよい。
 // さらに autoPlay 属性だけに頼らず play() も自分で呼ぶ（ミュート再生は
 // 自動再生ポリシー上許可されるが、拒否されても catch して静止画に戻る）。
-function LoopVideo({ src, className, style, onReady, onFail }: {
+function LoopVideo({ src, className, style, paused, onReady, onFail }: {
   src: string;
   className: string;
   style?: React.CSSProperties;
+  /** 利用者が止めているあいだは再生しない（WCAG 2.2.2） */
+  paused?: boolean;
   onReady?: () => void;
   onFail?: () => void;
 }) {
@@ -260,6 +285,7 @@ function LoopVideo({ src, className, style, onReady, onFail }: {
     // 見えているときだけ再生し、隠れたら止める。
     // 通信量とバッテリーの節約にもなる。
     const tryPlay = () => {
+      if (paused) { el.pause(); return; }
       if (document.visibilityState !== 'visible') return;
       const p = el.play();
       if (p && typeof p.catch === 'function') p.catch(() => { /* 自動再生拒否。下地のまま */ });
@@ -271,7 +297,7 @@ function LoopVideo({ src, className, style, onReady, onFail }: {
     tryPlay();
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [src]);
+  }, [src, paused]);
 
   return (
     <video
