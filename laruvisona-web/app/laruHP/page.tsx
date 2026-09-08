@@ -231,8 +231,23 @@ function LoopVideo({ src, className, onReady, onFail }: {
     const el = ref.current;
     if (!el) return;
     el.muted = true;                     // 属性だけだと効かないブラウザがある
-    const p = el.play();
-    if (p && typeof p.catch === 'function') p.catch(() => { /* 自動再生拒否。静止画のまま */ });
+
+    // タブが裏にある間、ブラウザは映像の読み込み自体を止める。
+    // その状態で play() を呼んでも readyState が 0 のまま進まないので、
+    // 見えているときだけ再生し、隠れたら止める。
+    // 通信量とバッテリーの節約にもなる。
+    const tryPlay = () => {
+      if (document.visibilityState !== 'visible') return;
+      const p = el.play();
+      if (p && typeof p.catch === 'function') p.catch(() => { /* 自動再生拒否。下地のまま */ });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') tryPlay();
+      else el.pause();
+    };
+    tryPlay();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [src]);
 
   return (

@@ -114,6 +114,16 @@ test('背景ループ映像は preload="none" にしない（本番で再生さ�
   assert.match(loopComp, /el\.muted = true/, 'ミュートを属性だけに頼らないこと');
 });
 
+test('タブが裏のときは再生しない（読み込みが止まるため）', () => {
+  // ブラウザは非表示タブの映像読み込みを止めるので、その状態で play() を
+  // 呼んでも readyState 0 のまま進まない。見えているときだけ再生し、
+  // 隠れたら止める。通信量とバッテリーの節約にもなる。
+  assert.match(loopComp, /document\.visibilityState !== 'visible'/);
+  assert.match(loopComp, /addEventListener\('visibilitychange'/);
+  assert.match(loopComp, /el\.pause\(\)/);
+  assert.match(loopComp, /removeEventListener\('visibilitychange'/, '後片付けをしていない');
+});
+
 test('表示の合図は canplay だけに頼らない', () => {
   assert.match(loopComp, /onLoadedData=\{onReady\}/);
   assert.match(loopComp, /onPlaying=\{onReady\}/);
