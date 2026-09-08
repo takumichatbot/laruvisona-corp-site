@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/api-error';
 
 // Simple in-memory rate limiter: max 5 subscribe requests per IP per hour
 const _subRateMap = new Map<string, number[]>();
@@ -42,7 +43,11 @@ export async function POST(req: Request) {
       { onConflict: 'site_id,email' }
     );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    // このAPIは未認証で叩けるので、DBのエラー文（テーブル名や制約名が入る）は返さない
+    logError('newsletter/subscribe', error);
+    return NextResponse.json({ error: '登録に失敗しました。時間をおいて再度お試しください。' }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

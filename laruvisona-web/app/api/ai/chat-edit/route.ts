@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { logError } from '@/lib/api-error';
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -61,7 +62,7 @@ actionsが不要な場合（質問への回答のみ）は空配列にしてく�
     return NextResponse.json({ reply: parsed.reply || '', actions: parsed.actions || [] });
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : String(e);
-    console.error('chat-edit error', errorMsg);
+    logError('ai/chat-edit', e);
 
     if (errorMsg.includes('blocked by content filtering policy') || errorMsg.includes('content_policy_violation')) {
       return NextResponse.json({

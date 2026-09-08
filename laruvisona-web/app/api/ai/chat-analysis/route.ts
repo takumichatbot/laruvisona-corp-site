@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { safeErrorMessage, logError } from '@/lib/api-error';
 
 // POST /api/ai/chat-analysis
 // Analyzes LARUbot conversation history to extract FAQs and pain points
@@ -142,6 +143,7 @@ faqs: 上位5件、painPoints: 上位3件、popularTopics: 上位5件。`;
 
     return NextResponse.json({ ok: true, analysis, analyzedAt: new Date().toISOString() });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    logError('ai/chat-analysis', e);
+    return NextResponse.json({ error: safeErrorMessage(e) }, { status: 500 });
   }
 }

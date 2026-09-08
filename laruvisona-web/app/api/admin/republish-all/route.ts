@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { exportToHTML, EXPORT_VERSION } from '@/lib/html-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
+import { redact, logError } from '@/lib/api-error';
 
 // 全公開サイトの published_html を最新の html-export で一括再生成する。
 // html-export.ts を修正した際、各オーナーの手動再公開を待たずに反映させるためのエンドポイント。
@@ -69,7 +70,8 @@ export async function POST(req: Request) {
       if (site.slug) revalidatePath(`/hp/${site.slug}`);
       results.push({ id: site.id, slug: site.slug, ok: true });
     } catch (e) {
-      results.push({ id: site.id, slug: site.slug, ok: false, error: e instanceof Error ? e.message : String(e) });
+      logError('admin/republish-all', e);
+      results.push({ id: site.id, slug: site.slug, ok: false, error: redact(e instanceof Error ? e.message : String(e)).slice(0, 300) });
     }
   }
 

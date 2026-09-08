@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { safeErrorMessage, logError } from '@/lib/api-error';
 
 // POST /api/ai/review-reply
 // body: { reviewText, reviewerName, rating, businessName, industry }
@@ -65,6 +66,7 @@ ${industry ? `- 業種: ${industry}` : ''}
     const parsed = JSON.parse(match[0]) as { replies: string[] };
     return NextResponse.json(parsed);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    logError('ai/review-reply', e);
+    return NextResponse.json({ error: safeErrorMessage(e) }, { status: 500 });
   }
 }

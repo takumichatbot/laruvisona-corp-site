@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAdmin } from '@/lib/adminAuth';
+import { safeErrorMessage, logError } from '@/lib/api-error';
 
 const client = new Anthropic();
 
@@ -108,6 +109,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ branches, synthesis, entanglement });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    logError('bridge/quantum', e);
+    return NextResponse.json({ error: safeErrorMessage(e) }, { status: 500 });
   }
 }

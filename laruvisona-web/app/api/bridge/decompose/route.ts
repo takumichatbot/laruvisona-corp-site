@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAdmin } from '@/lib/adminAuth';
+import { safeErrorMessage, logError } from '@/lib/api-error';
 
 const client = new Anthropic();
 
@@ -59,6 +60,7 @@ Rules:
 
     return NextResponse.json({ ...plan, parallelGroups });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    logError('bridge/decompose', e);
+    return NextResponse.json({ error: safeErrorMessage(e) }, { status: 500 });
   }
 }

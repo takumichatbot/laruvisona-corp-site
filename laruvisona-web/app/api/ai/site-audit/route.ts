@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { safeErrorMessage, logError } from '@/lib/api-error';
 
 // POST /api/ai/site-audit
 // body: { siteId }
@@ -127,6 +128,7 @@ impactはhigh/medium/lowのいずれか。scoreは各カテゴリの現状スコ
 
     return NextResponse.json({ ok: true, audit: result, auditedAt: new Date().toISOString() });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    logError('ai/site-audit', e);
+    return NextResponse.json({ error: safeErrorMessage(e) }, { status: 500 });
   }
 }
