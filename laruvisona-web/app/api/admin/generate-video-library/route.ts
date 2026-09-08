@@ -47,11 +47,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'GEMINI_API_KEY (or GOOGLE_AI_API_KEY) is not set' }, { status: 500 });
   }
 
-  const { industry, overwrite = false, durationSeconds = '4', model, action, target, variant } =
+  const { industry, overwrite = false, durationSeconds = '4', model, action, target, variant, resolution } =
     await req.json().catch(() => ({})) as {
       industry?: string; overwrite?: boolean; durationSeconds?: '4' | '6' | '8';
       model?: string; action?: 'list-models' | 'list-hero-variants' | 'promote-hero';
-      target?: 'lp-hero'; variant?: string;
+      target?: 'lp-hero'; variant?: string; resolution?: '720p' | '1080p';
     };
 
   // 診断: この鍵で使える動画モデルを確認する（モデルIDの取り違えを潰すため）
@@ -130,11 +130,12 @@ export async function POST(req: Request) {
       promptOverride: prompt,
       storagePathOverride: path,
       durationSeconds: durationSeconds || '8',
+      resolution,
       model,
     });
     const sec = Math.round((Date.now() - t0) / 1000);
     if (!r.url) return NextResponse.json({ target, variant: variant ?? null, ok: false, reason: r.reason, detail: r.detail, elapsedSec: sec }, { status: 502 });
-    return NextResponse.json({ target, variant: variant ?? null, ok: true, url: r.url, elapsedSec: sec, durationSeconds: durationSeconds || '8' });
+    return NextResponse.json({ target, variant: variant ?? null, ok: true, url: r.url, elapsedSec: sec, durationSeconds: durationSeconds || '8', resolution: r.usedResolution });
   }
 
   // 一括生成は用意しない。1リクエスト1業種に固定して、事故で全業種ぶんの費用が出ないようにする。
@@ -168,9 +169,9 @@ export async function POST(req: Request) {
     : null;
 
   const startedAt = Date.now();
-  const { url, reason, detail, usedSeed } = await generateVeoToStorage({ industry, seedImageUrl, durationSeconds, model });
+  const { url, reason, detail, usedSeed, usedResolution } = await generateVeoToStorage({ industry, seedImageUrl, durationSeconds, resolution, model });
   const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
 
   if (!url) return NextResponse.json({ industry, ok: false, reason, detail, elapsedSec, seedUsed: !!seedImageUrl }, { status: 502 });
-  return NextResponse.json({ industry, ok: true, url, elapsedSec, durationSeconds, seedUsed: !!usedSeed });
+  return NextResponse.json({ industry, ok: true, url, elapsedSec, durationSeconds, seedUsed: !!usedSeed, resolution: usedResolution });
 }

@@ -40,13 +40,18 @@ export async function generateVeoToStorage(opts: {
   storagePathOverride?: string;
   seedImageUrl?: string | null;
   durationSeconds?: '4' | '6' | '8';
+  /** 既定は 1080p。APIが受け付けない場合は自動で外して720pにフォールバックする */
+  resolution?: '720p' | '1080p';
   maxWaitMs?: number;
   model?: string;
-}): Promise<{ url: string | null; reason?: string; detail?: string; usedSeed?: boolean }> {
+}): Promise<{ url: string | null; reason?: string; detail?: string; usedSeed?: boolean; usedResolution?: string }> {
   const apiKey = getGeminiKey();
   if (!apiKey) return { url: null, reason: 'no_api_key' };
 
   const duration = opts.durationSeconds || '4';
+  // 解像度を指定しないと 720p になる。LPのファーストビューは横幅いっぱいに
+  // 引き伸ばすので、720p だと細い線やグラデーションの粗が出る。既定を1080pにする。
+  const wantResolution = opts.resolution || '1080p';
   const maxWait = opts.maxWaitMs ?? 4 * 60 * 1000;
 
   // 種画像（Imagenで作ったヒーロー）を JPEG にして渡す。webp のままだと受け付けない。
@@ -69,27 +74,52 @@ export async function generateVeoToStorage(opts: {
 
   // 1) 生成を開始（長時間処理なので即座に operation 名が返る）
   const model = opts.model || VEO_MODEL;
-  const startOnce = async (withImage: boolean) =>
+  const startOnce = async (withImage: boolean, withResolution: boolean) =>
     fetch(`${API_BASE}/models/${model}:predictLongRunning?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         instances: [{ prompt: opts.promptOverride || buildShowcaseVideoPrompt(opts.industry), ...(withImage && image ? { image } : {}) }],
-        parameters: { aspectRatio: '16:9', durationSeconds: Number(duration) },
+        parameters: {
+          aspectRatio: '16:9',
+          durationSeconds: Number(duration),
+          ...(withResolution ? { resolution: wantResolution } : {}),
+        },
       }),
     });
 
   let opName: string;
   let usedSeed = !!image;
+  let usedResolution: string = wantResolution;
   try {
-    let start = await startOnce(true);
+    let start = await startOnce(true, true);
+
+    // 解像度の指定が通らないモデル/プランなら、指定を外して720pで作り直す。
+    // 画質より「1本できること」を優先する。
+    if (!start.ok) {
+      const body = await start.text().catch(() => '');
+      if (start.status === 400 && /resolution/i.test(body)) {
+        usedResolution = '720p (resolution 指定が拒否された)';
+        start = await startOnce(true, false);
+      } else if (start.status === 400 && image && /image|inlineData|bytesBase64Encoded/i.test(body)) {
+        // 種画像が原因で弾かれたなら、画像なしで一度だけ作り直す。
+        // 絵柄の一致より「動画が1本できること」を優先する。
+        usedSeed = false;
+        start = await startOnce(false, true);
+      } else {
+        return {
+          url: null, reason: `start_failed_${start.status}`,
+          detail: body.replace(/key=[^&"\s]+/g, 'key=***').slice(0, 500),
+        };
+      }
+    }
+
+    // 解像度を外した結果まだ種画像で落ちる場合の、もう一段のフォールバック
     if (!start.ok && image) {
-      // 種画像が原因で弾かれたなら、画像なしで一度だけ作り直す。
-      // 絵柄の一致より「動画が1本できること」を優先する。
       const body = await start.text().catch(() => '');
       if (start.status === 400 && /image|inlineData|bytesBase64Encoded/i.test(body)) {
         usedSeed = false;
-        start = await startOnce(false);
+        start = await startOnce(false, usedResolution === wantResolution);
       } else {
         return {
           url: null, reason: `start_failed_${start.status}`,
@@ -141,7 +171,7 @@ export async function generateVeoToStorage(opts: {
     const { error } = await admin.storage.from('site-images')
       .upload(path, mp4, { contentType: 'video/mp4', upsert: true });
     if (error) return { url: null, reason: 'storage_upload_failed' };
-    return { url: admin.storage.from('site-images').getPublicUrl(path).data.publicUrl, usedSeed };
+    return { url: admin.storage.from('site-images').getPublicUrl(path).data.publicUrl, usedSeed, usedResolution };
   } catch {
     return { url: null, reason: 'download_error' };
   }

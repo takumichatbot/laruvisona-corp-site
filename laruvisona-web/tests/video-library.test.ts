@@ -235,3 +235,26 @@ test('見比べページ自体は動画を生成しない', () => {
   assert.match(preview, /action: 'list-hero-variants'/);
   assert.match(preview, /action: 'promote-hero'/);
 });
+
+// ── 解像度 ──────────────────────────────────────────────────────
+// 指定しないと Veo は 720p を返す。LPのファーストビューは横幅いっぱいに
+// 引き伸ばすので、細い線やグラデーションの粗が出る。既定を1080pにする。
+const veoSrc = read('../lib/veo.ts');
+
+test('解像度を指定しないまま投げない（既定1080p）', () => {
+  assert.match(veoSrc, /const wantResolution = opts\.resolution \|\| '1080p';/);
+  assert.match(veoSrc, /resolution: wantResolution/);
+});
+
+test('解像度が拒否されたら指定を外して作り直す', () => {
+  // モデルやプランによっては resolution を受け付けない。
+  // そこで諦めるのではなく、720pで1本作ることを優先する。
+  assert.match(veoSrc, /\/resolution\/i\.test\(body\)/);
+  assert.match(veoSrc, /startOnce\(true, false\)/);
+});
+
+test('実際に使われた解像度を呼び出し元に返す', () => {
+  // 「1080pのつもりが720pだった」を黙って通さないため
+  assert.match(veoSrc, /usedResolution/);
+  assert.match(adminRoute, /resolution: r\.usedResolution/);
+});
