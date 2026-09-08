@@ -2,11 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-const LaruHPScene = dynamic(() => import('@/components/Canvas/LaruHPScene'), { ssr: false });
 
 // ショーケースのモックに、業種画像ライブラリ(AI生成)の実写を敷く。
 // /api/library-image は未生成ならその場でImagen生成してリダイレクトする（セルフヒーリング）。
@@ -493,8 +491,6 @@ setTimeout(function(){
       <section ref={heroRef} className="pt-28 md:pt-36 pb-16 md:pb-28 px-6 text-center relative overflow-hidden">
         {/* 背景映像（読めたときだけ静かに現れる） */}
         <HeroBackgroundVideo />
-        {/* 3D scene background */}
-        <LaruHPScene />
 
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.12),transparent_65%)]" />

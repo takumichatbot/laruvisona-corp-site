@@ -44,3 +44,23 @@ test('演出が終わったら保険を解除する', () => {
   assert.match(src, /__lpAnimDone = true/);
   assert.match(src, /window\.clearTimeout\(fuse\)/);
 });
+
+// ── ファーストビューから3Dを外した ───────────────────────────────
+// 外した理由:
+//  1. Veoの背景映像を敷いたので、同じ場所に装飾レイヤーが2枚重なっていた
+//  2. three + @react-three/fiber + drei で200KB前後(gzip)のJSを配っていた。
+//     見返りは抽象的な浮遊オブジェクトで、商品の説明を何もしていない
+//  3. prefers-reduced-motion を見ておらず、LPの他の演出と方針が食い違っていた
+//  4. モバイル判定も frameloop 制御も無く、スクロールで見えなくなった後も
+//     WebGLのループが回り続けていた（発熱・電池）
+// 部品(components/Canvas/LaruHPScene.tsx)は消していないので、戻すのは1行。
+test('LPのファーストビューに3D(WebGL)を載せない', () => {
+  assert.equal(/LaruHPScene/.test(src), false, 'ファーストビューに3Dが戻っている');
+  assert.equal(/@react-three|from 'three'|Canvas\//.test(src), false, 'three系がLPに混ざっている');
+});
+
+test('ファーストビューの背景は映像1枚に絞る', () => {
+  const at = src.indexOf('<section ref={heroRef}');
+  const hero = src.slice(at, at + 1200);
+  assert.match(hero, /<HeroBackgroundVideo \/>/);
+});
