@@ -152,3 +152,61 @@ test('ヒーロー映像も公開側では生成しない', () => {
   assert.ok(!/generateVeo/.test(publicRoute2));
   assert.match(publicRoute2, /target === 'lp-hero'/);
 });
+
+// ── LPファーストビュー映像の候補（3案から選ぶ） ──────────────────
+test('候補は3案あり、それぞれ別ファイルに保存される', async () => {
+  const m = await import('../lib/veo-prompt.ts');
+  const keys = Object.keys(m.HERO_VARIANTS);
+  assert.deepEqual(keys.sort(), ['blueprint', 'glass', 'paper']);
+  for (const k of keys) {
+    assert.equal(m.heroVariantPath(k as never), `videos/lp-hero-${k}.mp4`);
+  }
+  // 決定版とは別枠。候補を作っても本番の1本は上書きされない
+  assert.notEqual(m.heroVariantPath('paper' as never), m.HERO_VIDEO_PATH);
+});
+
+test('どの案も「浮いているだけ」ではなく組み上がる動きを持つ', async () => {
+  const m = await import('../lib/veo-prompt.ts');
+  // 3Dの浮遊オブジェクトを外したのと同じ失敗を繰り返さないための固定。
+  const assembly = /(settle|align|form|stack|layer|meet|draw themselves|into place)/i;
+  for (const k of Object.keys(m.HERO_VARIANTS)) {
+    const p = m.buildHeroVariantPrompt(k as never);
+    assert.match(p, assembly, `${k}: 整列・構築の動きが指示されていない`);
+  }
+});
+
+test('どの案も文字・UI・人・暗部を禁止している', async () => {
+  const m = await import('../lib/veo-prompt.ts');
+  for (const k of Object.keys(m.HERO_VARIANTS)) {
+    const p = m.buildHeroVariantPrompt(k as never);
+    // Veoは読める文字やUIを描けない。頼むと崩れた偽の文字になる
+    assert.match(p, /No text, no letters/, `${k}: 文字禁止が無い`);
+    assert.match(p, /no user interface/, `${k}: UI禁止が無い`);
+    assert.match(p, /No people, no faces/, `${k}: 人物禁止が無い`);
+    // 見出しは濃い色。映像に暗部があると文字が読みにくくなる
+    assert.match(p, /Nothing dark/, `${k}: 暗部の禁止が無い`);
+    assert.match(p, /High-key/, `${k}: 高キー指定が無い`);
+  }
+});
+
+test('未知のvariantは受け付けない', async () => {
+  const m = await import('../lib/veo-prompt.ts');
+  assert.equal(m.isHeroVariant('paper'), true);
+  assert.equal(m.isHeroVariant('__proto__'), false, 'プロトタイプ汚染で通らないこと');
+  assert.equal(m.isHeroVariant('toString'), false);
+  assert.equal(m.isHeroVariant('shop'), false);
+});
+
+test('候補の一覧と採用は生成を伴わない（叩いても費用が出ない）', () => {
+  const listBlock = adminRoute.slice(adminRoute.indexOf("action === 'list-hero-variants'"), adminRoute.indexOf("action === 'promote-hero'"));
+  assert.equal(/generateVeoToStorage/.test(listBlock), false, '一覧で生成している');
+  const promoteBlock = adminRoute.slice(adminRoute.indexOf("action === 'promote-hero'"), adminRoute.indexOf("if (target === 'lp-hero')"));
+  assert.equal(/generateVeoToStorage/.test(promoteBlock), false, '採用で生成し直している');
+  assert.match(promoteBlock, /\.copy\(from, HERO_VIDEO_PATH\)/, 'ストレージ内コピーで済ませていない');
+});
+
+test('候補の生成は決定版を上書きしない', () => {
+  const heroBlock = adminRoute.slice(adminRoute.indexOf("if (target === 'lp-hero')"));
+  assert.match(heroBlock, /const path = variant \? heroVariantPath\(variant\) : HERO_VIDEO_PATH;/);
+  assert.match(heroBlock, /!isHeroVariant\(variant\)/, 'variantの検証が無い');
+});
