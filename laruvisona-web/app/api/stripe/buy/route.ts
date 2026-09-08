@@ -1,17 +1,29 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { safeReturnUrl } from '@/lib/site-origin';
 
 export async function POST(req: Request) {
   const { priceId, siteUrl } = await req.json().catch(() => ({})) as { priceId?: string; siteUrl?: string };
   if (!priceId) return NextResponse.json({ error: 'priceId required' }, { status: 400 });
+
+  const rl = rateLimit(`stripe-buy:${clientIp(req)}`, 20, 60 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
 
   if (!process.env.STRIPE_SECRET_KEY) {
     console.error('[stripe/buy] STRIPE_SECRET_KEY is not set');
     return NextResponse.json({ error: '決済が設定されていません（管理者にお問い合わせください）' }, { status: 500 });
   }
 
-  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
-  const base = (siteUrl || origin || 'https://laruvisona.jp/').split('?')[0];
+  // 決済後の戻り先。siteUrl はクライアントの言い値なので、そのまま使うと
+  // 決済を終えた利用者を攻撃者のドメインへ飛ばせる（オープンリダイレクト）。
+  // このAPIは本体サイトの購読ボタン用なので、本体のホストだけを許可する。
+  const base = safeReturnUrl(siteUrl, req.headers.get('origin'), {});
 
   try {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe';
 import { finalizeBooking } from '@/lib/booking-finalize';
 import { safeOrigin } from '@/lib/site-origin';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,15 @@ export async function POST(req: Request) {
   if (_hp) return NextResponse.json({ ok: true }); // ハニーポット
   if (!siteId || !slotId || !name || !email) {
     return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
+  }
+
+  // 予約枠を荒らされない/通知メールを大量に飛ばされないように
+  const rl = rateLimit(`booking-reserve:${clientIp(req)}`, 10, 60 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
   }
 
   const supabase = admin();

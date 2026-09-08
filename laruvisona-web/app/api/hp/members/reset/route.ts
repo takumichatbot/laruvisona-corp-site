@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyResetToken, hashPassword, signMemberToken, passwordFingerprint } from '@/lib/member-auth';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,15 @@ export async function POST(req: Request) {
   const { token, password } = await req.json().catch(() => ({}));
   if (!token || !password) return NextResponse.json({ error: 'パラメータが不足しています' }, { status: 400 });
   if (String(password).length < 6) return NextResponse.json({ error: 'パスワードは6文字以上にしてください' }, { status: 400 });
+
+  // 再設定トークンの総当たり対策
+  const rl = rateLimit(`member-reset-submit:${clientIp(req)}`, 10, 60 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: '試行回数が多すぎます。しばらくしてからお試しください。' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
 
   const payload = verifyResetToken(token);
   if (!payload) return NextResponse.json({ error: 'リンクが無効か期限切れです。もう一度お試しください。' }, { status: 400 });

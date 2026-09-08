@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { hashPassword, signMemberToken } from '@/lib/member-auth';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,15 @@ export async function POST(req: Request) {
   const { siteId, email, password, name, _hp } = await req.json().catch(() => ({}));
   if (_hp) return NextResponse.json({ ok: true });
   if (!siteId || !email || !password) return NextResponse.json({ error: 'メールとパスワードを入力してください' }, { status: 400 });
+
+  // 大量の会員アカウント作成でDBを埋められないように
+  const rl = rateLimit(`member-signup:${clientIp(req)}`, 5, 60 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: '登録の試行が多すぎます。しばらくしてからお試しください。' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
   if (String(password).length < 6) return NextResponse.json({ error: 'パスワードは6文字以上にしてください' }, { status: 400 });
 
   const supabase = admin();

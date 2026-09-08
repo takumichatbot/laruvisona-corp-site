@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { safeReturnUrl } from '@/lib/site-origin';
 
 // POST /api/shop/checkout — カート（複数商品・数量）対応の Stripe Checkout
 // 公開エンドポイント（公開ショップから購入）。単品(productId)も後方互換で受け付ける。
@@ -23,6 +25,15 @@ export async function POST(req: Request) {
 
   if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
 
+  // 決済セッションの大量生成でStripe側を荒らされないように
+  const rl = rateLimit(`shop-checkout:${clientIp(req)}`, 20, 60 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
   // 単品 → items 形式に正規化
   const reqItems = (body.items && body.items.length > 0)
     ? body.items
@@ -30,7 +41,7 @@ export async function POST(req: Request) {
   if (reqItems.length === 0) return NextResponse.json({ error: '商品が指定されていません' }, { status: 400 });
 
   const service = await createServiceClient();
-  const { data: site } = await service.from('sites').select('name, settings_json').eq('id', siteId).single();
+  const { data: site } = await service.from('sites').select('name, settings_json, slug, custom_domain').eq('id', siteId).single();
   if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
 
   const shopSettings = (site.settings_json as Record<string, unknown>) || {};
@@ -80,8 +91,10 @@ export async function POST(req: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
-      success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/?payment=success`,
-      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/`,
+      // 戻り先はクライアントの言い値をそのまま使わない。
+      // そのサイトが正当に配信されているホストでなければ自サイトに落とす。
+      success_url: `${safeReturnUrl(successUrl, req.headers.get('origin'), site)}?payment=success`,
+      cancel_url: safeReturnUrl(cancelUrl, req.headers.get('origin'), site),
       locale: 'ja',
       allow_promotion_codes: true, // クーポン/プロモコード入力を許可（Stripeで作成したコード）
       phone_number_collection: { enabled: true },
