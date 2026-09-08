@@ -63,9 +63,17 @@ const jsonLd = {
 export default function LaruHPLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <link rel="manifest" href="/manifest.json" />
-      <meta name="theme-color" content="#0ea5e9" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+      {/* LARU HP 自身の manifest。以前はここで /manifest.json（社内ツール Bridge のもの）を
+          読んでいた。アイコンに 1024x1024 / 1.9MB の PNG が指定されており、LPを開いた
+          全員がそれをダウンロードしていた（ページ重量の約46%）。名前も
+          「Bridge — AI Coding Assistant」だったので、ホーム画面に追加すると
+          顧客の端末に社内ツール名のアイコンが並ぶ状態だった。 */}
+      <link rel="manifest" href="/laruhp-manifest.json" />
+      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      <meta name="theme-color" content="#0284c7" />
+      {/* Font Awesome の CDN 読み込みはやめた。laruHP 配下では1つも使っておらず
+          （使っているのは会社サイト側の2ファイルだけ・5種類）、
+          描画をブロックする外部CSSとWebフォントを全ページで読んでいただけだった。 */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PwaInit />
       {children}

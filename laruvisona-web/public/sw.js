@@ -1,5 +1,7 @@
-const CACHE_NAME = 'bridge-v4';
-const STATIC_ASSETS = ['/manifest.json', '/laruhp_logo.png'];
+// 以前は install 時に 1.9MB の巨大ロゴPNGを必ず取りに行っていた。
+// LPを開いただけの人にも降ってくるので、軽いアイコンに差し替えた。
+const CACHE_NAME = 'laruhp-v5';
+const STATIC_ASSETS = ['/laruhp-manifest.json', '/laruhp-icon-192.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)));
@@ -37,8 +39,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title || 'Bridge', {
       body: data.body || 'タスクが完了しました',
-      icon: '/laruhp_logo.png',
-      badge: '/laruhp_logo.png',
+      icon: '/laruhp-icon-192.png',
+      badge: '/laruhp-icon-192.png',
       tag: data.tag || 'bridge',
       data: { url: data.url || '/laruHP/bridge' },
       vibrate: [100, 50, 200],
