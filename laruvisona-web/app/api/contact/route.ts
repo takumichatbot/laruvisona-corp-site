@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { safeFetch } from '@/lib/safe-fetch';
 
 function getAdminClient() {
   return createClient(
@@ -278,11 +279,13 @@ export async function POST(req: Request) {
   if (webhookUrl && contactRow?.id) {
     const webhookAt = new Date().toISOString();
     try {
-      const whRes = await fetch(webhookUrl, {
+      // Webhook先はテナントが自由に入れられるので、内部ネットワークへ
+      // 飛ばされないよう safeFetch を通す。
+      const whRes = await safeFetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: type || 'contact', siteName: site.name, name, email, phone: phone || null, message: message || null, extraFields: extraFields || null }),
-      });
+      }, { timeoutMs: 8000, maxRedirects: 2 });
       const whStatus = whRes.ok ? 'success' : 'failed';
       await supabase.from('contacts').update({
         extra_fields: { ...mergedExtraFields, webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },

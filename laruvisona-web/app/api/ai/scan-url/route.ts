@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { safeFetch, readCapped, BlockedUrlError } from '@/lib/safe-fetch';
 
 function normalizeUrl(raw: string): string {
   const trimmed = raw.trim();
@@ -9,7 +10,7 @@ function normalizeUrl(raw: string): string {
 }
 
 function extractText(html: string): string {
-  let text = html
+  const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<nav[\s\S]*?<\/nav>/gi, '')
@@ -33,14 +34,12 @@ const FETCH_HEADERS = {
   'Cache-Control': 'no-cache',
 };
 
+// 外部URLの取得は safeFetch 経由（社内・localhost・クラウドのメタデータへ
+// 飛ばされるのを防ぐ）。本文は2MBで打ち切る。
 async function fetchPage(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: FETCH_HEADERS,
-    signal: AbortSignal.timeout(10000),
-    redirect: 'follow',
-  });
+  const res = await safeFetch(url, { headers: FETCH_HEADERS }, { timeoutMs: 10000, maxRedirects: 3 });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.text();
+  return readCapped(res, 2_000_000);
 }
 
 export async function POST(req: Request) {
@@ -54,13 +53,21 @@ export async function POST(req: Request) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) return NextResponse.json({ error: 'api_key_missing' }, { status: 500 });
 
+  if (typeof rawUrl !== 'string' || rawUrl.length > 2000) {
+    return NextResponse.json({ error: 'URL required' }, { status: 400 });
+  }
+
   const httpsUrl = normalizeUrl(rawUrl);
   let pageText = '';
   try {
     const html = await fetchPage(httpsUrl);
     pageText = extractText(html);
-  } catch {
-    // Fallback: try http if https failed
+  } catch (e) {
+    // 内部アドレス等でブロックされた場合は、http へのフォールバックもしない
+    if (e instanceof BlockedUrlError) {
+      return NextResponse.json({ error: 'blocked_url' }, { status: 400 });
+    }
+    // https で落ちたときだけ http を試す
     if (httpsUrl.startsWith('https://')) {
       try {
         const html = await fetchPage(httpsUrl.replace('https://', 'http://'));
