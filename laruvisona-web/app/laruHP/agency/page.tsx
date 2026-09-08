@@ -208,7 +208,7 @@ export default function AgencyPage() {
           </Link>
           <h1 className="font-bold text-white">エージェンシー管理</h1>
           <div className="ml-auto flex items-center gap-3">
-            <Link href="/laruHP/builder/new"
+            <Link href="/laruHP/onboarding"
               className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition-all">
               + 新規クライアントサイト
             </Link>

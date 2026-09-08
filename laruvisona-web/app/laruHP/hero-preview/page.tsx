@@ -74,7 +74,7 @@ export default function HeroPreviewPage() {
       <main className="min-h-screen grid place-items-center bg-sky-50 text-gray-900 px-6">
         <p className="text-center leading-relaxed">
           管理者としてログインしてください。<br />
-          <Link href="/laruHP/login" className="text-sky-700 underline">ログインへ</Link>
+          <Link href="/laruHP/auth/login" className="text-sky-700 underline">ログインへ</Link>
         </p>
       </main>
     );
