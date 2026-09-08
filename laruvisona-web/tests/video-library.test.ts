@@ -91,28 +91,50 @@ test('動画は自社LP専用で、顧客サイト生成には使わない', () 
 const lpSrc = read('../app/laruHP/page.tsx');
 const publicRoute2 = read('../app/api/library-video/route.ts');
 
+// HeroBackgroundVideo 本体だけを切り出す（後ろに続く LoopVideo は含めない）
+const heroComp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
+// 実際に <video> を描いている共通部品
+const loopComp = lpSrc.slice(lpSrc.indexOf('function LoopVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
+
 test('ヒーロー映像は先頭の描画を邪魔しない', () => {
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
-  assert.match(comp, /document\.readyState === 'complete'/, '描画完了を待たずに読み込んでいる');
-  assert.match(comp, /addEventListener\('load', start/, 'load を待っていない');
-  assert.match(comp, /preload="none"/);
+  assert.match(heroComp, /document\.readyState === 'complete'/, '描画完了を待たずに読み込んでいる');
+  assert.match(heroComp, /addEventListener\('load', start/, 'load を待っていない');
+});
+
+test('背景ループ映像は preload="none" にしない（本番で再生されなくなる）', () => {
+  // Chrome は preload="none" を尊重して1バイトも読まないため、autoPlay が
+  // あっても readyState が 0 のまま止まり、canplay が来ず永久に opacity:0 に
+  // なる。本番のLPで実際にこれが起きていた。
+  // ここに来る時点で「動きを減らす設定でない・省データでない・2gでない・
+  // 動画が存在する」ことは確認済みなので preload は auto でよい。
+  assert.equal(/preload="none"/.test(loopComp), false, 'preload="none" だと読み込みが始まらない');
+  assert.match(loopComp, /preload="auto"/);
+  assert.match(loopComp, /\.play\(\)/, 'autoPlay 属性だけに頼らず play() も呼ぶこと');
+  assert.match(loopComp, /catch\(/, 'play() が拒否されたときに握りつぶすこと');
+  assert.match(loopComp, /el\.muted = true/, 'ミュートを属性だけに頼らないこと');
+});
+
+test('表示の合図は canplay だけに頼らない', () => {
+  assert.match(loopComp, /onLoadedData=\{onReady\}/);
+  assert.match(loopComp, /onPlaying=\{onReady\}/);
+  assert.match(loopComp, /onCanPlay=\{onReady\}/);
 });
 
 test('動きを減らす設定・通信量節約・低速回線では読まない', () => {
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
+  const comp = heroComp;
   assert.match(comp, /prefers-reduced-motion: reduce/);
   assert.match(comp, /conn\?\.saveData/);
   assert.match(comp, /2g\$\/\.test\(conn\.effectiveType\)/);
 });
 
 test('映像が無くても失敗しても、絵は消えない', () => {
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
-  assert.match(comp, /if \(!src\) return null;/, '取得できないときに何か描いてしまう');
-  assert.match(comp, /onError=\{\(\) => setSrc\(null\)\}/, '再生失敗で黒い箱が残る');
+  assert.match(heroComp, /if \(!src\) return null;/, '取得できないときに何か描いてしまう');
+  assert.match(heroComp, /onFail=\{\(\) => setSrc\(null\)\}/, '再生失敗で黒い箱が残る');
+  assert.match(loopComp, /onError=\{onFail\}/, '再生失敗が上に伝わっていない');
 });
 
 test('見出しの可読性を映像より優先する', () => {
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
+  const comp = heroComp;
   assert.match(comp, /opacity-30/, '映像が濃すぎて文字が読みにくい');
   assert.match(comp, /bg-gradient-to-b from-sky-50\//, '文字を守る膜が無い');
   assert.match(comp, /aria-hidden="true"/, '装飾が読み上げ対象になっている');

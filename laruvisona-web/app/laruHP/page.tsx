@@ -197,16 +197,56 @@ function HeroBackgroundVideo() {
   if (!src) return null;
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
-      <video
+      <LoopVideo
         src={src}
-        autoPlay muted loop playsInline preload="none"
-        onCanPlay={() => setReady(true)}
-        onError={() => setSrc(null)}
+        onReady={() => setReady(true)}
+        onFail={() => setSrc(null)}
         className={`w-full h-full object-cover transition-opacity duration-[1200ms] ${ready ? 'opacity-30' : 'opacity-0'}`}
       />
       {/* 見出しの可読性を守る膜。映像より文字を優先する */}
       <div className="absolute inset-0 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-sky-50/85" />
     </div>
+  );
+}
+
+// 背景ループ映像の共通部品。
+//
+// 以前は <video autoPlay preload="none"> と書いていたが、Chrome は
+// preload="none" を尊重して何も読み込まないため、autoPlay があっても
+// readyState が 0 のまま止まり、canplay が来ないので永久に opacity:0 の
+// ままだった（本番で実際にそうなっていた）。
+// ここに来る時点で「動きを減らす設定でない・省データでない・2gでない・
+// 動画が存在する」ことは確認済みなので、preload は auto にしてよい。
+// さらに autoPlay 属性だけに頼らず play() も自分で呼ぶ（ミュート再生は
+// 自動再生ポリシー上許可されるが、拒否されても catch して静止画に戻る）。
+function LoopVideo({ src, className, onReady, onFail }: {
+  src: string;
+  className: string;
+  onReady?: () => void;
+  onFail?: () => void;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.muted = true;                     // 属性だけだと効かないブラウザがある
+    const p = el.play();
+    if (p && typeof p.catch === 'function') p.catch(() => { /* 自動再生拒否。静止画のまま */ });
+  }, [src]);
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      autoPlay muted loop playsInline preload="auto"
+      // canplay だけだと来ないことがあるので、最初のフレームが乗った時点でも出す
+      onLoadedData={onReady}
+      onPlaying={onReady}
+      onCanPlay={onReady}
+      onError={onFail}
+      className={className}
+    />
   );
 }
 
@@ -242,10 +282,9 @@ function ShowcaseHeroMedia({ industry }: { industry: string }) {
     <div ref={ref} className="absolute inset-0 z-[1]">
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${libHero(industry)})` }} />
       {videoSrc && (
-        <video
+        <LoopVideo
           src={videoSrc}
-          autoPlay muted loop playsInline preload="none"
-          onError={e => { e.currentTarget.style.display = 'none'; }}
+          onFail={() => setVideoSrc(null)}
           className="absolute inset-0 w-full h-full object-cover"
         />
       )}
@@ -811,7 +850,7 @@ setTimeout(function(){
               <div className="px-3 pb-3">
                 <div className="bg-rose-50 border border-rose-100 rounded-xl p-2">
                   <div className="text-[6px] text-yellow-500 mb-0.5">★★★★★</div>
-                  <div className="text-[6px] text-gray-600">"カラーが得意なサロン。毎回満足しています！"</div>
+                  <div className="text-[6px] text-gray-600">「カラーが得意なサロン。毎回満足しています！」</div>
                   <div className="text-[5px] text-gray-400 mt-0.5">— 田中様（30代・OL）</div>
                 </div>
               </div>
@@ -873,7 +912,7 @@ setTimeout(function(){
               </div>
               <div className="bg-emerald-50 mx-3 mb-3 rounded-xl p-2">
                 <div className="text-[6px] text-yellow-500 mb-0.5">★★★★★</div>
-                <div className="text-[6px] text-gray-600">"3回の施術で長年の腰痛がほぼ解消！先生の説明も丁寧です。"</div>
+                <div className="text-[6px] text-gray-600">「3回の施術で長年の腰痛がほぼ解消！先生の説明も丁寧です。」</div>
                 <div className="text-[5px] text-gray-400 mt-0.5">— 鈴木様（40代・会社員）</div>
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
@@ -1105,7 +1144,7 @@ setTimeout(function(){
               </div>
               <div className="bg-amber-50 border-t border-amber-100 mx-3 mb-3 rounded-xl px-3 py-2">
                 <div className="text-[6px] text-yellow-500 mb-0.5">★★★★★</div>
-                <div className="text-[6px] text-gray-600">"親切丁寧な対応と高品質な仕上がりで大満足！"</div>
+                <div className="text-[6px] text-gray-600">「親切丁寧な対応と高品質な仕上がりで大満足！」</div>
                 <div className="text-[5px] text-gray-400 mt-0.5">— 佐藤様（50代・自営業）</div>
               </div>
               <div className="p-4 border-t border-gray-100 flex items-center justify-between">
