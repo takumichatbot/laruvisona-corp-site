@@ -99,14 +99,81 @@ test('外部解除の帰属を解除開始時に固定する', () => {
   assert.match(svc, /const external = ownsExternalRegistration\(row\)/);
 });
 
-test('外部解除は保存済みIDを信用せず、ホスト名で引き直す', () => {
+test('外部削除は解除処理に固定したIDだけを消す', () => {
   const s = code('lib/domain-ports.ts');
-  const fn = s.slice(s.indexOf('async unregisterByHost'));
-  const find = fn.indexOf('findDomain(cfg, host)');
-  const del = fn.indexOf('unregisterDomain(cfg');
-  assert.ok(find > -1 && del > -1 && find < del, '引き直さずに削除している');
-  assert.match(fn, /found\.domain\.name\.toLowerCase\(\) !== host\.toLowerCase\(\)/,
-    '対象ホスト名の一致を確認していない');
+  // 削除の直前にホスト名から引き直さない。引き直すと、遅れて再開した
+  // 古い解除が、作り直された新しい登録を消してしまう。
+  const del = s.slice(s.indexOf('async unregisterById'));
+  assert.equal(/findDomain\(/.test(del), false, '削除側でホストから引き直している');
+  assert.match(del, /unregisterDomain\(cfg, domainId\)/);
+
+  const find = s.slice(s.indexOf('async findByHost'), s.indexOf('async unregisterById'));
+  assert.match(find, /name\.toLowerCase\(\) !== host\.toLowerCase\(\)/, '照会でホスト名の一致を見ていない');
+
+  const svc = code('lib/domain-service.ts');
+  // 固定 → 直前の占有確認 → 削除 の順であること
+  const pin = svc.indexOf('pinReleaseTarget(');
+  const claim = svc.indexOf('claimRelease(args.siteId');
+  const unreg = svc.indexOf('unregisterById(targetId)');
+  assert.ok(pin > -1 && claim > -1 && unreg > -1, '固定・占有確認・削除がそろっていない');
+  assert.ok(pin < claim && claim < unreg, '順序が違う');
+});
+
+test('重複した解除は1本に集約する', () => {
+  const sql = read('supabase/site_domains.sql');
+  assert.match(sql, /release_lease_until > now\(\)[\s\S]{0,200}'in_progress'/);
+  const svc = code('lib/domain-service.ts');
+  assert.match(svc, /begun\.reason === 'in_progress'/);
+});
+
+test('登録開始を記録できなければ外部登録を呼ばない', () => {
+  const svc = code('lib/domain-service.ts');
+  const i = svc.indexOf('const started = await deps.store.markRegisterStarted');
+  assert.ok(i > -1, '記録の結果を受け取っていない');
+  const after = svc.slice(i, i + 900);
+  assert.match(after, /if \(!started\.ok\)/);
+  // register は else 側にしかない
+  const reg = after.indexOf('deps.render.register(host)');
+  const els = after.indexOf('} else {');
+  assert.ok(els > -1 && reg > els, '記録に失敗しても外部登録へ進んでいる');
+
+  const store = code('lib/domain-store-supabase.ts');
+  const fn = store.slice(store.indexOf('async markRegisterStarted'));
+  assert.match(fn, /if \(error\) return \{ ok: false/, 'RPCのエラーを捨てている');
+});
+
+test('登録できたのに記録できなかった分は帰属付きで積む', () => {
+  const svc = code('lib/domain-service.ts');
+  assert.match(svc, /enqueueOrphanRegistration\(\s*args\.siteId, host, registeredNow, row\.verification_token, row\.operation_epoch,/);
+  const sql = read('supabase/site_domains.sql');
+  assert.match(sql, /'orphan_registration'/);
+});
+
+test('サイトごと削除されても登録途中の記録を失わない', () => {
+  const sql = read('supabase/site_domains.sql');
+  const trg = sql.slice(sql.indexOf('function public.site_domains_enqueue_release'), sql.indexOf('$$;', sql.indexOf('function public.site_domains_enqueue_release')));
+  assert.match(trg, /old\.render_register_started_at is not null/, '登録開始の記録を見ていない');
+  assert.match(trg, /verification_token/, 'キューに行の同一性を残していない');
+});
+
+test('到達確認は必須。できない場合は接続済みにしない', () => {
+  const d = code('lib/domain.ts');
+  const fn = d.slice(d.indexOf('export function deriveStatus'), d.indexOf('export function statusLabel'));
+  assert.match(fn, /if \(input\.probe !== 'reached'\)/);
+  // 「鍵が無くてもRenderのverifiedで通す」抜け道が無いこと
+  assert.equal(/probe === 'unavailable'[\s\S]{0,200}'connected'/.test(fn), false);
+});
+
+test('回帰テストのランナーが正しいファイルを参照する', () => {
+  const sh = read('supabase/run-sql-regression.sh');
+  assert.match(sh, /test-bootstrap\.sql/);
+  assert.equal(/[^-]bootstrap\.sql/.test(sh.replace(/test-bootstrap\.sql/g, '')), false,
+    '存在しない bootstrap.sql を参照している');
+  // 自前で一時クラスタを作り、既存DBを消さない
+  assert.match(sh, /initdb/);
+  assert.match(sh, /mktemp -d/);
+  assert.equal(/drop database/i.test(sh), false, '既存のDBを削除している');
+  assert.match(sh, /laruhp_regression_\$\$/, '固定名のDBを使っている');
 });
 
 // ── 移行SQLと権限 ────────────────────────────────────

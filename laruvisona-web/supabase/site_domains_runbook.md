@@ -2,18 +2,29 @@
 
 対象: `supabase/site_domains.sql`（未適用）
 
+## 必須の環境変数
+
+| 変数 | 用途 | 未設定だと |
+|---|---|---|
+| `DOMAIN_PROBE_SECRET` | 到達確認の署名鍵（32文字以上） | 到達確認ができないので、どのドメインも「SSL準備中」から進まない。**独自ドメイン機能の必須設定** |
+| `RENDER_API_KEY` / `RENDER_SERVICE_ID` | 外部登録・解除 | 登録・解除を行わない。過去に登録した記録がある行の解除は `release_pending` のまま残る |
+| `RENDER_SERVICE_SLUG` | CNAMEの案内に出す宛先 | 案内のCNAME欄が空になる |
+
+`DOMAIN_PROBE_SECRET` はこのサービスだけが持つ共有鍵で、
+`/api/domain-probe` の応答署名に使う。値は返さないが、漏れると
+到達確認を偽装されるので、他のシークレットと同じ扱いにする。
+
 ## 実PostgreSQLでの回帰テスト
 
 外部に一切つながらない一時DBで、実際のSQL関数を競合の順序どおりに呼ぶ。
 
 ```
-# 一時サーバを立てて（例）
-initdb -D /tmp/pgtest/data -U laruhp --auth=trust
-pg_ctl -D /tmp/pgtest/data -o "-k /tmp/pgtest/sock -h ''" -l /tmp/pgtest/pg.log start
-
-# 適用してシナリオを流す
 ./supabase/run-sql-regression.sh
 ```
+
+このスクリプトは自分で一時クラスタ（Unix socketのみ）と一意な名前のDBを作り、
+終了時に自分が作ったものだけを片付ける。既存のPostgreSQLや既存のDBには触れない。
+`initdb` が PATH に無ければ `PG_BIN=/usr/lib/postgresql/16/bin` のように指定する。
 
 `site_domains_regression.sql` が固定しているのは次の順序:
 
@@ -27,6 +38,11 @@ pg_ctl -D /tmp/pgtest/data -o "-k /tmp/pgtest/sock -h ''" -l /tmp/pgtest/pg.log 
 | F | 登録開始の印は世代が一致するときだけ立つ |
 | G | 解除待ちの行に検証結果を書き戻せない |
 | H | 解除開始時に外部登録の帰属を固定する（legacy / 未登録 / 登録途中） |
+| I | 同じホストの解除は1本に集約する（重複解除を並行させない） |
+| J | 古い解除は、新しい世代の登録を削除対象にできない |
+| K | 登録開始の記録は行の同一性・世代・状態を見る |
+| L | 登録途中のままサイトごと削除されても記録が残る |
+| M | 記録できなかった外部登録を帰属付きで積める |
 
 `site_domains_permission_check.sql` は権限を確認する。
 どちらも「期待どおり失敗すること」が合格条件で、
@@ -110,7 +126,7 @@ drop table public.domain_release_queue;
 |---|---|
 | 担当 | 齋藤（外部サービスの管理権限が要るため） |
 | 頻度 | 週1回。加えて、画面で「解除待ち」が出たと連絡があったとき |
-| 手順 | 1. `select site_id, host, render_domain_id, attempts, last_error from public.domain_release_queue where resolved_at is null order by requested_at;`<br>2. 各ホストについて Render の custom domains 一覧を確認する<br>3. 一覧に**そのホスト名で**存在し、当社サービスの登録であることを確認してから解除する<br>4. `update public.domain_release_queue set resolved_at = now() where id = ...;` |
+| 手順 | 1. `select kind, site_id, host, render_domain_id, verification_token, operation_epoch, attempts, last_error from public.domain_release_queue where resolved_at is null order by requested_at;`<br>2. 各ホストについて Render の custom domains 一覧を確認する<br>3. 一覧に**そのホスト名で**存在し、当社サービスの登録であることを確認してから解除する<br>4. `update public.domain_release_queue set resolved_at = now() where id = ...;` |
 | 完了記録 | `resolved_at` を入れる。入っていないものは未完了として次回も出る |
 | 再確認 | 解除後に `dig` などでそのホストが当社へ向いていないことを確認する |
 
@@ -123,9 +139,17 @@ drop table public.domain_release_queue;
 select count(*) from public.site_domains where host = '<対象ホスト>';
 ```
 
-行が存在する場合は、それが新しい申請なので解除してはいけない。
-その場合はキューの行に `last_error = '再登録済みのため対象外'` を書いて
-`resolved_at` を入れる。
+行が存在する場合は、`verification_token` を突き合わせる。
+キューの `verification_token` と現在の行の値が**違えば別の申請**なので、
+解除してはいけない。その場合はキューの行に
+`last_error = '再登録済みのため対象外'` を書いて `resolved_at` を入れる。
+
+`kind` の意味:
+
+| kind | 意味 | やること |
+|---|---|---|
+| `release` | 解除の積み残し | 上の手順で外部から解除する |
+| `orphan_registration` | 外部登録は通ったが、その記録をDBに残せなかった | 同じ手順で外部から解除する（使われていない登録なので消してよい）。`site_domains` に同じ `verification_token` の行があれば、そちらが正なので消さない |
 
 ## 外部APIの設定が失われた場合
 

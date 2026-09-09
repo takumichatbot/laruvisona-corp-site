@@ -53,6 +53,9 @@ export interface DomainRecord {
    * その瞬間の判断をDB側で固定している。再試行しても判断がぶれない。
    */
   external_registration_owned: boolean | null;
+  /** 進行中の解除処理の識別子。外部削除はこの処理に紐づけて認可する */
+  release_operation_id: string | null;
+  release_lease_until: string | null;
   /** 所有確認が一度でも通ったか */
   ownership_verified_at: string | null;
 }
@@ -90,12 +93,27 @@ export interface DomainStore {
   setPrimary(siteId: string, host: string, fencingToken: string, epoch: number):
     Promise<{ ok: true } | { ok: false; reason: 'gone' | 'not_connected' | 'error'; message?: string }>;
   beginRelease(siteId: string, host: string):
-    Promise<{ ok: true; row: DomainRecord } | { ok: false; reason: 'gone' | 'error'; message?: string }>;
+    Promise<{ ok: true; row: DomainRecord } | { ok: false; reason: 'gone' | 'in_progress' | 'error'; message?: string }>;
+  /** 外部削除の対象IDを、この解除処理に固定する */
+  pinReleaseTarget(siteId: string, host: string, epoch: number, operationId: string, renderDomainId: string):
+    Promise<{ ok: true; renderDomainId: string | null } | { ok: false; reason: 'gone' | 'stale' | 'error'; message?: string }>;
+  /** 外部削除の直前に、まだこの処理が有効かを確かめて占有を延長する */
+  claimRelease(siteId: string, host: string, epoch: number, operationId: string):
+    Promise<{ ok: true; renderDomainId: string | null } | { ok: false; reason: 'gone' | 'stale' | 'error'; message?: string }>;
+  /** 外部登録は通ったが記録できなかった分を、帰属付きで積む */
+  enqueueOrphanRegistration(
+    siteId: string, host: string, renderDomainId: string,
+    fencingToken: string, epoch: number, message: string,
+  ): Promise<void>;
   finishRelease(siteId: string, host: string, fencingToken: string, epoch: number):
     Promise<{ ok: boolean; message?: string }>;
   markReleaseFailed(siteId: string, host: string, epoch: number, message: string): Promise<void>;
-  /** 外部登録を呼ぶ直前に印を付ける（DB保存前に落ちた登録を回収するため） */
-  markRegisterStarted(siteId: string, host: string, epoch: number): Promise<void>;
+  /**
+   * 外部登録を呼ぶ直前に印を付ける。
+   * 記録できなければ外部登録を呼んではいけないので、結果を返す。
+   */
+  markRegisterStarted(siteId: string, host: string, fencingToken: string, epoch: number):
+    Promise<{ ok: true } | { ok: false; reason: 'gone' | 'stale' | 'releasing' | 'error'; message?: string }>;
   /** そのホストが代理店の管理用ドメインとして既に使われていないか */
   isAgencyAdminHost(host: string): Promise<boolean>;
 }
@@ -113,11 +131,17 @@ export interface RenderPort {
   /** このサービスに登録されているドメインを名前で引く */
   find(host: string): Promise<{ ok: true; domain: { id?: string; name: string; verificationStatus?: string } | null } | { ok: false; message: string }>;
   /**
-   * 解除。保存済みIDを信用せず、必ずホスト名でこのサービスの登録を引き直してから
-   * そのIDで消す。行の render_domain_id を書き換えて他人のドメインを
-   * 消させる経路を残さないため。
+   * ホスト名で、このサービスに登録されているものを引く。
+   * 名前が完全一致したものだけを返す。
    */
-  unregisterByHost(host: string): Promise<{ ok: true; removed: boolean } | { ok: false; message: string }>;
+  findByHost(host: string): Promise<{ ok: true; domainId: string | null } | { ok: false; message: string }>;
+  /**
+   * 外部登録の削除。
+   * ここではホスト名から引き直さない。呼び出し側が、その解除処理に
+   * 固定したIDだけを渡す。ホストから引き直すと、遅れて再開した古い解除が
+   * 別の処理で作り直された新しい登録を消してしまう。
+   */
+  unregisterById(domainId: string): Promise<{ ok: true; removed: boolean } | { ok: false; message: string }>;
 }
 
 export interface ProbePort {
@@ -214,16 +238,31 @@ export async function verifyDomain(
   let renderCheck: RenderCheck = deps.render.configured() ? 'unavailable' : 'not_configured';
   let renderDomainId = row.render_domain_id;
   let lastError: string | null = null;
+  /** この呼び出しで新しく作った外部登録のID。保存に失敗したら回収へ回す */
+  let registeredNow: string | null = null;
 
   // 2. 所有が取れてから外部登録・照会
   if (ownership && deps.render.configured()) {
     if (!renderDomainId) {
       // 外部登録が成功したのにDB保存前に落ちると、こちらの都合で作った登録が
-      // 追跡できなくなる。呼ぶ「前」に印を残しておく。
-      await deps.store.markRegisterStarted(args.siteId, host, row.operation_epoch);
-      const reg = await deps.render.register(host);
-      if (reg.ok) renderDomainId = reg.domainId;
-      else lastError = reg.message;
+      // 追跡できなくなる。呼ぶ「前」に印を残す。
+      // 記録できなかったときは外部登録を呼ばない（記録なしの副作用を作らない）。
+      const started = await deps.store.markRegisterStarted(
+        args.siteId, host, row.verification_token, row.operation_epoch,
+      );
+      if (!started.ok) {
+        lastError = started.reason === 'releasing'
+          ? 'このドメインは解除処理中です'
+          : '登録の記録に失敗したため、外部登録を行いませんでした';
+      } else {
+        const reg = await deps.render.register(host);
+        if (reg.ok) {
+          renderDomainId = reg.domainId;
+          registeredNow = reg.domainId;
+        } else {
+          lastError = reg.message;
+        }
+      }
     }
     const found = await deps.render.find(host);
     if (found.ok) {
@@ -279,6 +318,15 @@ export async function verifyDomain(
   });
 
   if (!applied.ok) {
+    // 外部登録は通ったのに、その記録を残せなかった場合。
+    // ホスト名だけでは後から他用途の登録と区別できないので、
+    // 行の同一性・世代・IDを添えて回収へ回す。
+    if (registeredNow) {
+      await deps.store.enqueueOrphanRegistration(
+        args.siteId, host, registeredNow, row.verification_token, row.operation_epoch,
+        `検証結果を保存できなかった（${applied.reason}）`,
+      );
+    }
     // 保存できていないなら、成功として返さない。配信先も変えない。
     if (applied.reason === 'gone') {
       return err(409, 'このドメインは処理中に削除されました。もう一度追加してください');
@@ -373,31 +421,75 @@ export async function releaseDomain(
   const begun = await deps.store.beginRelease(args.siteId, host);
   if (!begun.ok) {
     if (begun.reason === 'gone') return err(404, 'このドメインは登録されていません');
+    if (begun.reason === 'in_progress') {
+      // 同じホストの解除が動いている。並行して外部へ出ていくと、
+      // 遅れた側が新しい世代の登録を消しに行く。1本に集約する。
+      return err(409, 'このドメインは解除処理中です。しばらくしてからお試しください');
+    }
     return err(500, begun.message || '解除を開始できませんでした');
   }
   const row = begun.row;
+  const epoch = row.operation_epoch;
+  const opId = row.release_operation_id;
 
   // 所有確認も外部登録も通っていない候補は、こちらの記録に外部の登録が無い。
   // 外部には触らず、候補の取消だけにする。
   const external = ownsExternalRegistration(row);
 
   if (external && deps.render.configured()) {
-    const res = await deps.render.unregisterByHost(host);
-    if (!res.ok) {
-      await deps.store.markReleaseFailed(args.siteId, host, row.operation_epoch, res.message);
-      return {
-        ok: true,
-        host,
-        released: false,
-        status: 'release_pending',
-        message: `配信は停止しました。外部側の解除に失敗したため、あとで再試行できます（${res.message}）`,
-      };
+    if (!opId) {
+      await deps.store.markReleaseFailed(args.siteId, host, epoch, '解除処理の識別子を取得できませんでした');
+      return { ok: true, host, released: false, status: 'release_pending',
+        message: '配信は停止しました。外部側の解除はあとで再試行できます' };
+    }
+
+    // 1. 削除するIDをこの解除処理に固定する。
+    //    行にIDが無い（legacy・登録途中）ときだけ外部一覧から引く。
+    //    引いた結果は必ずDBに固定し、固定できなければ外部は触らない。
+    let targetId = row.render_domain_id;
+    if (!targetId) {
+      const found = await deps.render.findByHost(host);
+      if (!found.ok) {
+        await deps.store.markReleaseFailed(args.siteId, host, epoch, found.message);
+        return { ok: true, host, released: false, status: 'release_pending',
+          message: `配信は停止しました。外部側の解除に失敗したため、あとで再試行できます（${found.message}）` };
+      }
+      if (found.domainId) {
+        const pinned = await deps.store.pinReleaseTarget(args.siteId, host, epoch, opId, found.domainId);
+        if (!pinned.ok) {
+          // 引いている間に状況が変わった（別の処理が完了した・作り直された）。
+          // ここで消すと、新しい世代の登録を消すことになる。
+          return err(409, 'このドメインは処理中に状態が変わりました。もう一度お試しください');
+        }
+        targetId = pinned.renderDomainId;
+      }
+    }
+
+    if (targetId) {
+      // 2. 消す直前に、この解除処理がまだ有効かを確かめる。
+      //    行が消えていれば（別の解除が完了していれば）ここで止まる。
+      const claim = await deps.store.claimRelease(args.siteId, host, epoch, opId);
+      if (!claim.ok) {
+        return err(409, 'このドメインは処理中に状態が変わりました。もう一度お試しください');
+      }
+      // 3. 固定したIDだけを消す。ホスト名から引き直さない。
+      const res = await deps.render.unregisterById(targetId);
+      if (!res.ok) {
+        await deps.store.markReleaseFailed(args.siteId, host, epoch, res.message);
+        return {
+          ok: true,
+          host,
+          released: false,
+          status: 'release_pending',
+          message: `配信は停止しました。外部側の解除に失敗したため、あとで再試行できます（${res.message}）`,
+        };
+      }
     }
   } else if (external && !deps.render.configured()) {
     // 過去に外部登録した記録があるのに、いまは外部APIの設定が無い。
     // 「解除不要」とは扱わず、記録を残して手当てできるようにする。
     await deps.store.markReleaseFailed(
-      args.siteId, host, row.operation_epoch,
+      args.siteId, host, epoch,
       '外部APIが未設定のため解除できませんでした。設定後に再試行してください',
     );
     return {
@@ -409,9 +501,9 @@ export async function releaseDomain(
     };
   }
 
-  const fin = await deps.store.finishRelease(args.siteId, host, row.verification_token, row.operation_epoch);
+  const fin = await deps.store.finishRelease(args.siteId, host, row.verification_token, epoch);
   if (!fin.ok) {
-    await deps.store.markReleaseFailed(args.siteId, host, row.operation_epoch, fin.message || 'DB削除に失敗');
+    await deps.store.markReleaseFailed(args.siteId, host, epoch, fin.message || 'DB削除に失敗');
     return {
       ok: true,
       host,

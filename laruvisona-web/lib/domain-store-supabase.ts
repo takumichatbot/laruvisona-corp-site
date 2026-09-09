@@ -13,7 +13,7 @@ import type {
 } from '@/lib/domain-service';
 import type { DomainStatus } from '@/lib/domain';
 
-const COLS = 'id, site_id, host, status, verification_token, render_domain_id, last_error, last_checked_at, operation_epoch, render_register_started_at, ownership_verified_at, external_registration_owned';
+const COLS = 'id, site_id, host, status, verification_token, render_domain_id, last_error, last_checked_at, operation_epoch, render_register_started_at, ownership_verified_at, external_registration_owned, release_operation_id, release_lease_until';
 
 type Rpc = { ok?: boolean; reason?: string; switched?: boolean; row?: DomainRecord };
 
@@ -108,7 +108,10 @@ export async function createDomainStore(): Promise<DomainStore> {
       const { data, error } = await rpc('laruhp_domain_begin_release', { p_site_id: siteId, p_host: host });
       if (error) return { ok: false as const, reason: 'error' as const, message: error };
       if (!data?.ok || !data.row) {
-        return { ok: false as const, reason: data?.reason === 'gone' ? 'gone' as const : 'error' as const };
+        const r = data?.reason;
+        const reason = r === 'gone' ? 'gone' as const
+          : r === 'in_progress' ? 'in_progress' as const : 'error' as const;
+        return { ok: false as const, reason };
       }
       return { ok: true as const, row: data.row };
     },
@@ -128,9 +131,49 @@ export async function createDomainStore(): Promise<DomainStore> {
       });
     },
 
-    async markRegisterStarted(siteId, host, epoch) {
-      await rpc('laruhp_domain_mark_register_started', {
+    async markRegisterStarted(siteId, host, fencingToken, epoch) {
+      // 記録できたかを返す。外部登録はこの結果を見てから呼ぶ。
+      const { data, error } = await rpc('laruhp_domain_mark_register_started', {
+        p_site_id: siteId, p_host: host, p_fencing_token: fencingToken, p_epoch: epoch,
+      });
+      if (error) return { ok: false as const, reason: 'error' as const, message: error };
+      if (!data?.ok) {
+        const r = data?.reason;
+        const reason = r === 'gone' ? 'gone' as const
+          : r === 'releasing' ? 'releasing' as const
+          : r === 'stale' ? 'stale' as const : 'error' as const;
+        return { ok: false as const, reason };
+      }
+      return { ok: true as const };
+    },
+
+    async pinReleaseTarget(siteId, host, epoch, operationId, renderDomainId) {
+      const { data, error } = await rpc('laruhp_domain_pin_release_target', {
         p_site_id: siteId, p_host: host, p_epoch: epoch,
+        p_operation_id: operationId, p_render_domain_id: renderDomainId,
+      });
+      if (error) return { ok: false as const, reason: 'error' as const, message: error };
+      if (!data?.ok) {
+        return { ok: false as const, reason: data?.reason === 'gone' ? 'gone' as const : 'stale' as const };
+      }
+      return { ok: true as const, renderDomainId: (data as { render_domain_id?: string | null }).render_domain_id ?? null };
+    },
+
+    async claimRelease(siteId, host, epoch, operationId) {
+      const { data, error } = await rpc('laruhp_domain_claim_release', {
+        p_site_id: siteId, p_host: host, p_epoch: epoch, p_operation_id: operationId,
+      });
+      if (error) return { ok: false as const, reason: 'error' as const, message: error };
+      if (!data?.ok) {
+        return { ok: false as const, reason: data?.reason === 'gone' ? 'gone' as const : 'stale' as const };
+      }
+      return { ok: true as const, renderDomainId: (data as { render_domain_id?: string | null }).render_domain_id ?? null };
+    },
+
+    async enqueueOrphanRegistration(siteId, host, renderDomainId, fencingToken, epoch, message) {
+      await rpc('laruhp_domain_enqueue_orphan_registration', {
+        p_site_id: siteId, p_host: host, p_render_domain_id: renderDomainId,
+        p_fencing_token: fencingToken, p_epoch: epoch, p_message: message,
       });
     },
 

@@ -21,6 +21,8 @@ type Row = {
   render_register_started_at: string | null;
   ownership_verified_at: string | null;
   external_registration_owned: boolean | null;
+  release_operation_id: string | null;
+  release_lease_until: string | null;
 };
 
 const TARGET = 'laruvisona-corp-site.onrender.com';
@@ -35,16 +37,19 @@ function makeStore(opts: {
   rows?: Row[];
   agencyHosts?: string[];
   failApply?: boolean;
+  failMarkRegisterStarted?: boolean;
   failFinishRelease?: boolean;
   /** applyCheck を呼ぶ直前に走らせる（競合の再現用） */
   beforeApply?: () => void;
 }) {
   const rows: Row[] = opts.rows ? [...opts.rows] : [];
   const marks: string[] = [];
+  const orphans: { host: string; renderDomainId: string; token: string; epoch: number; message: string }[] = [];
   let seq = 0;
   const store = {
     rows,
     marks,
+    orphans,
     async getOwnedSite(siteId: string, userId: string) {
       const s = opts.sites[siteId];
       if (!s || s.user_id !== userId) return null;
@@ -60,7 +65,7 @@ function makeStore(opts: {
         id: `d${++seq}`, site_id: siteId, host, status: 'pending_ownership',
         verification_token: token, render_domain_id: null, last_error: null, last_checked_at: null,
         operation_epoch: 1, render_register_started_at: null, ownership_verified_at: null,
-        external_registration_owned: null,
+        external_registration_owned: null, release_operation_id: null, release_lease_until: null,
       };
       rows.push(row);
       return { ok: true as const, row };
@@ -107,6 +112,10 @@ function makeStore(opts: {
     async beginRelease(siteId: string, host: string) {
       const row = rows.find(r => r.site_id === siteId && r.host === host);
       if (!row) return { ok: false as const, reason: 'gone' as const };
+      // 進行中の解除があれば新しい処理を始めない（SQLの release_lease_until と同じ）
+      if (row.status === 'release_pending' && row.release_lease_until === 'active') {
+        return { ok: false as const, reason: 'in_progress' as const };
+      }
       if (opts.sites[siteId].custom_domain === host) opts.sites[siteId].custom_domain = null;
       // 外部登録の帰属は、status が変わる前の値から固定する（SQLと同じ）
       row.external_registration_owned = row.external_registration_owned ?? (
@@ -115,7 +124,9 @@ function makeStore(opts: {
       row.status = 'release_pending';
       // 解除の開始で世代が進む＝進行中の検証は適用できなくなる
       row.operation_epoch += 1;
-      return { ok: true as const, row };
+      row.release_operation_id = `op-${++seq}`;
+      row.release_lease_until = 'active';
+      return { ok: true as const, row: { ...row } };
     },
     async finishRelease(siteId: string, host: string, fencingToken: string, epoch: number) {
       if (opts.failFinishRelease) return { ok: false, message: 'db down' };
@@ -132,10 +143,40 @@ function makeStore(opts: {
       marks.push(`${host}:${message}`);
       row.last_error = message;
     },
-    async markRegisterStarted(siteId: string, host: string, epoch: number) {
+    async markRegisterStarted(siteId: string, host: string, token: string, epoch: number) {
+      if (opts.failMarkRegisterStarted) return { ok: false as const, reason: 'error' as const, message: 'db down' };
       const row = rows.find(r => r.site_id === siteId && r.host === host);
-      if (!row || row.operation_epoch !== epoch) return;
+      if (!row) return { ok: false as const, reason: 'gone' as const };
+      // epoch は作り直すと戻りうるので token も見る（SQLと同じ）
+      if (row.verification_token !== token || row.operation_epoch !== epoch) {
+        return { ok: false as const, reason: 'stale' as const };
+      }
+      if (row.status === 'release_pending') return { ok: false as const, reason: 'releasing' as const };
       row.render_register_started_at = row.render_register_started_at ?? 'now';
+      return { ok: true as const };
+    },
+
+    async pinReleaseTarget(siteId: string, host: string, epoch: number, opId: string, renderDomainId: string) {
+      const row = rows.find(r => r.site_id === siteId && r.host === host);
+      if (!row) return { ok: false as const, reason: 'gone' as const };
+      if (row.operation_epoch !== epoch || row.release_operation_id !== opId || row.status !== 'release_pending') {
+        return { ok: false as const, reason: 'stale' as const };
+      }
+      row.render_domain_id = row.render_domain_id ?? renderDomainId;
+      return { ok: true as const, renderDomainId: row.render_domain_id };
+    },
+
+    async claimRelease(siteId: string, host: string, epoch: number, opId: string) {
+      const row = rows.find(r => r.site_id === siteId && r.host === host);
+      if (!row) return { ok: false as const, reason: 'gone' as const };
+      if (row.operation_epoch !== epoch || row.release_operation_id !== opId || row.status !== 'release_pending') {
+        return { ok: false as const, reason: 'stale' as const };
+      }
+      return { ok: true as const, renderDomainId: row.render_domain_id };
+    },
+
+    async enqueueOrphanRegistration(siteId: string, host: string, renderDomainId: string, token: string, epoch: number, message: string) {
+      orphans.push({ host, renderDomainId, token, epoch, message });
     },
     async isAgencyAdminHost(host: string) {
       return (opts.agencyHosts ?? []).includes(host);
@@ -167,10 +208,15 @@ function makeRender(mode: 'ok' | 'unverified' | 'down' | 'off', opts: { unregist
       if (mode === 'down') return { ok: false as const, message: 'Renderに接続できませんでした' };
       return { ok: true as const, domain: { id: 'rd_1', name: host, verificationStatus: mode === 'ok' ? 'verified' : 'pending' } };
     },
-    async unregisterByHost(host: string) {
-      this.calls.push(`unregister:${host}`);
+    async findByHost(host: string) {
+      this.calls.push(`find:${host}`);
       if (opts.unregister === 'fail') return { ok: false as const, message: 'Renderに接続できませんでした' };
-      return { ok: true as const, removed: opts.unregister !== 'missing' };
+      return { ok: true as const, domainId: opts.unregister === 'missing' ? null : 'rd_1' };
+    },
+    async unregisterById(id: string) {
+      this.calls.push(`unregister:${id}`);
+      if (opts.unregister === 'fail') return { ok: false as const, message: 'Renderに接続できませんでした' };
+      return { ok: true as const, removed: true };
     },
   };
 }
@@ -196,7 +242,7 @@ function row(host: string, over: Partial<Row> = {}): Row {
     id: 'd1', site_id: 's1', host, status: 'pending_ownership',
     verification_token: TOKEN, render_domain_id: null, last_error: null, last_checked_at: null,
     operation_epoch: 1, render_register_started_at: null, ownership_verified_at: null,
-    external_registration_owned: null,
+    external_registration_owned: null, release_operation_id: null, release_lease_until: null,
     ...over,
   };
 }
@@ -450,7 +496,8 @@ test('R4: 外部の解除に失敗したら記録を消さず、再試行でき�
   assert.equal(store.rows[0].status, 'release_pending');
   assert.ok(store.marks.length > 0, '失敗の記録が残っていない');
 
-  // 再試行して成功すれば消える
+  // 再試行して成功すれば消える（占有が切れている前提）
+  store.rows[0].release_lease_until = null;
   const render2 = makeRender('ok', { unregister: 'ok' });
   const again = await releaseDomain(deps(store, makeDns(), render2, makeProbe(true)),
     { siteId: 's1', userId: 'u1', host: 'example.com' });
@@ -459,7 +506,7 @@ test('R4: 外部の解除に失敗したら記録を消さず、再試行でき�
   assert.equal(store.rows.length, 0);
 });
 
-test('R4: 外部IDを持たないlegacyでも、ホスト名で解除を試みる', async () => {
+test('R4: 外部IDを持たないlegacyでも、引き直して固定してから解除する', async () => {
   const sites = { s1: { user_id: 'u1', custom_domain: 'legacy.example' as string | null } };
   const store = makeStore({ sites, rows: [row('legacy.example', { status: 'legacy', render_domain_id: null })] });
   const render = makeRender('ok', { unregister: 'ok' });
@@ -467,7 +514,8 @@ test('R4: 外部IDを持たないlegacyでも、ホスト名で解除を試み�
     { siteId: 's1', userId: 'u1', host: 'legacy.example' });
 
   assert.equal(res.ok, true);
-  assert.ok(render.calls.includes('unregister:legacy.example'), 'legacyで外部解除を飛ばしている');
+  assert.ok(render.calls.includes('find:legacy.example'), 'legacyで外部の照会をしていない');
+  assert.ok(render.calls.some(c => c.startsWith('unregister:')), 'legacyで外部解除を飛ばしている');
   assert.equal(store.rows.length, 0);
   assert.equal(sites.s1.custom_domain, null);
 });
@@ -534,7 +582,7 @@ test('R1: 登録を呼んだ記録がある候補は、外部解除まで行う'
   const res = await releaseDomain(deps(store, makeDns(), render, makeProbe(true)),
     { siteId: 's1', userId: 'u1', host: 'started.example' });
   assert.equal(res.ok, true);
-  assert.ok(render.calls.includes('unregister:started.example'), '回収できていない');
+  assert.ok(render.calls.some(c => c.startsWith('unregister:')), '回収できていない');
 });
 
 test('R1: 代理店の管理用ドメインは候補として登録できない', async () => {
@@ -630,7 +678,8 @@ test('R4: 署名鍵が無い運用では、Renderの確認が取れないと接�
   assert.equal(sites.s1.custom_domain, null);
 });
 
-test('R4: 署名鍵が無くても、Renderがverifiedで向き先も合えば接続済みにする', async () => {
+test('R4: 署名鍵が無い運用では、Renderがverifiedでも接続済みにしない', async () => {
+  // 到達確認は必須。TLSと実際の応答を確かめずに主URLへ採用しない。
   const sites = { s1: { user_id: 'u1', custom_domain: null as string | null } };
   const store = makeStore({ sites, rows: [row('nokey2.example')] });
   const res = await verifyDomain(
@@ -638,5 +687,187 @@ test('R4: 署名鍵が無くても、Renderがverifiedで向き先も合えば�
     { siteId: 's1', userId: 'u1', host: 'nokey2.example' });
   assert.equal(res.ok, true);
   if (!res.ok) return;
-  assert.equal(res.status, 'connected');
+  assert.equal(res.status, 'ssl_pending');
+  assert.equal(sites.s1.custom_domain, null);
+});
+
+// ════════════════════════════════════════════════════════════
+// 再々レビュー(4cee5c0) R1: 外部呼び出しが遅れたときの順序
+//
+// 監督が再現した順序:
+//   解除Aが外部照会で止まる → 解除Bが完了して行が消える →
+//   同じホストが新しいtoken・新しい外部IDで再登録される →
+//   遅れていた解除Aが再開する
+// このとき、解除Aが provider-new を削除してはいけない。
+// ════════════════════════════════════════════════════════════
+
+test('R1: 遅れて再開した解除は、固定済みの古いIDだけを消す', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: 'race.example' as string | null } };
+  const store = makeStore({
+    sites,
+    rows: [row('race.example', { status: 'connected', render_domain_id: 'provider-old', verification_token: 'tok-old' })],
+  });
+
+  const deleted: string[] = [];
+  let gate: (() => void) | null = null;
+  const opened = new Promise<void>(r => { gate = r; });
+  let firstDelete = true;
+
+  const render = {
+    calls: [] as string[],
+    configured() { return true; },
+    async register() { return { ok: true as const, domainId: 'x' }; },
+    async find(host: string) { return { ok: true as const, domain: { id: 'provider-old', name: host, verificationStatus: 'verified' } }; },
+    async findByHost() { return { ok: true as const, domainId: 'provider-old' }; },
+    async unregisterById(id: string) {
+      // 1回目（解除A）の削除呼び出しだけ、外部側で遅らせる
+      if (firstDelete) { firstDelete = false; await opened; }
+      deleted.push(id);
+      return { ok: true as const, removed: true };
+    },
+  };
+
+  const d = deps(store, makeDns(), render, makeProbe(true));
+
+  // 解除Aを開始し、外部削除の途中で止める
+  const aPromise = releaseDomain(d, { siteId: 's1', userId: 'u1', host: 'race.example' });
+  await new Promise(r => setTimeout(r, 0));
+
+  // その間に、行が消えて同じホストが新しいtoken・新しいIDで再登録される
+  store.rows.length = 0;
+  store.rows.push(row('race.example', {
+    id: 'd9', status: 'connected', render_domain_id: 'provider-new',
+    verification_token: 'tok-new', operation_epoch: 1,
+  }));
+  sites.s1.custom_domain = 'race.example';
+
+  gate!();
+  const a = await aPromise;
+
+  assert.deepEqual(deleted, ['provider-old'],
+    '遅れた解除が新しい世代の外部IDを消した');
+  assert.equal(store.rows.length, 1, '再登録した行が消えた');
+  assert.equal(store.rows[0].render_domain_id, 'provider-new');
+  assert.equal(store.rows[0].status, 'connected', '再登録した行が解除待ちにされた');
+  assert.equal(sites.s1.custom_domain, 'race.example', '再登録後の主URLが落ちた');
+  // 後始末（finish_release）は世代・トークンが合わないので通らない
+  assert.equal(a.ok, true);
+  if (a.ok) assert.equal(a.released, false);
+});
+
+test('R1: 外部照会が遅れている間に状況が変わったら、固定せず削除もしない', async () => {
+  // 行にIDが無い（legacy）ので、外部一覧から引いてから固定する。
+  // 引いている間に別の解除が完了し、同じホストが再登録された場合。
+  const sites = { s1: { user_id: 'u1', custom_domain: 'legacy-race.example' as string | null } };
+  const store = makeStore({
+    sites,
+    rows: [row('legacy-race.example', { status: 'legacy', render_domain_id: null, verification_token: 'tok-old' })],
+  });
+
+  const deleted: string[] = [];
+  let gate: (() => void) | null = null;
+  const opened = new Promise<void>(r => { gate = r; });
+
+  const render = {
+    calls: [] as string[],
+    configured() { return true; },
+    async register() { return { ok: true as const, domainId: 'x' }; },
+    async find(host: string) { return { ok: true as const, domain: { id: 'provider-new', name: host, verificationStatus: 'verified' } }; },
+    async findByHost() {
+      await opened;              // 照会が遅れる
+      return { ok: true as const, domainId: 'provider-new' }; // 引いた時点では新しいIDが返る
+    },
+    async unregisterById(id: string) { deleted.push(id); return { ok: true as const, removed: true }; },
+  };
+
+  const d = deps(store, makeDns(), render, makeProbe(true));
+  const aPromise = releaseDomain(d, { siteId: 's1', userId: 'u1', host: 'legacy-race.example' });
+  await new Promise(r => setTimeout(r, 0));
+
+  // 照会の間に行が消え、同じホストが再登録される
+  store.rows.length = 0;
+  store.rows.push(row('legacy-race.example', {
+    id: 'd9', status: 'connected', render_domain_id: 'provider-new',
+    verification_token: 'tok-new', operation_epoch: 1,
+  }));
+  sites.s1.custom_domain = 'legacy-race.example';
+
+  gate!();
+  const a = await aPromise;
+
+  assert.deepEqual(deleted, [], '引き直した新しいIDを削除してしまった');
+  assert.equal(a.ok, false, '状況が変わったのに成功として返している');
+  if (!a.ok) assert.equal(a.status, 409);
+  assert.equal(store.rows[0].render_domain_id, 'provider-new');
+  assert.equal(sites.s1.custom_domain, 'legacy-race.example');
+});
+
+test('R1: 解除が動いている間、同じホストの解除をもう1本始めない', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: 'dup.example' as string | null } };
+  const store = makeStore({
+    sites,
+    rows: [row('dup.example', { status: 'connected', render_domain_id: 'provider-old' })],
+  });
+  const render = makeRender('ok', { unregister: 'fail' });
+  const d = deps(store, makeDns(), render, makeProbe(true));
+
+  // 1本目は外部解除に失敗して release_pending のまま残る（占有は続く）
+  const first = await releaseDomain(d, { siteId: 's1', userId: 'u1', host: 'dup.example' });
+  assert.equal(first.ok, true);
+
+  const second = await releaseDomain(d, { siteId: 's1', userId: 'u1', host: 'dup.example' });
+  assert.equal(second.ok, false, '2本目の解除が並行して外部へ出ていく');
+  if (!second.ok) assert.equal(second.status, 409);
+});
+
+// ════════════════════════════════════════════════════════════
+// R2: 登録開始の記録と、記録できなかった登録の回収
+// ════════════════════════════════════════════════════════════
+
+test('R2: 登録開始を記録できなければ、外部登録を呼ばない', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: null as string | null } };
+  const store = makeStore({ sites, rows: [row('nomark.example')], failMarkRegisterStarted: true });
+  const render = makeRender('ok');
+
+  const res = await verifyDomain(
+    deps(store, makeDns({ txt: [challengeRecordValue(TOKEN)], a: [APEX_IP] }), render, makeProbe(true)),
+    { siteId: 's1', userId: 'u1', host: 'nomark.example' });
+
+  assert.equal(res.ok, true);
+  assert.equal(render.calls.filter(c => c.startsWith('register:')).length, 0,
+    '記録できていないのに外部登録を呼んだ');
+  if (res.ok) assert.ok(res.lastError, '理由が残っていない');
+});
+
+test('R2: 解除中のドメインには登録開始を記録せず、外部登録もしない', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: null as string | null } };
+  const store = makeStore({ sites, rows: [row('rel.example', { status: 'release_pending' })] });
+  const render = makeRender('ok');
+  const res = await verifyDomain(
+    deps(store, makeDns({ txt: [challengeRecordValue(TOKEN)] }), render, makeProbe(true)),
+    { siteId: 's1', userId: 'u1', host: 'rel.example' });
+  // verify 自体が解除中を拒否する
+  assert.equal(res.ok, false);
+  assert.deepEqual(render.calls, []);
+});
+
+test('R2: 登録できたのに記録できなかったら、帰属付きで回収へ回す', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: null as string | null } };
+  const store = makeStore({
+    sites,
+    rows: [row('orphan.example')],
+    // 外部登録のあと、確定の直前に行が消える
+    beforeApply: () => { store.rows.length = 0; },
+  });
+  const render = makeRender('ok');
+
+  const res = await verifyDomain(
+    deps(store, makeDns({ txt: [challengeRecordValue(TOKEN)], a: [APEX_IP] }), render, makeProbe(true)),
+    { siteId: 's1', userId: 'u1', host: 'orphan.example' });
+
+  assert.equal(res.ok, false, '保存できていないのに成功として返している');
+  assert.equal(store.orphans.length, 1, '作った外部登録が追跡できていない');
+  assert.equal(store.orphans[0].host, 'orphan.example');
+  assert.equal(store.orphans[0].renderDomainId, 'rd_1');
+  assert.equal(store.orphans[0].token, TOKEN, '行の同一性が残っていない');
 });

@@ -51,6 +51,11 @@ create table if not exists public.site_domains (
   -- 解除に入ると status が release_pending に変わって legacy 等の根拠が消えるため、
   -- その瞬間の判断を残しておく（再試行しても判断がぶれない）。
   external_registration_owned boolean,
+  -- 進行中の解除の識別子と占有期限。
+  -- 同じホストに対する解除要求を1つに集約し、古い要求が
+  -- 新しい世代の外部登録を消しに行かないようにする。
+  release_operation_id uuid,
+  release_lease_until timestamptz,
 
   -- 処理の世代。所有確認トークンとは別物。
   --   verification_token … 利用者がDNSに置く値。行を作り直さない限り変わらない
@@ -70,6 +75,8 @@ create table if not exists public.site_domains (
 alter table public.site_domains add column if not exists operation_epoch bigint not null default 1;
 alter table public.site_domains add column if not exists render_register_started_at timestamptz;
 alter table public.site_domains add column if not exists external_registration_owned boolean;
+alter table public.site_domains add column if not exists release_operation_id uuid;
+alter table public.site_domains add column if not exists release_lease_until timestamptz;
 
 create unique index if not exists site_domains_host_key on public.site_domains (host);
 create index if not exists site_domains_site_idx on public.site_domains (site_id);
@@ -96,11 +103,25 @@ create table if not exists public.domain_release_queue (
   site_id uuid,
   host text not null,
   render_domain_id text,
+  -- どの行・どの世代・どの解除処理の積み残しかを残す。
+  -- ホスト名だけだと、同じホストが別サイトに登録し直されたときに
+  -- 新しい割当を消してしまう。
+  verification_token text,
+  operation_epoch bigint,
+  release_operation_id uuid,
+  external_registration_owned boolean,
+  /** 'release'（解除の積み残し） / 'orphan_registration'（登録できたが記録できなかった） */
+  kind text not null default 'release',
   requested_at timestamptz not null default now(),
   attempts int not null default 0,
   last_error text,
   resolved_at timestamptz
 );
+alter table public.domain_release_queue add column if not exists verification_token text;
+alter table public.domain_release_queue add column if not exists operation_epoch bigint;
+alter table public.domain_release_queue add column if not exists release_operation_id uuid;
+alter table public.domain_release_queue add column if not exists external_registration_owned boolean;
+alter table public.domain_release_queue add column if not exists kind text not null default 'release';
 alter table public.domain_release_queue enable row level security;
 revoke all on public.domain_release_queue from authenticated, anon;
 
@@ -111,10 +132,20 @@ begin
   if coalesce(current_setting('laruhp.release_done', true), '') = '1' then
     return old;
   end if;
+  -- 外部に何かを作った可能性がある行は、消える前に積む。
+  -- render_register_started_at（登録を呼んだ記録）を見ていなかったため、
+  -- 「登録は通ったがIDを保存する前にサイトごと削除された」行が
+  -- 追跡できずに消えていた。
   if old.render_domain_id is not null
+     or old.render_register_started_at is not null
+     or coalesce(old.external_registration_owned, false)
      or old.status in ('connected', 'legacy', 'release_pending', 'ssl_pending') then
-    insert into public.domain_release_queue (site_id, host, render_domain_id)
-    values (old.site_id, old.host, old.render_domain_id);
+    insert into public.domain_release_queue (
+      site_id, host, render_domain_id, verification_token, operation_epoch,
+      release_operation_id, external_registration_owned, kind)
+    values (
+      old.site_id, old.host, old.render_domain_id, old.verification_token, old.operation_epoch,
+      old.release_operation_id, old.external_registration_owned, 'release');
   end if;
   return old;
 end;
@@ -176,15 +207,25 @@ create trigger guard_sites_custom_domain_trg before insert or update on public.s
 create or replace function public.laruhp_domain_mark_register_started(
   p_site_id uuid,
   p_host text,
+  p_fencing_token text,
   p_epoch bigint
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_row public.site_domains%rowtype;
 begin
   select * into v_row from public.site_domains
    where site_id = p_site_id and host = p_host for update;
-  if not found or v_row.operation_epoch is distinct from p_epoch then
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'gone');
+  end if;
+  -- epoch は行を作り直すと 1 に戻りうるので、行の同一性（token）も見る
+  if v_row.verification_token is distinct from p_fencing_token
+     or v_row.operation_epoch is distinct from p_epoch then
     return jsonb_build_object('ok', false, 'reason', 'stale');
   end if;
+  if v_row.status = 'release_pending' then
+    return jsonb_build_object('ok', false, 'reason', 'releasing');
+  end if;
+
   update public.site_domains
      set render_register_started_at = coalesce(render_register_started_at, now())
    where id = v_row.id;
@@ -293,7 +334,8 @@ $$;
 -- もう適用できなくなる（順序Aの上書きを止める）。
 create or replace function public.laruhp_domain_begin_release(
   p_site_id uuid,
-  p_host text
+  p_host text,
+  p_lease_seconds int default 120
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_row public.site_domains%rowtype;
 begin
@@ -304,6 +346,15 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'gone');
   end if;
 
+  -- すでに別の解除処理が動いている間は、新しい処理を始めない。
+  -- 並行して外部へ出ていくと、遅れた側が新しい世代の登録を消しにいく。
+  if v_row.status = 'release_pending'
+     and v_row.release_lease_until is not null
+     and v_row.release_lease_until > now() then
+    return jsonb_build_object('ok', false, 'reason', 'in_progress',
+                              'row', to_jsonb(v_row));
+  end if;
+
   update public.sites set custom_domain = null
    where id = p_site_id and custom_domain = p_host;
 
@@ -311,6 +362,8 @@ begin
     status = 'release_pending',
     operation_epoch = operation_epoch + 1,
     release_requested_at = coalesce(release_requested_at, now()),
+    release_operation_id = gen_random_uuid(),
+    release_lease_until = now() + make_interval(secs => p_lease_seconds),
     -- 解除前の行から判断して固定する。status はこの更新で release_pending に
     -- 変わるので、legacy だったことを後から判断できなくなるため。
     external_registration_owned = coalesce(
@@ -323,6 +376,87 @@ begin
    returning * into v_row;
 
   return jsonb_build_object('ok', true, 'row', to_jsonb(v_row));
+end;
+$$;
+
+-- 外部削除の対象IDを、この解除処理に固定する。
+-- legacy など行にIDが無い場合は、外部一覧から引いた1件をここで確定させる。
+-- 固定できなければ（行が消えた・世代が進んだ・別処理になった）外部は触らない。
+create or replace function public.laruhp_domain_pin_release_target(
+  p_site_id uuid,
+  p_host text,
+  p_epoch bigint,
+  p_operation_id uuid,
+  p_render_domain_id text
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_row public.site_domains%rowtype;
+begin
+  select * into v_row from public.site_domains
+   where site_id = p_site_id and host = p_host for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'gone');
+  end if;
+  if v_row.operation_epoch is distinct from p_epoch
+     or v_row.release_operation_id is distinct from p_operation_id
+     or v_row.status <> 'release_pending' then
+    return jsonb_build_object('ok', false, 'reason', 'stale');
+  end if;
+
+  update public.site_domains
+     set render_domain_id = coalesce(render_domain_id, p_render_domain_id)
+   where id = v_row.id
+   returning * into v_row;
+
+  return jsonb_build_object('ok', true, 'render_domain_id', v_row.render_domain_id);
+end;
+$$;
+
+-- 外部削除を実行してよいかを、直前にもう一度確かめて占有を延長する。
+-- 遅れた解除要求が、別の処理で作り直されたホストを消しに行かないようにする。
+create or replace function public.laruhp_domain_claim_release(
+  p_site_id uuid,
+  p_host text,
+  p_epoch bigint,
+  p_operation_id uuid,
+  p_lease_seconds int default 120
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_row public.site_domains%rowtype;
+begin
+  select * into v_row from public.site_domains
+   where site_id = p_site_id and host = p_host for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'gone');
+  end if;
+  if v_row.operation_epoch is distinct from p_epoch
+     or v_row.release_operation_id is distinct from p_operation_id
+     or v_row.status <> 'release_pending' then
+    return jsonb_build_object('ok', false, 'reason', 'stale');
+  end if;
+
+  update public.site_domains
+     set release_lease_until = now() + make_interval(secs => p_lease_seconds)
+   where id = v_row.id;
+  return jsonb_build_object('ok', true, 'render_domain_id', v_row.render_domain_id);
+end;
+$$;
+
+-- 外部登録は成功したが、その記録をDBへ残せなかった分を積む。
+-- 解除が先に完了して行が消えている場合もあるので、行に依存しない。
+create or replace function public.laruhp_domain_enqueue_orphan_registration(
+  p_site_id uuid,
+  p_host text,
+  p_render_domain_id text,
+  p_fencing_token text,
+  p_epoch bigint,
+  p_message text
+) returns jsonb language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.domain_release_queue (
+    site_id, host, render_domain_id, verification_token, operation_epoch,
+    external_registration_owned, kind, last_error)
+  values (p_site_id, p_host, p_render_domain_id, p_fencing_token, p_epoch, true,
+          'orphan_registration', p_message);
+  return jsonb_build_object('ok', true);
 end;
 $$;
 
@@ -402,10 +536,13 @@ begin
   foreach f in array array[
     'laruhp_domain_apply_check(uuid,text,text,bigint,text,text,text,boolean)',
     'laruhp_domain_set_primary(uuid,text,text,bigint)',
-    'laruhp_domain_begin_release(uuid,text)',
     'laruhp_domain_finish_release(uuid,text,text,bigint)',
     'laruhp_domain_mark_release_failed(uuid,text,bigint,text)',
-    'laruhp_domain_mark_register_started(uuid,text,bigint)'
+    'laruhp_domain_mark_register_started(uuid,text,text,bigint)',
+    'laruhp_domain_begin_release(uuid,text,int)',
+    'laruhp_domain_pin_release_target(uuid,text,bigint,uuid,text)',
+    'laruhp_domain_claim_release(uuid,text,bigint,uuid,int)',
+    'laruhp_domain_enqueue_orphan_registration(uuid,text,text,text,bigint,text)'
   ] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
     execute format('grant execute on function public.%s to service_role', f);
@@ -415,6 +552,8 @@ begin
   execute 'drop function if exists public.laruhp_domain_set_primary(uuid,text,text)';
   execute 'drop function if exists public.laruhp_domain_finish_release(uuid,text,text)';
   execute 'drop function if exists public.laruhp_domain_mark_release_failed(uuid,text,text)';
+  execute 'drop function if exists public.laruhp_domain_mark_register_started(uuid,text,bigint)';
+  execute 'drop function if exists public.laruhp_domain_begin_release(uuid,text)';
 end;
 $$;
 

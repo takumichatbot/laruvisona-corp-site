@@ -264,29 +264,24 @@ export interface StatusInput {
  * 事実の組み合わせから状態を決める。
  *
  * 「確認していない」「確認して駄目だった」「確認する必要がない」を混ぜない。
- * 接続済みにするには、次のどちらかで配信先の裏が取れている必要がある:
- *   (a) 署名付きの到達確認が成立した（probe = reached）
- *   (b) 到達確認ができない運用で、Renderが verified を返し、
- *       かつ公開DNSの向き先も一致している
- * どちらも無いときは ssl_pending のままにして、切り替えない。
+ * 接続済みにする条件は、署名付きの到達確認が成立していること（probe = reached）。
+ * 署名鍵が無い運用では到達確認自体ができないので、接続済みにはしない。
+ * DOMAIN_PROBE_SECRET は独自ドメイン機能の必須設定として扱う。
  */
 export function deriveStatus(input: StatusInput): DomainStatus {
   if (!input.ownership) return 'pending_ownership';
 
-  const renderOk = input.renderCheck === 'verified' || input.renderCheck === 'not_configured';
-
-  if (input.probe === 'reached') {
-    return renderOk ? 'connected' : 'ssl_pending';
-  }
-
-  if (input.probe === 'unavailable') {
-    // 到達確認ができない運用。信頼できる外部確認が取れているときだけ通す。
-    if (input.renderCheck === 'verified' && input.dnsPointsHere) return 'connected';
+  // 到達確認は必須。ここを飛ばすと、TLSでつながるかも、こちらのサービスが
+  // 応答しているかも確かめないまま主URLへ採用できてしまう。
+  // Render の verificationStatus は「DNSの確認が済んだ」であって、
+  // 公開できる状態（証明書の発行・ルーティングの反映）とは別物。
+  if (input.probe !== 'reached') {
+    if (input.probe === 'unavailable') return 'ssl_pending';
     return input.dnsPointsHere ? 'ssl_pending' : 'pending_dns';
   }
 
-  // probe === 'not_reached'
-  return input.dnsPointsHere ? 'ssl_pending' : 'pending_dns';
+  const renderOk = input.renderCheck === 'verified' || input.renderCheck === 'not_configured';
+  return renderOk ? 'connected' : 'ssl_pending';
 }
 
 /** 利用者向けの状態ラベルと、次にやること */

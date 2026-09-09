@@ -159,16 +159,15 @@ test('「確認していない」を「確認して問題なし」に変換し�
   assert.equal(deriveStatus({ ...base, renderCheck: 'not_configured' }), 'connected');
 });
 
-test('到達確認ができない運用では、信頼できる外部確認を必須にする', () => {
+test('到達確認ができない運用では、接続済みにしない', () => {
   const base = { ownership: true, probe: 'unavailable' as const };
-  // Renderがverifiedで、公開DNSの向き先も合っているときだけ通す
-  assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'verified' }), 'connected');
-  // Renderの確認が取れないなら、到達確認も無いので接続済みにしない
+  // 署名鍵が無いと、TLSでつながるかも、こちらのサービスが応答しているかも
+  // 確かめられない。Renderのverificationは「DNSの確認が済んだ」であって
+  // 公開できる状態とは別なので、これだけでは通さない。
+  assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'verified' }), 'ssl_pending');
   assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'unavailable' }), 'ssl_pending');
-  assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'unverified' }), 'ssl_pending');
-  // 到達確認もRender確認も無い運用では、接続済みにできない
+  assert.equal(deriveStatus({ ...base, dnsPointsHere: false, renderCheck: 'verified' }), 'ssl_pending');
   assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'not_configured' }), 'ssl_pending');
-  assert.equal(deriveStatus({ ...base, dnsPointsHere: false, renderCheck: 'verified' }), 'pending_dns');
 });
 
 test('このサービスへ到達できなければ、Renderがverifiedでも接続済みにしない', () => {

@@ -4,9 +4,11 @@
 -- 期待どおりでなければ raise exception で落ちるので、psql の終了コードで判定できる。
 --
 -- 実行:
---   supabase/site_domains_regression.sh を使う（一時DBを作って適用してから流す）
+--   ./supabase/run-sql-regression.sh
+--   （一時クラスタを作り、test-bootstrap.sql → schema.sql → site_domains.sql を
+--     適用してからこのファイルを流す。終了時に自分が作ったものだけ片付ける）
 --
--- 前提: schema.sql と site_domains.sql を適用済みの空DB。
+-- 前提: 上記3つを適用済みの空DB。
 
 \set ON_ERROR_STOP on
 select set_config('request.jwt.claims', '{"role":"service_role"}', false);
@@ -191,14 +193,14 @@ begin
   values (v_site,'f.example.com','t-f','pending_ownership');
   select operation_epoch into v_e from public.site_domains where host='f.example.com';
 
-  v_r := public.laruhp_domain_mark_register_started(v_site,'f.example.com',v_e);
+  v_r := public.laruhp_domain_mark_register_started(v_site,'f.example.com','t-f',v_e);
   perform pg_temp.expect((v_r->>'ok')::boolean, 'F: 登録開始の印が立つ');
   perform pg_temp.expect(
     (select render_register_started_at from public.site_domains where host='f.example.com') is not null,
     'F: 記録が残る');
 
   perform public.laruhp_domain_begin_release(v_site,'f.example.com');
-  v_r := public.laruhp_domain_mark_register_started(v_site,'f.example.com',v_e);
+  v_r := public.laruhp_domain_mark_register_started(v_site,'f.example.com','t-f',v_e);
   perform pg_temp.expect((v_r->>'ok')::boolean is false, 'F: 世代が進んだあとの印は立たない');
 end;
 $$;
@@ -255,4 +257,143 @@ begin
 end;
 $$;
 
-select 'ALL SQL REGRESSION SCENARIOS PASSED (incl. H)' as result;
+
+
+-- ════════════════════════════════════════════════════════════
+-- 追加I: 同じホストの解除は1つに集約する（重複解除を並行させない）
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000003';
+  v_a jsonb; v_b jsonb;
+begin
+  insert into public.sites(id,user_id,name) values (v_site,'00000000-0000-0000-0000-000000000001','i');
+  insert into public.site_domains(site_id,host,verification_token,status,render_domain_id)
+  values (v_site,'i.example','t-i','connected','provider-old');
+
+  v_a := public.laruhp_domain_begin_release(v_site,'i.example');
+  perform pg_temp.expect((v_a->>'ok')::boolean, 'I: 1本目の解除は開始できる');
+
+  v_b := public.laruhp_domain_begin_release(v_site,'i.example');
+  perform pg_temp.expect((v_b->>'ok')::boolean is false, 'I: 2本目は開始しない');
+  perform pg_temp.expect(v_b->>'reason' = 'in_progress', 'I: 進行中として返す');
+end;
+$$;
+
+-- ════════════════════════════════════════════════════════════
+-- 追加J: 古い解除は、新しい世代の登録を削除対象にできない
+--        （レビューで再現された順序：A遅延 → B完了 → 再登録 → A再開）
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000003';
+  v_a jsonb; v_row jsonb; v_epoch_a bigint; v_op_a uuid;
+  v_claim jsonb; v_pin jsonb;
+begin
+  insert into public.site_domains(site_id,host,verification_token,status,render_domain_id)
+  values (v_site,'j.example','t-j1','connected','provider-old');
+
+  -- 解除A開始（外部照会が遅れる想定）。この時点の世代と処理IDを持つ。
+  v_a := public.laruhp_domain_begin_release(v_site,'j.example');
+  v_row := v_a->'row';
+  v_epoch_a := (v_row->>'operation_epoch')::bigint;
+  v_op_a := (v_row->>'release_operation_id')::uuid;
+
+  -- 解除Bが完了して行が消える
+  perform public.laruhp_domain_finish_release(v_site,'j.example','t-j1',v_epoch_a);
+  perform pg_temp.expect(not exists(select 1 from public.site_domains where host='j.example'),
+    'J: 先行の解除で行が消える');
+
+  -- 同じホストが新しい token / 新しい外部IDで再登録され、主URLになる
+  insert into public.site_domains(site_id,host,verification_token,status,render_domain_id)
+  values (v_site,'j.example','t-j2','connected','provider-new');
+  update public.sites set custom_domain = null where id = v_site;
+
+  -- 遅れていた解除Aが、削除の直前に占有を確かめる
+  v_claim := public.laruhp_domain_claim_release(v_site,'j.example',v_epoch_a,v_op_a);
+  perform pg_temp.expect((v_claim->>'ok')::boolean is false, 'J: 古い解除は占有を取れない');
+  perform pg_temp.expect(v_claim->>'reason' = 'stale', 'J: 理由が stale');
+
+  -- 新しい行のIDが、古い解除の対象として固定されることもない
+  v_pin := public.laruhp_domain_pin_release_target(v_site,'j.example',v_epoch_a,v_op_a,'provider-new');
+  perform pg_temp.expect((v_pin->>'ok')::boolean is false, 'J: 古い解除が新しいIDを固定できない');
+  perform pg_temp.expect(
+    (select render_domain_id from public.site_domains where host='j.example') = 'provider-new',
+    'J: 再登録した行はそのまま');
+end;
+$$;
+
+-- ════════════════════════════════════════════════════════════
+-- 追加K: 登録開始の記録は、行の同一性・世代・状態を見る
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000003';
+  v_e bigint; v_r jsonb;
+begin
+  insert into public.site_domains(site_id,host,verification_token,status)
+  values (v_site,'k.example','t-k1','pending_ownership');
+  select operation_epoch into v_e from public.site_domains where host='k.example';
+
+  -- 別のトークン（＝作り直された行）では記録しない。
+  -- epoch は作り直すと 1 に戻りうるので、世代だけでは足りない。
+  v_r := public.laruhp_domain_mark_register_started(v_site,'k.example','t-OLD',v_e);
+  perform pg_temp.expect((v_r->>'ok')::boolean is false, 'K: 別トークンでは記録しない');
+
+  -- 解除中の行にも記録しない
+  perform public.laruhp_domain_begin_release(v_site,'k.example');
+  select operation_epoch into v_e from public.site_domains where host='k.example';
+  v_r := public.laruhp_domain_mark_register_started(v_site,'k.example','t-k1',v_e);
+  perform pg_temp.expect((v_r->>'ok')::boolean is false, 'K: 解除中は記録しない');
+  perform pg_temp.expect(v_r->>'reason' = 'releasing', 'K: 理由が releasing');
+end;
+$$;
+
+-- ════════════════════════════════════════════════════════════
+-- 追加L: 登録途中のままサイトごと削除されても、記録が残る
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000004';
+  v_e bigint;
+begin
+  insert into public.sites(id,user_id,name) values (v_site,'00000000-0000-0000-0000-000000000001','l');
+  insert into public.site_domains(site_id,host,verification_token,status)
+  values (v_site,'l.example','t-l','pending_ownership');
+  select operation_epoch into v_e from public.site_domains where host='l.example';
+
+  -- 外部登録を呼ぶ直前の印だけがある状態（IDはまだ保存されていない）
+  perform public.laruhp_domain_mark_register_started(v_site,'l.example','t-l',v_e);
+
+  delete from public.sites where id = v_site;
+
+  perform pg_temp.expect(not exists(select 1 from public.site_domains where host='l.example'),
+    'L: CASCADEで候補行は消える');
+  perform pg_temp.expect(
+    exists(select 1 from public.domain_release_queue where host='l.example' and resolved_at is null),
+    'L: 後始末のキューに残る（登録途中の記録が失われない）');
+  perform pg_temp.expect(
+    (select verification_token from public.domain_release_queue where host='l.example') = 't-l',
+    'L: 行の同一性がキューに残る');
+end;
+$$;
+
+-- ════════════════════════════════════════════════════════════
+-- 追加M: 記録できなかった外部登録を、帰属付きで積める
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000003';
+begin
+  perform public.laruhp_domain_enqueue_orphan_registration(
+    v_site,'m.example','provider-orphan','t-m',1,'apply_check が gone を返した');
+  perform pg_temp.expect(
+    (select kind from public.domain_release_queue where host='m.example') = 'orphan_registration',
+    'M: 登録の積み残しとして区別できる');
+  perform pg_temp.expect(
+    (select render_domain_id from public.domain_release_queue where host='m.example') = 'provider-orphan',
+    'M: 外部IDが残る');
+end;
+$$;
+
+select 'ALL SQL REGRESSION SCENARIOS PASSED (A-M)' as result;

@@ -39,21 +39,27 @@ export const renderPort: RenderPort = {
     return r.ok ? { ok: true, domain: r.domain } : { ok: false, message: r.message };
   },
 
-  async unregisterByHost(host) {
+  async findByHost(host) {
     const cfg = renderConfig();
-    if (!cfg) return { ok: false, message: 'Renderが未設定です' };
-    // 保存済みのIDは信用しない。必ずこのサービスの登録一覧をホスト名で引き直し、
-    // 名前が完全に一致したものだけを消す。
-    // （行の render_domain_id を書き換えて他人のドメインを消させないため）
-    const found = await findDomain(cfg, host);
-    if (!found.ok) return { ok: false, message: found.message };
-    if (!found.domain) return { ok: true, removed: false };
-    if (found.domain.name.toLowerCase() !== host.toLowerCase()) {
-      return { ok: false, message: '解除対象のホスト名が一致しません' };
+    if (!cfg) return { ok: false as const, message: 'Renderが未設定です' };
+    const r = await findDomain(cfg, host);
+    if (!r.ok) return { ok: false as const, message: r.message };
+    if (!r.domain) return { ok: true as const, domainId: null };
+    // 名前が完全に一致したものだけを対象にする
+    if (r.domain.name.toLowerCase() !== host.toLowerCase()) {
+      return { ok: false as const, message: '解除対象のホスト名が一致しません' };
     }
-    if (!found.domain.id) return { ok: false, message: '解除対象のIDが取得できません' };
-    const res = await unregisterDomain(cfg, found.domain.id);
-    return res.ok ? { ok: true, removed: true } : { ok: false, message: res.message || '解除に失敗しました' };
+    return { ok: true as const, domainId: r.domain.id ?? null };
+  },
+
+  async unregisterById(domainId) {
+    const cfg = renderConfig();
+    if (!cfg) return { ok: false as const, message: 'Renderが未設定です' };
+    // ここではホスト名から引き直さない。
+    // 引き直すと、遅れて再開した古い解除が、別の処理で作り直された
+    // 新しい登録のIDを取得して消してしまう。
+    const res = await unregisterDomain(cfg, domainId);
+    return res.ok ? { ok: true as const, removed: true } : { ok: false as const, message: res.message || '解除に失敗しました' };
   },
 };
 
