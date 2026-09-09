@@ -101,3 +101,32 @@ h2.font-en {
     font-size: 11px;
   }
 }
+
+/* ── 端末に元から入っている日本語フォントで組む ────────────────────
+   Noto Sans JP を Web フォントで配ると、日本語は文字数が多いため
+   ウェイトごとに数十個のサブセットに分割される。実測で 49ファイル・959KB、
+   さらに @font-face の宣言だけで CSS 277KB を占めていた。
+   Apple はヒラギノ角ゴ、Android は Noto Sans CJK、Windows は游ゴシックが
+   最初から入っているので、そちらを使えば 0 バイトで同等の品質が出る。
+
+   このクラスを付けた要素の中だけに効く。既存ページには影響しない。 */
+.font-system-jp {
+  font-family:
+    system-ui,
+    -apple-system,                      /* iOS / macOS: San Francisco → 日本語はヒラギノ */
+    'Hiragino Kaku Gothic ProN',
+    'Hiragino Sans',
+    'Noto Sans CJK JP',                 /* Android / Linux */
+    'Yu Gothic UI', 'Yu Gothic', Meiryo, /* Windows */
+    sans-serif;
+  /* 日本語の約物（括弧・句読点）の余白を詰める。組版が締まる */
+  font-feature-settings: 'palt' 1;
+  /* 行頭に句読点や閉じ括弧が来ないようにする */
+  line-break: strict;
+}
+
+/* 見出しは折り返しのバランスを取る（1文字だけ次行に落ちるのを防ぐ） */
+.text-balance-jp {
+  text-wrap: balance;
+  line-break: strict;
+}
