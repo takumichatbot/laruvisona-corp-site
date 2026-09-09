@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import DomainSettings from './DomainSettings';
 
 const PLAN_LABELS: Record<string, { name: string; price: string; color: string }> = {
   hp:           { name: 'HP プラン',               price: '¥999/月',    color: 'text-sky-600 bg-sky-50 border-sky-200' },
@@ -74,15 +75,6 @@ export default function SettingsPage() {
         setGscLoading(false);
       }
 
-      // Load sites for custom domain settings
-      const sitesRes = await fetch('/api/sites');
-      const sitesData = await sitesRes.json();
-      const ds = (sitesData.sites || []) as { id: string; name: string; slug: string | null; custom_domain: string | null }[];
-      setDomainSites(ds);
-      const vals: Record<string, string> = {};
-      for (const s of ds) vals[s.id] = s.custom_domain || '';
-      setDomainValues(vals);
-
       // Load saved GMB place ID + Instagram from profile
       const { data: { user: u } } = await supabase.auth.getUser();
       if (u) {
@@ -152,13 +144,7 @@ export default function SettingsPage() {
   const [igMsg, setIgMsg] = useState('');
   const [igMedia, setIgMedia] = useState<{ id: string; media_url: string; permalink: string; caption?: string }[]>([]);
 
-  // Custom domain state
-  const [domainSites, setDomainSites] = useState<{ id: string; name: string; slug: string | null; custom_domain: string | null }[]>([]);
-  const [domainValues, setDomainValues] = useState<Record<string, string>>({});
-  const [domainSaving, setDomainSaving] = useState<string | null>(null);
-  const [domainChecking, setDomainChecking] = useState<string | null>(null);
-  const [domainMsg, setDomainMsg] = useState<Record<string, { text: string; type: 'success' | 'error' | 'info' }>>({});
-  const [domainVerified, setDomainVerified] = useState<Record<string, { verified: boolean; cname: string | null; expectedTarget: string }>>({});
+  // 独自ドメインの状態は ./DomainSettings.tsx が持つ
 
   // GMB reviews + AI reply
   const [gmbReviews, setGmbReviews] = useState<{ author_name: string; rating: number; text: string; relative_time_description: string }[]>([]);
@@ -284,47 +270,6 @@ export default function SettingsPage() {
     if (error) { setGmbMsg(`保存に失敗しました: ${error.message}`); }
     else { setGmbSaved(gmbPlaceId.trim()); setGmbMsg('保存しました'); }
     setGmbSaving(false);
-  };
-
-  const handleDomainSave = async (siteId: string) => {
-    const domain = (domainValues[siteId] || '').trim().toLowerCase().replace(/^https?:\/\//, '');
-    setDomainSaving(siteId);
-    setDomainMsg(prev => ({ ...prev, [siteId]: { text: '', type: 'info' } }));
-    const res = await fetch(`/api/sites/${siteId}/domain`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customDomain: domain || null }),
-    });
-    const d = await res.json() as { ok?: boolean; error?: string; renderStatus?: string };
-    if (res.ok) {
-      setDomainSites(prev => prev.map(s => s.id === siteId ? { ...s, custom_domain: domain || null } : s));
-      const renderNote = d.renderStatus && d.renderStatus !== 'registered' ? `（Render: ${d.renderStatus}）` : '';
-      setDomainMsg(prev => ({ ...prev, [siteId]: { text: domain ? `保存しました${renderNote}。次にDNSを設定してください。` : 'ドメインを削除しました', type: 'success' } }));
-    } else {
-      setDomainMsg(prev => ({ ...prev, [siteId]: { text: `エラー: ${d.error || '保存に失敗しました'}`, type: 'error' } }));
-    }
-    setDomainSaving(null);
-  };
-
-  const handleDomainCheck = async (siteId: string) => {
-    setDomainChecking(siteId);
-    setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'DNS確認中...', type: 'info' } }));
-    try {
-      const res = await fetch(`/api/sites/${siteId}/domain`);
-      const d = await res.json() as { verified?: boolean; dnsVerified?: boolean; cname?: string | null; aRecord?: string | null; expectedTarget?: string; expectedApexIp?: string; reason?: string };
-      if (d.reason === 'no_domain') {
-        setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'ドメインが設定されていません', type: 'error' } }));
-      } else if (d.verified) {
-        setDomainMsg(prev => ({ ...prev, [siteId]: { text: '✓ DNS確認済み！サイトが独自ドメインで表示されています。', type: 'success' } }));
-        setDomainVerified(prev => ({ ...prev, [siteId]: { verified: true, cname: d.cname ?? null, expectedTarget: d.expectedTarget ?? '' } }));
-      } else {
-        setDomainMsg(prev => ({ ...prev, [siteId]: { text: `DNS未反映。現在: CNAME ${d.cname || 'なし'} / A ${d.aRecord || 'なし'} → 期待値: CNAME ${d.expectedTarget || '---'} または A ${d.expectedApexIp || '---'}`, type: 'error' } }));
-        setDomainVerified(prev => ({ ...prev, [siteId]: { verified: false, cname: d.cname ?? null, expectedTarget: d.expectedTarget ?? '' } }));
-      }
-    } catch {
-      setDomainMsg(prev => ({ ...prev, [siteId]: { text: 'DNS確認に失敗しました', type: 'error' } }));
-    }
-    setDomainChecking(null);
   };
 
   const inputCls = 'w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-sky-500 transition-colors';
@@ -542,71 +487,7 @@ export default function SettingsPage() {
         </> /* end account tab */}
 
         {/* ── Domain tab ── */}
-        {activeTab === 'domain' && <>
-
-        {/* Custom Domain (moved to its own tab) */}
-        {domainSites.length > 0 && (
-          <section className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-700"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-              </div>
-              <h2 className="font-bold text-sm text-gray-900">独自ドメイン設定</h2>
-            </div>
-            <p className="text-xs text-gray-500 mb-5">取得済みドメインをサイトに紐付けます。設定後、ドメインのDNSにレコードを追加してください（下の手順参照）。</p>
-            <div className="space-y-5">
-              {domainSites.map(site => (
-                <div key={site.id} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-700">{site.name}</span>
-                    {domainVerified[site.id]?.verified && (
-                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✓ 確認済み</span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={domainValues[site.id] ?? ''}
-                      onChange={e => setDomainValues(prev => ({ ...prev, [site.id]: e.target.value }))}
-                      placeholder="example.com"
-                      className={inputCls}
-                    />
-                    <button onClick={() => handleDomainSave(site.id)} disabled={domainSaving === site.id}
-                      className="flex-shrink-0 text-sm bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-lg transition-all">
-                      {domainSaving === site.id ? '...' : '保存'}
-                    </button>
-                    {site.custom_domain && (
-                      <button onClick={() => handleDomainCheck(site.id)} disabled={domainChecking === site.id}
-                        className="flex-shrink-0 text-xs border border-gray-200 hover:border-sky-300 text-gray-600 px-3 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                        {domainChecking === site.id ? '確認中...' : 'DNS確認'}
-                      </button>
-                    )}
-                  </div>
-                  {domainMsg[site.id]?.text && (
-                    <p className={`text-[11px] font-semibold ${domainMsg[site.id].type === 'error' ? 'text-red-600' : domainMsg[site.id].type === 'success' ? 'text-green-600' : 'text-sky-600'}`}>
-                      {domainMsg[site.id].text}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
-              <p className="text-[11px] font-bold text-gray-700">DNS設定手順</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[11px] text-gray-600">
-                  <thead><tr className="border-b border-gray-200"><th className="text-left pb-1.5 font-semibold">設定するドメイン</th><th className="text-left pb-1.5 font-semibold">タイプ</th><th className="text-left pb-1.5 font-semibold">ホスト</th><th className="text-left pb-1.5 font-semibold">値</th></tr></thead>
-                  <tbody className="font-mono">
-                    <tr><td className="py-1 pr-3">www.example.com</td><td className="py-1 pr-3">CNAME</td><td className="py-1 pr-3">www</td><td className="py-1 text-sky-600">laruvisona-corp-site.onrender.com</td></tr>
-                    <tr><td className="py-1 pr-3">example.com</td><td className="py-1 pr-3">A</td><td className="py-1 pr-3">@（空欄）</td><td className="py-1 text-sky-600">216.24.57.1</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-[10px] text-gray-400">ルートドメイン（@）にはCNAMEを設定できないレジストラが多いため、Aレコードをご利用ください（ALIAS/ANAME対応のDNSならCNAMEと同じ値でも可）。設定後「DNS確認」ボタンで反映状況を確認できます。反映には最大48時間かかる場合があります。</p>
-            </div>
-          </section>
-        )}
-
-        </> /* end domain tab */}
+        {activeTab === 'domain' && <DomainSettings />}
 
         {/* ── Integrations tab ── */}
         {activeTab === 'integrations' && <>
