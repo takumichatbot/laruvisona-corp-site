@@ -84,7 +84,7 @@ function SectionHead({ eyebrow, title, lead }: { eyebrow: string; title: string;
 }
 
 /** スマホの枠に、AIが実際に生成した業種別の画像を入れて見せる */
-function PhoneMock({ industry, label, priority = false }: { industry: string; label: string; priority?: boolean }) {
+function PhoneMock({ industry, label }: { industry: string; label: string }) {
   return (
     <figure className="shrink-0 w-[172px]">
       <div className="rounded-[22px] border-[6px] border-slate-800 bg-slate-800 shadow-xl overflow-hidden">
@@ -95,7 +95,13 @@ function PhoneMock({ industry, label, priority = false }: { industry: string; la
             alt={`${label}のホームページの作例`}
             width={172}
             height={306}
-            loading={priority ? 'eager' : 'lazy'}
+            // 作例モックはすべて遅延読み込みにする。
+            // スマホ(375px)ではこの2枚はファーストビューに入らない
+            // （1枚目の上端は約1,200px下）ので、先読みすると本文より先に
+            // 約150KBの画像を取りに行くことになる。
+            // PC・スマホどちらでもLCPの候補は見出しのテキストで、
+            // この画像は装飾なので優先度を上げる理由がない。
+            loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-[58%] object-cover"
           />
@@ -179,7 +185,7 @@ export default function LpNextPage() {
           {/* 主役の視覚要素は「実際に作れるサイト」。装飾ではなく証拠を置く */}
           <div className="mt-10 md:mt-0 flex justify-center gap-3">
             <div className="pt-8"><PhoneMock industry="beauty" label="美容室" /></div>
-            <PhoneMock industry="restaurant" label="飲食店" priority />
+            <PhoneMock industry="restaurant" label="飲食店" />
           </div>
         </div>
       </section>
