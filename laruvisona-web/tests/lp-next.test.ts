@@ -71,8 +71,18 @@ test('ファーストビューに 内容・価格・次の行動 がそろって
   assert.match(hero, /TERMS\.firstMonthFree/, '契約条件が無い');
 });
 
+/** コードコメントを落として、利用者が実際に目にする文字列だけを見る */
+function withoutComments(src: string): string {
+  return src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')  // JSX内のコメント
+    .replace(/\/\*[\s\S]*?\*\//g, '')        // ブロックコメント
+    .replace(/^\s*\/\/.*$/gm, '');            // 行コメント
+}
+
 test('裏の取れていない実績や効果を書かない', () => {
-  const all = page + facts;
+  // 判定はコメントを除いた本文に対して行う。
+  // 「こう書かない」という説明コメント自体が引っかかっては意味がない。
+  const all = withoutComments(page) + withoutComments(facts);
   const banned = [
     /導入\s*[0-9,]+\s*[社店件]/,
     /満足度\s*[0-9]/,
@@ -80,6 +90,8 @@ test('裏の取れていない実績や効果を書かない', () => {
     /[0-9,]+\s*(社|店舗|事業者)(が|に)?(導入|利用)/,
     /No\.?1|ナンバーワン|第1位/i,
     /売上が.*倍/,
+    // 他の顧客の行動についての主張（人気・選択率）も、裏が取れないので書かない
+    /よく選ばれ|人気No|一番選ばれ|最も選ばれ|利用者の[0-9]/,
   ];
   for (const re of banned) {
     assert.equal(re.test(all), false, `裏の取れていない主張がある: ${re}`);
@@ -114,6 +126,19 @@ test('ログイン状態や顧客データを読まない（静的に配れる�
   for (const re of [/getUser|createClient|cookies\(\)|headers\(\)/]) {
     assert.equal(re.test(page + facts), false, `ページが要求時のデータを読んでいる: ${re}`);
   }
+});
+
+test('主CTAの行き先が実在するページである', () => {
+  const m = facts.match(/href: '([^']+)'/);
+  assert.ok(m, 'PRIMARY_CTA.href が読めない');
+  const route = m![1].replace(/^\//, '');
+  assert.ok(fs.existsSync(path.join(root, 'app', route, 'page.tsx')),
+    `CTAの行き先 ${m![1]} にページが無い`);
+});
+
+test('作例は横スクロールできることが分かる', () => {
+  assert.match(page, /snap-x/, 'スナップが無い');
+  assert.match(page, /横にスクロール/, 'スクロールできることが書かれていない');
 });
 
 test('作例は「作例」と分かる形で出す', () => {

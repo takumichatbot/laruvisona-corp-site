@@ -106,13 +106,13 @@ export default function LpNextPage() {
           スマホ1画面で「誰の・何が・いくらで・次に何をするか」が分かることだけを狙う。
           背景動画も3Dも置かない。 */}
       <section className="px-5 pt-10 pb-12 md:pt-20 md:pb-20 bg-gradient-to-b from-sky-50 to-white">
-        <div className="max-w-5xl mx-auto md:grid md:grid-cols-[1.05fr_0.95fr] md:gap-12 md:items-center">
+        <div className="max-w-5xl mx-auto md:grid md:grid-cols-[1.15fr_0.85fr] md:gap-10 md:items-center">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full bg-white border border-sky-200 px-3.5 py-1.5 text-[12px] font-medium text-sky-800">
               個人商店・小さな会社のための
             </p>
 
-            <h1 className="mt-4 text-[34px] leading-[1.28] md:text-[54px] md:leading-[1.15] font-bold tracking-tight text-balance-jp">
+            <h1 className="mt-4 text-[34px] leading-[1.3] md:text-[48px] lg:text-[54px] md:leading-[1.18] font-bold tracking-tight text-balance-jp">
               お店のホームページを、<br />
               <span className="text-sky-600">月{yen(hp.monthly)}円</span>で持つ。
             </h1>
@@ -124,7 +124,7 @@ export default function LpNextPage() {
             </p>
 
             <ul className="mt-5 space-y-2 text-[15px] text-slate-700">
-              {[TERMS.firstMonthFree, `最低${TERMS.minimumMonths}ヶ月・${TERMS.cancel}`, TERMS.payment].map(t => (
+              {[TERMS.firstMonthFree, `最低${TERMS.minimumMonths}ヶ月、7ヶ月目からいつでも解約`, TERMS.payment].map(t => (
                 <li key={t} className="flex items-start gap-2.5">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0" aria-hidden="true">
                     <path d="M20 6L9 17l-5-5" />
@@ -199,13 +199,18 @@ export default function LpNextPage() {
           <SectionHead
             eyebrow="さくれい"
             title="こんなサイトが作れます"
-            lead="どれもAIが生成した作例です。写真も文章も、この仕組みで用意しています。"
+            lead="どれもAIが生成した作例です。写真も文章も、この仕組みで用意しています。横にスクロールすると他の業種も見られます。"
           />
         </div>
-        <div className="max-w-5xl mx-auto -mx-5 px-5 overflow-x-auto">
-          <div className="flex gap-4 pb-2 w-max">
+        {/* 横に並べる。スマホでは全部は入らないので、
+            スクロールできることが分かるように右端を少し見切れさせ、
+            スナップを効かせる。 */}
+        <div className="max-w-5xl mx-auto -mx-5 px-5 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-4 pb-2 w-max pr-8">
             {(['restaurant', 'beauty', 'clinic', 'construction', 'hotel', 'retail'] as const).map(id => (
-              <PhoneMock key={id} industry={id} label={INDUSTRIES.find(i => i.id === id)!.name} />
+              <div key={id} className="snap-start">
+                <PhoneMock industry={id} label={INDUSTRIES.find(i => i.id === id)!.name} />
+              </div>
             ))}
           </div>
         </div>

@@ -125,8 +125,13 @@ h2.font-en {
   line-break: strict;
 }
 
-/* 見出しは折り返しのバランスを取る（1文字だけ次行に落ちるのを防ぐ） */
+/* 見出しの折り返し。
+   日本語は原則どこでも改行できてしまうので、放っておくと
+   「お店のホー／ムページを、」のようにカタカナ語の途中で切れる。
+   auto-phrase は文節の切れ目で折り返す指定（Chrome/Edge 119以降）。
+   対応していないブラウザでは従来どおりの折り返しに戻るだけで、崩れない。 */
 .text-balance-jp {
   text-wrap: balance;
+  word-break: auto-phrase;
   line-break: strict;
 }
