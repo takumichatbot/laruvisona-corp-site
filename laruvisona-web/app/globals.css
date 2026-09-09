@@ -110,7 +110,13 @@ h2.font-en {
    最初から入っているので、そちらを使えば 0 バイトで同等の品質が出る。
 
    このクラスを付けた要素の中だけに効く。既存ページには影響しない。 */
-.font-system-jp {
+.font-system-jp,
+/* globals.css には h1〜h6 への直接指定（Noto Sans JP）がある。
+   CSSでは「継承した値」より「直接当たった宣言」が常に勝つので、
+   親に .font-system-jp を付けただけでは見出しに効かない。
+   実際、本番で見出しだけ Noto Sans JP のままになり、
+   Webフォントが11ファイル245KB読み込まれていた。見出しにも明示的に当てる。 */
+.font-system-jp :is(h1, h2, h3, h4, h5, h6) {
   font-family:
     system-ui,
     -apple-system,                      /* iOS / macOS: San Francisco → 日本語はヒラギノ */

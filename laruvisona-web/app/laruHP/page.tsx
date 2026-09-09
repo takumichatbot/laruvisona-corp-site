@@ -882,7 +882,7 @@ setTimeout(function(){
                   {[{icon:'✂️',bg:'from-rose-300 to-pink-200'},{icon:'💇',bg:'from-pink-200 to-rose-300'},{icon:'🌸',bg:'from-rose-200 to-pink-300'}].map((t,i)=>(
                     <div key={i} className={`relative w-12 h-14 rounded-lg overflow-hidden bg-gradient-to-br ${t.bg} flex items-end justify-center`}>
                       <div className="text-[18px] mb-1">{t.icon}</div>
-                      {libGallery('beauty',i) && <img src={libGallery('beauty',i)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      {libGallery('beauty',i) && <img loading="lazy" decoding="async" src={libGallery('beauty',i)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                     </div>
                   ))}
                 </div>
@@ -899,7 +899,7 @@ setTimeout(function(){
                     <div key={s.name} className="rounded-xl overflow-hidden border border-rose-100">
                       <div className="relative h-8 bg-rose-50 flex items-center justify-center text-[14px]">
                         {s.icon}
-                        {libGallery('beauty',i+3) && <img src={libGallery('beauty',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                        {libGallery('beauty',i+3) && <img loading="lazy" decoding="async" src={libGallery('beauty',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="bg-white p-1 text-center">
                         <div className="text-[7px] font-semibold text-gray-700">{s.name}</div>
@@ -948,7 +948,7 @@ setTimeout(function(){
                   {[{icon:'💆',bg:'from-emerald-300 to-teal-200'},{icon:'🌿',bg:'from-teal-200 to-emerald-300'}].map((t,i)=>(
                     <div key={i} className={`relative w-11 h-13 rounded-lg overflow-hidden bg-gradient-to-b ${t.bg} flex items-end justify-center pb-1`}>
                       <div className="text-[16px]">{t.icon}</div>
-                      {libGallery('clinic',i) && <img src={libGallery('clinic',i)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      {libGallery('clinic',i) && <img loading="lazy" decoding="async" src={libGallery('clinic',i)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                     </div>
                   ))}
                 </div>
@@ -965,7 +965,7 @@ setTimeout(function(){
                     <div key={s.label} className="rounded-lg overflow-hidden border border-emerald-100">
                       <div className="relative h-8 bg-emerald-50 flex items-center justify-center text-[12px]">
                         {s.icon}
-                        {libGallery('clinic',i+2) && <img src={libGallery('clinic',i+2)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                        {libGallery('clinic',i+2) && <img loading="lazy" decoding="async" src={libGallery('clinic',i+2)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="bg-white p-1 text-center"><div className="text-[6px] text-emerald-700 font-medium leading-tight">{s.label}</div></div>
                     </div>
@@ -1009,7 +1009,7 @@ setTimeout(function(){
                   {[{bg:'from-orange-200 to-amber-200',icon:'🍽',n:4},{bg:'from-amber-200 to-yellow-200',icon:'🥂',n:5},{bg:'from-yellow-200 to-orange-200',icon:'🥩',n:0}].map((m,i)=>(
                     <div key={i} className={`relative w-11 h-12 rounded-lg overflow-hidden bg-gradient-to-br ${m.bg} flex items-end justify-center pb-1`}>
                       <div className="text-[16px]">{m.icon}</div>
-                      {libGallery('restaurant',m.n) && <img src={libGallery('restaurant',m.n)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                      {libGallery('restaurant',m.n) && <img loading="lazy" decoding="async" src={libGallery('restaurant',m.n)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                     </div>
                   ))}
                 </div>
@@ -1026,7 +1026,7 @@ setTimeout(function(){
                     <div key={m.name} className="rounded-lg overflow-hidden border border-amber-100">
                       <div className={`relative h-8 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[16px]`}>
                         🍴
-                        {libGallery('restaurant',i+1) && <img src={libGallery('restaurant',i+1)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                        {libGallery('restaurant',i+1) && <img loading="lazy" decoding="async" src={libGallery('restaurant',i+1)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="bg-white p-1"><div className="text-[5.5px] font-medium text-gray-700 leading-tight">{m.name}</div><div className="text-[6px] text-amber-600 font-bold">{m.price}</div></div>
                     </div>
@@ -1083,7 +1083,7 @@ setTimeout(function(){
                     <div key={a.label} className="bg-white border border-slate-200 text-center shadow-sm overflow-hidden">
                       <div className="relative h-8 bg-slate-100 flex items-center justify-center text-[12px]">
                         {a.icon}
-                        {libGallery('legal',i+3) && <img src={libGallery('legal',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                        {libGallery('legal',i+3) && <img loading="lazy" decoding="async" src={libGallery('legal',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="p-1"><div className="text-[6px] text-slate-600 font-medium">{a.label}</div></div>
                     </div>
@@ -1137,7 +1137,7 @@ setTimeout(function(){
                     <div key={s.label} className="rounded-lg overflow-hidden border border-red-100">
                       <div className="relative h-8 bg-red-50 flex items-center justify-center text-[12px]">
                         {s.icon}
-                        {libGallery('fitness',i+3) && <img src={libGallery('fitness',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                        {libGallery('fitness',i+3) && <img loading="lazy" decoding="async" src={libGallery('fitness',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="bg-white p-1 text-center">
                         <div className="text-[6px] font-bold text-gray-700">{s.label}</div>
@@ -1197,7 +1197,7 @@ setTimeout(function(){
                     <div key={m.label} className="rounded-lg overflow-hidden border border-amber-100">
                       <div className={`relative h-9 bg-gradient-to-br ${m.bg} flex items-center justify-center text-[18px]`}>
                         {m.icon}
-                        {libGallery('construction',i+3) && <img src={libGallery('construction',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
+                        {libGallery('construction',i+3) && <img loading="lazy" decoding="async" src={libGallery('construction',i+3)} alt="" onError={hideOnError} className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="bg-white p-1 text-center"><div className="text-[5.5px] font-medium text-gray-600">{m.label}</div></div>
                     </div>

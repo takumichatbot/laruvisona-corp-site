@@ -97,3 +97,13 @@ test('ランディングページを開いただけで通知許可を求めな�
   assert.match(pwa, /export async function requestPushPermission/,
     '利用者の操作から呼ぶための関数が無い');
 });
+
+test('既存LPの作例画像は先読みしない', () => {
+  // 実測: ファーストビューの外にある画像26枚が eager で、初回に全部読んでいた。
+  // <img> で読んでいるぶんは lazy にできる（背景画像は属性が使えないので別課題）。
+  const lp = read('app/laruHP/page.tsx');
+  const imgs = lp.match(/<img [^>]*>/g) || [];
+  const eager = imgs.filter(t => !/loading="lazy"/.test(t));
+  assert.deepEqual(eager, [], `先読みのままの<img>が${eager.length}個ある`);
+  assert.ok(imgs.length > 0, '<img>が消えている');
+});
