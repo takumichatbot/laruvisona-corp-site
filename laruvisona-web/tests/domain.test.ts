@@ -145,26 +145,35 @@ test('CNAMEが見えなくてもAレコードで向き先を判断できる', ()
 // ── 状態 ──
 
 test('所有確認・到達・Render確認を別々の事実として状態にする', () => {
-  const base = { ownership: true, dnsPointsHere: true, reachesService: true, renderCheck: 'verified' as const };
+  const base = { ownership: true, dnsPointsHere: true, probe: 'reached' as const, renderCheck: 'verified' as const };
   assert.equal(deriveStatus({ ...base, ownership: false }), 'pending_ownership');
-  assert.equal(deriveStatus({ ...base, reachesService: false, dnsPointsHere: false }), 'pending_dns');
-  assert.equal(deriveStatus({ ...base, reachesService: false, dnsPointsHere: true }), 'ssl_pending');
+  assert.equal(deriveStatus({ ...base, probe: 'not_reached', dnsPointsHere: false }), 'pending_dns');
+  assert.equal(deriveStatus({ ...base, probe: 'not_reached', dnsPointsHere: true }), 'ssl_pending');
   assert.equal(deriveStatus(base), 'connected');
 });
 
 test('「確認していない」を「確認して問題なし」に変換しない', () => {
-  const base = { ownership: true, dnsPointsHere: true, reachesService: true };
-  // 照会に失敗した（結果が分からない）→ 接続済みにしない
+  const base = { ownership: true, dnsPointsHere: true, probe: 'reached' as const };
   assert.equal(deriveStatus({ ...base, renderCheck: 'unavailable' }), 'ssl_pending');
-  // 照会できて未検証だった → 接続済みにしない
   assert.equal(deriveStatus({ ...base, renderCheck: 'unverified' }), 'ssl_pending');
-  // そもそも確認しない運用 → 到達確認だけで接続済みにしてよい
   assert.equal(deriveStatus({ ...base, renderCheck: 'not_configured' }), 'connected');
+});
+
+test('到達確認ができない運用では、信頼できる外部確認を必須にする', () => {
+  const base = { ownership: true, probe: 'unavailable' as const };
+  // Renderがverifiedで、公開DNSの向き先も合っているときだけ通す
+  assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'verified' }), 'connected');
+  // Renderの確認が取れないなら、到達確認も無いので接続済みにしない
+  assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'unavailable' }), 'ssl_pending');
+  assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'unverified' }), 'ssl_pending');
+  // 到達確認もRender確認も無い運用では、接続済みにできない
+  assert.equal(deriveStatus({ ...base, dnsPointsHere: true, renderCheck: 'not_configured' }), 'ssl_pending');
+  assert.equal(deriveStatus({ ...base, dnsPointsHere: false, renderCheck: 'verified' }), 'pending_dns');
 });
 
 test('このサービスへ到達できなければ、Renderがverifiedでも接続済みにしない', () => {
   assert.equal(
-    deriveStatus({ ownership: true, dnsPointsHere: true, reachesService: false, renderCheck: 'verified' }),
+    deriveStatus({ ownership: true, dnsPointsHere: true, probe: 'not_reached', renderCheck: 'verified' }),
     'ssl_pending',
   );
 });

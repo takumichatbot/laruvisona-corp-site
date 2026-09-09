@@ -13,7 +13,7 @@ import type {
 } from '@/lib/domain-service';
 import type { DomainStatus } from '@/lib/domain';
 
-const COLS = 'id, site_id, host, status, verification_token, render_domain_id, last_error, last_checked_at';
+const COLS = 'id, site_id, host, status, verification_token, render_domain_id, last_error, last_checked_at, operation_epoch, render_register_started_at, ownership_verified_at, external_registration_owned';
 
 type Rpc = { ok?: boolean; reason?: string; switched?: boolean; row?: DomainRecord };
 
@@ -76,19 +76,24 @@ export async function createDomainStore(): Promise<DomainStore> {
         p_site_id: input.siteId,
         p_host: input.host,
         p_fencing_token: input.fencingToken,
+        p_epoch: input.epoch,
         p_status: input.status,
         p_render_domain_id: input.renderDomainId,
         p_last_error: input.lastError,
         p_make_primary: input.makePrimary,
       });
       if (error) return { ok: false, reason: 'error', message: error };
-      if (!data?.ok) return { ok: false, reason: data?.reason === 'gone' ? 'gone' : 'error' };
+      if (!data?.ok) {
+        const reason = data?.reason === 'gone' ? 'gone' as const
+          : data?.reason === 'releasing' ? 'releasing' as const : 'error' as const;
+        return { ok: false, reason };
+      }
       return { ok: true, switched: !!data.switched };
     },
 
-    async setPrimary(siteId, host, fencingToken) {
+    async setPrimary(siteId, host, fencingToken, epoch) {
       const { data, error } = await rpc('laruhp_domain_set_primary', {
-        p_site_id: siteId, p_host: host, p_fencing_token: fencingToken,
+        p_site_id: siteId, p_host: host, p_fencing_token: fencingToken, p_epoch: epoch,
       });
       if (error) return { ok: false as const, reason: 'error' as const, message: error };
       if (!data?.ok) {
@@ -108,17 +113,37 @@ export async function createDomainStore(): Promise<DomainStore> {
       return { ok: true as const, row: data.row };
     },
 
-    async finishRelease(siteId, host, fencingToken) {
+    async finishRelease(siteId, host, fencingToken, epoch) {
       const { data, error } = await rpc('laruhp_domain_finish_release', {
-        p_site_id: siteId, p_host: host, p_fencing_token: fencingToken,
+        p_site_id: siteId, p_host: host, p_fencing_token: fencingToken, p_epoch: epoch,
       });
       if (error) return { ok: false, message: error };
       if (!data?.ok) return { ok: false, message: data?.reason ?? 'unknown' };
       return { ok: true };
     },
 
-    async markReleaseFailed(siteId, host, message) {
-      await rpc('laruhp_domain_mark_release_failed', { p_site_id: siteId, p_host: host, p_message: message });
+    async markReleaseFailed(siteId, host, epoch, message) {
+      await rpc('laruhp_domain_mark_release_failed', {
+        p_site_id: siteId, p_host: host, p_epoch: epoch, p_message: message,
+      });
+    },
+
+    async markRegisterStarted(siteId, host, epoch) {
+      await rpc('laruhp_domain_mark_register_started', {
+        p_site_id: siteId, p_host: host, p_epoch: epoch,
+      });
+    },
+
+    async isAgencyAdminHost(host) {
+      // 代理店の管理画面ドメインは profiles 側で登録される別経路。
+      // 候補として登録できてしまうと、そのまま外部解除まで進める。
+      // service role で見る（他人の profiles 行なので利用者からは読めない）。
+      const { data } = await admin
+        .from('profiles')
+        .select('id')
+        .eq('agency_admin_domain', host)
+        .limit(1);
+      return Array.isArray(data) && data.length > 0;
     },
   };
 }

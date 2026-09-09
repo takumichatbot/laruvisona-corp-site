@@ -19,6 +19,7 @@ import {
   isServable,
   type DomainStatus,
   type RenderCheck,
+  type ProbeResult,
 } from './domain';
 
 // ── ポート ────────────────────────────────────────────
@@ -38,6 +39,22 @@ export interface DomainRecord {
   render_domain_id: string | null;
   last_error: string | null;
   last_checked_at: string | null;
+  /**
+   * 処理の世代。解除を開始するたびにDB側で進む。
+   * verification_token は行の同一性、こちらは同じ行の中での処理の新しさを表す。
+   * TXTトークンだけでは、解除の途中に古い検証が割り込むのを止められなかった。
+   */
+  operation_epoch: number;
+  /** 外部登録を呼ぶ直前に立てた印。後始末の認可に使う */
+  render_register_started_at: string | null;
+  /**
+   * 解除を開始した時点で確定した「こちらの都合で作った外部登録があるか」。
+   * 解除に入ると status が release_pending になり legacy 等の根拠が消えるので、
+   * その瞬間の判断をDB側で固定している。再試行しても判断がぶれない。
+   */
+  external_registration_owned: boolean | null;
+  /** 所有確認が一度でも通ったか */
+  ownership_verified_at: string | null;
 }
 
 export interface OwnedSite {
@@ -50,6 +67,8 @@ export interface ApplyCheckInput {
   host: string;
   /** 検証開始時に読んだ verification_token。一致しなければ適用しない */
   fencingToken: string;
+  /** 検証開始時に読んだ処理世代。解除が始まっていれば進んでいるので弾かれる */
+  epoch: number;
   status: DomainStatus;
   renderDomainId: string | null;
   lastError: string | null;
@@ -59,7 +78,7 @@ export interface ApplyCheckInput {
 
 export type ApplyCheckResult =
   | { ok: true; switched: boolean }
-  | { ok: false; reason: 'gone' | 'error'; message?: string };
+  | { ok: false; reason: 'gone' | 'releasing' | 'error'; message?: string };
 
 export interface DomainStore {
   getOwnedSite(siteId: string, userId: string): Promise<OwnedSite | null>;
@@ -68,13 +87,17 @@ export interface DomainStore {
   addDomain(siteId: string, host: string, token: string):
     Promise<{ ok: true; row: DomainRecord } | { ok: false; reason: 'taken' | 'error'; message?: string }>;
   applyCheck(input: ApplyCheckInput): Promise<ApplyCheckResult>;
-  setPrimary(siteId: string, host: string, fencingToken: string):
+  setPrimary(siteId: string, host: string, fencingToken: string, epoch: number):
     Promise<{ ok: true } | { ok: false; reason: 'gone' | 'not_connected' | 'error'; message?: string }>;
   beginRelease(siteId: string, host: string):
     Promise<{ ok: true; row: DomainRecord } | { ok: false; reason: 'gone' | 'error'; message?: string }>;
-  finishRelease(siteId: string, host: string, fencingToken: string):
+  finishRelease(siteId: string, host: string, fencingToken: string, epoch: number):
     Promise<{ ok: boolean; message?: string }>;
-  markReleaseFailed(siteId: string, host: string, message: string): Promise<void>;
+  markReleaseFailed(siteId: string, host: string, epoch: number, message: string): Promise<void>;
+  /** 外部登録を呼ぶ直前に印を付ける（DB保存前に落ちた登録を回収するため） */
+  markRegisterStarted(siteId: string, host: string, epoch: number): Promise<void>;
+  /** そのホストが代理店の管理用ドメインとして既に使われていないか */
+  isAgencyAdminHost(host: string): Promise<boolean>;
 }
 
 export interface DnsPort {
@@ -98,8 +121,12 @@ export interface RenderPort {
 }
 
 export interface ProbePort {
-  /** そのホスト名で、実際にこのサービスへHTTPSで到達できたか */
-  reachesService(host: string): Promise<boolean>;
+  /**
+   * そのホスト名で、実際にこのサービスへ到達できたか。
+   * 署名鍵が無いなど、確認自体ができない場合は 'unavailable' を返す。
+   * 固定の応答を返すだけのサーバーは 'reached' にならない。
+   */
+  reachesService(host: string): Promise<ProbeResult>;
 }
 
 export interface Deps {
@@ -135,6 +162,13 @@ export async function addDomain(
 
   if (isReservedHost(host, deps.mainHost)) return err(400, 'このドメインは使用できません');
 
+  // 代理店の管理画面ドメインは profiles.agency_admin_domain 側で登録される別経路。
+  // site_domains の重複だけを見ていると、他人の管理ホストを自分の候補として
+  // 登録でき、そのまま解除に進めてしまう。
+  if (await deps.store.isAgencyAdminHost(host)) {
+    return err(409, 'このドメインは別の用途で使用されています');
+  }
+
   const added = await deps.store.addDomain(args.siteId, host, generateVerificationToken());
   if (!added.ok) {
     if (added.reason === 'taken') return err(409, 'このドメインはすでに別のサイトに設定されています');
@@ -149,7 +183,7 @@ export interface VerifyEvidence {
   ownership: boolean;
   dnsPointsHere: boolean;
   pointedBy: 'cname' | 'a' | null;
-  reachesService: boolean;
+  probe: ProbeResult;
   renderCheck: RenderCheck;
   seen: { cname: string[]; a: string[]; txtCount: number };
 }
@@ -184,6 +218,9 @@ export async function verifyDomain(
   // 2. 所有が取れてから外部登録・照会
   if (ownership && deps.render.configured()) {
     if (!renderDomainId) {
+      // 外部登録が成功したのにDB保存前に落ちると、こちらの都合で作った登録が
+      // 追跡できなくなる。呼ぶ「前」に印を残しておく。
+      await deps.store.markRegisterStarted(args.siteId, host, row.operation_epoch);
       const reg = await deps.render.register(host);
       if (reg.ok) renderDomainId = reg.domainId;
       else lastError = reg.message;
@@ -210,29 +247,31 @@ export async function verifyDomain(
     expectedApexIps: deps.expectedApexIps,
   });
 
-  // 4. 実際にこのサービスへ到達できるか（接続済みの必須条件）
-  let reachesService = false;
-  if (ownership) reachesService = await deps.probe.reachesService(host);
+  // 4. 署名付きの往復で、実際にこのサービスへ到達できるか
+  let probe: ProbeResult = 'unavailable';
+  if (ownership) probe = await deps.probe.reachesService(host);
 
-  const status = deriveStatus({ ownership, dnsPointsHere: points.pointsHere, reachesService, renderCheck });
+  const status = deriveStatus({ ownership, dnsPointsHere: points.pointsHere, probe, renderCheck });
 
   const evidence: VerifyEvidence = {
     ownership,
     dnsPointsHere: points.pointsHere,
     pointedBy: points.how,
-    reachesService,
+    probe,
     renderCheck,
     seen: { cname, a, txtCount: txt.length },
   };
 
-  // 5. 主な公開URLがまだ無いときだけ、確認できた時点で自動的に採用する。
-  //    すでに別のホストで公開できている場合は勝手に移さない（明示的な切替操作を使う）。
+  // 5. 主な公開URLの自動採用を「希望」として伝えるだけにする。
+  //    ここで読んだ custom_domain は外部確認の前の値なので、
+  //    実際に採用してよいかはDB側で「いまも未設定か」を見て決める。
   const makePrimary = status === 'connected' && !site.custom_domain;
 
   const applied = await deps.store.applyCheck({
     siteId: args.siteId,
     host,
     fencingToken: row.verification_token,
+    epoch: row.operation_epoch,
     status,
     renderDomainId,
     lastError,
@@ -243,6 +282,9 @@ export async function verifyDomain(
     // 保存できていないなら、成功として返さない。配信先も変えない。
     if (applied.reason === 'gone') {
       return err(409, 'このドメインは処理中に削除されました。もう一度追加してください');
+    }
+    if (applied.reason === 'releasing') {
+      return err(409, 'このドメインは解除処理中です。完了してからやり直してください');
     }
     return err(500, applied.message || '確認結果を保存できませんでした');
   }
@@ -269,7 +311,7 @@ export async function setPrimaryDomain(
     return err(409, '接続の確認が取れていないドメインは公開URLにできません');
   }
 
-  const res = await deps.store.setPrimary(args.siteId, host, row.verification_token);
+  const res = await deps.store.setPrimary(args.siteId, host, row.verification_token, row.operation_epoch);
   if (!res.ok) {
     if (res.reason === 'gone') return err(409, 'このドメインは処理中に削除されました');
     if (res.reason === 'not_connected') return err(409, '接続の確認が取れていないドメインは公開URLにできません');
@@ -285,12 +327,37 @@ export type ReleaseResult =
   | { ok: true; host: string; released: boolean; status: DomainStatus; message?: string };
 
 /**
+ * その行が「こちらの都合で作った外部登録」を持っているか。
+ *
+ * ホスト名が外部の一覧に載っていることは、削除してよい根拠にならない。
+ * 同じRenderサービスには、代理店の管理用ホストや別サイトの別名も載る。
+ * 削除してよいのは、サーバー側の記録が「この申請のために登録した」と
+ * 示しているものだけ:
+ *   - render_domain_id を保存できている（登録が完了した）
+ *   - render_register_started_at がある（登録を呼んだ。保存前に落ちた分の回収）
+ *   - legacy（移行時に sites.custom_domain から取り込んだ＝実際に配信していた割当）
+ */
+export function ownsExternalRegistration(row: DomainRecord): boolean {
+  // 解除開始時にDB側で固定した判断があれば、それに従う。
+  // （status は release_pending に変わってしまうので、後から再計算できない）
+  if (row.external_registration_owned !== null && row.external_registration_owned !== undefined) {
+    return row.external_registration_owned;
+  }
+  if (row.render_domain_id) return true;
+  if (row.render_register_started_at) return true;
+  if (row.status === 'legacy') return true;
+  return false;
+}
+
+/**
  * 解除の順番:
  *   1. 配信ポインタを外し、状態を release_pending にする（ここまでは1トランザクション）
- *   2. Render側を解除する。保存済みIDは信用せず、ホスト名で引き直す
- *   3. 成功したら行を消す。失敗したら release_pending のまま残して再試行できるようにする
+ *      このときDB側で処理世代が進むので、進行中だった検証の結果は適用されなくなる
+ *   2. 外部登録の帰属を確認する。こちらが作った登録でなければ外部は触らない
+ *   3. Render側を解除する。保存済みIDは信用せず、ホスト名で引き直す
+ *   4. 成功したら行を消す。失敗したら release_pending のまま残して再試行できるようにする
  *
- * 途中で失敗しても ok=true を返さない。
+ * 途中で失敗しても ok=true（released=true）を返さない。
  */
 export async function releaseDomain(
   deps: Deps,
@@ -310,10 +377,14 @@ export async function releaseDomain(
   }
   const row = begun.row;
 
-  if (deps.render.configured()) {
+  // 所有確認も外部登録も通っていない候補は、こちらの記録に外部の登録が無い。
+  // 外部には触らず、候補の取消だけにする。
+  const external = ownsExternalRegistration(row);
+
+  if (external && deps.render.configured()) {
     const res = await deps.render.unregisterByHost(host);
     if (!res.ok) {
-      await deps.store.markReleaseFailed(args.siteId, host, res.message);
+      await deps.store.markReleaseFailed(args.siteId, host, row.operation_epoch, res.message);
       return {
         ok: true,
         host,
@@ -322,11 +393,25 @@ export async function releaseDomain(
         message: `配信は停止しました。外部側の解除に失敗したため、あとで再試行できます（${res.message}）`,
       };
     }
+  } else if (external && !deps.render.configured()) {
+    // 過去に外部登録した記録があるのに、いまは外部APIの設定が無い。
+    // 「解除不要」とは扱わず、記録を残して手当てできるようにする。
+    await deps.store.markReleaseFailed(
+      args.siteId, host, row.operation_epoch,
+      '外部APIが未設定のため解除できませんでした。設定後に再試行してください',
+    );
+    return {
+      ok: true,
+      host,
+      released: false,
+      status: 'release_pending',
+      message: '配信は停止しました。外部側の解除は設定が戻ってから行います',
+    };
   }
 
-  const fin = await deps.store.finishRelease(args.siteId, host, row.verification_token);
+  const fin = await deps.store.finishRelease(args.siteId, host, row.verification_token, row.operation_epoch);
   if (!fin.ok) {
-    await deps.store.markReleaseFailed(args.siteId, host, fin.message || 'DB削除に失敗');
+    await deps.store.markReleaseFailed(args.siteId, host, row.operation_epoch, fin.message || 'DB削除に失敗');
     return {
       ok: true,
       host,

@@ -238,39 +238,55 @@ export type RenderCheck =
   /** RENDER_API_KEY等が未設定で、この確認自体を行わない運用 */
   | 'not_configured';
 
+export type ProbeResult =
+  /** 署名付きの往復が成立し、このサービスに届いていることを確認できた */
+  | 'reached'
+  /** 応答が無い、署名が合わない、別ホストだった */
+  | 'not_reached'
+  /** 署名鍵が未設定などで、この確認自体ができない */
+  | 'unavailable';
+
 export interface StatusInput {
   /** テナント固有のTXTで所有を確認できたか */
   ownership: boolean;
   /** 公開DNS上で配信先がこちらを向いているか（案内用の補助的な根拠） */
   dnsPointsHere: boolean;
   /**
-   * そのホスト名で実際にこのサービスへHTTPSで到達できたか。
-   * 配信できていることの直接の証拠なので、これを接続済みの必須条件にする。
-   * Cloudflareのプロキシのように公開DNSからは判断できない構成でも、
-   * ここが true なら実際に配信できている。
+   * そのホスト名で実際にこのサービスへ到達できたか。
+   * 固定の文字列を返すだけの確認は別のサーバーでも真似できるので、
+   * 要求ごとの nonce と署名で往復が成立したときだけ 'reached' にする。
    */
-  reachesService: boolean;
+  probe: ProbeResult;
   renderCheck: RenderCheck;
 }
 
 /**
  * 事実の組み合わせから状態を決める。
  *
- * 重要: 「確認していない」と「確認して駄目だった」と「確認する必要がない」を
- * 混ぜない。以前は renderVerified が null（＝照会に失敗した）でも
- * false でなければ通していたため、Renderの登録も照会も失敗しているのに
- * connected になっていた。
+ * 「確認していない」「確認して駄目だった」「確認する必要がない」を混ぜない。
+ * 接続済みにするには、次のどちらかで配信先の裏が取れている必要がある:
+ *   (a) 署名付きの到達確認が成立した（probe = reached）
+ *   (b) 到達確認ができない運用で、Renderが verified を返し、
+ *       かつ公開DNSの向き先も一致している
+ * どちらも無いときは ssl_pending のままにして、切り替えない。
  */
 export function deriveStatus(input: StatusInput): DomainStatus {
   if (!input.ownership) return 'pending_ownership';
-  if (!input.reachesService) {
-    // DNSも向いていないなら、まだレコードを足していない段階
+
+  const renderOk = input.renderCheck === 'verified' || input.renderCheck === 'not_configured';
+
+  if (input.probe === 'reached') {
+    return renderOk ? 'connected' : 'ssl_pending';
+  }
+
+  if (input.probe === 'unavailable') {
+    // 到達確認ができない運用。信頼できる外部確認が取れているときだけ通す。
+    if (input.renderCheck === 'verified' && input.dnsPointsHere) return 'connected';
     return input.dnsPointsHere ? 'ssl_pending' : 'pending_dns';
   }
-  // 到達はできている。あとはRender側の確認が取れているか。
-  if (input.renderCheck === 'unavailable') return 'ssl_pending';
-  if (input.renderCheck === 'unverified') return 'ssl_pending';
-  return 'connected';
+
+  // probe === 'not_reached'
+  return input.dnsPointsHere ? 'ssl_pending' : 'pending_dns';
 }
 
 /** 利用者向けの状態ラベルと、次にやること */

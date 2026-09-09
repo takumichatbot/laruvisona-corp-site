@@ -80,13 +80,13 @@ rollback;
 -- ── 3. 状態遷移の関数を直接呼べないこと ───────────────
 begin;
   select public._as_user(:'u1');
-  select public.laruhp_domain_apply_check(:'s1', :'h1', 'x', 'connected', null, null, true);
+  select public.laruhp_domain_apply_check(:'s1', :'h1', 'x', 1::bigint, 'connected', null, null, true);
   -- 期待: ERROR: permission denied for function laruhp_domain_apply_check
 rollback;
 
 begin;
   select public._as_user(:'u1');
-  select public.laruhp_domain_set_primary(:'s1', :'h1', 'x');
+  select public.laruhp_domain_set_primary(:'s1', :'h1', 'x', 1::bigint);
   -- 期待: ERROR: permission denied
 rollback;
 
@@ -101,6 +101,19 @@ rollback;
 begin;
   select public._as_user(:'u2');
   select count(*) from public.domain_release_queue;
+  -- 期待: ERROR: permission denied
+rollback;
+
+-- ── 6. 解除・登録開始の関数も直接呼べないこと ────────
+begin;
+  select public._as_user(:'u1');
+  select public.laruhp_domain_begin_release(:'s1', :'h1');
+  -- 期待: ERROR: permission denied
+rollback;
+
+begin;
+  select public._as_user(:'u1');
+  select public.laruhp_domain_mark_register_started(:'s1', :'h1', 1::bigint);
   -- 期待: ERROR: permission denied
 rollback;
 

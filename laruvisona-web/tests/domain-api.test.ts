@@ -51,9 +51,52 @@ test('副作用のあるverifyとprimaryはPOSTのみ', () => {
 
 test('顧客が入力したドメインへの接続は safeFetch を通し、リダイレクトを追わない', () => {
   const s = code('lib/domain-ports.ts');
-  assert.match(s, /safeFetch\(\s*`https:\/\/\$\{host\}\/api\/domain-probe`/);
+  assert.match(s, /safeFetch\(\s*`https:\/\/\$\{host\}\/api\/domain-probe\?/);
   assert.match(s, /maxRedirects: 0/);
   assert.equal(/\bawait fetch\(/.test(s), false, '素のfetchが混ざっている');
+});
+
+test('到達確認は固定文字列ではなく署名付きの往復で行う', () => {
+  const ports = code('lib/domain-ports.ts');
+  assert.match(ports, /createChallenge\(secret, host\)/);
+  assert.match(ports, /verifyProof\(secret, c, json\.proof\)/);
+  assert.match(ports, /if \(!secret\) return 'unavailable'/);
+
+  const route = code('app/api/domain-probe/route.ts');
+  assert.match(route, /verifyChallenge\(/);
+  assert.equal(/marker/.test(route), false, '固定の目印を返す実装が残っている');
+
+  const proof = code('lib/domain-probe-proof.ts');
+  assert.match(proof, /createHmac\('sha256'/);
+  assert.match(proof, /timingSafeEqual/);
+  // 要求と応答で別の署名を使う（応答を要求から作れないように）
+  assert.match(proof, /`req\|/);
+  assert.match(proof, /`res\|/);
+  assert.match(proof, /exp < now/);
+});
+
+test('DBの状態遷移は処理世代を見る', () => {
+  const sql = read('supabase/site_domains.sql');
+  assert.match(sql, /operation_epoch bigint not null default 1/);
+  // 解除の開始で世代が進む
+  assert.match(sql, /operation_epoch = operation_epoch \+ 1/);
+  for (const fn of ['apply_check', 'finish_release', 'mark_release_failed', 'mark_register_started']) {
+    const i = sql.indexOf(`function public.laruhp_domain_${fn}`);
+    assert.ok(i > -1, `関数が無い: ${fn}`);
+    const body = sql.slice(i, sql.indexOf('$$;', i));
+    assert.match(body, /operation_epoch is distinct from p_epoch/, `世代を見ていない: ${fn}`);
+  }
+  // 自動採用は「いまも未設定」のときだけ
+  assert.match(sql, /update public\.sites set custom_domain = p_host\s*\n\s*where id = p_site_id and custom_domain is null/);
+});
+
+test('外部解除の帰属を解除開始時に固定する', () => {
+  const sql = read('supabase/site_domains.sql');
+  assert.match(sql, /external_registration_owned boolean/);
+  assert.match(sql, /external_registration_owned = coalesce\(/);
+  const svc = code('lib/domain-service.ts');
+  assert.match(svc, /export function ownsExternalRegistration/);
+  assert.match(svc, /const external = ownsExternalRegistration\(row\)/);
 });
 
 test('外部解除は保存済みIDを信用せず、ホスト名で引き直す', () => {

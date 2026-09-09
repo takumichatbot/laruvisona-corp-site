@@ -1,24 +1,34 @@
 import { NextResponse } from 'next/server';
+import { probeSecret, verifyChallenge } from '@/lib/domain-probe-proof';
 
-// 独自ドメインが「実際にこのサービスへ届いているか」を確かめるための目印。
+// 独自ドメインが「実際にこのサービスへ届いているか」を確かめるための応答。
 //
-// 公開DNSのレコードを見るだけでは判断できない構成がある
-// （Cloudflareのプロキシを有効にすると、CNAMEもRenderの共有IPも公開DNSに出ない）。
-// また共有Aレコードへの一致は、このサービスに届いている証拠にはなっても
-// Render登録やTLSの完了までは意味しない。
+// 固定の文字列を返すだけだと、別のサーバーで同じJSONを返して偽装できる。
+// そこで、要求ごとの nonce と期限に対して、共有鍵でしか作れない応答署名を返す。
+// 鍵（DOMAIN_PROBE_SECRET）はこのサービスだけが持つ。
 //
-// そこで、そのホスト名でHTTPSを話しかけてこの応答が返るかどうかを、
-// 接続済み判定の必須条件にしている。
-//
-// 秘密は返さない。返すのは固定の目印と、受け取った Host だけ。
+// 秘密そのものは返さない。返すのは、その要求に対する署名だけ。
+
 export const dynamic = 'force-dynamic';
 
-export const DOMAIN_PROBE_MARKER = 'laruhp-domain-probe';
-
 export async function GET(req: Request) {
-  const host = (req.headers.get('host') || '').split(':')[0].toLowerCase();
-  return NextResponse.json(
-    { marker: DOMAIN_PROBE_MARKER, host },
-    { headers: { 'cache-control': 'no-store' } },
-  );
+  const secret = probeSecret();
+  if (!secret) {
+    return NextResponse.json({ ok: false, reason: 'not_configured' }, { status: 503, headers: { 'cache-control': 'no-store' } });
+  }
+
+  const url = new URL(req.url);
+  const actualHost = (req.headers.get('host') || '').split(':')[0];
+
+  const res = verifyChallenge(secret, {
+    host: url.searchParams.get('host'),
+    nonce: url.searchParams.get('nonce'),
+    exp: url.searchParams.get('exp'),
+    sig: url.searchParams.get('sig'),
+  }, actualHost);
+
+  if (!res.ok) {
+    return NextResponse.json({ ok: false, reason: res.reason }, { status: 400, headers: { 'cache-control': 'no-store' } });
+  }
+  return NextResponse.json({ ok: true, proof: res.proof }, { headers: { 'cache-control': 'no-store' } });
 }

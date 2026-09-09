@@ -1,0 +1,222 @@
+diff --git a/laruvisona-web/app/lp-next/page.tsx b/laruvisona-web/app/lp-next/page.tsx
+index 92508a7..da2e6f2 100644
+--- a/laruvisona-web/app/lp-next/page.tsx
++++ b/laruvisona-web/app/lp-next/page.tsx
+@@ -4,7 +4,7 @@ import { PLANS, TERMS, INDUSTRIES, PRIMARY_CTA, SECONDARY_CTA } from './facts';
+ import DemoVideo from './DemoVideo';
+ import Faq from './Faq';
+ 
+-// 新LPの比較用プレビュー。既存の /laruHP には一切触れない。
++// LARU HP の正式なランディングページ。
+ //
+ // このファイルは app/laruHP/ の外にある（実体は /lp-next、見せるURLは
+ // next.config.ts の rewrite で /laruHP/lp-next のまま）。
+@@ -26,13 +26,23 @@ export const viewport: Viewport = {
+ };
+ 
+ export const metadata: Metadata = {
+-  title: '【プレビュー】LARU HP',
+-  description: '新しいランディングページの比較用プレビューです。',
+-  // 実体は /lp-next だが、見せるURLは /laruHP/lp-next（next.config.ts の rewrite）。
+-  // どちらで開かれても検索対象にしない。
+-  robots: { index: false, follow: false, nocache: true },
+-  alternates: { canonical: 'https://laruvisona.jp/laruHP/lp-next' },
+-  openGraph: { url: 'https://laruvisona.jp/laruHP/lp-next' },
++  title: 'LARU HP | お店のホームページを月999円で',
++  description: '業種を選んで店舗情報を入れるだけ。文章も写真もAIが用意して、そのまま公開できます。サーバー・SSL込み、初月無料・月額999円から。',
++  alternates: { canonical: 'https://laruvisona.jp/laruHP' },
++  openGraph: {
++    title: 'LARU HP | お店のホームページを月999円で',
++    description: '業種を選んで店舗情報を入れるだけ。サーバー・SSL込み、初月無料・月額999円から。',
++    url: 'https://laruvisona.jp/laruHP',
++    siteName: 'LARU HP',
++    type: 'website',
++    images: [{ url: '/laruHP/opengraph-image', width: 1200, height: 630, alt: 'LARU HP' }],
++  },
++  twitter: {
++    card: 'summary_large_image',
++    title: 'LARU HP | お店のホームページを月999円で',
++    description: '業種を選んで店舗情報を入れるだけ。初月無料・月額999円から。',
++    images: ['/laruHP/opengraph-image'],
++  },
+   manifest: '/laruhp-manifest.json',
+   icons: {
+     icon: [
+@@ -43,6 +53,34 @@ export const metadata: Metadata = {
+   },
+ };
+ 
++// 構造化データは、このページに実際に書いてあるものだけを出す。
++// 旧LPのJSON-LDをそのまま戻さない（プラン構成も価格の出どころも違うため）。
++// 値は facts.ts から作るので、表示と構造化データがずれない。
++const jsonLd = {
++  '@context': 'https://schema.org',
++  '@type': 'SoftwareApplication',
++  name: 'LARU HP',
++  applicationCategory: 'BusinessApplication',
++  operatingSystem: 'Web',
++  url: 'https://laruvisona.jp/laruHP',
++  description: '業種別のテンプレートとAIで、店舗のホームページを作って公開できるサービス。',
++  offers: {
++    '@type': 'AggregateOffer',
++    priceCurrency: 'JPY',
++    lowPrice: String(Math.min(...PLANS.map(p => p.monthly))),
++    highPrice: String(Math.max(...PLANS.map(p => p.monthly))),
++    offerCount: PLANS.length,
++    offers: PLANS.map(p => ({
++      '@type': 'Offer',
++      name: p.name,
++      price: String(p.monthly),
++      priceCurrency: 'JPY',
++      description: p.lead,
++    })),
++  },
++  publisher: { '@type': 'Organization', name: '株式会社LaruVisona', url: 'https://laruvisona.jp' },
++};
++
+ // このページはログイン状態も顧客データも読まない純粋な表示だけのページなので、
+ // 静的に配ってよい。共有キャッシュに個人のデータが入る余地がない。
+ // app/laruHP/layout.tsx の配下にいた間は、子で force-static を書いても
+@@ -126,16 +164,9 @@ export default function LpNextPage() {
+   const hp = PLANS[0];
+ 
+   return (
++    <>
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+     <main className="font-system-jp bg-white text-slate-900 antialiased">
+-      {/* プレビューであることを明示する帯（差し替え時に消す） */}
+-      <div className="bg-amber-100 text-amber-900 text-[13px] px-4 py-2 text-center">
+-        これは新しいLPのプレビューです。検索には出ません。
+-        <Link
+-          href="/laruHP"
+-          className="inline-flex items-center min-h-[44px] px-2 underline font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+-        >今のLPを見る</Link>
+-      </div>
+-
+       {/* ───────── ファーストビュー ─────────
+           スマホ1画面で「誰の・何が・いくらで・次に何をするか」が分かることだけを狙う。
+           背景動画も3Dも置かない。 */}
+@@ -382,5 +413,6 @@ export default function LpNextPage() {
+         <p className="mt-5">株式会社LaruVisona</p>
+       </footer>
+     </main>
++    </>
+   );
+ }
+diff --git a/laruvisona-web/next.config.ts b/laruvisona-web/next.config.ts
+index 5fcc4f5..6c703dc 100644
+--- a/laruvisona-web/next.config.ts
++++ b/laruvisona-web/next.config.ts
+@@ -5,23 +5,29 @@ const nextConfig: NextConfig = {
+   async redirects() {
+     return [
+       { source: '/plans', destination: '/laruHP/plans', permanent: true },
++      // 新LPの実体URLとプレビューURLは正式URLへ集約する。
++      // permanent: true は 308（301ではない）で返る。
++      { source: '/lp-next', destination: '/laruHP', permanent: true },
++      { source: '/laruHP/lp-next', destination: '/laruHP', permanent: true },
+     ];
+   },
+-  // 新LPのプレビューを /laruHP/lp-next で見せつつ、実体はレイアウト配下の外に置く。
++  // 新LPを /laruHP で配る。
+   //
+-  // なぜこうするか:
+-  // app/laruHP/layout.tsx が force-dynamic を指定しているため、その配下の
+-  // ページは何をしても要求ごとにサーバーで描画される。子ページに
+-  // force-static を書いても上書きできないことを本番で確認した
+-  // （cache-control: private, no-cache, no-store / cf-cache-status: DYNAMIC）。
+-  // かといって force-dynamic を配下48ページから一括で外すのは影響が大きい。
++  // 実体は app/lp-next（app/laruHP/layout.tsx の force-dynamic の外）にある。
++  // beforeFiles はファイルシステムより前に評価されるので、
++  // app/laruHP/page.tsx を残したまま /laruHP を新LPに差し替えられる。
+   //
+-  // 実体を app/lp-next に置けばルートレイアウトだけが適用されるので静的にできる。
+-  // rewrite なのでURLは /laruHP/lp-next のまま変わらない。
++  // 実体URL /lp-next と旧プレビューURL /laruHP/lp-next は正式URLへ集約する。
++  // redirects は beforeFiles より前に評価されるため、
++  // /laruHP → /lp-next の内部書き換えがリダイレクトに戻ることはない。
+   async rewrites() {
+-    return [
+-      { source: '/laruHP/lp-next', destination: '/lp-next' },
+-    ];
++    return {
++      beforeFiles: [
++        { source: '/laruHP', destination: '/lp-next' },
++      ],
++      afterFiles: [],
++      fallback: [],
++    };
+   },
+ };
+ 
+diff --git a/laruvisona-web/tests/lp-next.test.ts b/laruvisona-web/tests/lp-next.test.ts
+index 0c9b7cf..2211a68 100644
+--- a/laruvisona-web/tests/lp-next.test.ts
++++ b/laruvisona-web/tests/lp-next.test.ts
+@@ -14,34 +14,44 @@ const facts = read('app/lp-next/facts.ts');
+ const oldLp = read('app/laruHP/page.tsx');
+ const layout = read('app/laruHP/layout.tsx');
+ 
+-test('プレビューは検索対象から外す', () => {
+-  assert.match(page, /robots: \{ index: false, follow: false/, 'noindexになっていない');
++test('正式LPは検索対象にする', () => {
++  const src = read('app/lp-next/page.tsx');
++  assert.equal(/robots:\s*\{[^}]*index:\s*false/.test(src), false, '昇格後もnoindexが残っている');
+ });
+ 
+-test('canonicalを本番LPに向けない', () => {
+-  // 実体は app/lp-next（ルートレイアウトのみ）に移したので、
+-  // laruHPレイアウトの canonical は継承しない。それでも明示しておく。
+-  assert.match(layout, /canonical: 'https:\/\/laruvisona\.jp\/laruHP'/, '既存LPのcanonicalが変わった');
+-  assert.match(page, /canonical: 'https:\/\/laruvisona\.jp\/laruHP\/lp-next'/);
++test('プレビュー用の帯とリンクを残さない', () => {
++  const src = read('app/lp-next/page.tsx');
++  assert.equal(/検索には出ません/.test(src), false, 'プレビューの帯が残っている');
++  assert.equal(/今のLPを見る/.test(src), false, '旧LPへのリンクが残っている');
++  assert.equal(/【プレビュー】/.test(src), false, 'タイトルがプレビューのまま');
+ });
+ 
+-test('URLは /laruHP/lp-next のまま、実体はレイアウト配下の外に置く', () => {
+-  // app/laruHP/layout.tsx の force-dynamic は子ページの force-static で
+-  // 上書きできない（本番のレスポンスヘッダで確認済み）。
+-  // 配下48ページに影響する変更を避けるため、実体だけ外に出して rewrite で繋ぐ。
++test('canonicalは正式URLを指す', () => {
++  const src = read('app/lp-next/page.tsx');
++  assert.match(src, /canonical: 'https:\/\/laruvisona\.jp\/laruHP'/);
++});
++
++test('構造化データは、このページに書いてある価格から作る', () => {
++  const src = read('app/lp-next/page.tsx');
++  assert.match(src, /'@type': 'SoftwareApplication'/);
++  assert.match(src, /PLANS\.map\(p => \(\{/);
++  assert.equal(/lowPrice: '999'/.test(src), false, '価格を直書きしている');
++});
++
++test('URLは /laruHP で配り、実体はレイアウト配下の外に置く', () => {
+   const cfg = read('next.config.ts');
+-  assert.match(cfg, /async rewrites\(\)/, 'rewriteが無い');
+-  assert.match(cfg, /source: '\/laruHP\/lp-next', destination: '\/lp-next'/);
+-  // 実ルートが残っていると rewrite より優先されるので、page ファイルが無いことを見る。
+-  // （空ディレクトリは Next.js のルートにならず、git も追跡しないので対象外）
+-  const strays = ['page.tsx', 'page.ts', 'page.jsx', 'page.js']
+-    .filter((f) => fs.existsSync(path.join(root, 'app/laruHP/lp-next', f)));
+-  assert.deepEqual(strays, [],
+-    'laruHP配下に残っていると実ルートがrewriteより優先される');
++  assert.match(cfg, /beforeFiles: \[\s*\{ source: '\/laruHP', destination: '\/lp-next' \}/);
++  assert.ok(fs.existsSync(path.join(root, 'app/laruHP/page.tsx')), '旧LPのファイルが消えている');
+   assert.ok(fs.existsSync(path.join(root, 'app/lp-next/page.tsx')));
+-  // ルートレイアウトが動的でないこと（ここが動的なら静的化できない）
+-  assert.equal(/export const dynamic/.test(read('app/layout.tsx')), false,
+-    'ルートレイアウトが動的になっている');
++  assert.equal(/export const dynamic/.test(read('app/layout.tsx')), false);
++});
++
++test('実体URLとプレビューURLは正式URLへ集約する', () => {
++  const cfg = read('next.config.ts');
++  assert.match(cfg, /\{ source: '\/lp-next', destination: '\/laruHP', permanent: true \}/);
++  assert.match(cfg, /\{ source: '\/laruHP\/lp-next', destination: '\/laruHP', permanent: true \}/);
++  // permanent: true は 308。手順書の期待値もこれに合わせる
++  assert.match(cfg, /308/);
+ });
+ 
+ test('既存LPのURL・canonical・メタデータに触っていない', () => {

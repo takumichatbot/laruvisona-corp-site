@@ -43,7 +43,22 @@ create table if not exists public.site_domains (
 
   render_domain_id text,
   render_registered_at timestamptz,
+  -- 外部登録を「呼ぶ直前」に立てる印。DB保存前に落ちても、
+  -- こちらの都合で作った登録だと分かるようにするため（後始末の認可に使う）。
+  render_register_started_at timestamptz,
   release_requested_at timestamptz,
+  -- 解除を開始した時点で「こちらの都合で作った外部登録がある」と判断したかどうか。
+  -- 解除に入ると status が release_pending に変わって legacy 等の根拠が消えるため、
+  -- その瞬間の判断を残しておく（再試行しても判断がぶれない）。
+  external_registration_owned boolean,
+
+  -- 処理の世代。所有確認トークンとは別物。
+  --   verification_token … 利用者がDNSに置く値。行を作り直さない限り変わらない
+  --   operation_epoch    … 解除を開始するたびに進む。進んだ時点で、
+  --                        それより前に始まった検証の結果は適用できなくなる
+  -- TXTトークンだけでは同じ行の「処理の世代」を区別できず、
+  -- 解除の途中に古い検証が割り込んで上書きできてしまった。
+  operation_epoch bigint not null default 1,
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -51,6 +66,11 @@ create table if not exists public.site_domains (
 
 -- 同じホストを2つのサイトが同時に主張できないようにする。
 -- アプリ側のチェックだけでは同時リクエストで抜けるため、DBの制約で押さえる。
+-- 既存インストールへの追加（初回適用時は上のcreate tableで作られている）
+alter table public.site_domains add column if not exists operation_epoch bigint not null default 1;
+alter table public.site_domains add column if not exists render_register_started_at timestamptz;
+alter table public.site_domains add column if not exists external_registration_owned boolean;
+
 create unique index if not exists site_domains_host_key on public.site_domains (host);
 create index if not exists site_domains_site_idx on public.site_domains (site_id);
 
@@ -142,13 +162,42 @@ create trigger guard_sites_custom_domain_trg before insert or update on public.s
   for each row execute function public.guard_sites_custom_domain();
 
 -- ── 状態遷移（service_role からのみ実行できる）────────
+--
+-- 共通の約束:
+--   * 対象行を for update でロックしてから判断する
+--   * verification_token（行の同一性）と operation_epoch（処理の世代）の
+--     両方が一致しないと適用しない
+--   * 「いまの状態から遷移してよいか」もDB内で確認する。
+--     関数の外で読んだ状態を根拠にしない
 
--- 検証結果の確定。fencing token が一致し、行が残っている場合だけ適用する。
--- 主ドメインの採用も同じトランザクションで行う。
+-- 外部登録を呼ぶ直前に印を付ける。
+-- Renderへの登録が成功したのにDB保存前に落ちた場合でも、
+-- 「こちらの都合で作った登録」であることが後から分かるようにする。
+create or replace function public.laruhp_domain_mark_register_started(
+  p_site_id uuid,
+  p_host text,
+  p_epoch bigint
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_row public.site_domains%rowtype;
+begin
+  select * into v_row from public.site_domains
+   where site_id = p_site_id and host = p_host for update;
+  if not found or v_row.operation_epoch is distinct from p_epoch then
+    return jsonb_build_object('ok', false, 'reason', 'stale');
+  end if;
+  update public.site_domains
+     set render_register_started_at = coalesce(render_register_started_at, now())
+   where id = v_row.id;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+-- 検証結果の確定。
 create or replace function public.laruhp_domain_apply_check(
   p_site_id uuid,
   p_host text,
   p_fencing_token text,
+  p_epoch bigint,
   p_status text,
   p_render_domain_id text,
   p_last_error text,
@@ -163,8 +212,15 @@ begin
    where site_id = p_site_id and host = p_host
    for update;
 
-  if not found or v_row.verification_token is distinct from p_fencing_token then
+  if not found
+     or v_row.verification_token is distinct from p_fencing_token
+     or v_row.operation_epoch is distinct from p_epoch then
     return jsonb_build_object('ok', false, 'reason', 'gone');
+  end if;
+
+  -- 解除が始まっている行に、古い検証結果を書き戻さない
+  if v_row.status = 'release_pending' then
+    return jsonb_build_object('ok', false, 'reason', 'releasing');
   end if;
 
   update public.site_domains set
@@ -189,8 +245,12 @@ begin
       else connected_at end
   where id = v_row.id;
 
+  -- 主URLの自動採用は「いまも未設定」のときだけ。
+  -- 検証を始めた時点で未設定でも、その間に利用者が明示的に選んでいれば
+  -- そちらを尊重する（上書きしない）。
   if p_make_primary and p_status in ('connected', 'legacy') then
-    update public.sites set custom_domain = p_host where id = p_site_id;
+    update public.sites set custom_domain = p_host
+     where id = p_site_id and custom_domain is null;
     v_switched := found;
   end if;
 
@@ -202,7 +262,8 @@ $$;
 create or replace function public.laruhp_domain_set_primary(
   p_site_id uuid,
   p_host text,
-  p_fencing_token text
+  p_fencing_token text,
+  p_epoch bigint
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_row public.site_domains%rowtype;
 begin
@@ -210,7 +271,9 @@ begin
    where site_id = p_site_id and host = p_host
    for update;
 
-  if not found or v_row.verification_token is distinct from p_fencing_token then
+  if not found
+     or v_row.verification_token is distinct from p_fencing_token
+     or v_row.operation_epoch is distinct from p_epoch then
     return jsonb_build_object('ok', false, 'reason', 'gone');
   end if;
   if v_row.status not in ('connected', 'legacy') then
@@ -225,7 +288,9 @@ begin
 end;
 $$;
 
--- 解除の開始。配信ポインタを先に外し、状態を release_pending にする。
+-- 解除の開始。
+-- ここで operation_epoch を進めるので、進行中だった検証の結果は
+-- もう適用できなくなる（順序Aの上書きを止める）。
 create or replace function public.laruhp_domain_begin_release(
   p_site_id uuid,
   p_host text
@@ -244,7 +309,16 @@ begin
 
   update public.site_domains set
     status = 'release_pending',
-    release_requested_at = coalesce(release_requested_at, now())
+    operation_epoch = operation_epoch + 1,
+    release_requested_at = coalesce(release_requested_at, now()),
+    -- 解除前の行から判断して固定する。status はこの更新で release_pending に
+    -- 変わるので、legacy だったことを後から判断できなくなるため。
+    external_registration_owned = coalesce(
+      external_registration_owned,
+      v_row.render_domain_id is not null
+        or v_row.render_register_started_at is not null
+        or v_row.status = 'legacy'
+    )
    where id = v_row.id
    returning * into v_row;
 
@@ -256,15 +330,22 @@ $$;
 create or replace function public.laruhp_domain_finish_release(
   p_site_id uuid,
   p_host text,
-  p_fencing_token text
+  p_fencing_token text,
+  p_epoch bigint
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_row public.site_domains%rowtype;
 begin
   select * into v_row from public.site_domains
    where site_id = p_site_id and host = p_host
    for update;
-  if not found or v_row.verification_token is distinct from p_fencing_token then
+  if not found
+     or v_row.verification_token is distinct from p_fencing_token
+     or v_row.operation_epoch is distinct from p_epoch then
     return jsonb_build_object('ok', false, 'reason', 'gone');
+  end if;
+  -- 解除中でない行（＝別の申請として作り直された行）は消さない
+  if v_row.status <> 'release_pending' then
+    return jsonb_build_object('ok', false, 'reason', 'not_releasing');
   end if;
 
   perform set_config('laruhp.release_done', '1', true);
@@ -278,24 +359,37 @@ begin
 end;
 $$;
 
+-- 解除に失敗した記録。
+-- 世代と現在状態を見るので、遅れて届いた古い解除失敗が、
+-- 作り直された新しい申請を release_pending にすることはない（順序C）。
 create or replace function public.laruhp_domain_mark_release_failed(
   p_site_id uuid,
   p_host text,
+  p_epoch bigint,
   p_message text
 ) returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_row public.site_domains%rowtype;
 begin
+  select * into v_row from public.site_domains
+   where site_id = p_site_id and host = p_host
+   for update;
+  if not found or v_row.operation_epoch is distinct from p_epoch then
+    return jsonb_build_object('ok', false, 'reason', 'stale');
+  end if;
+  if v_row.status <> 'release_pending' then
+    return jsonb_build_object('ok', false, 'reason', 'not_releasing');
+  end if;
+
   update public.site_domains
-     set status = 'release_pending', last_error = p_message, last_checked_at = now()
-   where site_id = p_site_id and host = p_host;
+     set last_error = p_message, last_checked_at = now()
+   where id = v_row.id;
 
   insert into public.domain_release_queue (site_id, host, render_domain_id, last_error, attempts)
-  select site_id, host, render_domain_id, p_message, 1
-    from public.site_domains
-   where site_id = p_site_id and host = p_host
-     and not exists (
-       select 1 from public.domain_release_queue q
-        where q.host = p_host and q.resolved_at is null
-     );
+  select v_row.site_id, v_row.host, v_row.render_domain_id, p_message, 1
+   where not exists (
+     select 1 from public.domain_release_queue q
+      where q.host = p_host and q.resolved_at is null
+   );
 
   return jsonb_build_object('ok', true);
 end;
@@ -306,15 +400,21 @@ do $$
 declare f text;
 begin
   foreach f in array array[
-    'laruhp_domain_apply_check(uuid,text,text,text,text,text,boolean)',
-    'laruhp_domain_set_primary(uuid,text,text)',
+    'laruhp_domain_apply_check(uuid,text,text,bigint,text,text,text,boolean)',
+    'laruhp_domain_set_primary(uuid,text,text,bigint)',
     'laruhp_domain_begin_release(uuid,text)',
-    'laruhp_domain_finish_release(uuid,text,text)',
-    'laruhp_domain_mark_release_failed(uuid,text,text)'
+    'laruhp_domain_finish_release(uuid,text,text,bigint)',
+    'laruhp_domain_mark_release_failed(uuid,text,bigint,text)',
+    'laruhp_domain_mark_register_started(uuid,text,bigint)'
   ] loop
     execute format('revoke all on function public.%s from public, anon, authenticated', f);
     execute format('grant execute on function public.%s to service_role', f);
   end loop;
+  -- 旧シグネチャが残っていると authenticated から呼べてしまうので落とす
+  execute 'drop function if exists public.laruhp_domain_apply_check(uuid,text,text,text,text,text,boolean)';
+  execute 'drop function if exists public.laruhp_domain_set_primary(uuid,text,text)';
+  execute 'drop function if exists public.laruhp_domain_finish_release(uuid,text,text)';
+  execute 'drop function if exists public.laruhp_domain_mark_release_failed(uuid,text,text)';
 end;
 $$;
 

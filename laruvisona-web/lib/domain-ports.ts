@@ -5,6 +5,7 @@ import dns from 'node:dns/promises';
 import { safeFetch, readCapped } from '@/lib/safe-fetch';
 import { renderConfig, registerDomain, findDomain, unregisterDomain } from '@/lib/render-domains';
 import type { DnsPort, RenderPort, ProbePort } from '@/lib/domain-service';
+import { probeSecret, createChallenge, verifyProof } from '@/lib/domain-probe-proof';
 
 export const dnsPort: DnsPort = {
   async txt(name) {
@@ -58,20 +59,27 @@ export const renderPort: RenderPort = {
 
 export const probePort: ProbePort = {
   async reachesService(host) {
+    // 固定の応答を返すだけの確認は、別のサーバーで真似できる。
+    // 毎回の nonce と期限に対して、共有鍵でしか作れない署名が返るかで見る。
+    const secret = probeSecret();
+    if (!secret) return 'unavailable';
+
+    const c = createChallenge(secret, host);
+    const qs = new URLSearchParams({ host: c.host, nonce: c.nonce, exp: String(c.exp), sig: c.sig });
     try {
-      // リダイレクトは追わない。別ホストへ飛ばされた先の応答で
-      // 「接続済み」と判断しないため。
+      // リダイレクトは追わない。別ホストへ飛ばされた先の応答で判断しないため。
       const res = await safeFetch(
-        `https://${host}/api/domain-probe`,
+        `https://${host}/api/domain-probe?${qs.toString()}`,
         { method: 'GET', headers: { accept: 'application/json' } },
         { timeoutMs: 8000, maxRedirects: 0 },
       );
-      if (res.status !== 200) { try { await res.arrayBuffer(); } catch { /* noop */ } return false; }
+      if (res.status !== 200) { try { await res.arrayBuffer(); } catch { /* noop */ } return 'not_reached'; }
       const body = await readCapped(res, 4096);
-      const json = JSON.parse(body) as { marker?: string; host?: string };
-      return json.marker === 'laruhp-domain-probe' && json.host === host.toLowerCase();
+      const json = JSON.parse(body) as { ok?: boolean; proof?: string };
+      if (!json.ok || !json.proof) return 'not_reached';
+      return verifyProof(secret, c, json.proof) ? 'reached' : 'not_reached';
     } catch {
-      return false;
+      return 'not_reached';
     }
   },
 };

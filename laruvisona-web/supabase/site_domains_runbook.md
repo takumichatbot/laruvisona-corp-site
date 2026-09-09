@@ -2,6 +2,36 @@
 
 対象: `supabase/site_domains.sql`（未適用）
 
+## 実PostgreSQLでの回帰テスト
+
+外部に一切つながらない一時DBで、実際のSQL関数を競合の順序どおりに呼ぶ。
+
+```
+# 一時サーバを立てて（例）
+initdb -D /tmp/pgtest/data -U laruhp --auth=trust
+pg_ctl -D /tmp/pgtest/data -o "-k /tmp/pgtest/sock -h ''" -l /tmp/pgtest/pg.log start
+
+# 適用してシナリオを流す
+./supabase/run-sql-regression.sh
+```
+
+`site_domains_regression.sql` が固定しているのは次の順序:
+
+| 記号 | 内容 |
+|---|---|
+| A | 検証中に解除が確定 → 古い検証を適用しない。実体の無い主URLが残らない |
+| B | 検証中に利用者が主URLを選択 → 自動採用で上書きしない |
+| C | 遅れて届いた古い解除失敗 → 作り直された新しい申請を壊さない |
+| D | 同一サイトの2候補を同時に初回検証 → 主URLは1つだけ |
+| E | 解除待ちでない行を finish_release で消せない |
+| F | 登録開始の印は世代が一致するときだけ立つ |
+| G | 解除待ちの行に検証結果を書き戻せない |
+| H | 解除開始時に外部登録の帰属を固定する（legacy / 未登録 / 登録途中） |
+
+`site_domains_permission_check.sql` は権限を確認する。
+どちらも「期待どおり失敗すること」が合格条件で、
+1件でも成功したら適用しない。
+
 ## 先に隔離環境で確認する
 
 本番での接続試験を最初の結合試験にしない。順番は次のとおり。
@@ -70,3 +100,35 @@ drop table public.domain_release_queue;
 ```
 
 退避したテーブルは、Render側の後始末が終わるまで消さない。
+
+
+## 解除待ちキュー（domain_release_queue）の運用
+
+自動で消化する処理は入れていない。**キューに積まれた＝外部の解除が済んだ、ではない。**
+
+| 項目 | 決め |
+|---|---|
+| 担当 | 齋藤（外部サービスの管理権限が要るため） |
+| 頻度 | 週1回。加えて、画面で「解除待ち」が出たと連絡があったとき |
+| 手順 | 1. `select site_id, host, render_domain_id, attempts, last_error from public.domain_release_queue where resolved_at is null order by requested_at;`<br>2. 各ホストについて Render の custom domains 一覧を確認する<br>3. 一覧に**そのホスト名で**存在し、当社サービスの登録であることを確認してから解除する<br>4. `update public.domain_release_queue set resolved_at = now() where id = ...;` |
+| 完了記録 | `resolved_at` を入れる。入っていないものは未完了として次回も出る |
+| 再確認 | 解除後に `dig` などでそのホストが当社へ向いていないことを確認する |
+
+注意: キューに古い世代のホストが残っている状態で、同じホストが別のサイトに
+登録し直されることがある。**必ず `site_domains` に同じホストの行が
+存在しないことを確認してから解除する。**
+
+```sql
+-- 解除してよいか（0件であること）
+select count(*) from public.site_domains where host = '<対象ホスト>';
+```
+
+行が存在する場合は、それが新しい申請なので解除してはいけない。
+その場合はキューの行に `last_error = '再登録済みのため対象外'` を書いて
+`resolved_at` を入れる。
+
+## 外部APIの設定が失われた場合
+
+`RENDER_API_KEY` / `RENDER_SERVICE_ID` が未設定のときに解除が実行されると、
+「解除不要」とは扱わず `release_pending` のまま残り、キューに積まれる。
+設定を戻してから画面の「解除を再試行」を押すか、上の手順で手当てする。
