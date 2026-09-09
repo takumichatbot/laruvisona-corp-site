@@ -14,7 +14,7 @@ const {
   normalizeDomain, wwwSibling, isReservedHost,
   challengeRecordName, challengeRecordValue, generateVerificationToken,
   checkOwnership, cnameMatchesTarget, checkPointsHere, deriveStatus,
-  dnsInstructions, isServable, statusLabel,
+  dnsInstructions, isServable, statusLabel, looksLikeApex, DNS_SUPPORT_NOTES,
 } = await import('../lib/domain.ts');
 
 // ── 正規化 ──
@@ -144,34 +144,41 @@ test('CNAMEが見えなくてもAレコードで向き先を判断できる', ()
 
 // ── 状態 ──
 
-test('所有確認・向き先・SSLを別々の事実として状態にする', () => {
-  assert.equal(deriveStatus({ ownership: false, pointsHere: true, renderVerified: true, tlsReady: true }), 'pending_ownership');
-  assert.equal(deriveStatus({ ownership: true, pointsHere: false, renderVerified: null, tlsReady: null }), 'pending_dns');
-  assert.equal(deriveStatus({ ownership: true, pointsHere: true, renderVerified: false, tlsReady: null }), 'ssl_pending');
-  assert.equal(deriveStatus({ ownership: true, pointsHere: true, renderVerified: true, tlsReady: false }), 'ssl_pending');
-  assert.equal(deriveStatus({ ownership: true, pointsHere: true, renderVerified: true, tlsReady: true }), 'connected');
+test('所有確認・到達・Render確認を別々の事実として状態にする', () => {
+  const base = { ownership: true, dnsPointsHere: true, reachesService: true, renderCheck: 'verified' as const };
+  assert.equal(deriveStatus({ ...base, ownership: false }), 'pending_ownership');
+  assert.equal(deriveStatus({ ...base, reachesService: false, dnsPointsHere: false }), 'pending_dns');
+  assert.equal(deriveStatus({ ...base, reachesService: false, dnsPointsHere: true }), 'ssl_pending');
+  assert.equal(deriveStatus(base), 'connected');
 });
 
-test('共有Aレコードへの一致だけでは接続済みにならない', () => {
-  // Renderの共有IPは誰でも向けられる。所有確認が無ければ接続済みにしない。
-  const points = checkPointsHere(
-    { txt: [], cname: [], a: ['216.24.57.1'] },
-    { expectedTarget: 'svc.onrender.com', expectedApexIps: ['216.24.57.1'] },
+test('「確認していない」を「確認して問題なし」に変換しない', () => {
+  const base = { ownership: true, dnsPointsHere: true, reachesService: true };
+  // 照会に失敗した（結果が分からない）→ 接続済みにしない
+  assert.equal(deriveStatus({ ...base, renderCheck: 'unavailable' }), 'ssl_pending');
+  // 照会できて未検証だった → 接続済みにしない
+  assert.equal(deriveStatus({ ...base, renderCheck: 'unverified' }), 'ssl_pending');
+  // そもそも確認しない運用 → 到達確認だけで接続済みにしてよい
+  assert.equal(deriveStatus({ ...base, renderCheck: 'not_configured' }), 'connected');
+});
+
+test('このサービスへ到達できなければ、Renderがverifiedでも接続済みにしない', () => {
+  assert.equal(
+    deriveStatus({ ownership: true, dnsPointsHere: true, reachesService: false, renderCheck: 'verified' }),
+    'ssl_pending',
   );
-  const status = deriveStatus({ ownership: false, pointsHere: points.pointsHere, renderVerified: true, tlsReady: true });
-  assert.equal(status, 'pending_ownership');
 });
 
 test('配信してよい状態は connected と legacy だけ', () => {
   assert.equal(isServable('connected'), true);
   assert.equal(isServable('legacy'), true);
-  for (const s of ['pending_ownership', 'pending_dns', 'ssl_pending', 'failed'] as const) {
+  for (const s of ['pending_ownership', 'pending_dns', 'ssl_pending', 'failed', 'release_pending'] as const) {
     assert.equal(isServable(s), false, `配信されてしまう: ${s}`);
   }
 });
 
 test('すべての状態に「次にやること」がある', () => {
-  for (const s of ['pending_ownership', 'pending_dns', 'ssl_pending', 'connected', 'failed', 'legacy'] as const) {
+  for (const s of ['pending_ownership', 'pending_dns', 'ssl_pending', 'connected', 'failed', 'legacy', 'release_pending'] as const) {
     const l = statusLabel(s);
     assert.ok(l.label.length > 0, s);
     assert.ok(l.next.length > 0, s);
@@ -192,12 +199,34 @@ test('DNS手順に、種類・名前・値がそろっている', () => {
   assert.match(txt.note || '', /消さず|残して/);
 });
 
-test('ルートドメインはA、サブドメインはCNAMEを案内する', () => {
-  const apex = dnsInstructions('example.com', 't', { expectedTarget: 'svc.onrender.com', expectedApexIp: '216.24.57.1' });
-  assert.equal(apex.find(r => r.purpose === '配信先')?.type, 'A');
+test('配信先はAとCNAMEの両方を出し、可能性が高いほうを勧める', () => {
+  const opts = { expectedTarget: 'svc.onrender.com', expectedApexIp: '216.24.57.1' };
 
-  const sub = dnsInstructions('www.example.com', 't', { expectedTarget: 'svc.onrender.com', expectedApexIp: '216.24.57.1' });
-  const s = sub.find(r => r.purpose === '配信先');
-  assert.equal(s?.type, 'CNAME');
-  assert.equal(s?.value, 'svc.onrender.com');
+  const apex = dnsInstructions('example.com', 't', opts).filter(r => r.purpose === '配信先');
+  assert.equal(apex.length, 2, 'どちらか一方しか出していない');
+  assert.equal(apex.find(r => r.recommended)?.type, 'A');
+
+  const sub = dnsInstructions('www.example.com', 't', opts).filter(r => r.purpose === '配信先');
+  const rec = sub.find(r => r.recommended);
+  assert.equal(rec?.type, 'CNAME');
+  assert.equal(rec?.value, 'svc.onrender.com');
+});
+
+test('co.jp などをサブドメインと誤認しない', () => {
+  // ラベル数だけで判定すると example.co.jp にCNAMEを案内してしまう
+  assert.equal(looksLikeApex('example.co.jp'), true);
+  assert.equal(looksLikeApex('example.com'), true);
+  assert.equal(looksLikeApex('www.example.co.jp'), false);
+  assert.equal(looksLikeApex('shop.example.com'), false);
+  assert.equal(looksLikeApex('example.co.uk'), true);
+
+  const opts = { expectedTarget: 'svc.onrender.com', expectedApexIp: '216.24.57.1' };
+  const rows = dnsInstructions('example.co.jp', 't', opts).filter(r => r.purpose === '配信先');
+  assert.equal(rows.find(r => r.recommended)?.type, 'A');
+});
+
+test('対応範囲の説明にメール設定とCloudflareプロキシが含まれる', () => {
+  const joined = DNS_SUPPORT_NOTES.join('\n');
+  assert.match(joined, /MX/);
+  assert.match(joined, /Cloudflare/);
 });

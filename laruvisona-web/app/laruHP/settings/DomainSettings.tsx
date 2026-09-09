@@ -10,13 +10,15 @@ import { useCallback, useEffect, useState } from 'react';
  * 所有確認・DNSの反映・SSLの発行が終わったのかは分からなかった。
  */
 
-type Status = 'pending_ownership' | 'pending_dns' | 'ssl_pending' | 'connected' | 'failed' | 'legacy';
+type Status = 'pending_ownership' | 'pending_dns' | 'ssl_pending' | 'connected' | 'failed' | 'legacy' | 'release_pending';
 
 interface DnsRecord {
   purpose: string;
   type: 'TXT' | 'CNAME' | 'A';
   name: string;
   value: string;
+  recommended?: boolean;
+  group?: string;
   note?: string;
 }
 
@@ -25,7 +27,10 @@ interface DomainEntry {
   status: Status;
   label: string;
   next: string;
-  isLive: boolean;
+  /** いまこのサイトの正規URLとして配信されているか */
+  isPrimary: boolean;
+  /** 接続は確認できているが、まだ正規URLではない（切替できる） */
+  canBePrimary: boolean;
   lastError: string | null;
   lastCheckedAt: string | null;
   records: DnsRecord[];
@@ -36,6 +41,7 @@ interface SiteEntry {
   name: string;
   liveDomain: string | null;
   domains: DomainEntry[];
+  notes: string[];
 }
 
 const STATUS_STYLE: Record<Status, string> = {
@@ -45,6 +51,7 @@ const STATUS_STYLE: Record<Status, string> = {
   connected: 'bg-green-100 text-green-700',
   failed: 'bg-red-100 text-red-700',
   legacy: 'bg-slate-200 text-slate-700',
+  release_pending: 'bg-orange-100 text-orange-800',
 };
 
 /** 進み方を4段階で示す。どこで止まっているかが分かるようにする */
@@ -63,6 +70,7 @@ function stepIndex(status: Status): number {
     case 'connected': return 4;
     case 'legacy': return 4;
     case 'failed': return 0;
+    case 'release_pending': return 0;
   }
 }
 
@@ -77,10 +85,10 @@ export default function DomainSettings() {
   const loadOne = useCallback(async (id: string, name: string): Promise<SiteEntry> => {
     try {
       const res = await fetch(`/api/sites/${id}/domain`);
-      const d = await res.json() as { liveDomain?: string | null; domains?: DomainEntry[] };
-      return { id, name, liveDomain: d.liveDomain ?? null, domains: d.domains ?? [] };
+      const d = await res.json() as { liveDomain?: string | null; domains?: DomainEntry[]; notes?: string[] };
+      return { id, name, liveDomain: d.liveDomain ?? null, domains: d.domains ?? [], notes: d.notes ?? [] };
     } catch {
-      return { id, name, liveDomain: null, domains: [] };
+      return { id, name, liveDomain: null, domains: [], notes: [] };
     }
   }, []);
 
@@ -129,6 +137,9 @@ export default function DomainSettings() {
   };
 
   const handleVerify = async (site: SiteEntry, host: string) => {
+    // 解除待ちの行では、確認ではなく解除の再試行を行う
+    const entry = site.domains.find(x => x.host === host);
+    if (entry?.status === 'release_pending') { await handleRemove(site, host); return; }
     setBusy(`${site.id}:${host}`);
     setMsg(p => ({ ...p, [site.id]: { text: '確認しています…', type: 'info' } }));
     try {
@@ -162,16 +173,39 @@ export default function DomainSettings() {
     }
   };
 
+  const handleMakePrimary = async (site: SiteEntry, host: string) => {
+    setBusy(`${site.id}:${host}`);
+    try {
+      const res = await fetch(`/api/sites/${site.id}/domain/primary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host }),
+      });
+      const d = await res.json() as { error?: string };
+      setMsg(p => ({
+        ...p,
+        [site.id]: res.ok
+          ? { text: `${host} を主な公開URLにしました。旧ドメインは接続したまま残っています。`, type: 'success' }
+          : { text: d.error || '切り替えに失敗しました', type: 'error' },
+      }));
+      await refreshSite(site.id, site.name);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const handleRemove = async (site: SiteEntry, host: string) => {
     setBusy(`${site.id}:${host}`);
     try {
       const res = await fetch(`/api/sites/${site.id}/domain?host=${encodeURIComponent(host)}`, { method: 'DELETE' });
-      const d = await res.json() as { error?: string; renderNote?: string | null };
+      const d = await res.json() as { error?: string; released?: boolean; message?: string | null };
       setMsg(p => ({
         ...p,
-        [site.id]: res.ok
-          ? { text: d.renderNote ? `${host} を削除しました（${d.renderNote}）` : `${host} を削除しました`, type: 'success' }
-          : { text: d.error || '削除に失敗しました', type: 'error' },
+        [site.id]: !res.ok
+          ? { text: d.error || '解除に失敗しました', type: 'error' }
+          : d.released
+            ? { text: `${host} を解除しました`, type: 'success' }
+            : { text: d.message || `${host} の配信は停止しましたが、外部側の解除が残っています`, type: 'info' },
       }));
       await refreshSite(site.id, site.name);
     } finally {
@@ -200,7 +234,7 @@ export default function DomainSettings() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-gray-800">{site.name}</span>
               {site.liveDomain && (
-                <span className="text-[10px] text-gray-500">公開中: {site.liveDomain}</span>
+                <span className="text-[10px] text-gray-500">主な公開URL: {site.liveDomain}</span>
               )}
             </div>
 
@@ -238,7 +272,7 @@ export default function DomainSettings() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-sm text-gray-900">{d.host}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${STATUS_STYLE[d.status]}`}>{d.label}</span>
-                    {d.isLive && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-sky-600 text-white">公開中</span>}
+                    {d.isPrimary && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-sky-600 text-white">主な公開URL</span>}
                   </div>
 
                   {/* どこまで進んだか */}
@@ -262,6 +296,11 @@ export default function DomainSettings() {
                             <p className="text-[11px] font-bold text-gray-800">
                               {i + 1}. {r.purpose}
                               <span className="ml-2 font-mono font-normal text-gray-500">種類: {r.type}</span>
+                              {r.group && (
+                                <span className={`ml-2 font-normal ${r.recommended ? 'text-sky-700' : 'text-gray-400'}`}>
+                                  {r.recommended ? '← こちらの可能性が高い' : '（どちらか一方でかまいません）'}
+                                </span>
+                              )}
                             </p>
                             {([['名前', r.name], ['値', r.value]] as const).map(([labelText, val]) => (
                               <div key={labelText} className="flex items-start gap-2">
@@ -285,10 +324,9 @@ export default function DomainSettings() {
                       {d.records.filter(r => r.note).map(r => (
                         <p key={r.name} className="text-[10px] text-gray-500">{r.note}</p>
                       ))}
-                      <p className="text-[10px] text-gray-500">
-                        既存のメール設定（MX）や、他サービスの確認用TXTは消さずに残してください。TXTは同じ名前に複数登録できます。
-                        反映まで数分〜最大48時間かかることがあります。
-                      </p>
+                      {site.notes.map(n => (
+                        <p key={n} className="text-[10px] text-gray-500">{n}</p>
+                      ))}
                     </div>
                   )}
 
@@ -299,15 +337,27 @@ export default function DomainSettings() {
                       disabled={busy === `${site.id}:${d.host}`}
                       className="text-xs border border-sky-300 text-sky-700 hover:bg-sky-50 px-3 min-h-[44px] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {busy === `${site.id}:${d.host}` ? '確認中…' : '確認する'}
+                      {busy === `${site.id}:${d.host}`
+                        ? '確認中…'
+                        : d.status === 'release_pending' ? '解除を再試行' : '確認する'}
                     </button>
+                    {d.canBePrimary && (
+                      <button
+                        type="button"
+                        onClick={() => handleMakePrimary(site, d.host)}
+                        disabled={busy === `${site.id}:${d.host}`}
+                        className="text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 min-h-[44px] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        主な公開URLにする
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleRemove(site, d.host)}
                       disabled={busy === `${site.id}:${d.host}`}
                       className="text-xs border border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-600 px-3 min-h-[44px] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      削除
+                      {d.status === 'release_pending' ? '記録を削除' : '解除'}
                     </button>
                   </div>
                 </div>

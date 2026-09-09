@@ -1,8 +1,13 @@
-// 独自ドメインAPIの構造的な回帰テスト。
+// 独自ドメインまわりの「構造として保証したいこと」だけを見るテスト。
 //
-// 実際のSupabase/Renderには接続できないので、ここではソースを読んで
-// 「壊れやすい順番・迂回経路」が戻っていないことを固定する。
-// 判定ロジックそのものは tests/domain.test.ts で値として検証している。
+// APIの振る舞い（失敗・競合・所有者違い・解除の再試行）は
+// tests/domain-service.test.ts で実処理を呼んで検証している。
+// こちらに残すのは、コードを実行しても分からない事実だけ:
+//   - 迂回経路が復活していないこと
+//   - 移行SQLと権限設計が要件を満たしていること
+//   - 画面に必要な情報が出ていること
+// DBの実効権限はここでは保証できない。supabase/site_domains_permission_check.sql
+// を隔離環境で実行して確認する。
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -12,11 +17,6 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
 
-const DOMAIN_ROUTE = 'app/api/sites/[id]/domain/route.ts';
-const VERIFY_ROUTE = 'app/api/sites/[id]/domain/verify/route.ts';
-const SITE_ROUTE = 'app/api/sites/[id]/route.ts';
-
-/** コメントを外したソース（説明文がテストに引っかからないように） */
 function code(p: string): string {
   return read(p)
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -25,121 +25,140 @@ function code(p: string): string {
     .join('\n');
 }
 
-test('副作用の前にサイトの所有者を確認する', () => {
-  const s = code(DOMAIN_ROUTE);
-  const put = s.slice(s.indexOf('export async function PUT'));
-  const owner = put.indexOf('ownedSite');
-  const insert = put.indexOf('.insert(');
-  assert.ok(owner > -1, 'PUTに所有者確認が無い');
-  assert.ok(insert > -1, 'PUTにinsertが無い');
-  assert.ok(owner < insert, '所有者確認より先に書き込んでいる');
-});
-
-test('ドメインを保存しただけでは配信先にならない', () => {
-  const s = code(DOMAIN_ROUTE);
-  const put = s.slice(s.indexOf('export async function PUT'), s.indexOf('export async function DELETE'));
-  assert.equal(/custom_domain\s*:/.test(put), false,
-    'PUTで sites.custom_domain を書いている（未確認のドメインが配信先・決済戻り先に載る）');
-  assert.equal(/registerDomain/.test(put), false,
-    'PUTでRenderに登録している（所有確認の前に外部登録してはいけない）');
-});
-
-test('Renderへの登録は所有確認のあとに行う', () => {
-  const s = code(VERIFY_ROUTE);
-  const ownership = s.indexOf('const ownership = checkOwnership');
-  const register = s.indexOf('registerDomain(cfg');
-  assert.ok(ownership > -1 && register > -1);
-  assert.ok(ownership < register, '所有確認より先にRenderへ登録している');
-  assert.match(s, /if \(ownership && cfg\)/, '所有確認を通らなくてもRender登録に進める');
-});
-
-test('配信の切り替えは接続済みになったときだけ', () => {
-  const s = code(VERIFY_ROUTE);
-  const idx = s.indexOf("status === 'connected' && site.custom_domain !== host");
-  assert.ok(idx > -1, '接続済み以外でも custom_domain を書き換えうる');
-  const after = s.slice(idx, idx + 400);
-  assert.match(after, /custom_domain: host/);
-  // 失敗時に既存ドメインを消していないこと
-  assert.equal(/custom_domain: null/.test(s), false,
-    'verifyが custom_domain を消している（切替失敗で旧ドメインが落ちる）');
-});
-
-test('顧客が入力したドメインへの接続は safeFetch を通す', () => {
-  const s = code(VERIFY_ROUTE);
-  assert.match(s, /safeFetch\(`https:\/\/\$\{host\}\//, 'HTTPS確認が素のfetchになっている（SSRF）');
-});
-
-test('副作用のあるverifyはPOSTのみで、GETは塞ぐ', () => {
-  const s = code(VERIFY_ROUTE);
-  assert.match(s, /export async function POST/);
-  assert.match(s, /export async function GET[\s\S]*?405/);
-});
+// ── 迂回経路 ──────────────────────────────────────────
 
 test('PATCH /api/sites/[id] からドメインを書き換えられない', () => {
-  const s = code(SITE_ROUTE);
+  const s = code('app/api/sites/[id]/route.ts');
   const patch = s.slice(s.indexOf('export async function PATCH'), s.indexOf('export async function DELETE'));
   assert.equal(/update\(\{\s*custom_domain/.test(patch), false,
-    'PATCHにドメイン更新経路が残っている（所有確認とRender登録を迂回できる）');
-  assert.match(patch, /custom_domain' in body[\s\S]{0,400}status: 400/,
-    'custom_domainを送られたときに拒否していない');
+    'PATCHにドメイン更新経路が残っている');
+  assert.match(patch, /custom_domain' in body[\s\S]{0,400}status: 400/);
 });
 
-test('配信側は sites.custom_domain だけを見る（＝確認済みのみ配信される）', () => {
-  // by-domain と site-origin は変更していない。custom_domain に確認済みしか
-  // 入らなくなったので、この2つを触らずに要件を満たしている。
+test('配信側は sites.custom_domain だけを見る（確認済みしか入らない）', () => {
   const byDomain = read('app/hp/by-domain/[domain]/page.tsx');
   assert.match(byDomain, /\.eq\('custom_domain', domain\)/);
   assert.match(byDomain, /\.eq\('published', true\)/);
-  const origin = read('lib/site-origin.ts');
-  assert.match(origin, /site\.custom_domain/);
+  assert.match(read('lib/site-origin.ts'), /site\.custom_domain/);
 });
 
-test('移行SQLがあり、既存ドメインを止めずに取り込む', () => {
+test('副作用のあるverifyとprimaryはPOSTのみ', () => {
+  assert.match(code('app/api/sites/[id]/domain/verify/route.ts'), /export async function GET[\s\S]*?405/);
+  const primary = code('app/api/sites/[id]/domain/primary/route.ts');
+  assert.match(primary, /export async function POST/);
+  assert.equal(/export async function GET/.test(primary), false);
+});
+
+test('顧客が入力したドメインへの接続は safeFetch を通し、リダイレクトを追わない', () => {
+  const s = code('lib/domain-ports.ts');
+  assert.match(s, /safeFetch\(\s*`https:\/\/\$\{host\}\/api\/domain-probe`/);
+  assert.match(s, /maxRedirects: 0/);
+  assert.equal(/\bawait fetch\(/.test(s), false, '素のfetchが混ざっている');
+});
+
+test('外部解除は保存済みIDを信用せず、ホスト名で引き直す', () => {
+  const s = code('lib/domain-ports.ts');
+  const fn = s.slice(s.indexOf('async unregisterByHost'));
+  const find = fn.indexOf('findDomain(cfg, host)');
+  const del = fn.indexOf('unregisterDomain(cfg');
+  assert.ok(find > -1 && del > -1 && find < del, '引き直さずに削除している');
+  assert.match(fn, /found\.domain\.name\.toLowerCase\(\) !== host\.toLowerCase\(\)/,
+    '対象ホスト名の一致を確認していない');
+});
+
+// ── 移行SQLと権限 ────────────────────────────────────
+
+test('一般ユーザーは site_domains を読むことしかできない', () => {
   const sql = read('supabase/site_domains.sql');
-  assert.match(sql, /create table if not exists public\.site_domains/);
-  // 同じホストを2サイトが同時に主張できない
-  assert.match(sql, /create unique index if not exists site_domains_host_key/);
-  assert.match(sql, /enable row level security/);
-  // 既存顧客を止めない
+  assert.match(sql, /create policy "Users read own site_domains"[\s\S]{0,120}for select/);
+  assert.equal(/for all/.test(sql), false, 'FOR ALL のポリシーが残っている');
+  assert.match(sql, /revoke insert, update, delete on public\.site_domains from authenticated, anon/);
+});
+
+test('sites.custom_domain の直接変更をDB側で拒否する', () => {
+  const sql = read('supabase/site_domains.sql');
+  assert.match(sql, /create trigger guard_sites_custom_domain_trg/);
+  assert.match(sql, /tg_op = 'UPDATE' and new\.custom_domain is distinct from old\.custom_domain/);
+  assert.match(sql, /tg_op = 'INSERT' and new\.custom_domain is not null/);
+});
+
+test('状態遷移の関数は service_role からしか実行できない', () => {
+  const sql = read('supabase/site_domains.sql');
+  for (const fn of ['apply_check', 'set_primary', 'begin_release', 'finish_release', 'mark_release_failed']) {
+    assert.ok(sql.includes(`laruhp_domain_${fn}`), `関数が無い: ${fn}`);
+  }
+  assert.match(sql, /revoke all on function public\.%s from public, anon, authenticated/);
+  assert.match(sql, /grant execute on function public\.%s to service_role/);
+});
+
+test('確定処理は行をロックし、fencing tokenが一致するときだけ適用する', () => {
+  const sql = read('supabase/site_domains.sql');
+  const fn = sql.slice(sql.indexOf('function public.laruhp_domain_apply_check'), sql.indexOf('function public.laruhp_domain_set_primary'));
+  assert.match(fn, /for update/);
+  assert.match(fn, /verification_token is distinct from p_fencing_token/);
+  assert.match(fn, /'reason', 'gone'/);
+  // 状態更新と配信ポインタの更新が同じ関数（＝同じトランザクション）にある
+  assert.match(fn, /update public\.sites set custom_domain = p_host/);
+});
+
+test('サイトごと消えても外部解除の記録が残る', () => {
+  const sql = read('supabase/site_domains.sql');
+  assert.match(sql, /create table if not exists public\.domain_release_queue/);
+  assert.match(sql, /create trigger site_domains_enqueue_release_trg before delete/);
+});
+
+test('移行SQLは既存ドメインを止めない', () => {
+  const sql = read('supabase/site_domains.sql');
   assert.match(sql, /'legacy'/);
   assert.match(sql, /from public\.sites s\s+where s\.custom_domain is not null/);
-  // 既存の配信ポインタを消していない
-  assert.equal(/update public\.sites[\s\S]*custom_domain\s*=\s*null/.test(sql), false,
-    '移行SQLが既存の custom_domain を消している');
+  assert.equal(/update public\.sites[\s\S]{0,200}custom_domain\s*=\s*null\s*;?\s*--\s*移行/.test(sql), false);
+  assert.match(sql, /create unique index if not exists site_domains_host_key/);
 });
 
 test('移行SQL適用前でも既存の接続済みドメインが画面から消えない', () => {
-  // デプロイとSQL適用のどちらが先でも、既存顧客の設定画面が壊れないこと。
-  const s = code(DOMAIN_ROUTE);
-  assert.match(s, /rowsErr/, 'site_domains が無いときの分岐が無い');
-  assert.match(s, /migrationPending: true/);
-  const idx = s.indexOf('if (rowsErr)');
-  assert.ok(idx > -1);
-  assert.match(s.slice(idx, idx + 700), /liveDomain: site\.custom_domain/);
+  const s = code('app/api/sites/[id]/domain/route.ts');
+  assert.match(s, /migrationPending/);
+  const idx = s.indexOf('if (rows.length === 0 && site.custom_domain)');
+  assert.ok(idx > -1, 'SQL未適用時の分岐が無い');
+  assert.match(s.slice(idx, idx + 500), /liveDomain: site\.custom_domain/);
 });
 
-test('設定画面はステップと次の操作を出す', () => {
+// ── 画面 ──────────────────────────────────────────────
+
+test('設定画面はステップ・次の操作・DNSレコードを出す', () => {
   const ui = read('app/laruHP/settings/DomainSettings.tsx');
   for (const w of ['所有確認', 'DNS接続', 'SSL', '公開']) {
     assert.ok(ui.includes(w), `進捗表示に「${w}」が無い`);
   }
-  // 「何を・どこに・どんな値で」設定するかが1件ずつ分かること。
-  // 390pxだと表は列が潰れて読めなかったので、項目ごとのカードにしている。
-  assert.match(ui, /種類: \{r\.type\}/, 'レコードの種類を出していない');
-  assert.match(ui, /\['名前', r\.name\], \['値', r\.value\]/, '名前と値を出していない');
+  assert.match(ui, /種類: \{r\.type\}/);
+  assert.match(ui, /\['名前', r\.name\], \['値', r\.value\]/);
   assert.equal(/<table/.test(ui), false, '狭い画面で潰れる表に戻っている');
-  // 手で書き写させない
   assert.match(ui, /navigator\.clipboard\.writeText/);
-  assert.match(ui, /をコピー/);
-  // 既存のメール設定を壊さない案内
-  assert.match(ui, /MX[\s\S]{0,80}消さずに残して/);
-  // 操作ボタンはタップ領域44px以上。
-  // JSXの onClick={() => ...} に > が入るので、開始タグを正規表現で切らずに
-  // 「<button から </button まで」を見る。
+});
+
+test('設定画面が「接続確認済み」と「主な公開URL」を分けている', () => {
+  const ui = read('app/laruHP/settings/DomainSettings.tsx');
+  assert.match(ui, /主な公開URL/);
+  assert.match(ui, /canBePrimary/);
+  assert.match(ui, /domain\/primary/, '主ドメイン切替の呼び出しが無い');
+  assert.match(ui, /解除を再試行|release_pending/, '解除待ちの再試行導線が無い');
+});
+
+test('ダッシュボードは旧APIの形を参照しない', () => {
+  const dash = read('app/laruHP/dashboard/DashboardClient.tsx');
+  assert.equal(/data\.customDomain/.test(dash), false, '旧レスポンスのcustomDomainを見ている');
+  assert.equal(/data\.verified/.test(dash), false, '旧レスポンスのverifiedを見ている');
+  assert.equal(/method: 'PUT'[\s\S]{0,200}customDomain/.test(dash), false,
+    '所有確認を飛ばす旧操作が残っている');
+  assert.match(dash, /settings\?tab=domain/, '新しい設定画面への導線が無い');
+});
+
+test('操作ボタンのタップ領域は44px以上', () => {
+  const ui = read('app/laruHP/settings/DomainSettings.tsx');
   const parts = ui.split('<button').slice(1);
+  assert.ok(parts.length >= 3);
   for (const part of parts) {
     const body = part.slice(0, part.indexOf('</button'));
     assert.ok(/min-h-\[44px\]/.test(body), `44px未満のボタンがある: ${body.slice(0, 80)}`);
   }
-  assert.ok(parts.length >= 3, 'ボタンが見つからない');
 });

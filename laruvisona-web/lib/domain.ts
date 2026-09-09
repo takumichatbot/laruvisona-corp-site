@@ -26,19 +26,26 @@ import { randomBytes } from 'node:crypto';
 // failed            : 直近の確認で回復不能な失敗（理由は last_error）
 // legacy            : この仕組みを入れる前から接続されていた既存ドメイン。
 //                     既存顧客を止めないため配信は続けるが、UIでは再確認を促す。
+// release_pending   : 利用者が解除を指示したが、Render側の解除がまだ終わっていない。
+//                     行を消してしまうと再試行できなくなるので、外部IDごと残す。
 export type DomainStatus =
   | 'pending_ownership'
   | 'pending_dns'
   | 'ssl_pending'
   | 'connected'
   | 'failed'
-  | 'legacy';
+  | 'legacy'
+  | 'release_pending';
 
 export const DOMAIN_STATUSES: DomainStatus[] = [
-  'pending_ownership', 'pending_dns', 'ssl_pending', 'connected', 'failed', 'legacy',
+  'pending_ownership', 'pending_dns', 'ssl_pending', 'connected', 'failed', 'legacy', 'release_pending',
 ];
 
-/** 配信・canonical・決済戻り先に使ってよい状態か */
+/**
+ * 主な公開URL（sites.custom_domain）に採用してよい状態か。
+ * ここに入ったホストだけが proxy.ts の配信先と
+ * lib/site-origin.ts の決済戻り先許可リストに載る。
+ */
 export function isServable(status: DomainStatus): boolean {
   return status === 'connected' || status === 'legacy';
 }
@@ -221,24 +228,48 @@ export function checkPointsHere(
 
 // ── 状態の決定 ────────────────────────────────────────
 
+export type RenderCheck =
+  /** Renderの照会が成功し、verified だった */
+  | 'verified'
+  /** Renderの照会が成功したが、まだ未検証だった */
+  | 'unverified'
+  /** 登録・照会に失敗した。結果が分からない（未検証と同じ扱いにはできない） */
+  | 'unavailable'
+  /** RENDER_API_KEY等が未設定で、この確認自体を行わない運用 */
+  | 'not_configured';
+
 export interface StatusInput {
+  /** テナント固有のTXTで所有を確認できたか */
   ownership: boolean;
-  pointsHere: boolean;
-  /** RenderのcustomDomain.verificationStatus === 'verified'。未設定なら null */
-  renderVerified: boolean | null;
-  /** 実際にHTTPSで応答したか。確認していないなら null */
-  tlsReady: boolean | null;
+  /** 公開DNS上で配信先がこちらを向いているか（案内用の補助的な根拠） */
+  dnsPointsHere: boolean;
+  /**
+   * そのホスト名で実際にこのサービスへHTTPSで到達できたか。
+   * 配信できていることの直接の証拠なので、これを接続済みの必須条件にする。
+   * Cloudflareのプロキシのように公開DNSからは判断できない構成でも、
+   * ここが true なら実際に配信できている。
+   */
+  reachesService: boolean;
+  renderCheck: RenderCheck;
 }
 
 /**
  * 事実の組み合わせから状態を決める。
- * 「所有確認」「向き先」「TLS」を潰さないので、UIは次に何をすべきかを出せる。
+ *
+ * 重要: 「確認していない」と「確認して駄目だった」と「確認する必要がない」を
+ * 混ぜない。以前は renderVerified が null（＝照会に失敗した）でも
+ * false でなければ通していたため、Renderの登録も照会も失敗しているのに
+ * connected になっていた。
  */
 export function deriveStatus(input: StatusInput): DomainStatus {
   if (!input.ownership) return 'pending_ownership';
-  if (!input.pointsHere) return 'pending_dns';
-  if (input.renderVerified === false) return 'ssl_pending';
-  if (input.tlsReady !== true) return 'ssl_pending';
+  if (!input.reachesService) {
+    // DNSも向いていないなら、まだレコードを足していない段階
+    return input.dnsPointsHere ? 'ssl_pending' : 'pending_dns';
+  }
+  // 到達はできている。あとはRender側の確認が取れているか。
+  if (input.renderCheck === 'unavailable') return 'ssl_pending';
+  if (input.renderCheck === 'unverified') return 'ssl_pending';
   return 'connected';
 }
 
@@ -252,11 +283,14 @@ export function statusLabel(status: DomainStatus): { label: string; next: string
     case 'ssl_pending':
       return { label: 'SSL準備中', next: '証明書の発行を待っています。数分〜数十分かかります。' };
     case 'connected':
-      return { label: '接続済み', next: '独自ドメインで公開されています。' };
+      // 「接続確認済み」と「主な公開URL」は別。ここでは配信ポインタの話をしない。
+      return { label: '接続確認済み', next: 'このドメインでアクセスできます。主な公開URLにするかは下で選べます。' };
     case 'failed':
       return { label: '失敗', next: '設定を確認して、もう一度お試しください。' };
     case 'legacy':
-      return { label: '要再確認', next: '現在も公開中です。新しい確認手順での再確認をお願いします。' };
+      return { label: '要再確認', next: '以前からの設定で配信中です。新しい確認手順での再確認をお願いします。' };
+    case 'release_pending':
+      return { label: '解除待ち', next: '配信は停止しました。外部側の解除が残っています。「解除を再試行」を押してください。' };
   }
 }
 
@@ -266,7 +300,38 @@ export interface DnsInstruction {
   type: 'TXT' | 'CNAME' | 'A';
   name: string;
   value: string;
+  /** 同じ目的の選択肢が複数あるとき、こちらを勧める */
+  recommended?: boolean;
+  /** 「どちらか一方でよい」ことを示すグループ名 */
+  group?: string;
   note?: string;
+}
+
+/**
+ * 複数ラベルの公開サフィックス（抜粋）。
+ *
+ * example.co.jp のようなドメインは、ラベル数が3でもDNSゾーンの頂点(apex)であり、
+ * 多くのレジストラでCNAMEを置けない。ラベル数だけで判定すると誤った案内になる。
+ * ただしここは網羅リストではないので、判定は「おすすめ」を決めるためだけに使い、
+ * A と CNAME の両方を必ず画面に出す。
+ */
+const MULTI_LABEL_SUFFIXES = [
+  'co.jp', 'ne.jp', 'or.jp', 'ac.jp', 'go.jp', 'ad.jp', 'ed.jp', 'gr.jp', 'lg.jp',
+  'co.uk', 'org.uk', 'me.uk', 'ac.uk', 'gov.uk',
+  'com.au', 'net.au', 'org.au', 'co.nz', 'com.br', 'com.cn', 'com.tw',
+  'co.kr', 'or.kr', 'com.sg', 'com.hk', 'com.mx', 'co.in', 'com.tr',
+];
+
+/**
+ * そのホストがDNSゾーンの頂点である「可能性が高い」か。
+ * 断定はしない（顧客が example.com のDNSでサブゾーンを委任している場合もある）。
+ */
+export function looksLikeApex(host: string): boolean {
+  const labels = host.split('.');
+  for (const suf of MULTI_LABEL_SUFFIXES) {
+    if (host.endsWith(`.${suf}`)) return labels.length === suf.split('.').length + 1;
+  }
+  return labels.length === 2;
 }
 
 export function dnsInstructions(
@@ -274,31 +339,44 @@ export function dnsInstructions(
   token: string,
   opts: { expectedTarget: string; expectedApexIp: string },
 ): DnsInstruction[] {
-  const labels = host.split('.');
+  const apex = looksLikeApex(host);
   const rows: DnsInstruction[] = [
     {
       purpose: '所有の確認',
       type: 'TXT',
       name: challengeRecordName(host),
       value: challengeRecordValue(token),
-      note: 'このレコードは接続後も残してください。既存のTXT（SPFなど）は消さずに追加します。',
+      note: 'このレコードは接続後も残してください。既存のTXT（SPFなど）は消さずに追加します。TXTは同じ名前に複数登録できます。',
     },
   ];
-  if (labels.length > 2) {
-    rows.push({
-      purpose: '配信先',
-      type: 'CNAME',
-      name: host,
-      value: opts.expectedTarget,
-    });
-  } else {
-    rows.push({
-      purpose: '配信先',
-      type: 'A',
-      name: host,
-      value: opts.expectedApexIp,
-      note: 'ルートドメインにCNAMEを置けないDNSが多いためAレコードです。ALIAS/ANAMEが使えるなら CNAME でも構いません。',
-    });
-  }
+
+  // 配信先は A か CNAME のどちらか一方。どちらが正しいかは顧客のDNSゾーン次第
+  // なので、こちらで決め打ちにせず両方を出し、可能性が高いほうを勧める。
+  rows.push({
+    purpose: '配信先',
+    group: 'delivery',
+    type: 'CNAME',
+    name: host,
+    value: opts.expectedTarget,
+    recommended: !apex,
+    note: 'このホストがサブドメイン（ゾーンの途中）の場合はこちら。',
+  });
+  rows.push({
+    purpose: '配信先',
+    group: 'delivery',
+    type: 'A',
+    name: host,
+    value: opts.expectedApexIp,
+    recommended: apex,
+    note: 'このホストがDNSゾーンの頂点（@ / ルートドメイン）の場合はこちら。ALIAS/ANAMEが使えるDNSなら、CNAMEと同じ値でも構いません。',
+  });
+
   return rows;
 }
+
+/** 画面と説明に出す、現時点の対応範囲 */
+export const DNS_SUPPORT_NOTES = [
+  'MXレコード（メール）や他サービスの確認用TXTは消さずに残してください。',
+  'Cloudflareのプロキシ（オレンジ色の雲）を有効にしたままでも接続できます。公開DNSからはレコードが見えませんが、実際にHTTPSで到達できるかで確認します。',
+  'DNSの反映には数分〜最大48時間かかることがあります。',
+];

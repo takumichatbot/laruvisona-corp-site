@@ -295,7 +295,11 @@ export default function SettingsPage() {
   })();
 
   type Tab = 'account' | 'domain' | 'integrations' | 'danger';
-  const [activeTab, setActiveTab] = useState<Tab>('account');
+  // ダッシュボードから /laruHP/settings?tab=domain で直接開けるようにする
+  const tabParam = searchParams.get('tab');
+  const initialTab: Tab = (['account', 'domain', 'integrations', 'danger'] as const)
+    .includes(tabParam as Tab) ? (tabParam as Tab) : 'account';
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'account', label: 'アカウント' },

@@ -306,8 +306,6 @@ export default function DashboardPage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
   const [paymentBanner, setPaymentBanner] = useState<'success' | 'canceled' | 'upgraded' | null>(null);
-  const [domainInputs, setDomainInputs] = useState<Record<string, string>>({});
-  const [savingDomain, setSavingDomain] = useState<string | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [pendingSiteId, setPendingSiteId] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<Partial<Record<'7'|'30'|'all', Record<string, DayView[]>>>>({ '7': {} });
@@ -316,7 +314,6 @@ export default function DashboardPage() {
   const [deleteToast, setDeleteToast] = useState<{ site: Site; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [deleteCountdown, setDeleteCountdown] = useState(5);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [domainErrors, setDomainErrors] = useState<Record<string, string>>({});
   const [newSiteError, setNewSiteError] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
   const [fetchError, setFetchError] = useState('');
@@ -327,7 +324,6 @@ export default function DashboardPage() {
   const [slugInput, setSlugInput] = useState('');
   const [slugError, setSlugError] = useState('');
   const [savingSlug, setSavingSlug] = useState(false);
-  const [dnsStatus, setDnsStatus] = useState<Record<string, { verified: boolean; cname: string | null; expectedTarget: string; checking: boolean }>>({});
   const [tourResetKey, setTourResetKey] = useState(0);
   const [unpublishSiteId, setUnpublishSiteId] = useState<string | null>(null);
   const [weekSummary, setWeekSummary] = useState<{ pvThisWeek: number; pvLastWeek: number; contactsThisWeek: number; contactsLastWeek: number } | null>(null);
@@ -376,9 +372,6 @@ export default function DashboardPage() {
       const sitesEarly = sitesSettled[0].status === 'fulfilled' ? sitesSettled[0].value : { sites: [] };
       const sitesForView: Site[] = sitesEarly.sites || [];
       setSites(sitesForView);
-      const initDomainsEarly: Record<string, string> = {};
-      for (const s of sitesForView) initDomainsEarly[s.id] = s.custom_domain || '';
-      setDomainInputs(initDomainsEarly);
       setLoading(false);
 
       const results = await Promise.allSettled([sitesP, profileP, analyticsP, contactsP]);
@@ -404,9 +397,6 @@ export default function DashboardPage() {
           }
         }
       }
-      const initDomains: Record<string, string> = {};
-      for (const s of loadedSites) initDomains[s.id] = s.custom_domain || '';
-      setDomainInputs(initDomains);
       setProfile(profileData);
       setAnalytics(prev => ({ ...prev, '7': analyticsData.data || {} }));
       const loadedContacts = (contactsData.contacts || []).map((c: { id: string; site_id: string; read: boolean; crm_followup_at?: string | null; created_at?: string }) => ({ id: c.id, site_id: c.site_id, read: c.read, crm_followup_at: c.crm_followup_at, created_at: c.created_at }));
@@ -514,36 +504,6 @@ export default function DashboardPage() {
       });
     }
     setPublishing(null);
-  };
-
-  const handleSaveDomain = async (siteId: string) => {
-    setSavingDomain(siteId);
-    setDomainErrors(e => ({ ...e, [siteId]: '' }));
-    const domain = domainInputs[siteId]?.trim() || '';
-    const res = await fetch(`/api/sites/${siteId}/domain`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customDomain: domain || null }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      setSites(prev => prev.map(s => s.id === siteId ? { ...s, custom_domain: data.customDomain } : s));
-    } else {
-      setDomainErrors(e => ({ ...e, [siteId]: data.error || 'ドメインの保存に失敗しました' }));
-      setSites(prev => {
-        const site = prev.find(s => s.id === siteId);
-        if (site) setDomainInputs(d => ({ ...d, [siteId]: site.custom_domain || '' }));
-        return prev;
-      });
-    }
-    setSavingDomain(null);
-  };
-
-  const handleCheckDns = async (siteId: string) => {
-    setDnsStatus(prev => ({ ...prev, [siteId]: { ...prev[siteId], checking: true, verified: false, cname: null, expectedTarget: '' } }));
-    const res = await fetch(`/api/sites/${siteId}/domain`);
-    const data = await res.json();
-    setDnsStatus(prev => ({ ...prev, [siteId]: { verified: !!data.verified, cname: data.cname || null, expectedTarget: data.expectedTarget || '', checking: false } }));
   };
 
   const handleUnpublish = async (siteId: string) => {
@@ -1896,79 +1856,22 @@ export default function DashboardPage() {
                       </Link>
                     )}
 
-                    {/* Custom domain */}
-                    {domainErrors[site.id] && (
-                      <p className="text-red-600 text-[10px] -mb-1">{domainErrors[site.id]}</p>
-                    )}
-                    <div className="flex gap-1.5">
-                      <div className="flex-1 relative min-w-0">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                          <IcGlobe />
+                    {/* 独自ドメイン: 所有確認つきの設定画面に一本化した。
+                        ここで直接保存できると、所有確認とRender登録を飛ばす
+                        古い経路が復活してしまう。 */}
+                    <Link
+                      href="/laruHP/settings?tab=domain"
+                      className="flex items-center gap-2 bg-white border border-gray-200 hover:border-sky-300 rounded-md px-2.5 py-2 transition-all min-h-[44px]"
+                    >
+                      <span className="text-gray-400 flex-shrink-0"><IcGlobe /></span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[10px] font-semibold text-gray-700">独自ドメイン</span>
+                        <span className="block text-[9px] text-gray-500 truncate font-mono">
+                          {site.custom_domain || '未設定'}
                         </span>
-                        <input
-                          type="text"
-                          placeholder="example.com"
-                          value={domainInputs[site.id] ?? ''}
-                          onChange={e => setDomainInputs(d => ({ ...d, [site.id]: e.target.value }))}
-                          className="w-full bg-white border border-gray-200 rounded-md pl-6 pr-2 py-1.5 text-[10px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 font-mono"
-                        />
-                      </div>
-                      <button
-                        onClick={() => handleSaveDomain(site.id)}
-                        disabled={savingDomain === site.id}
-                        className="text-[10px] bg-sky-50 hover:bg-sky-100 border border-gray-200 hover:border-sky-200 px-3 py-1.5 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 text-gray-600"
-                      >
-                        {savingDomain === site.id ? '...' : '保存'}
-                      </button>
-                    </div>
-
-                    {/* DNS verification */}
-                    {site.custom_domain && (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleCheckDns(site.id)}
-                            disabled={dnsStatus[site.id]?.checking}
-                            className="text-[10px] bg-sky-50 hover:bg-sky-100 border border-gray-200 px-2.5 py-1.5 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-gray-500 flex-shrink-0"
-                          >
-                            {dnsStatus[site.id]?.checking ? '確認中...' : 'DNS確認'}
-                          </button>
-                          {dnsStatus[site.id] && !dnsStatus[site.id].checking && (
-                            <span className={`text-[10px] font-semibold ${dnsStatus[site.id].verified ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              {dnsStatus[site.id].verified ? '✓ 接続済み' : '⚠ 未設定'}
-                            </span>
-                          )}
-                        </div>
-                        {dnsStatus[site.id] && !dnsStatus[site.id].verified && !dnsStatus[site.id].checking && (
-                          <div className="bg-sky-50 border border-sky-100 rounded-md p-2 space-y-1.5">
-                            <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-wide">DNSレコードを設定してください</p>
-                            <div className="font-mono text-[9px] text-gray-600 space-y-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-gray-400">wwwなどのサブドメイン → CNAME:</span>
-                                <span>{dnsStatus[site.id].expectedTarget || 'laruvisona-corp-site.onrender.com'}</span>
-                                <button
-                                  onClick={() => navigator.clipboard.writeText(dnsStatus[site.id].expectedTarget || 'laruvisona-corp-site.onrender.com')}
-                                  className="text-sky-500 hover:text-sky-700 border border-sky-200 px-1 rounded text-[8px] font-bold transition-colors"
-                                >
-                                  コピー
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-gray-400">ルートドメイン（@） → A:</span>
-                                <span>216.24.57.1</span>
-                                <button
-                                  onClick={() => navigator.clipboard.writeText('216.24.57.1')}
-                                  className="text-sky-500 hover:text-sky-700 border border-sky-200 px-1 rounded text-[8px] font-bold transition-colors"
-                                >
-                                  コピー
-                                </button>
-                              </div>
-                            </div>
-                            <p className="text-[9px] text-gray-400">※ ルートドメインにCNAMEは設定できないレジストラが多いため、Aレコードをご利用ください。DNS反映には24〜48時間かかる場合があります。設定後に再度「DNS確認」を押してください。</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      </span>
+                      <span className="text-[9px] text-sky-600 font-bold flex-shrink-0">設定</span>
+                    </Link>
 
                     {/* Member management */}
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
