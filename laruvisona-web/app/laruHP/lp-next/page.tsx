@@ -99,7 +99,10 @@ export default function LpNextPage() {
       {/* プレビューであることを明示する帯（差し替え時に消す） */}
       <div className="bg-amber-100 text-amber-900 text-[13px] px-4 py-2 text-center">
         これは新しいLPのプレビューです。検索には出ません。
-        <Link href="/laruHP" className="underline ml-2 font-medium">今のLPを見る</Link>
+        <Link
+          href="/laruHP"
+          className="inline-flex items-center min-h-[44px] px-2 underline font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+        >今のLPを見る</Link>
       </div>
 
       {/* ───────── ファーストビュー ─────────
@@ -137,8 +140,11 @@ export default function LpNextPage() {
             <div className="mt-7">
               <PrimaryCta id="cta-hero" />
             </div>
-            <p className="mt-3 text-center md:text-left text-[13px]">
-              <Link href={SECONDARY_CTA.href} className="text-sky-700 underline underline-offset-4">
+            <p className="mt-2 text-center md:text-left">
+              <Link
+                href={SECONDARY_CTA.href}
+                className="inline-flex items-center min-h-[44px] px-2 text-[14px] text-sky-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              >
                 {SECONDARY_CTA.label}
               </Link>
             </p>
@@ -324,12 +330,23 @@ export default function LpNextPage() {
       </section>
 
       <footer className="px-5 py-10 text-center text-[13px] text-slate-500 border-t border-slate-100">
-        <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2">
-          <Link href="/laruHP/plans" className="underline underline-offset-4">料金プラン</Link>
-          <Link href="/laruHP/terms" className="underline underline-offset-4">利用規約</Link>
-          <Link href="/laruHP/privacy" className="underline underline-offset-4">プライバシーポリシー</Link>
-          <Link href="/laruHP/tokusho" className="underline underline-offset-4">特定商取引法に基づく表記</Link>
-          <Link href="/laruHP/contact" className="underline underline-offset-4">お問い合わせ</Link>
+        {/* 指で押す前提なので、文字リンクでも高さ44pxを確保する */}
+        <nav className="flex flex-wrap justify-center gap-x-2">
+          {[
+            { href: '/laruHP/plans', label: '料金プラン' },
+            { href: '/laruHP/terms', label: '利用規約' },
+            { href: '/laruHP/privacy', label: 'プライバシーポリシー' },
+            { href: '/laruHP/tokusho', label: '特定商取引法に基づく表記' },
+            { href: '/laruHP/contact', label: 'お問い合わせ' },
+          ].map(l => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="inline-flex items-center min-h-[44px] px-2 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+            >
+              {l.label}
+            </Link>
+          ))}
         </nav>
         <p className="mt-5">株式会社LaruVisona</p>
       </footer>

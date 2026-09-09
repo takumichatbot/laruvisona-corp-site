@@ -125,6 +125,28 @@ test('タップできるものは十分な大きさがある', () => {
   assert.match(faq, /focus-visible:outline/);
 });
 
+test('文字リンクも指で押せる大きさにする', () => {
+  // 実測で、副CTA（高さ15px）とフッターの5リンク（高さ20px）が44px未満だった。
+  // 下線つきの文字リンクでも、押す前提のものは高さを確保する。
+  const links = page.match(/className="[^"]*underline[^"]*"/g) || [];
+  const small = links.filter(l => !/min-h-\[44px\]/.test(l));
+  assert.deepEqual(small, [], '44pxを確保していない文字リンクがある');
+});
+
+test('操作できる要素にはすべてフォーカス表示がある', () => {
+  // キーボードで辿ったときに、いま自分がどこにいるか見えないと操作できない。
+  // この環境では実際のTabキーがページに届かない（裏タブのため）ので、
+  // ソース側で網羅を確かめる。
+  const demo = read('app/laruHP/lp-next/DemoVideo.tsx');
+  const faq = read('app/laruHP/lp-next/Faq.tsx');
+  for (const [name, src] of [['page', page], ['Faq', faq], ['DemoVideo', demo]] as const) {
+    const tags = (src.match(/<(?:Link|a|button|summary)\b/g) || []).length;
+    const rings = (src.match(/focus-visible:outline\b/g) || []).length;
+    assert.ok(tags === 0 || rings >= tags,
+      `${name}: 操作できる要素 ${tags} 件に対し focus-visible の指定が ${rings} 件しかない`);
+  }
+});
+
 test('ログイン状態や顧客データを読まない（静的に配れる）', () => {
   assert.match(page, /export const dynamic = 'force-static'/);
   for (const re of [/getUser|createClient|cookies\(\)|headers\(\)/]) {
