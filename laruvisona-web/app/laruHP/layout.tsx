@@ -30,6 +30,17 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://laruvisona.jp/laruHP',
   },
+  // manifest と icons は metadata で指定する。生の <link> を書くと、
+  // 入れ子のレイアウト（/laruHP/bridge など）で別の manifest を出したいときに
+  // タグが二重になってしまう。metadata なら深いセグメントの指定が勝つ。
+  manifest: '/laruhp-manifest.json',
+  icons: {
+    icon: [
+      { url: '/laruhp-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/laruhp-icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 const jsonLd = {
@@ -63,13 +74,13 @@ const jsonLd = {
 export default function LaruHPLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {/* LARU HP 自身の manifest。以前はここで /manifest.json（社内ツール Bridge のもの）を
-          読んでいた。アイコンに 1024x1024 / 1.9MB の PNG が指定されており、LPを開いた
-          全員がそれをダウンロードしていた（ページ重量の約46%）。名前も
+      {/* manifest と apple-touch-icon は上の metadata で指定している。
+          以前はここで /manifest.json（社内ツール Bridge のもの）を読んでいた。
+          アイコンに 1024x1024 / 1.9MB の PNG が指定されており、LPを開いた全員が
+          それをダウンロードしていた（ページ重量の約46%）。名前も
           「Bridge — AI Coding Assistant」だったので、ホーム画面に追加すると
-          顧客の端末に社内ツール名のアイコンが並ぶ状態だった。 */}
-      <link rel="manifest" href="/laruhp-manifest.json" />
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+          顧客の端末に社内ツール名のアイコンが並ぶ状態だった。
+          Bridge 自身の manifest は app/laruHP/bridge/layout.tsx で上書きする。 */}
       <meta name="theme-color" content="#0284c7" />
       {/* Font Awesome の CDN 読み込みはやめた。laruHP 配下では1つも使っておらず
           （使っているのは会社サイト側の2ファイルだけ・5種類）、

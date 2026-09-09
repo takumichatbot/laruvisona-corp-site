@@ -38,9 +38,39 @@ test('1.9MBのロゴを全訪問者に配らない', () => {
   const sw = read('public/sw.js');
   assert.equal(/laruhp_logo\.png/.test(sw), false, 'Service Worker が巨大ロゴをプリキャッシュしている');
   const layout = read('app/laruHP/layout.tsx');
-  assert.match(layout, /rel="manifest" href="\/laruhp-manifest\.json"/);
-  assert.equal(/rel="manifest" href="\/manifest\.json"/.test(layout), false,
-    '社内ツール Bridge の manifest を顧客向けページで読んでいる');
+  assert.match(layout, /manifest: '\/laruhp-manifest\.json'/);
+  const bridgeManifest = JSON.parse(read('public/manifest.json'));
+  assert.equal(/laruhp_logo\.png/.test(JSON.stringify(bridgeManifest)), false,
+    'Bridge側のmanifestも巨大ロゴを指している');
+});
+
+// ── Bridge を壊していないこと ────────────────────────────────
+// 顧客向けの manifest を差し替えた副作用で、Bridge が PWA として
+// インストールできなくなっていないかを見張る。
+test('Bridgeは自分のmanifestを持ち、起動先と名前が変わっていない', () => {
+  const bridgeLayout = read('app/laruHP/bridge/layout.tsx');
+  assert.match(bridgeLayout, /manifest: '\/manifest\.json'/, 'Bridgeがmanifestを失っている');
+  const m = JSON.parse(read('public/manifest.json'));
+  assert.equal(m.start_url, '/laruHP/bridge', 'Bridgeの起動先が変わっている');
+  assert.match(m.name, /Bridge/, 'Bridgeの名前が変わっている');
+  assert.ok(Array.isArray(m.shortcuts) && m.shortcuts.length > 0, 'ショートカットが消えている');
+});
+
+test('Bridgeのプッシュ通知経路に触っていない', () => {
+  const bridge = read('app/laruHP/bridge/BridgeClient.tsx');
+  // Bridge は PwaInit に依存せず、自前で購読して /api/bridge/push に送る
+  assert.match(bridge, /pushManager\.subscribe/);
+  assert.match(bridge, /'\/api\/bridge\/push'/);
+});
+
+test('顧客向けの通知許可はボタンからしか求めない', () => {
+  // レイアウトに置かれた PwaInit が勝手に聞かないこと（前のコミットで対応済み）
+  const pwa = read('components/PwaInit.tsx');
+  const body = pwa.slice(pwa.indexOf('export default function PwaInit'), pwa.indexOf('export async function requestPushPermission'));
+  assert.equal(/requestPermission/.test(body), false);
+  // ai-command の許可要求は onClick から呼ばれていること
+  const ai = read('app/laruHP/ai-command/page.tsx');
+  assert.match(ai, /onClick=\{requestNotif\}/, '通知許可がボタン起点になっていない');
 });
 
 test('顧客向けのmanifestに社内ツールの名前が入っていない', () => {
