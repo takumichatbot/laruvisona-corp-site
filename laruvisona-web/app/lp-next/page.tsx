@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { PLANS, TERMS, INDUSTRIES, PRIMARY_CTA, SECONDARY_CTA } from './facts';
 import DemoVideo from './DemoVideo';
@@ -6,23 +6,48 @@ import Faq from './Faq';
 
 // 新LPの比較用プレビュー。既存の /laruHP には一切触れない。
 //
-// - robots: 検索対象から外す。プレビューが本物のLPと競合しないように。
-// - alternates.canonical: 親レイアウト（app/laruHP/layout.tsx）が
-//   canonical を https://laruvisona.jp/laruHP に固定しているため、
-//   何もしないとこのプレビューが本番LPを正規URLだと主張してしまう。
-//   自分自身を指すように必ず上書きする。
+// このファイルは app/laruHP/ の外にある（実体は /lp-next、見せるURLは
+// next.config.ts の rewrite で /laruHP/lp-next のまま）。
+// そのため app/laruHP/layout.tsx が持っていたものは何も継承しない。
+// 継承されなくなったものを、必要な分だけここで自前で持つ:
+//   - viewport（viewportFit: 'cover' を含む）… 下の export
+//   - manifest / icons … metadata.icons, metadata.manifest
+//   - robots / canonical … 下のとおり
+// 逆に、意図して引き継いでいないもの:
+//   - PwaInit（Service Worker 登録）… 比較計測の邪魔になるので入れない
+//   - SoftwareApplication の JSON-LD … noindex のページに商品の構造化データを
+//     出す意味がないため。このLPを本番に昇格させるときは、robots の解除と
+//     一緒に JSON-LD と canonical を必ず入れ直すこと。
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#0284c7',
+};
+
 export const metadata: Metadata = {
   title: '【プレビュー】LARU HP',
   description: '新しいランディングページの比較用プレビューです。',
+  // 実体は /lp-next だが、見せるURLは /laruHP/lp-next（next.config.ts の rewrite）。
+  // どちらで開かれても検索対象にしない。
   robots: { index: false, follow: false, nocache: true },
   alternates: { canonical: 'https://laruvisona.jp/laruHP/lp-next' },
   openGraph: { url: 'https://laruvisona.jp/laruHP/lp-next' },
+  manifest: '/laruhp-manifest.json',
+  icons: {
+    icon: [
+      { url: '/laruhp-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/laruhp-icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 // このページはログイン状態も顧客データも読まない純粋な表示だけのページなので、
 // 静的に配ってよい。共有キャッシュに個人のデータが入る余地がない。
-// （親レイアウトが force-dynamic を指定しているため、実際に静的になるかは
-//   本番のレスポンスヘッダで確認する。結果は報告に載せる。）
+// app/laruHP/layout.tsx の配下にいた間は、子で force-static を書いても
+// 親の force-dynamic を上書きできなかった（本番のヘッダで確認済み）。
+// 実体を配下の外に出したので、ここで静的になる。
 export const dynamic = 'force-static';
 
 const yen = (n: number) => n.toLocaleString('ja-JP');

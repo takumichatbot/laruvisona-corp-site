@@ -9,8 +9,8 @@ import path from 'node:path';
 
 const root = path.join(import.meta.dirname, '..');
 const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
-const page = read('app/laruHP/lp-next/page.tsx');
-const facts = read('app/laruHP/lp-next/facts.ts');
+const page = read('app/lp-next/page.tsx');
+const facts = read('app/lp-next/facts.ts');
 const oldLp = read('app/laruHP/page.tsx');
 const layout = read('app/laruHP/layout.tsx');
 
@@ -18,9 +18,30 @@ test('プレビューは検索対象から外す', () => {
   assert.match(page, /robots: \{ index: false, follow: false/, 'noindexになっていない');
 });
 
-test('canonicalを本番LPに向けない（親レイアウトの指定を必ず上書きする）', () => {
-  assert.match(layout, /canonical: 'https:\/\/laruvisona\.jp\/laruHP'/, '前提が変わった');
+test('canonicalを本番LPに向けない', () => {
+  // 実体は app/lp-next（ルートレイアウトのみ）に移したので、
+  // laruHPレイアウトの canonical は継承しない。それでも明示しておく。
+  assert.match(layout, /canonical: 'https:\/\/laruvisona\.jp\/laruHP'/, '既存LPのcanonicalが変わった');
   assert.match(page, /canonical: 'https:\/\/laruvisona\.jp\/laruHP\/lp-next'/);
+});
+
+test('URLは /laruHP/lp-next のまま、実体はレイアウト配下の外に置く', () => {
+  // app/laruHP/layout.tsx の force-dynamic は子ページの force-static で
+  // 上書きできない（本番のレスポンスヘッダで確認済み）。
+  // 配下48ページに影響する変更を避けるため、実体だけ外に出して rewrite で繋ぐ。
+  const cfg = read('next.config.ts');
+  assert.match(cfg, /async rewrites\(\)/, 'rewriteが無い');
+  assert.match(cfg, /source: '\/laruHP\/lp-next', destination: '\/lp-next'/);
+  // 実ルートが残っていると rewrite より優先されるので、page ファイルが無いことを見る。
+  // （空ディレクトリは Next.js のルートにならず、git も追跡しないので対象外）
+  const strays = ['page.tsx', 'page.ts', 'page.jsx', 'page.js']
+    .filter((f) => fs.existsSync(path.join(root, 'app/laruHP/lp-next', f)));
+  assert.deepEqual(strays, [],
+    'laruHP配下に残っていると実ルートがrewriteより優先される');
+  assert.ok(fs.existsSync(path.join(root, 'app/lp-next/page.tsx')));
+  // ルートレイアウトが動的でないこと（ここが動的なら静的化できない）
+  assert.equal(/export const dynamic/.test(read('app/layout.tsx')), false,
+    'ルートレイアウトが動的になっている');
 });
 
 test('既存LPのURL・canonical・メタデータに触っていない', () => {
@@ -35,7 +56,7 @@ test('ファーストビューに自動再生の背景動画も3Dも置かない
 });
 
 test('動画は押されるまで読み込まない', () => {
-  const demo = read('app/laruHP/lp-next/DemoVideo.tsx');
+  const demo = read('app/lp-next/DemoVideo.tsx');
   assert.match(demo, /\{started \? \(/, '最初から<video>を描いている');
   assert.match(demo, /onClick=\{\(\) => setStarted\(true\)\}/);
   assert.match(demo, /controls/, '再生後に止められない');
@@ -119,7 +140,7 @@ test('価格と契約条件が一次情報と一致している', () => {
 
 test('タップできるものは十分な大きさがある', () => {
   assert.match(page, /min-h-\[56px\]/);
-  const faq = read('app/laruHP/lp-next/Faq.tsx');
+  const faq = read('app/lp-next/Faq.tsx');
   assert.match(faq, /min-h-\[56px\]/);
   assert.match(page, /focus-visible:outline/);
   assert.match(faq, /focus-visible:outline/);
@@ -137,8 +158,8 @@ test('操作できる要素にはすべてフォーカス表示がある', () =>
   // キーボードで辿ったときに、いま自分がどこにいるか見えないと操作できない。
   // この環境では実際のTabキーがページに届かない（裏タブのため）ので、
   // ソース側で網羅を確かめる。
-  const demo = read('app/laruHP/lp-next/DemoVideo.tsx');
-  const faq = read('app/laruHP/lp-next/Faq.tsx');
+  const demo = read('app/lp-next/DemoVideo.tsx');
+  const faq = read('app/lp-next/Faq.tsx');
   for (const [name, src] of [['page', page], ['Faq', faq], ['DemoVideo', demo]] as const) {
     const tags = (src.match(/<(?:Link|a|button|summary)\b/g) || []).length;
     const rings = (src.match(/focus-visible:outline\b/g) || []).length;
