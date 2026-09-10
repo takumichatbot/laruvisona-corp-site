@@ -90,6 +90,9 @@ interface SiteData {
   clarityId: string;
   webhookUrl: string;
   sitePassword: string;
+  /** サイト全体の見た目（lib/site-design.ts）。未設定なら従来どおり */
+  design?: Record<string, unknown>;
+  designPreset?: string;
 }
 
 const DEFAULT_PALETTE = ['#1e3a8a', '#3b82f6', '#111827', '#ffffff', '#6b7280', '#f59e0b'];
@@ -491,6 +494,43 @@ function CountdownTimer({ targetDate, textColor }: { targetDate: string; textCol
 }
 
 // ─── Block Renderer (Canvas) ──────────────────────────────────────────────────
+/**
+ * 画布で直に直せる文字。
+ *
+ * 以前は dangerouslySetInnerHTML で描いていた。ブロックの中身は人が打った
+ * 文字だけとは限らず、AIの生成結果やURL取り込みの結果も同じ場所に入るので、
+ * 認証済みの編集画面でそれがHTMLとして動いてしまう。textContent で入れる。
+ *
+ * 反映は「値が変わったときだけ」。毎回書き戻すと、入力中にカーソルが先頭へ
+ * 飛び、日本語の変換も切れる。
+ */
+function EditableText({ value, tag, className, onCommit }: {
+  value: string;
+  tag: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'div' | 'span';
+  className: string;
+  onCommit: (next: string) => void;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (el && el.textContent !== value) el.textContent = value;
+  }, [value]);
+  const props = {
+    ref: ref as React.RefObject<never>,
+    contentEditable: true as const,
+    suppressContentEditableWarning: true,
+    className,
+    onBlur: (e: React.FocusEvent<HTMLElement>) => onCommit(e.currentTarget.textContent || ''),
+  };
+  if (tag === 'h1') return <h1 {...props} />;
+  if (tag === 'h2') return <h2 {...props} />;
+  if (tag === 'h3') return <h3 {...props} />;
+  if (tag === 'h4') return <h4 {...props} />;
+  if (tag === 'p') return <p {...props} />;
+  if (tag === 'div') return <div {...props} />;
+  return <span {...props} />;
+}
+
 function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }: {
   block: Block;
   selected: boolean;
@@ -524,24 +564,15 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
     return <span style={{ display: 'inline-block', background: el.bg, color: el.color, fontSize: `${(el.size || 16) / 10}cqw`, fontWeight: 700, padding: '.6em 1.2em', borderRadius: '.6em' }}>{el.text}</span>;
   };
 
-  const editable = (key: string, tag: 'h1'|'h2'|'h3'|'h4'|'p'|'div'|'span' = 'span', className: string = '') => {
-    const props = {
-      contentEditable: true as const,
-      suppressContentEditableWarning: true,
-      className: `outline-none focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:bg-blue-50/80 rounded transition-all cursor-text ${className}`,
-      onBlur: (e: React.FocusEvent<HTMLElement>) => {
-        onDataChange({ ...d, [key]: e.currentTarget.textContent || '' });
-      },
-      dangerouslySetInnerHTML: { __html: (d[key] as string) || '' },
-    };
-    if (tag === 'h1') return <h1 {...props} />;
-    if (tag === 'h2') return <h2 {...props} />;
-    if (tag === 'h3') return <h3 {...props} />;
-    if (tag === 'h4') return <h4 {...props} />;
-    if (tag === 'p') return <p {...props} />;
-    if (tag === 'div') return <div {...props} />;
-    return <span {...props} />;
-  };
+  const editable = (key: string, tag: 'h1'|'h2'|'h3'|'h4'|'p'|'div'|'span' = 'span', className: string = '') => (
+    <EditableText
+      key={`${block.id}-${key}`}
+      value={(d[key] as string) || ''}
+      tag={tag}
+      className={`outline-none focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:bg-blue-50/80 rounded transition-all cursor-text ${className}`}
+      onCommit={next => onDataChange({ ...d, [key]: next })}
+    />
+  );
 
   const inner = () => {
     switch (block.type) {
@@ -549,12 +580,9 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
         const links = (d.links as { label: string; href: string }[]) || [];
         return (
           <div className="flex items-center justify-between px-6 py-4 shadow-sm" style={{ backgroundColor: d.bgColor as string, color: d.textColor as string }}>
-            <span
-              contentEditable suppressContentEditableWarning
+            <EditableText tag="span" value={(d.logo as string) || 'サイト名'}
               className="font-black text-lg outline-none cursor-text hover:bg-black/5 rounded px-1"
-              onBlur={(e: React.FocusEvent<HTMLElement>) => onDataChange({ ...d, logo: e.currentTarget.textContent || '' })}
-              dangerouslySetInnerHTML={{ __html: (d.logo as string) || 'サイト名' }}
-            />
+              onCommit={next => onDataChange({ ...d, logo: next })} />
             <div className="flex items-center gap-5 text-sm">
               {links.map((l, i) => (
                 <span key={i} className="opacity-80 hover:opacity-100 cursor-pointer">{l.label}</span>
@@ -579,13 +607,9 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
             <div className="relative z-10 max-w-2xl">
               {editable('heading', 'h1', 'text-4xl font-black mb-4 block w-full whitespace-pre-line')}
               {editable('subheading', 'p', 'text-lg mb-8 block opacity-90 w-full')}
-              <span
-                contentEditable
-                suppressContentEditableWarning
+              <EditableText tag="span" value={(d.ctaText as string) || ''}
                 className="inline-block bg-white text-gray-900 px-8 py-3 rounded-full font-bold cursor-text outline-none hover:opacity-90"
-                onBlur={(e: React.FocusEvent<HTMLElement>) => onDataChange({ ...d, ctaText: e.currentTarget.textContent || '' })}
-                dangerouslySetInnerHTML={{ __html: (d.ctaText as string) || '' }}
-              />
+                onCommit={next => onDataChange({ ...d, ctaText: next })} />
             </div>
           </div>
         );
@@ -712,13 +736,9 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
           <div className="px-8 py-16 text-center" style={{ backgroundColor: d.bgColor as string, color: d.textColor as string }}>
             {editable('heading', 'h2', 'text-3xl font-black block mb-4 w-full')}
             {editable('subtext', 'p', 'block mb-8 opacity-90 w-full')}
-            <span
-              contentEditable
-              suppressContentEditableWarning
+            <EditableText tag="span" value={(d.buttonText as string) || ''}
               className="inline-block bg-white text-gray-900 px-10 py-3 rounded-full font-bold cursor-text outline-none"
-              onBlur={(e: React.FocusEvent<HTMLElement>) => onDataChange({ ...d, buttonText: e.currentTarget.textContent || '' })}
-              dangerouslySetInnerHTML={{ __html: (d.buttonText as string) || '' }}
-            />
+              onCommit={next => onDataChange({ ...d, buttonText: next })} />
           </div>
         );
 
@@ -734,34 +754,18 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                 <div key={i} className="border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
                   {item.image && <img src={item.image} alt="" className="w-full object-cover" style={{ height: '150px' }} />}
                   <div className="p-6 text-center">
-                    <div
-                      contentEditable suppressContentEditableWarning
+                    <EditableText tag="div" value={item.icon}
                       className="text-3xl mb-3 block outline-none cursor-text"
-                      onBlur={e => {
-                        const newItems = [...items];
-                        newItems[i] = { ...newItems[i], icon: e.currentTarget.textContent || '' };
-                        onDataChange({ ...d, items: newItems });
-                      }}
-                      dangerouslySetInnerHTML={{ __html: item.icon }}
-                    />
-                    <div
-                      contentEditable suppressContentEditableWarning
+                      onCommit={next => { const ni=[...items]; ni[i]={...ni[i],icon:next}; onDataChange({...d,items:ni}); }} />
+                    <EditableText tag="div" value={item.title}
                       className="font-bold text-gray-800 text-lg mb-2 block outline-none cursor-text"
-                      onBlur={e => {
-                        const newItems = [...items];
-                        newItems[i] = { ...newItems[i], title: e.currentTarget.textContent || '' };
-                        onDataChange({ ...d, items: newItems });
-                      }}
-                      dangerouslySetInnerHTML={{ __html: item.title }}
-                    />
-                    <p contentEditable suppressContentEditableWarning
+                      onCommit={next => { const ni=[...items]; ni[i]={...ni[i],title:next}; onDataChange({...d,items:ni}); }} />
+                    <EditableText tag="p" value={item.description}
                       className="text-gray-500 text-sm mb-3 outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
-                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],description:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
-                      dangerouslySetInnerHTML={{ __html: item.description }} />
-                    {item.price && <span contentEditable suppressContentEditableWarning
+                      onCommit={next => { const ni=[...items]; ni[i]={...ni[i],description:next}; onDataChange({...d,items:ni}); }} />
+                    {item.price && <EditableText tag="span" value={item.price}
                       className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold outline-none cursor-text inline-block"
-                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],price:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
-                      dangerouslySetInnerHTML={{ __html: item.price }} />}
+                      onCommit={next => { const ni=[...items]; ni[i]={...ni[i],price:next}; onDataChange({...d,items:ni}); }} />}
                   </div>
                 </div>
               ))}
@@ -781,18 +785,17 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                   <div className="flex gap-1 mb-3">
                     {[...Array(item.rating)].map((_, j) => <span key={j} className="text-yellow-400">★</span>)}
                   </div>
-                  <p contentEditable suppressContentEditableWarning
+                  <EditableText tag="p" value={item.text}
                     className="text-gray-600 text-sm leading-relaxed mb-4 outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
-                    onBlur={e => { const ni=[...items]; ni[i]={...ni[i],text:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
-                    dangerouslySetInnerHTML={{ __html: item.text }} />
+                    onCommit={next => { const ni=[...items]; ni[i]={...ni[i],text:next}; onDataChange({...d,items:ni}); }} />
                   <div className="text-gray-800 font-bold text-sm">
-                    <span contentEditable suppressContentEditableWarning className="outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
-                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],name:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
-                      dangerouslySetInnerHTML={{ __html: item.name }} />
+                    <EditableText tag="span" value={item.name}
+                      className="outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
+                      onCommit={next => { const ni=[...items]; ni[i]={...ni[i],name:next}; onDataChange({...d,items:ni}); }} />
                     <span className="text-gray-400 font-normal ml-1">(
-                      <span contentEditable suppressContentEditableWarning className="outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
-                        onBlur={e => { const ni=[...items]; ni[i]={...ni[i],age:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
-                        dangerouslySetInnerHTML={{ __html: item.age }} />
+                      <EditableText tag="span" value={item.age}
+                        className="outline-none cursor-text focus:ring-1 focus:ring-blue-400/40 rounded"
+                        onCommit={next => { const ni=[...items]; ni[i]={...ni[i],age:next}; onDataChange({...d,items:ni}); }} />
                     )</span>
                   </div>
                 </div>
@@ -812,18 +815,16 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                 <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
                   <div className="p-5 flex gap-3 items-start bg-white">
                     <span className="text-blue-500 font-black text-lg flex-shrink-0 leading-tight">Q</span>
-                    <p contentEditable suppressContentEditableWarning
+                    <EditableText tag="p" value={item.q}
                       className="font-bold text-gray-800 outline-none cursor-text focus:ring-2 focus:ring-blue-500/60 focus:bg-blue-50/80 rounded flex-1"
-                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],q:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
-                      dangerouslySetInnerHTML={{ __html: item.q }} />
+                      onCommit={next => { const ni=[...items]; ni[i]={...ni[i],q:next}; onDataChange({...d,items:ni}); }} />
                     <span className="text-gray-300 text-xs flex-shrink-0 leading-tight mt-1">▼</span>
                   </div>
                   <div className="px-5 pb-5 pt-3 flex gap-3 bg-gray-50 border-t border-gray-100">
                     <span className="text-green-500 font-black text-lg flex-shrink-0 leading-tight">A</span>
-                    <p contentEditable suppressContentEditableWarning
+                    <EditableText tag="p" value={item.a}
                       className="text-gray-600 text-sm outline-none cursor-text focus:ring-2 focus:ring-blue-500/60 focus:bg-blue-50/80 rounded flex-1"
-                      onBlur={e => { const ni=[...items]; ni[i]={...ni[i],a:e.currentTarget.textContent||''}; onDataChange({...d,items:ni}); }}
-                      dangerouslySetInnerHTML={{ __html: item.a }} />
+                      onCommit={next => { const ni=[...items]; ni[i]={...ni[i],a:next}; onDataChange({...d,items:ni}); }} />
                   </div>
                 </div>
               ))}
@@ -4320,11 +4321,6 @@ function BuilderContent() {
   const undoStack = useRef<SiteData[]>([]);
   const redoStack = useRef<SiteData[]>([]);
   const siteRef = useRef<SiteData>(defaultSiteData);
-  // 読み込んだ settings_json をそのまま覚えておく。
-  // 保存は settings_json を丸ごと置き換えるので、ビルダーが扱わない設定
-  // （globalFooter・previewToken・sequences・style など）を書き戻さないと、
-  // 一度保存しただけで消えてしまう。
-  const loadedSettingsRef = useRef<Record<string, unknown>>({});
   const canvasRef = useRef<HTMLDivElement>(null);
   const [showBuilderTour, setShowBuilderTour] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -4375,45 +4371,77 @@ function BuilderContent() {
   // 保存する中身は1か所で作る。
   // 以前は自動保存と手動保存で別々に書いており、自動保存では globalFooter が、
   // 手動保存では sitePassword が抜けていた（保存するたびに片方が消えていた）。
-  const buildSavePayload = useCallback((s: SiteData) => ({
-    name: s.siteName,
-    blocks_json: { v: 2, pages: s.pages },
-    seo_json: s.pages[0]?.seo || emptySeo,
-    settings_json: {
-      ...loadedSettingsRef.current,
+  const buildSavePayload = useCallback((s: SiteData, mode: 'patch' | 'full' = 'patch') => {
+    // 編集画面が持っている設定だけを列挙する。
+    // ここに無い設定（連携・商品・プレビュー用URL・配信の予約など）は
+    // 編集画面では触らないので、送らない＝サーバ側で今の値が残る。
+    const owned = {
       colorScheme: s.colorScheme, designStyle: s.designStyle, larubot: s.larubot, laruseo: s.laruseo,
       notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId,
       laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily,
       accentColor: s.accentColor, heroLayout: s.heroLayout, headerStyle: s.headerStyle,
       animLevel: s.animLevel, globalFooter: s.globalFooter, customPalette: s.customPalette,
       lineNotifyToken: s.lineNotifyToken, clarityId: s.clarityId, webhookUrl: s.webhookUrl,
-      sitePassword: s.sitePassword,
-    },
-  }), []);
+      sitePassword: s.sitePassword, design: s.design, designPreset: s.designPreset,
+    };
+    const base = {
+      name: s.siteName,
+      blocks_json: { v: 2, pages: s.pages },
+      seo_json: s.pages[0]?.seo || emptySeo,
+    };
+    // 新規作成のときだけ、丸ごと渡す（重ねる相手がまだ無い）
+    return mode === 'full'
+      ? { ...base, settings_json: owned }
+      : { ...base, settings_json_patch: owned };
+  }, []);
 
   // Keep siteRef in sync for undo/redo to read current state without stale closure
   useEffect(() => { siteRef.current = site; }, [site]);
 
-  // Mark dirty when site changes (skip initial mount)
+  // 編集のたびに進む版番号。保存の往復中に編集が入ったかを、これで見分ける
+  const editSeqRef = useRef(0);
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
+    editSeqRef.current += 1;
     setIsDirty(true);
   }, [site]);
 
-  // Auto-save to server every 30s when dirty and siteId exists
+  // 30秒ごとの自動保存。
+  //
+  // 以前は fetch の結果を見ずに「保存済み」にしていた。回線が切れていても、
+  // ログインが切れていても（401）、画面には保存済みと出て、そのまま閉じると
+  // 編集が消えていた。いまは応答を確かめ、失敗ならそのまま未保存にしておく。
+  //
+  // 送っているあいだの編集も保存済みにしない。送った時点の版番号を控え、
+  // 戻ってきたときに版が進んでいたら未保存のままにする。
   useEffect(() => {
     if (!isDirty || !dbSiteId) return;
     const timer = setTimeout(async () => {
       const s = siteRef.current;
-      await fetch(`/api/sites/${dbSiteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildSavePayload(s)),
-      });
-      localStorage.setItem('laruHP_builder', JSON.stringify(s));
-      setIsDirty(false);
+      const seq = editSeqRef.current;
+      try {
+        const res = await fetch(`/api/sites/${dbSiteId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildSavePayload(s)),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setSaveError(res.status === 401
+            ? 'ログインが切れています。別のタブで入り直してから、保存を押してください'
+            : (body.error as string) || `自動保存できませんでした (${res.status})`);
+          return;
+        }
+      } catch {
+        setSaveError('自動保存できませんでした。通信を確かめて、保存を押してください');
+        return;
+      }
+      try { localStorage.setItem('laruHP_builder', JSON.stringify(s)); } catch { /* 容量超過は無視 */ }
+      setSaveError(false as string | false);
       setLastSavedAt(new Date());
+      // 送っているあいだに編集が続いていたら、未保存のままにする
+      if (editSeqRef.current === seq) setIsDirty(false);
     }, 30000);
     return () => clearTimeout(timer);
   }, [isDirty, dbSiteId, buildSavePayload]);
@@ -4684,11 +4712,12 @@ function BuilderContent() {
               clarityId: s.settings_json?.clarityId || '',
               webhookUrl: s.settings_json?.webhookUrl || '',
               sitePassword: s.settings_json?.sitePassword || '',
+              design: s.settings_json?.design,
+              designPreset: s.settings_json?.designPreset,
             });
             setCurrentPageId(pages[0].id);
             setPublished(s.published);
             setPublishedSlug(s.slug);
-            loadedSettingsRef.current = (s.settings_json as Record<string, unknown>) || {};
             if (s.settings_json?.previewToken) setPreviewToken(s.settings_json.previewToken);
           }
         })
@@ -5179,30 +5208,39 @@ function BuilderContent() {
   const handleSave = async () => {
     setSaving(true);
     setSaveError(false as string | false);
-    const payload = buildSavePayload(site);
+    const s0 = siteRef.current;
+    const seq = editSeqRef.current;
     try {
       if (dbSiteId) {
         const res = await fetch(`/api/sites/${dbSiteId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(buildSavePayload(s0)),
         });
-        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `保存エラー (${res.status})`); }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(res.status === 401
+            ? 'ログインが切れています。別のタブで入り直してから、もう一度保存してください'
+            : (d.error as string) || `保存エラー (${res.status})`);
+        }
       } else {
         const res = await fetch('/api/sites', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, industry: onboardingData?.industry }),
+          body: JSON.stringify({ ...buildSavePayload(s0, 'full'), industry: onboardingData?.industry }),
         });
         if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `保存エラー (${res.status})`); }
-        const { site: s } = await res.json();
-        if (s?.id) setDbSiteId(s.id);
+        const { site: created } = await res.json();
+        if (created?.id) setDbSiteId(created.id);
       }
-      localStorage.setItem('laruHP_builder', JSON.stringify(site));
-      setIsDirty(false);
-      setSaved(true);
+      try { localStorage.setItem('laruHP_builder', JSON.stringify(s0)); } catch { /* 容量超過は無視 */ }
       setLastSavedAt(new Date());
-      setTimeout(() => setSaved(false), 2000);
+      // 送っているあいだに続きを編集していたら、保存済みにはしない
+      if (editSeqRef.current === seq) {
+        setIsDirty(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '保存に失敗しました');
     }
@@ -5248,7 +5286,7 @@ function BuilderContent() {
       const res = await fetch('/api/sites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...buildSavePayload(site), industry: onboardingData?.industry }),
+        body: JSON.stringify({ ...buildSavePayload(site, 'full'), industry: onboardingData?.industry }),
       });
       // 未ログイン: 作業をローカル保存して登録へ誘導（サイレント失敗を防ぐ）
       if (res.status === 401) {

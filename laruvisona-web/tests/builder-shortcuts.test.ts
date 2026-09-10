@@ -55,30 +55,57 @@ test('履歴に積んでから変更する（複製・貼り付けが取り消�
 
 // ── 保存の中身 ──
 //
-// 保存は settings_json を丸ごと置き換える（PUT /api/sites/[id]）。
-// そのため「保存する中身を組み立てる場所」が2つあると、片方に入れ忘れた
-// 設定が保存のたびに消える。実際そうなっていた:
+// 保存は3か所（自動保存・保存ボタン・新規作成）から呼ばれる。組み立てが
+// 分かれていると、片方に入れ忘れた設定が保存のたびに消える。実際そうなっていた:
 //   ・30秒ごとの自動保存 …… globalFooter（フッター）が入っていなかった
 //   ・保存ボタン        …… sitePassword（サイトのパスワード）が入っていなかった
-// どちらもビルダーが知らない設定（previewToken・sequences・style など）は
-// 常に落ちていた。
+//
+// さらに、設定を丸ごと送り返すと、別の画面で変えた値が古い値へ戻る。
+// いまは「編集画面が持っている設定だけ」を送り、サーバ側で重ねる。
 
 test('保存する中身を組み立てる場所は1つだけ', () => {
-  const spots = src.match(/settings_json: \{/g) || [];
-  assert.equal(spots.length, 1,
-    `保存の中身が${spots.length}か所で組み立てられている（食い違うと設定が消える）`);
+  assert.equal((src.match(/settings_json: owned/g) || []).length, 1);
+  assert.equal((src.match(/settings_json_patch: owned/g) || []).length, 1);
   assert.match(src, /const buildSavePayload = useCallback/);
-  // 自動保存も保存ボタンも、同じ組み立てを使う
-  assert.equal((src.match(/buildSavePayload\((s|site)\)/g) || []).length, 3,
-    '自動保存・保存ボタン・新規作成が同じ組み立てを使っていない');
+  // 自動保存・保存ボタン・新規作成が同じ組み立てを使う
+  assert.equal((src.match(/buildSavePayload\((s|s0|site)(, 'full')?\)/g) || []).length, 4,
+    '自動保存・保存ボタン・新規作成・公開時の作成が、同じ組み立てを使っていない');
 });
 
-test('ビルダーが扱わない設定を、保存で消さない', () => {
+test('編集画面が持っている設定だけを送る（古い値で上書きしない）', () => {
   const payload = src.slice(src.indexOf('const buildSavePayload'), src.indexOf('// Keep siteRef in sync'));
-  assert.match(payload, /\.\.\.loadedSettingsRef\.current/,
-    '読み込んだ settings_json を書き戻していない（previewToken などが消える）');
-  // ビルダーが持っている設定は、すべて保存に含める
-  for (const k of ['globalFooter', 'sitePassword', 'customCss', 'lineNotifyToken', 'webhookUrl', 'clarityId', 'customPalette']) {
+  // 画面を開いたときの設定を丸ごと送り返さない
+  assert.equal(/loadedSettingsRef/.test(src), false,
+    '読み込んだ設定を丸ごと送り返している（別画面の更新や失効したURLが戻る）');
+  for (const k of ['globalFooter', 'sitePassword', 'customCss', 'lineNotifyToken', 'webhookUrl', 'clarityId', 'customPalette', 'design']) {
     assert.match(payload, new RegExp(`${k}: s\\.${k}`), `保存に含まれていない設定: ${k}`);
   }
+  // 既存サイトの保存は「重ねる」側を使う
+  assert.match(payload, /mode === 'full'/);
+});
+
+test('自動保存は、失敗を保存済みにしない', () => {
+  const auto = src.slice(src.indexOf('// 30秒ごとの自動保存'), src.indexOf('// Warn before leaving'));
+  assert.match(auto, /if \(!res\.ok\)/, '応答を確かめずに保存済みにしている');
+  assert.match(auto, /setSaveError\(/);
+  assert.match(auto, /catch \{[\s\S]*setSaveError\(/, '通信エラーを保存済みにしている');
+  // 失敗したら未保存のまま
+  assert.ok(auto.indexOf('return;') < auto.indexOf('setIsDirty(false)'),
+    '失敗しても保存済みにしている');
+});
+
+test('保存している間の編集を、保存済みにしない', () => {
+  // 送った時点の版番号を控え、戻ったときに進んでいれば未保存のままにする
+  assert.match(src, /const editSeqRef = useRef\(0\)/);
+  assert.match(src, /editSeqRef\.current \+= 1/);
+  assert.equal((src.match(/if \(editSeqRef\.current === seq\)/g) || []).length, 2,
+    '自動保存と保存ボタンの両方で、保存中の編集を見ていない');
+});
+
+test('編集画面の文字は、HTMLとして描かない', () => {
+  // AIの生成結果やURL取り込みの文字列も同じ場所に入る
+  assert.equal(/dangerouslySetInnerHTML=\{\{ __html: (d|item)\./.test(src), false,
+    'ブロックの中身をHTMLとして描いている');
+  assert.match(src, /function EditableText\(/);
+  assert.match(src, /el\.textContent = value/);
 });
