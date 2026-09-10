@@ -42,22 +42,28 @@ const html = exportToHTML(
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
 
-// 画像を写す（公開時は /salon/ で配信される想定）。
+// 画像は public/salon/ に置いてある（アプリの通常の配信物）。
 //
-// images/ の直下にあるファイルだけが配信用。images/original は原本置き場で、
-// 配信には使わない。以前はここを読み飛ばさずに copyFileSync へ渡していたため、
-// ディレクトリをコピーしようとして EISDIR で落ちていた（手順どおりに実行すると
-// 必ず exit 1 になっていた）。
+// 以前はここ（docs/…/images/）に置き、この道具で public へ写していた。
+// そのため「READMEの手順を踏まないと画像が出ない」状態になっていて、
+// クリーンな取得から普通にビルドして起動すると /salon/hero-1600.jpg が
+// 404 になっていた。いまは置き場所そのものを public/salon/ に移してある。
+// 原本（切り出し前のPNG）だけが images/original/ に残っている。
 //
-// 形式も全部そろえて写す。jpg だけだと、公開HTMLが優先して選ぶ avif / webp が
-// 置かれず、ブラウザは大きい jpg しか落とせない（画像が出ないこともある）。
+// ここでは、書き出し先でも同じ絵が見えるように写し、
+// 配信に必要な形式がそろっているかを確かめる。
 const DELIVERY = /\.(avif|webp|jpg|jpeg|png|svg)$/i;
-const imgSrc = path.join(HERE, 'images');
-const copyImages = (dest) => {
+const imgSrc = path.join(ROOT, 'public', 'salon');
+if (!fs.existsSync(imgSrc)) {
+  console.error(`画像が見つかりません: ${imgSrc}`);
+  process.exit(1);
+}
+{
+  const dest = path.join(OUT, 'salon');
   fs.mkdirSync(dest, { recursive: true });
   const kinds = {};
   for (const e of fs.readdirSync(imgSrc, { withFileTypes: true })) {
-    if (!e.isFile()) continue;                 // original/ などの入れ物は写さない
+    if (!e.isFile()) continue;
     const m = e.name.match(DELIVERY);
     if (!m) continue;
     fs.copyFileSync(path.join(imgSrc, e.name), path.join(dest, e.name));
@@ -65,12 +71,12 @@ const copyImages = (dest) => {
     kinds[k] = (kinds[k] || 0) + 1;
   }
   const total = Object.values(kinds).reduce((a, b) => a + b, 0);
-  console.log(`画像を写しました: ${total}枚（${Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join(' / ')}） → ${dest}`);
-  return total;
-};
-if (fs.existsSync(imgSrc)) {
-  copyImages(path.join(OUT, 'salon'));
-  if (args.public) copyImages(path.resolve(args.public));
+  console.log(`画像: ${total}枚（${Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join(' / ')}） → ${dest}`);
+  // 公開HTMLは avif → webp → jpg の順に選ぶ。どれか欠けると、
+  // 端末によっては大きい画像しか落とせない・出ないことがある。
+  for (const k of ['avif', 'webp', 'jpg']) {
+    if (!kinds[k]) { console.error(`配信用の ${k} がありません`); process.exit(1); }
+  }
 }
 
 console.log(`書き出しました: ${path.join(OUT, 'index.html')}  (${(html.length / 1024).toFixed(0)} KB)`);

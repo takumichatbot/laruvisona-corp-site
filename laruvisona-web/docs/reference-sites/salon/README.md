@@ -24,8 +24,9 @@ cd tmp/salon && python3 -m http.server 8099
 # → http://127.0.0.1:8099/
 ```
 
-`images/` の直下にある配信用ファイル（avif / webp / jpg）を全部写す。
-`images/original/` は原本置き場なので写さない。
+配信用の画像は `public/salon/` にある（アプリが普通に配る場所）。
+build.mjs は書き出し先にも同じものを写し、avif / webp / jpg がそろっているかを見る。
+`images/original/` は原本置き場で、配信には使わない。
 
 顧客が選んだ書体（Shippori Mincho）は Google Fonts から読む。
 外に出られる環境で開けば、本物の明朝で表示される。
@@ -34,15 +35,14 @@ cd tmp/salon && python3 -m http.server 8099
 
 以下の検証はすべて、この環境の上で動かす。
 
-```bash
-# 1. 画像をアプリから配信できる場所へ置く（avif / webp / jpg を全部）
-node --import ./tests/_resolve-ts.mjs docs/reference-sites/salon/build.mjs \
-  --app-root . --out ./tmp/salon --public ./public/salon
+画像を置く手順は要らない。`public/salon/` に入っているので、
+取得してビルドして起動すれば、そのまま配信される。
 
-# 2. ビルド
+```bash
+# 1. ビルド
 npx next build
 
-# 3. 偽のSupabase（読み書きできる）とアプリを立てる
+# 2. 偽のSupabase（読み書きできる）とアプリを立てる
 node tests/http/fixture.cjs &
 ADMIN_SECRET=test-admin-secret \
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54999 \
@@ -67,6 +67,9 @@ npx next start -p 3300 &
 | `booking-check.mjs` | 予約フォームの**画面側**（Cookie表示中・キーボード・失敗時の戻り） | 応答は `route.fulfill` で差し替え。サーバは通らない |
 | `heading-check.mjs` | ヒーロー見出しが**意味の切れ目で折り返しているか**（390px / 1440px） | 実ブラウザ。文字ごとの座標から行を数える |
 | `img-measure.mjs` | ヒーロー画像が**どれを何バイト落としたか** | 実ブラウザ。CDPの転送量で測る |
+| `delivery-check.mjs` | **普通に起動しただけで画像が配信されるか**（srcset で実際に選ばれた1枚まで） | 追跡されているファイルだけの取得から `next build` → `next start` |
+| `concurrent-save-check.mjs` | 設定の一部保存が、**あいだに入った別の更新を消さないか** | 実API。偽DB側で読み取りと書き込みの隙間に更新を差し込む |
+| `studio-check.mjs` | 制作画面の通し（きく→えらぶ→編集→保存→読み直し→公開）と、保存失敗時に公開させないこと | 実ブラウザ。保存失敗は保存先を実際に失敗させる |
 
 ```bash
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/publish-check.mjs --port 3300
@@ -75,7 +78,16 @@ node docs/reference-sites/salon/builder-save-check.mjs --port 3300
 node docs/reference-sites/salon/api-contract-check.mjs --port 3300
 node docs/reference-sites/salon/booking-check.mjs --url http://127.0.0.1:3300/hp/yuian
 node docs/reference-sites/salon/heading-check.mjs --url http://127.0.0.1:3300/hp/yuian
+node docs/reference-sites/salon/concurrent-save-check.mjs --port 3300
+node docs/reference-sites/salon/studio-check.mjs --port 3300
+ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/delivery-check.mjs --port 3300
 ```
+
+### 取得したままの状態で確かめる
+
+`delivery-check.mjs` は「手順を踏んだ人の手元でだけ映る」状態を防ぐためのもの。
+追跡されているファイルだけを別の場所へ取り出し（`git archive HEAD | tar -x -C <dir>`）、
+`npm ci` → `npx next build` → `npx next start` と普通に動かしてから当てる。
 
 `booking-check.mjs` の「送った中身がPOSTに載っている」は、**受信できたこと**では
 ない。実サーバが受け取ったかどうかは `api-contract-check.mjs` で見る。
@@ -109,12 +121,17 @@ node docs/reference-sites/salon/heading-check.mjs --url http://127.0.0.1:3300/hp
 
 ## 写真
 
-`images/` は**差し替え用**。実寸・実比率で作ってあるので、
+`public/salon/` が**差し替え先**。実寸・実比率で作ってあるので、
 同じ名前・同じ比率の写真に置き換えれば、トリミングも余白もそのまま合う。
+
+以前はここを `docs/reference-sites/salon/images/` に置き、build.mjs で
+public へ写していた。手順を踏まないと画像が出ない状態だったので、
+置き場所そのものを `public/salon/` へ移した（`git mv`。中身は同じ）。
 
 ### ヒーロー（B案・用意済み）
 
-原本は `images/original/yuian-hero-B-original.png`（2400×1792）。**捨てない。**
+原本は `docs/reference-sites/salon/images/original/yuian-hero-B-original.png`
+（2400×1792）。**捨てない。** 配信用は原本から作り、`public/salon/` に置く。
 配信用は原本から作る。
 
 | 用途 | 比率 | 幅 | 形式 |
