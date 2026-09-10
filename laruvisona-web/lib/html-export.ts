@@ -1,24 +1,31 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
+import { designCss } from '@/lib/site-design';
+import { escapeHtml, safeUrl, safeCssValue } from '@/lib/safe-markup';
 
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
 export const EXPORT_VERSION = 7;
 
-function escapeHtml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
   const str = (key: string) => escapeHtml(String(d[key] ?? ''));
-  const raw = (key: string) => String(d[key] ?? '');
+  /* 属性・style に入れる値。エスケープしてから出す。
+     以前は生のまま差し込んでいたので、色やリンクの欄に " を入れるだけで
+     属性から抜け出せた（取り込みやAI生成の文字列も同じ欄に入る）。 */
+  const raw = (key: string) => escapeHtml(String(d[key] ?? ''));
+  /* エスケープしない生の値。JSON.stringify して <script> に渡すときだけ使う */
+  const rawValue = (key: string) => String(d[key] ?? '');
+  /* href / src。javascript: などは押した瞬間に動くので、形で弾く */
+  const url = (key: string, fallback = '#') => escapeHtml(safeUrl(d[key], fallback));
+  /* style の値。区切り文字を含むものは既定値に落とす */
+  const css = (key: string, fallback = '') => escapeHtml(safeCssValue(d[key], fallback));
 
   switch (block.type) {
     case 'nav': {
       const links = (d['links'] as { label: string; href: string }[] | undefined) || [];
       const linkHtml = links.map(l => `<a href="${escapeHtml(l.href)}" class="lhp-nav-link">${escapeHtml(l.label)}</a>`).join('');
-      const cta = d['showCta'] ? `<a href="${raw('ctaLink')}" class="lhp-nav-cta">${str('ctaText')}</a>` : '';
+      const cta = d['showCta'] ? `<a href="${url('ctaLink')}" class="lhp-nav-cta">${str('ctaText')}</a>` : '';
       const sticky = d['sticky'] ? ' lhp-nav-sticky' : '';
       return `
 <nav class="lhp-nav${sticky}" style="background-color:${raw('bgColor') || '#fff'};color:${raw('textColor') || '#111'}">
@@ -60,10 +67,10 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       // 代替テキストに改行は要らない
       const heroAlt = str('bgImageAlt') || escapeHtml(headingText.replace(/\s+/g, ' ').trim());
       const heroPos = raw('bgImagePosition');
-      const heroImgTag = `<img src="${raw('bgImage')}" alt="${heroAlt}"`
+      const heroImgTag = `<img src="${url('bgImage', '')}" alt="${heroAlt}"`
         + (heroW ? ` width="${heroW}"` : '') + (heroH ? ` height="${heroH}"` : '')
-        + ` sizes="${escapeHtml(heroSizes)}"`
-        + (heroPos ? ` style="object-position:${escapeHtml(String(heroPos))}"` : '')
+        + ` sizes="${heroSizes}"`
+        + (heroPos ? ` style="object-position:${heroPos}"` : '')
         + ` loading="eager" fetchpriority="high" decoding="async">`;
       const heroPicture = heroSources.length
         ? `<picture>${heroSources.map(sc => `<source${sc.type ? ` type="${escapeHtml(sc.type)}"` : ''}`
@@ -85,7 +92,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     <div class="lhp-hero-content">
       <h1>${headingHtml}</h1>
       <p class="lhp-hero-sub">${str('subheading')}</p>
-      <a href="${raw('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
+      <a href="${url('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
     </div>
     ${imgCol}
   </div>
@@ -115,7 +122,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     case 'image':
       return d['src'] ? `
 <section data-lhp-anim class="lhp-section">
-  <img src="${raw('src')}" alt="${str('alt') || '画像'}" class="lhp-img" style="height:${raw('height')}px;object-fit:${raw('objectFit')}" loading="lazy" />
+  <img src="${url('src', '')}" alt="${str('alt') || '画像'}" class="lhp-img" style="height:${css('height', 'auto')}px;object-fit:${css('objectFit', 'cover')}" loading="lazy" />
   ${d['caption'] ? `<p class="lhp-img-caption">${str('caption')}</p>` : ''}
 </section>` : '';
 
@@ -148,7 +155,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 <section data-lhp-anim class="lhp-cta" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
   <h2>${str('heading')}</h2>
   <p>${str('subtext')}</p>
-  <a href="${raw('buttonLink')}" class="lhp-btn-cta">${str('buttonText')}</a>
+  <a href="${url('buttonLink')}" class="lhp-btn-cta">${str('buttonText')}</a>
 </section>`;
 
     case 'services': {
@@ -351,7 +358,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 (function(){
   var sid=window.__LHPSID; if(!sid)return;
   var box=document.getElementById('lhp-item-box-${bid}'); if(!box)return;
-  var PID=${JSON.stringify(pid)}, BUY=${JSON.stringify(raw('buyText') || '購入する')}, QB='width:40px;height:40px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:20px;font-weight:700;cursor:pointer;color:#0f172a';
+  var PID=${JSON.stringify(pid)}, BUY=${JSON.stringify(rawValue('buyText') || '購入する')}, QB='width:40px;height:40px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:20px;font-weight:700;cursor:pointer;color:#0f172a';
   var p=null,vid=null,qty=1;
   var EMO={'サービス':'⚙️','コース・講座':'📚','チケット':'🎟️','デジタルコンテンツ':'💾','その他':'📦'};
   function yen(n){return '¥'+n.toLocaleString();}
@@ -560,7 +567,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     try{
       var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:v('lhp-mf-name'),email:v('lhp-mf-email'),phone:v('lhp-mf-phone'),message:v('lhp-mf-message')})});
       var res=await r.json();
-      if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">${escapeHtml(raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。')}</div>';${raw('redirectUrl') ? `setTimeout(function(){window.location.href='${escapeHtml(raw('redirectUrl') || '')}';},1500);` : ''}}
+      if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。'}</div>';${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${JSON.stringify(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}}
       else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
     }catch(e){btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
   };
@@ -625,8 +632,8 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:nm,email:em,phone:cv('phone'),message:ms})});
       var d=await r.json();
       if(d.ok){
-        f.innerHTML='<div class="lhp-form-success">${escapeHtml(raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。')}</div>';
-        ${raw('redirectUrl') ? `setTimeout(function(){window.location.href='${escapeHtml(raw('redirectUrl') || '')}';},1500);` : ''}
+        f.innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。'}</div>';
+        ${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${JSON.stringify(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}
       }
       else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。再度お試しください。';}
     }catch(err){btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
@@ -663,7 +670,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 <section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <div class="lhp-gallery lhp-gallery-${cols}" id="${blockId}">
-    ${validImages.map((src, i) => `<img src="${src}" alt="ギャラリー画像 ${i + 1}" class="lhp-gallery-img lhp-lb-trigger" data-lhp-lb-src="${src}" data-lhp-lb-group="${blockId}" data-lhp-lb-idx="${i}" loading="lazy" style="cursor:zoom-in" />`).join('')}
+    ${validImages.map((rawSrc, i) => { const src = escapeHtml(safeUrl(rawSrc, '')); return `<img src="${src}" alt="ギャラリー画像 ${i + 1}" class="lhp-gallery-img lhp-lb-trigger" data-lhp-lb-src="${src}" data-lhp-lb-group="${blockId}" data-lhp-lb-idx="${i}" loading="lazy" style="cursor:zoom-in" />`; }).join('')}
   </div>
 </section>`;
     }
@@ -702,7 +709,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       return `
 <section data-lhp-anim class="lhp-section">
   ${d['heading'] ? `<h2 class="lhp-section-title">${str('heading')}</h2>` : ''}
-  <iframe src="${raw('embedUrl')}" class="lhp-map" style="height:${raw('height') || 400}px" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+  <iframe src="${url('embedUrl', 'about:blank')}" class="lhp-map" style="height:${css('height', '400')}px" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
 </section>`;
 
     case 'countdown':
@@ -710,7 +717,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 <section data-lhp-anim class="lhp-countdown" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
   <h2>${str('heading')}</h2>
   <p>${str('subtext')}</p>
-  <div class="lhp-countdown-timer" data-target="${raw('targetDate')}">
+  <div class="lhp-countdown-timer" data-target="${str('targetDate')}">
     <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-d">00</span><span class="lhp-cdt-l">日</span></div>
     <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-h">00</span><span class="lhp-cdt-l">時間</span></div>
     <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-m">00</span><span class="lhp-cdt-l">分</span></div>
@@ -719,7 +726,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </section>
 <script>
 (function(){
-  var t=new Date("${raw('targetDate')}").getTime();
+  var t=new Date(${JSON.stringify(rawValue('targetDate'))}).getTime();
   function tick(){
     var d=t-Date.now();
     if(d<0)d=0;
@@ -1040,7 +1047,7 @@ ${d['stickyCta'] ? `
     <button onclick="document.getElementById('lhp-popup-overlay').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:${raw('textColor')};font-size:1.25rem;cursor:pointer;opacity:.7">✕</button>
     <h2 style="font-size:1.4rem;font-weight:900;margin-bottom:12px">${str('heading')}</h2>
     <p style="opacity:.85;margin-bottom:28px;line-height:1.6">${str('text')}</p>
-    <a href="${raw('buttonLink')}" style="display:inline-block;background:${raw('buttonColor')||'#fff'};color:${raw('buttonTextColor')||'#111'};padding:14px 40px;border-radius:9999px;font-weight:700;text-decoration:none;font-size:1rem">${str('buttonText')}</a>
+    <a href="${url('buttonLink')}" style="display:inline-block;background:${css('buttonColor', '#fff')};color:${css('buttonTextColor', '#111')};padding:14px 40px;border-radius:9999px;font-weight:700;text-decoration:none;font-size:1rem">${str('buttonText')}</a>
   </div>
 </div>
 <script>
@@ -1208,7 +1215,13 @@ function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: stri
     d['hideOnDesktop'] ? 'lhp-hide-desktop' : '',
   ].filter(Boolean).join(' ');
 
-  return classes ? `<div class="${classes}">${inner}</div>` : inner;
+  if (classes) inner = `<div class="${classes}">${inner}</div>`;
+
+  // どこがどのブロックかを、出来上がったHTMLの側にも残す。
+  // 編集画面のプレビューは、この公開用HTMLをそのまま表示して、押された場所から
+  // ブロックを引き当てる。プレビュー専用の描画を別に持つと、編集画面と公開後で
+  // 見え方がずれる。見た目には影響しない目印だけを足す。
+  return inner.replace(/<[a-z][a-z0-9-]*/i, m => `${m} data-lhp-block="${escapeHtml(block.id)}"`);
 }
 
 const DESIGN_STYLES: Record<string, string> = {
@@ -1943,6 +1956,7 @@ ${headerStyle === 'colored' ? `.lhp-nav{background:var(--lhp-primary)!important}
 ${heroLayout === 'split' ? `/* 左右に分けるヒーロー。内側の幅を広げないと、写真が42%＝約300pxにしかならず、   1440pxの画面で切手のように小さく見える。写真を主役にできる幅にする。 */.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:clamp(28px,4vw,56px);max-width:1180px;width:100%;margin:0 auto}.lhp-hero-split .lhp-hero-content{flex:1 1 38%;min-width:0}.lhp-hero-split-img{flex:1 1 62%;border-radius:4px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img,.lhp-hero-split-img picture{width:100%;height:100%;display:block}.lhp-hero-split-img img{object-fit:cover;object-position:center}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column;gap:24px}/* 16:9 は横長すぎて、店内写真だと椅子や鏡が切れる。4:3 で場の様子を残す */.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:4/3}.lhp-hero-split .lhp-hero-content{width:100%}}` : ''}
 ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
+${settings.design ? `<style>${designCss(settings.design)}</style>` : ''}
 ${settings.customCss ? `<style>${settings.customCss}</style>` : ''}
 </head>
 <body class="lhp-style-${designStyle}">

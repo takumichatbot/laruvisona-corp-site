@@ -1,0 +1,1126 @@
+'use client';
+/**
+ * 制作画面（スタジオ）。
+ *
+ * これまでの編集画面は、機能の一覧が先に来て、はじめての人がどこから触れば
+ * よいか分からなかった。ここでは順番を「きく → えらぶ → ととのえる → 出す」に
+ * 変え、真ん中に大きな実物のプレビューを置く。
+ *
+ * 大事にしていること:
+ *  - プレビューは公開用のHTMLそのもの。編集画面だけの描き方を持たない。
+ *    （持つと、編集画面で整えたのに公開したら崩れる、が起きる）
+ *  - 色・書体・余白・角の丸みは、CSSを書かずに設定で決まる。
+ *  - 保存できなかったときに「保存済み」と出さない。
+ *  - 既存のサイトをそのまま開ける。従来の編集画面にもいつでも戻れる。
+ */
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { exportToHTML } from '@/lib/html-export';
+import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
+import {
+  DESIGN_PRESETS, DEFAULT_DESIGN, normalizeDesign, type SiteDesign,
+} from '@/lib/site-design';
+import {
+  BLOCK_DEFS, blockIcon, blockLabel, blockSummary, orderForGoal,
+  GOALS, INDUSTRY_CHOICES, type FieldDef, type IntakeAnswers,
+} from '@/lib/studio-schema';
+import { cleanIncomingText } from '@/lib/safe-markup';
+import type { Block, Page, SEOSettings } from '@/types/laruHP';
+
+/* ─────────────────────────────────────────────────────────────────────── */
+
+const EMPTY_SEO: SEOSettings = { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' };
+
+interface StudioSettings {
+  colorScheme: string;
+  designStyle: string;
+  fontFamily: string;
+  accentColor: string;
+  heroLayout: 'center' | 'left' | 'split';
+  headerStyle: 'transparent' | 'solid' | 'colored';
+  animLevel: 'none' | 'subtle' | 'full';
+  larubot: boolean;
+  laruseo: boolean;
+  notifyEmail: string;
+  customCss: string;
+  design: SiteDesign;
+  designPreset: string;
+  globalFooter?: Record<string, unknown>;
+}
+
+interface StudioSite {
+  name: string;
+  pages: Page[];
+  settings: StudioSettings;
+}
+
+type SaveState =
+  | { kind: 'clean'; at: Date | null }
+  | { kind: 'dirty' }
+  | { kind: 'saving' }
+  | { kind: 'failed'; message: string };
+
+const FONTS = [
+  { value: 'noto', label: 'すっきり（ゴシック）' },
+  { value: 'mincho', label: '落ち着き（明朝）' },
+  { value: 'rounded', label: 'やわらかい（丸ゴシック）' },
+  { value: 'zen', label: 'はっきり（太めのゴシック）' },
+  { value: 'biz', label: '読みやすさ優先' },
+  { value: 'kaisei', label: '和の趣き' },
+];
+
+/** 見た目の設定を、公開HTMLが受け取る形にそろえる */
+function toExportSettings(s: StudioSettings) {
+  return {
+    colorScheme: s.colorScheme,
+    style: 'clean',
+    designStyle: s.designStyle,
+    fontFamily: s.fontFamily,
+    accentColor: s.design.accent || s.accentColor,
+    heroLayout: s.heroLayout,
+    headerStyle: s.headerStyle,
+    animLevel: s.animLevel,
+    larubot: s.larubot,
+    laruseo: s.laruseo,
+    notifyEmail: s.notifyEmail,
+    customCss: s.customCss,
+    design: s.design as unknown as Record<string, unknown>,
+    designPreset: s.designPreset,
+    globalFooter: s.globalFooter,
+  };
+}
+
+/* ── プレビュー ─────────────────────────────────────────────────────────
+   公開用のHTMLをそのまま iframe に流し込む。srcdoc は親と同じ生成元なので、
+   読み込み後に中の document へ触れる。押された場所から data-lhp-block を
+   たどって、どの節かを親へ返す。HTMLには何も足していない。 */
+
+function Preview({ html, device, selectedId, onSelect }: {
+  html: string;
+  device: 'pc' | 'sp';
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const ref = useRef<HTMLIFrameElement | null>(null);
+  const scrollRef = useRef(0);
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
+
+  const attach = useCallback(() => {
+    const win = ref.current?.contentWindow;
+    const doc = ref.current?.contentDocument;
+    if (!win || !doc) return;
+    // 書き換えのたびに読み直されるので、見ていた位置へ戻す
+    win.scrollTo(0, scrollRef.current);
+    win.addEventListener('scroll', () => { scrollRef.current = win.scrollY; }, { passive: true });
+
+    const style = doc.createElement('style');
+    style.setAttribute('data-studio', '');
+    style.textContent = `
+      /* 編集中は、来た人に出す帯を出さない（下が隠れて中身が見えない） */
+      #lhp-cookie-banner{display:none!important}
+      [data-lhp-block]{outline-offset:-2px}
+      [data-lhp-block]:hover{outline:2px dashed rgba(37,99,235,.55)}
+      [data-lhp-studio-selected]{outline:3px solid #2563eb !important}
+      html{scroll-behavior:auto}
+    `;
+    doc.head.appendChild(style);
+
+    doc.addEventListener('click', (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const holder = target?.closest?.('[data-lhp-block]') as HTMLElement | null;
+      // プレビューの中では、リンクや送信で画面を移動させない
+      const link = target?.closest?.('a,button');
+      if (link) { e.preventDefault(); e.stopPropagation(); }
+      if (holder) onSelectRef.current(holder.getAttribute('data-lhp-block') || '');
+    }, true);
+    doc.addEventListener('submit', (e: Event) => e.preventDefault(), true);
+  }, []);
+
+  useEffect(() => {
+    const doc = ref.current?.contentDocument;
+    if (!doc) return;
+    doc.querySelectorAll('[data-lhp-studio-selected]').forEach(el => el.removeAttribute('data-lhp-studio-selected'));
+    if (selectedId) {
+      const el = doc.querySelector(`[data-lhp-block="${CSS.escape(selectedId)}"]`);
+      if (el) {
+        el.setAttribute('data-lhp-studio-selected', '');
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
+  }, [selectedId, html]);
+
+  return (
+    <div className={`mx-auto h-full ${device === 'sp' ? 'w-[390px]' : 'w-full max-w-[1440px]'}`}>
+      <iframe
+        ref={ref}
+        title="できあがりの見え方"
+        srcDoc={html}
+        onLoad={attach}
+        className={`w-full h-full bg-white ${device === 'sp' ? 'rounded-[28px] border-[10px] border-slate-800 shadow-2xl' : 'rounded-lg border border-slate-300 shadow-sm'}`}
+      />
+    </div>
+  );
+}
+
+/* ── 入力の部品 ───────────────────────────────────────────────────────── */
+
+function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="block mb-4">
+      <span className="block text-[13px] font-bold text-slate-700 mb-1.5">{label}</span>
+      {children}
+      {hint && <span className="block text-[11px] text-slate-500 mt-1 leading-relaxed">{hint}</span>}
+    </label>
+  );
+}
+
+const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/60';
+
+function Field({ def, value, onChange }: {
+  def: FieldDef;
+  value: unknown;
+  onChange: (next: unknown) => void;
+}) {
+  if (def.type === 'toggle') {
+    return (
+      <label className="flex items-center gap-2 mb-4 cursor-pointer">
+        <input type="checkbox" checked={!!value} onChange={e => onChange(e.target.checked)} className="w-4 h-4 accent-sky-600" />
+        <span className="text-[13px] font-bold text-slate-700">{def.label}</span>
+      </label>
+    );
+  }
+  if (def.type === 'list') {
+    const arr = Array.isArray(value) ? value : [];
+    if (def.ofStrings) {
+      return (
+        <Row label={def.label} hint={def.hint}>
+          <div className="space-y-2">
+            {arr.map((v, i) => (
+              <div key={i} className="flex gap-2">
+                <input className={inputCls} value={String(v ?? '')}
+                  onChange={e => onChange(arr.map((x, j) => j === i ? e.target.value : x))} />
+                <button type="button" className="px-2 text-slate-400 hover:text-red-600"
+                  onClick={() => onChange(arr.filter((_, j) => j !== i))}>削除</button>
+              </div>
+            ))}
+            <button type="button" className="text-[12px] font-bold text-sky-700 hover:underline"
+              onClick={() => onChange([...arr, ''])}>＋ 追加する</button>
+          </div>
+        </Row>
+      );
+    }
+    return (
+      <div className="mb-5">
+        <div className="text-[13px] font-bold text-slate-700 mb-2">{def.label}</div>
+        <div className="space-y-3">
+          {arr.map((item, i) => (
+            <div key={i} className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[11px] font-bold text-slate-500">{i + 1}件目</span>
+                <div className="flex gap-2 text-[11px]">
+                  {i > 0 && <button type="button" className="text-slate-500 hover:text-slate-900"
+                    onClick={() => { const a = [...arr]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; onChange(a); }}>上へ</button>}
+                  {i < arr.length - 1 && <button type="button" className="text-slate-500 hover:text-slate-900"
+                    onClick={() => { const a = [...arr]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; onChange(a); }}>下へ</button>}
+                  <button type="button" className="text-red-600 hover:underline"
+                    onClick={() => onChange(arr.filter((_, j) => j !== i))}>削除</button>
+                </div>
+              </div>
+              {(def.item || []).map(sub => (
+                <Field key={sub.key} def={sub}
+                  value={(item as Record<string, unknown>)?.[sub.key]}
+                  onChange={next => onChange(arr.map((x, j) => j === i ? { ...(x as object), [sub.key]: next } : x))} />
+              ))}
+            </div>
+          ))}
+          <button type="button" className="text-[12px] font-bold text-sky-700 hover:underline"
+            onClick={() => onChange([...arr, { ...(def.itemDefault || {}) }])}>＋ 追加する</button>
+        </div>
+      </div>
+    );
+  }
+  if (def.type === 'color') {
+    return (
+      <Row label={def.label} hint={def.hint}>
+        <div className="flex gap-2 items-center">
+          <input type="color" value={String(value || '#ffffff')} onChange={e => onChange(e.target.value)}
+            className="w-9 h-9 rounded border border-slate-300 bg-transparent cursor-pointer" />
+          <input className={inputCls} value={String(value ?? '')} placeholder="#ffffff"
+            onChange={e => onChange(e.target.value)} />
+        </div>
+      </Row>
+    );
+  }
+  if (def.type === 'select') {
+    return (
+      <Row label={def.label} hint={def.hint}>
+        <select className={inputCls} value={String(value ?? '')} onChange={e => onChange(e.target.value)}>
+          {(def.options || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </Row>
+    );
+  }
+  if (def.type === 'number') {
+    return (
+      <Row label={def.label} hint={def.hint}>
+        <input type="number" className={inputCls} value={String(value ?? '')} min={def.min} max={def.max}
+          onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
+      </Row>
+    );
+  }
+  if (def.type === 'multiline') {
+    return (
+      <Row label={def.label} hint={def.hint}>
+        <textarea className={`${inputCls} min-h-[92px] leading-relaxed`} value={String(value ?? '')}
+          placeholder={def.placeholder}
+          onChange={e => onChange(cleanIncomingText(e.target.value))} />
+      </Row>
+    );
+  }
+  if (def.type === 'image') {
+    return (
+      <Row label={def.label} hint={def.hint || '写真のURL、または /salon/hero-1600.jpg のような置き場所'}>
+        <div className="flex gap-2 items-start">
+          {String(value || '') && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={String(value)} alt="" className="w-14 h-14 rounded object-cover border border-slate-200 bg-slate-100" />
+          )}
+          <input className={inputCls} value={String(value ?? '')} placeholder="https://…"
+            onChange={e => onChange(e.target.value.trim())} />
+        </div>
+      </Row>
+    );
+  }
+  return (
+    <Row label={def.label} hint={def.hint}>
+      <input className={inputCls} value={String(value ?? '')} placeholder={def.placeholder}
+        onChange={e => onChange(cleanIncomingText(e.target.value, 400))} />
+    </Row>
+  );
+}
+
+/* ── 本体 ─────────────────────────────────────────────────────────────── */
+
+function StudioInner() {
+  const params = useSearchParams();
+  const siteIdParam = params.get('siteId');
+
+  const [siteId, setSiteId] = useState<string | null>(siteIdParam);
+  const [step, setStep] = useState<'intake' | 'mood' | 'edit'>(siteIdParam ? 'edit' : 'intake');
+  const [loading, setLoading] = useState(!!siteIdParam);
+  const [loadError, setLoadError] = useState('');
+
+  const [intake, setIntake] = useState<IntakeAnswers>({
+    industry: 'beauty', name: '', area: '', audience: '', goal: 'booking', description: '',
+  });
+
+  const [site, setSite] = useState<StudioSite>(() => ({
+    name: '', pages: [], settings: {
+      colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
+      accentColor: '#2563eb', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
+      larubot: false, laruseo: false, notifyEmail: '', customCss: '',
+      design: { ...DEFAULT_DESIGN }, designPreset: '',
+    },
+  }));
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [device, setDevice] = useState<'pc' | 'sp'>('pc');
+  const [panel, setPanel] = useState<'block' | 'design' | 'ready'>('block');
+  const [saveState, setSaveState] = useState<SaveState>({ kind: 'clean', at: null });
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
+  const [savedSincePublish, setSavedSincePublish] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishNote, setPublishNote] = useState('');
+
+  const siteRef = useRef(site);
+  useEffect(() => { siteRef.current = site; }, [site]);
+  const editSeq = useRef(0);
+  // 読み込みで入れ替えた分は「編集」ではない。
+  // ここを時間差（setTimeout）で打ち消すと、順番によって未保存のまま残る。
+  const hydrating = useRef(true);
+
+  useEffect(() => {
+    if (hydrating.current) { hydrating.current = false; return; }
+    editSeq.current += 1;
+    setSaveState(prev => (prev.kind === 'saving' ? prev : { kind: 'dirty' }));
+  }, [site]);
+
+  /* ── 読み込み ── */
+  useEffect(() => {
+    if (!siteIdParam) return;
+    let alive = true;
+    (async () => {
+      try {
+        // 保存されている内容をそのまま見たい。ブラウザの控えを使わせない
+        const res = await fetch(`/api/sites/${siteIdParam}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status === 401 ? 'ログインが必要です' : `サイトを開けませんでした (${res.status})`);
+        const { site: s } = await res.json();
+        if (!alive || !s) return;
+        const raw = s.blocks_json;
+        const pages: Page[] = raw?.v === 2 && Array.isArray(raw.pages) && raw.pages.length
+          ? raw.pages
+          : [{ id: 'page-main', name: 'トップページ', path: '/', blocks: Array.isArray(raw) ? raw : [], seo: { ...EMPTY_SEO, ...(s.seo_json || {}) } }];
+        const st = (s.settings_json || {}) as Record<string, unknown>;
+        setSite({
+          name: s.name || '',
+          pages,
+          settings: {
+            colorScheme: (st.colorScheme as string) || 'professional-blue',
+            designStyle: (st.designStyle as string) || 'modern',
+            fontFamily: (st.fontFamily as string) || 'noto',
+            accentColor: (st.accentColor as string) || '#2563eb',
+            heroLayout: (st.heroLayout as StudioSettings['heroLayout']) || 'center',
+            headerStyle: (st.headerStyle as StudioSettings['headerStyle']) || 'solid',
+            animLevel: (st.animLevel as StudioSettings['animLevel']) || 'subtle',
+            larubot: !!st.larubot, laruseo: !!st.laruseo,
+            notifyEmail: (st.notifyEmail as string) || '',
+            customCss: (st.customCss as string) || '',
+            // 既存サイトに design が無ければ、いまの見え方を変えない既定値を入れる
+            design: st.design ? normalizeDesign(st.design) : { ...DEFAULT_DESIGN, accent: (st.accentColor as string) || DEFAULT_DESIGN.accent },
+            designPreset: (st.designPreset as string) || '',
+            globalFooter: st.globalFooter as Record<string, unknown> | undefined,
+          },
+        });
+        setPublishedAt(s.published ? (s.updated_at as string) : null);
+        setSelectedId(pages[0]?.blocks?.[0]?.id ?? null);
+        hydrating.current = true;   // この差し替えは編集ではない
+      } catch (e) {
+        if (alive) setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [siteIdParam]);
+
+  const page = site.pages[0];
+  const blocks = useMemo(() => page?.blocks ?? [], [page]);
+
+  const updateBlocks = useCallback((next: Block[]) => {
+    setSite(prev => ({ ...prev, pages: prev.pages.map((p, i) => i === 0 ? { ...p, blocks: next } : p) }));
+  }, []);
+
+  const updateBlockData = useCallback((id: string, key: string, value: unknown) => {
+    setSite(prev => ({
+      ...prev,
+      pages: prev.pages.map((p, i) => i === 0
+        ? { ...p, blocks: p.blocks.map(b => b.id === id ? { ...b, data: { ...b.data, [key]: value } } : b) }
+        : p),
+    }));
+  }, []);
+
+  const setDesign = useCallback((patch: Partial<SiteDesign>) => {
+    setSite(prev => ({ ...prev, settings: { ...prev.settings, design: { ...prev.settings.design, ...patch } } }));
+  }, []);
+
+  /* ── プレビューのHTML ── */
+  const [previewHtml, setPreviewHtml] = useState('');
+  useEffect(() => {
+    if (!page) { setPreviewHtml(''); return; }
+    const t = setTimeout(() => {
+      try {
+        setPreviewHtml(exportToHTML(
+          site.pages,
+          page.seo || EMPTY_SEO,
+          toExportSettings(site.settings) as never,
+          site.name || '店名',
+          { name: site.name, industry: intake.industry, siteId: siteId || 'studio-preview', slug: '' },
+        ));
+      } catch (e) {
+        setPreviewHtml(`<p style="font-family:sans-serif;padding:24px">プレビューを作れませんでした: ${String(e)}</p>`);
+      }
+    }, 140);
+    return () => clearTimeout(t);
+  }, [site, page, intake.industry, siteId]);
+
+  /* ── 保存 ── */
+  const save = useCallback(async () => {
+    const s = siteRef.current;
+    const seq = editSeq.current;
+    setSaveState({ kind: 'saving' });
+    const payload = {
+      name: s.name || '無題のサイト',
+      blocks_json: { v: 2, pages: s.pages },
+      seo_json: s.pages[0]?.seo || EMPTY_SEO,
+      settings_json_patch: toExportSettings(s.settings),
+    };
+    try {
+      let id = siteId;
+      if (id) {
+        const res = await fetch(`/api/sites/${id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const b = await res.json().catch(() => ({}));
+          throw new Error(res.status === 401
+            ? 'ログインが切れています。別のタブで入り直してから、もう一度保存してください'
+            : (b.error as string) || `保存できませんでした (${res.status})`);
+        }
+      } else {
+        const { settings_json_patch, ...rest } = payload;
+        const res = await fetch('/api/sites', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...rest, settings_json: settings_json_patch, industry: intake.industry }),
+        });
+        if (!res.ok) {
+          const b = await res.json().catch(() => ({}));
+          throw new Error((b.error as string) || `保存できませんでした (${res.status})`);
+        }
+        const { site: created } = await res.json();
+        id = created?.id ?? null;
+        setSiteId(id);
+      }
+      setSavedSincePublish(true);
+      // 送っているあいだに続きを編集していたら、保存済みにはしない
+      setSaveState(editSeq.current === seq ? { kind: 'clean', at: new Date() } : { kind: 'dirty' });
+    } catch (e) {
+      setSaveState({ kind: 'failed', message: e instanceof Error ? e.message : '保存できませんでした' });
+    }
+  }, [siteId, intake.industry]);
+
+  // 保存されている内容を、サーバから取り直す。
+  // 別の画面や別の端末で直したあと、こちらの画面を最新にそろえるため。
+  // 画面内の遷移ではなく、読み込みからやり直す必要がある。
+  const reload = useCallback(() => {
+    if (!siteId) return;
+    if (saveState.kind === 'dirty' && !confirm('保存していない変更があります。読み直すと消えます。よろしいですか')) return;
+    window.location.reload();
+  }, [siteId, saveState.kind]);
+
+  const publish = useCallback(async () => {
+    if (!siteId) return;
+    setPublishing(true);
+    setPublishNote('');
+    try {
+      const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'POST' });
+      const b = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((b.error as string) || `公開できませんでした (${res.status})`);
+      setPublishedAt(new Date().toISOString());
+      setSavedSincePublish(false);
+      setPublishNote('公開しました');
+    } catch (e) {
+      setPublishNote(e instanceof Error ? e.message : '公開できませんでした');
+    }
+    setPublishing(false);
+  }, [siteId]);
+
+  /* ── ヒアリングから、はじめの形を作る ── */
+  const buildFromIntake = useCallback((presetId: string) => {
+    const preset = DESIGN_PRESETS.find(p => p.id === presetId) || DESIGN_PRESETS[0];
+    const template = getTemplateForIndustry(intake.industry);
+    let made: Block[] = template
+      ? applyTemplateData(template, {
+        name: intake.name || '店名', address: intake.area,
+        description: intake.description, catchphrase: '', phone: '',
+        services: [], hours: [],
+      })
+      : [];
+    if (!made.length) {
+      made = [
+        { id: 'b-hero', type: 'hero', data: { heading: intake.name || '店名', subheading: intake.area, ctaText: 'お問い合わせ', ctaLink: '#contact' } },
+        { id: 'b-text', type: 'paragraph', data: { text: intake.description, align: 'left' } },
+        { id: 'b-contact', type: 'contact', data: { heading: 'お問い合わせ', subtext: '', fields: ['name', 'email', 'phone', 'message'], buttonText: '送信する' } },
+      ];
+    }
+    made = orderForGoal(made, intake.goal);
+    const seo: SEOSettings = {
+      ...EMPTY_SEO,
+      title: `${intake.name || '店名'}${intake.area ? ` | ${intake.area}` : ''}`,
+      description: intake.description.slice(0, 110),
+    };
+    setSite({
+      name: intake.name || '無題のサイト',
+      pages: [{ id: 'page-main', name: 'トップページ', path: '/', blocks: made, seo }],
+      settings: {
+        colorScheme: 'professional-blue',
+        designStyle: preset.designStyle,
+        fontFamily: preset.fontFamily,
+        accentColor: preset.design.accent,
+        heroLayout: 'split', headerStyle: 'solid', animLevel: 'subtle',
+        larubot: false, laruseo: false, notifyEmail: '', customCss: '',
+        design: { ...preset.design }, designPreset: preset.id,
+      },
+    });
+    setSelectedId(made[0]?.id ?? null);
+    setStep('edit');
+  }, [intake]);
+
+  /* ── 公開準備の確認 ── */
+  const readiness = useMemo(() => {
+    const items: Array<{ ok: boolean; label: string; detail: string }> = [];
+    const all = blocks;
+    const text = JSON.stringify(all);
+    items.push({
+      ok: !!site.name.trim(), label: '店名が入っている',
+      detail: site.name || '左上の店名を入れてください',
+    });
+    items.push({
+      ok: !!(page?.seo?.description || '').trim(), label: '検索結果に出る説明文がある',
+      detail: page?.seo?.description ? `${page.seo.description.slice(0, 40)}…` : '「サイト全体」で入れられます',
+    });
+    const heroBlock = all.find(b => b.type === 'hero');
+    items.push({
+      ok: !!(heroBlock?.data as Record<string, unknown> | undefined)?.bgImage,
+      label: '最初の画面に写真が入っている',
+      detail: (heroBlock?.data as Record<string, unknown> | undefined)?.bgImage ? '入っています' : '写真があると、来た人がすぐ雰囲気を掴めます',
+    });
+    items.push({
+      ok: !/ここに|入力してください|サンプル|見出しを入力/.test(text),
+      label: '例文のままの場所が残っていない',
+      detail: /ここに|入力してください|サンプル|見出しを入力/.test(text) ? '「入力してください」などが残っています' : '大丈夫です',
+    });
+    const hasForm = all.some(b => b.type === 'contact' || b.type === 'booking');
+    items.push({
+      ok: hasForm, label: '連絡を受け取る欄がある',
+      detail: hasForm ? '予約または問い合わせの欄があります' : '予約か問い合わせの節を足してください',
+    });
+    items.push({
+      ok: !!site.settings.notifyEmail.trim() || !hasForm,
+      label: '受け取ったお知らせの届け先が決まっている',
+      detail: site.settings.notifyEmail || 'メールの届け先を「サイト全体」で入れてください',
+    });
+    items.push({
+      ok: all.length >= 4, label: '中身がひととおり揃っている',
+      detail: `${all.length}個の節`,
+    });
+    return items;
+  }, [blocks, site.name, site.settings.notifyEmail, page?.seo?.description]);
+
+  /* ── 画面 ── */
+
+  if (loading) {
+    return <div className="min-h-screen grid place-items-center text-slate-500">開いています…</div>;
+  }
+  if (loadError) {
+    return (
+      <div className="min-h-screen grid place-items-center p-6">
+        <div className="max-w-md text-center">
+          <p className="text-slate-800 font-bold mb-2">{loadError}</p>
+          <Link href="/laruHP/dashboard" className="text-sky-700 underline text-sm">サイト一覧へ戻る</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'intake') return <Intake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} />;
+  if (step === 'mood') return <Mood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} />;
+
+  const selected = blocks.find(b => b.id === selectedId) || null;
+  const def = selected ? BLOCK_DEFS[selected.type] : null;
+
+  return (
+    <div className="h-screen flex flex-col bg-slate-100 text-slate-900">
+      {/* 上の帯 */}
+      <header className="flex items-center gap-3 px-4 h-14 bg-white border-b border-slate-200 flex-shrink-0">
+        <Link href="/laruHP/dashboard" className="text-sm font-bold text-slate-500 hover:text-slate-900">← 一覧</Link>
+        <input
+          className="font-bold text-slate-900 border border-transparent hover:border-slate-300 focus:border-sky-400 rounded px-2 py-1 text-sm w-56 focus:outline-none"
+          value={site.name} placeholder="店名"
+          onChange={e => setSite(prev => ({ ...prev, name: cleanIncomingText(e.target.value, 120) }))}
+        />
+        <div className="flex bg-slate-100 rounded-lg p-0.5 ml-2">
+          {(['pc', 'sp'] as const).map(k => (
+            <button key={k} onClick={() => setDevice(k)}
+              className={`px-3 py-1 rounded-md text-xs font-bold ${device === k ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>
+              {k === 'pc' ? 'パソコン' : 'スマホ'}
+            </button>
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-3">
+          <SaveBadge state={saveState} />
+          <button onClick={reload} disabled={!siteId}
+            className="text-xs font-bold text-slate-500 hover:text-slate-900 disabled:opacity-30">読み直す</button>
+          <button onClick={save} disabled={saveState.kind === 'saving'}
+            className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-bold disabled:opacity-50">
+            {saveState.kind === 'saving' ? '保存中…' : '保存'}
+          </button>
+          <button onClick={() => setPanel('ready')}
+            className="px-4 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-bold">公開の準備</button>
+        </div>
+      </header>
+
+      <div className="flex-1 flex min-h-0">
+        {/* 左: 節の一覧 */}
+        <aside className="w-60 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
+          <div className="px-3 py-2 text-[11px] font-bold text-slate-400">ページの中身</div>
+          {blocks.map((b, i) => (
+            <div key={b.id}
+              className={`group px-3 py-2 border-l-4 cursor-pointer ${selectedId === b.id ? 'border-sky-500 bg-sky-50' : 'border-transparent hover:bg-slate-50'}`}
+              onClick={() => { setSelectedId(b.id); setPanel('block'); }}>
+              <div className="flex items-center gap-2">
+                <span>{blockIcon(b)}</span>
+                <span className="text-[13px] font-bold text-slate-800 flex-1 truncate">{blockLabel(b)}</span>
+                <span className="opacity-0 group-hover:opacity-100 flex gap-1 text-[10px] text-slate-400">
+                  {i > 0 && <button onClick={e => { e.stopPropagation(); const a = [...blocks]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; updateBlocks(a); }}>▲</button>}
+                  {i < blocks.length - 1 && <button onClick={e => { e.stopPropagation(); const a = [...blocks]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; updateBlocks(a); }}>▼</button>}
+                  <button onClick={e => { e.stopPropagation(); if (confirm(`「${blockLabel(b)}」を消しますか`)) updateBlocks(blocks.filter(x => x.id !== b.id)); }}>✕</button>
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 truncate pl-6">{blockSummary(b)}</div>
+            </div>
+          ))}
+          <AddBlock onAdd={type => {
+            const id = `b-${Math.random().toString(36).slice(2, 9)}`;
+            updateBlocks([...blocks, { id, type: type as Block['type'], data: defaultDataFor(type) }]);
+            setSelectedId(id);
+            setPanel('block');
+          }} />
+        </aside>
+
+        {/* 中央: できあがりの見え方 */}
+        <main className="flex-1 min-w-0 p-4 overflow-hidden">
+          <Preview html={previewHtml} device={device} selectedId={selectedId} onSelect={id => { setSelectedId(id); setPanel('block'); }} />
+        </main>
+
+        {/* 右: 設定 */}
+        <aside className="w-[340px] bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
+          <div className="flex border-b border-slate-200 flex-shrink-0">
+            {([['block', '選んだ場所'], ['design', 'サイト全体'], ['ready', '公開の準備']] as const).map(([k, label]) => (
+              <button key={k} onClick={() => setPanel(k)}
+                className={`flex-1 py-2.5 text-[12px] font-bold ${panel === k ? 'text-sky-700 border-b-2 border-sky-600' : 'text-slate-400'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {panel === 'block' && (
+              selected && def ? (
+                <>
+                  <div className="mb-4">
+                    <div className="text-sm font-bold text-slate-900">{def.label}</div>
+                    <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{def.purpose}</div>
+                  </div>
+                  {def.fields.map(f => (
+                    <Field key={f.key} def={f}
+                      value={(selected.data as Record<string, unknown>)[f.key]}
+                      onChange={v => updateBlockData(selected.id, f.key, v)} />
+                  ))}
+                </>
+              ) : selected ? (
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  この節（{selected.type}）は、いまの画面からは細かい設定を出していません。
+                  <Link href={`/laruHP/builder?siteId=${siteId ?? ''}`} className="text-sky-700 underline ml-1">これまでの編集画面</Link>
+                  で直せます。
+                </p>
+              ) : (
+                <p className="text-sm text-slate-500">左の一覧か、真ん中のプレビューを押すと、その場所の設定が出ます。</p>
+              )
+            )}
+
+            {panel === 'design' && (
+              <DesignPanel
+                site={site}
+                setSite={setSite}
+                setDesign={setDesign}
+                seo={page?.seo || EMPTY_SEO}
+                onSeo={next => setSite(prev => ({ ...prev, pages: prev.pages.map((p, i) => i === 0 ? { ...p, seo: next } : p) }))}
+              />
+            )}
+
+            {panel === 'ready' && (
+              <Ready
+                items={readiness}
+                siteId={siteId}
+                published={!!publishedAt}
+                savedSincePublish={savedSincePublish}
+                saveState={saveState}
+                publishing={publishing}
+                note={publishNote}
+                onPublish={publish}
+              />
+            )}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+/* ── 上の帯の保存表示 ── */
+function SaveBadge({ state }: { state: SaveState }) {
+  if (state.kind === 'saving') return <span className="text-xs font-bold text-slate-500">保存しています…</span>;
+  if (state.kind === 'dirty') return <span className="text-xs font-bold text-amber-600">未保存の変更があります</span>;
+  if (state.kind === 'failed') {
+    return <span className="text-xs font-bold text-red-600 max-w-[300px] truncate" title={state.message}>保存できませんでした: {state.message}</span>;
+  }
+  return <span className="text-xs font-bold text-emerald-600">{state.at ? `${state.at.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に保存` : '保存済み'}</span>;
+}
+
+/* ── 節を足す ── */
+function AddBlock({ onAdd }: { onAdd: (type: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="p-3">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full py-2 rounded-lg border border-dashed border-slate-300 text-[12px] font-bold text-slate-500 hover:border-sky-400 hover:text-sky-700">
+        ＋ 節を足す
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1">
+          {Object.entries(BLOCK_DEFS).map(([type, d]) => (
+            <button key={type} onClick={() => { onAdd(type); setOpen(false); }}
+              className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-100">
+              <span className="text-[13px] font-bold text-slate-700">{d.icon} {d.label}</span>
+              <span className="block text-[10px] text-slate-400 leading-tight">{d.purpose}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function defaultDataFor(type: string): Record<string, unknown> {
+  const base: Record<string, Record<string, unknown>> = {
+    hero: { heading: '', subheading: '', ctaText: 'お問い合わせ', ctaLink: '#contact', bgColor: '#ffffff', textColor: '#111111' },
+    heading: { text: '見出し', subtext: '', align: 'center' },
+    paragraph: { text: '', align: 'left' },
+    image: { src: '', alt: '', height: 320 },
+    gallery: { heading: '写真', images: [], columns: '2' },
+    'price-table': { heading: 'メニューと料金', subtext: '', plans: [] },
+    team: { heading: '担当する人', items: [] },
+    faq: { heading: 'よくある質問', items: [] },
+    hours: { heading: '営業時間', schedule: [], note: '' },
+    booking: { mode: 'simple', heading: 'ご予約', subtext: '', serviceTypes: [], timeSlots: ['10:00', '11:00', '13:00'], buttonText: 'この内容で予約を申し込む', buttonColor: '#2563eb', bgColor: '#f8fafc', stickyCta: true, stickyCtaText: 'ご予約へ' },
+    contact: { heading: 'お問い合わせ', subtext: '', fields: ['name', 'email', 'phone', 'message'], buttonText: '送信する', buttonColor: '#2563eb', bgColor: '#ffffff' },
+    'two-col': { col1Title: '', col1Text: '', col2Title: '', col2Text: '' },
+    map: { heading: '地図', embedUrl: '', height: 320 },
+    cta: { heading: '', subtext: '', buttonText: '', buttonLink: '#contact', bgColor: '#111827' },
+    tabs: { heading: '', items: [] },
+  };
+  return base[type] ?? {};
+}
+
+/* ── サイト全体の設定 ── */
+function DesignPanel({ site, setSite, setDesign, seo, onSeo }: {
+  site: StudioSite;
+  setSite: React.Dispatch<React.SetStateAction<StudioSite>>;
+  setDesign: (patch: Partial<SiteDesign>) => void;
+  seo: SEOSettings;
+  onSeo: (next: SEOSettings) => void;
+}) {
+  const d = site.settings.design;
+  const swatch = (key: keyof SiteDesign, label: string, hint?: string) => (
+    <Row key={key} label={label} hint={hint}>
+      <div className="flex gap-2 items-center">
+        <input type="color" value={String(d[key])} onChange={e => setDesign({ [key]: e.target.value } as Partial<SiteDesign>)}
+          className="w-9 h-9 rounded border border-slate-300 bg-transparent cursor-pointer" />
+        <input className={inputCls} value={String(d[key])}
+          onChange={e => setDesign({ [key]: e.target.value } as Partial<SiteDesign>)} />
+      </div>
+    </Row>
+  );
+  const slider = (key: keyof SiteDesign, label: string, min: number, max: number, stepv: number, unit = '') => (
+    <Row key={key} label={`${label}（${d[key]}${unit}）`}>
+      <input type="range" min={min} max={max} step={stepv} value={Number(d[key])}
+        onChange={e => setDesign({ [key]: Number(e.target.value) } as Partial<SiteDesign>)}
+        className="w-full accent-sky-600" />
+    </Row>
+  );
+
+  return (
+    <>
+      <div className="mb-4">
+        <div className="text-sm font-bold text-slate-900">サイト全体</div>
+        <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
+          ここで決めた色や余白が、すべての節に効きます。CSSを書く必要はありません。
+        </div>
+      </div>
+
+      <Row label="雰囲気を選び直す" hint="いまの文章と写真はそのまま、見た目だけ入れ替わります">
+        <div className="grid grid-cols-2 gap-1.5">
+          {DESIGN_PRESETS.map(p => (
+            <button key={p.id} type="button"
+              onClick={() => setSite(prev => ({
+                ...prev,
+                settings: { ...prev.settings, design: { ...p.design }, designStyle: p.designStyle, fontFamily: p.fontFamily, accentColor: p.design.accent, designPreset: p.id },
+              }))}
+              className={`text-left px-2 py-1.5 rounded-lg border text-[12px] font-bold ${site.settings.designPreset === p.id ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
+              {p.name}
+            </button>
+          ))}
+        </div>
+      </Row>
+
+      <Row label="書体">
+        <select className={inputCls} value={site.settings.fontFamily}
+          onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, fontFamily: e.target.value } }))}>
+          {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+      </Row>
+
+      <div className="text-[11px] font-bold text-slate-400 mt-5 mb-2">色</div>
+      {swatch('ink', '文字の色')}
+      {swatch('bg', '地の色')}
+      {swatch('accent', '差し色', 'ボタンや強調に使います')}
+      {swatch('surface', '薄い面の色', 'カードや帯の地色')}
+      {swatch('line', '罫線の色')}
+
+      <div className="text-[11px] font-bold text-slate-400 mt-5 mb-2">文字と余白</div>
+      {slider('bodyScale', '本文の大きさ', 0.85, 1.25, 0.01)}
+      {slider('bodyLeading', '行の高さ', 1.5, 2.3, 0.05)}
+      {slider('bodyTracking', '本文の字間', 0, 0.12, 0.005, 'em')}
+      {slider('headingScale', '見出しの大きさ', 0.8, 1.4, 0.05)}
+      {slider('headingTracking', '見出しの字間', 0, 0.2, 0.01, 'em')}
+      {slider('headingWeight', '見出しの太さ', 200, 900, 100)}
+      {slider('readWidth', '一行の長さ', 24, 46, 1, '字')}
+      <Row label="節と節のあいだ">
+        <select className={inputCls} value={d.space}
+          onChange={e => setDesign({ space: e.target.value as SiteDesign['space'] })}>
+          <option value="tight">つめる</option>
+          <option value="normal">ふつう</option>
+          <option value="roomy">ひろめ</option>
+          <option value="airy">とてもひろい</option>
+        </select>
+      </Row>
+
+      <div className="text-[11px] font-bold text-slate-400 mt-5 mb-2">形</div>
+      {slider('radius', '角の丸み', 0, 32, 1, 'px')}
+      <Row label="ボタンの形">
+        <select className={inputCls} value={d.buttonShape}
+          onChange={e => setDesign({ buttonShape: e.target.value as SiteDesign['buttonShape'] })}>
+          <option value="square">角のまま</option>
+          <option value="soft">すこし丸い</option>
+          <option value="pill">まるい</option>
+        </select>
+      </Row>
+      <Row label="見出しの飾り線">
+        <select className={inputCls} value={d.titleRule}
+          onChange={e => setDesign({ titleRule: e.target.value as SiteDesign['titleRule'] })}>
+          <option value="none">なし</option>
+          <option value="short">短い線</option>
+          <option value="underline">下線</option>
+        </select>
+      </Row>
+      <Row label="写真の比率" hint="並べた写真の切り取り方">
+        <select className={inputCls} value={d.photoRatio}
+          onChange={e => setDesign({ photoRatio: e.target.value as SiteDesign['photoRatio'] })}>
+          <option value="1:1">正方形</option>
+          <option value="4:5">たて長（4:5）</option>
+          <option value="3:4">たて長（3:4）</option>
+          <option value="4:3">よこ長（4:3）</option>
+          <option value="16:9">よこ長（16:9）</option>
+        </select>
+      </Row>
+
+      <div className="text-[11px] font-bold text-slate-400 mt-5 mb-2">写真の見せ方</div>
+      <Row label="最初の画面の組み方">
+        <select className={inputCls} value={site.settings.heroLayout}
+          onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, heroLayout: e.target.value as StudioSettings['heroLayout'] } }))}>
+          <option value="center">中央に文字</option>
+          <option value="left">左に文字</option>
+          <option value="split">左に文字・右に写真</option>
+        </select>
+      </Row>
+      <Row label="動き" hint="読みづらいと感じたら「なし」にしてください">
+        <select className={inputCls} value={site.settings.animLevel}
+          onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, animLevel: e.target.value as StudioSettings['animLevel'] } }))}>
+          <option value="none">なし</option>
+          <option value="subtle">ひかえめ</option>
+          <option value="full">しっかり</option>
+        </select>
+      </Row>
+
+      <div className="text-[11px] font-bold text-slate-400 mt-5 mb-2">検索・連絡</div>
+      <Row label="検索結果に出る説明文" hint="110文字くらいまで。何の店で、どこにあるかを書きます">
+        <textarea className={`${inputCls} min-h-[72px]`} value={seo.description}
+          onChange={e => onSeo({ ...seo, description: cleanIncomingText(e.target.value, 200) })} />
+      </Row>
+      <Row label="問い合わせの届け先（メール）">
+        <input className={inputCls} type="email" value={site.settings.notifyEmail}
+          onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, notifyEmail: e.target.value.trim() } }))} />
+      </Row>
+    </>
+  );
+}
+
+/* ── 公開の準備 ── */
+function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, onPublish }: {
+  items: Array<{ ok: boolean; label: string; detail: string }>;
+  siteId: string | null;
+  published: boolean;
+  savedSincePublish: boolean;
+  saveState: SaveState;
+  publishing: boolean;
+  note: string;
+  onPublish: () => void;
+}) {
+  const done = items.filter(i => i.ok).length;
+  return (
+    <>
+      <div className="mb-4">
+        <div className="text-sm font-bold text-slate-900">公開の準備（{done}/{items.length}）</div>
+        <div className="text-[11px] text-slate-500 mt-0.5">すべて埋まっていなくても公開できます。あとから直せます。</div>
+      </div>
+      <ul className="space-y-2 mb-5">
+        {items.map(i => (
+          <li key={i.label} className="flex gap-2">
+            <span className={`mt-0.5 ${i.ok ? 'text-emerald-600' : 'text-amber-500'}`}>{i.ok ? '✓' : '!'}</span>
+            <div>
+              <div className="text-[13px] font-bold text-slate-800">{i.label}</div>
+              <div className="text-[11px] text-slate-500 leading-relaxed">{i.detail}</div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="border-t border-slate-200 pt-4">
+        <div className="text-[12px] text-slate-600 mb-2 leading-relaxed">
+          {!siteId && '最初に一度「保存」を押すと、公開できるようになります。'}
+          {siteId && !published && 'まだ公開していません。'}
+          {siteId && published && savedSincePublish && '公開したあとに直した内容があります。もう一度公開すると、その内容が出ます。'}
+          {siteId && published && !savedSincePublish && '公開しています。いまの内容が出ています。'}
+        </div>
+        {saveState.kind === 'dirty' && (
+          <div className="text-[12px] font-bold text-amber-700 mb-2">先に「保存」を押してください。</div>
+        )}
+        <button onClick={onPublish} disabled={!siteId || publishing || saveState.kind === 'dirty'}
+          className="w-full py-2.5 rounded-lg bg-sky-600 text-white text-sm font-bold disabled:opacity-40">
+          {publishing ? '公開しています…' : published ? 'この内容で公開し直す' : '公開する'}
+        </button>
+        {note && <div className="text-[12px] mt-2 text-slate-700">{note}</div>}
+        {siteId && (
+          <Link href={`/laruHP/builder?siteId=${siteId}`}
+            className="block text-center text-[11px] text-slate-400 hover:text-slate-700 mt-3 underline">
+            これまでの編集画面を開く
+          </Link>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ── ステップ1: きく ── */
+function Intake({ intake, setIntake, onNext }: {
+  intake: IntakeAnswers;
+  setIntake: React.Dispatch<React.SetStateAction<IntakeAnswers>>;
+  onNext: () => void;
+}) {
+  const ready = intake.name.trim().length > 0;
+  return (
+    <div className="min-h-screen bg-slate-50 py-12 px-5">
+      <div className="max-w-xl mx-auto">
+        <div className="text-[11px] font-bold text-sky-700 mb-2">1 / 3　きく</div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-1">お店のことを、少しだけ教えてください</h1>
+        <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+          この4つだけで、たたき台を作ります。あとから全部直せます。
+        </p>
+
+        <Row label="何のお店ですか">
+          <select className={inputCls} value={intake.industry}
+            onChange={e => setIntake(v => ({ ...v, industry: e.target.value }))}>
+            {INDUSTRY_CHOICES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </Row>
+        <Row label="店名・屋号">
+          <input className={inputCls} value={intake.name} placeholder="結い庵"
+            onChange={e => setIntake(v => ({ ...v, name: cleanIncomingText(e.target.value, 120) }))} />
+        </Row>
+        <Row label="どこにありますか" hint="市区町村や、最寄り駅まででかまいません">
+          <input className={inputCls} value={intake.area} placeholder="東京都国立市"
+            onChange={e => setIntake(v => ({ ...v, area: cleanIncomingText(e.target.value, 120) }))} />
+        </Row>
+        <Row label="どんな人に来てほしいですか" hint="サイトの言葉づかいを決めるのに使います">
+          <input className={inputCls} value={intake.audience} placeholder="髪のくせで朝に困っている人"
+            onChange={e => setIntake(v => ({ ...v, audience: cleanIncomingText(e.target.value, 200) }))} />
+        </Row>
+
+        <div className="mb-5">
+          <div className="text-[13px] font-bold text-slate-700 mb-2">来た人に、まずしてほしいことは</div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {GOALS.map(g => (
+              <button key={g.value} type="button" onClick={() => setIntake(v => ({ ...v, goal: g.value }))}
+                className={`text-left px-3 py-2.5 rounded-xl border-2 ${intake.goal === g.value ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                <div className="text-[13px] font-bold text-slate-800">{g.label}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">{g.note}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Row label="お店のことを、ひとことで" hint="うまく書けなくて大丈夫です。あとで直せます">
+          <textarea className={`${inputCls} min-h-[90px]`} value={intake.description}
+            placeholder="朝、自分で乾かしてまとまる髪を目指す、予約制の美容室です。"
+            onChange={e => setIntake(v => ({ ...v, description: cleanIncomingText(e.target.value, 600) }))} />
+        </Row>
+
+        <button onClick={onNext} disabled={!ready}
+          className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold disabled:opacity-30">
+          雰囲気を選ぶ →
+        </button>
+        {!ready && <p className="text-[11px] text-slate-400 mt-2 text-center">店名だけ入れてください</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ── ステップ2: えらぶ ──
+   見本は静止画ではなく、実際の公開用HTMLをその場で作って表示している。
+   選んだあとに「思っていたのと違う」が起きないようにするため。 */
+function Mood({ intake, onBack, onPick }: {
+  intake: IntakeAnswers;
+  onBack: () => void;
+  onPick: (presetId: string) => void;
+}) {
+  const samples = useMemo(() => DESIGN_PRESETS.map(p => {
+    const seo = { ...EMPTY_SEO, title: intake.name || '店名' };
+    const blocks: Block[] = [
+      { id: 's-hero', type: 'hero', data: { heading: intake.name || '店名', subheading: intake.area || 'まちの名前', ctaText: 'ご予約へ', ctaLink: '#', bgColor: p.design.bg, textColor: p.design.ink } },
+      { id: 's-lead', type: 'heading', data: { text: '当店について', subtext: '', align: 'center' } },
+      { id: 's-p', type: 'paragraph', data: { text: intake.description || '仕上がりの写真がきれいなのは当たり前だと思っています。基準にしているのは、そのあとの毎日です。', align: 'left' } },
+      { id: 's-price', type: 'price-table', data: { heading: 'メニューと料金', subtext: '表示は税込です', plans: [
+        { name: '基本のメニュー', price: '6,600', period: '円', description: 'ご相談を含みます', features: ['ていねいに伺います'], highlighted: true, buttonText: '予約する', buttonLink: '#' },
+      ] } },
+    ];
+    const html = exportToHTML(
+      [{ id: 'p', name: 'p', path: '/', blocks, seo }],
+      seo,
+      {
+        colorScheme: 'professional-blue', style: 'clean', designStyle: p.designStyle, fontFamily: p.fontFamily,
+        accentColor: p.design.accent, heroLayout: 'center', headerStyle: 'solid', animLevel: 'none',
+        larubot: false, laruseo: false, design: p.design as unknown as Record<string, unknown>,
+      } as never,
+      intake.name || '店名',
+    );
+    return { preset: p, html };
+  }), [intake]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 py-10 px-5">
+      <div className="max-w-5xl mx-auto">
+        <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-900 mb-4">← 戻る</button>
+        <div className="text-[11px] font-bold text-sky-700 mb-2">2 / 3　えらぶ</div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-1">どの雰囲気が近いですか</h1>
+        <p className="text-sm text-slate-500 mb-6">実際に出来上がる見た目です。あとから何度でも変えられます。</p>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {samples.map(({ preset, html }) => (
+            <button key={preset.id} onClick={() => onPick(preset.id)}
+              className="text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-sky-500 overflow-hidden transition-colors">
+              <div className="h-64 overflow-hidden bg-white pointer-events-none">
+                <iframe title={preset.name} srcDoc={html}
+                  className="w-[1280px] h-[1024px] origin-top-left"
+                  style={{ transform: 'scale(0.3)', border: 0 }} />
+              </div>
+              <div className="p-3 border-t border-slate-100">
+                <div className="text-sm font-bold text-slate-900">{preset.name}</div>
+                <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{preset.note}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function StudioPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen grid place-items-center text-slate-500">開いています…</div>}>
+      <StudioInner />
+    </Suspense>
+  );
+}

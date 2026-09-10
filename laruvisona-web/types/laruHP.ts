@@ -70,6 +70,10 @@ export interface SiteSettings {
   heroLayout?: 'center' | 'left' | 'split';
   headerStyle?: 'transparent' | 'solid' | 'colored';
   animLevel?: 'none' | 'subtle' | 'full';
+  /** サイト全体の見た目（色・余白・書体の大きさなど）。lib/site-design.ts が扱う */
+  design?: Record<string, unknown>;
+  /** 選んだ雰囲気の見本のid（あとで見分けるためだけに持つ） */
+  designPreset?: string;
 }
 
 export interface Site {

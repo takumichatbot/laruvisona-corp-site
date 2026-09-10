@@ -105,6 +105,81 @@ test('見出しに書かれたHTMLは、これまでどおり文字として出�
   assert.match(h, /&lt;img src=x onerror=alert\(1\)&gt;危険/);
 });
 
+
+/* ── 生成された文字を、HTMLとして動かさない ───────────────────────────
+   ブロックの中身にはAIの生成結果や他サイトからの取り込みも入る。
+   公開ページでも編集画面でも、それらが札として動いてはいけない。 */
+
+const NASTY = '<img src=x onerror=alert(1)>';
+
+test('見出し・本文の記号は、どのブロックでも文字として出す', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'b1', type: 'hero', data: { heading: NASTY, subheading: NASTY, ctaText: NASTY, ctaLink: '#' } },
+      { id: 'b2', type: 'paragraph', data: { text: NASTY, align: 'left' } },
+      { id: 'b3', type: 'faq', data: { heading: NASTY, items: [{ q: NASTY, a: NASTY }] } },
+      { id: 'b4', type: 'price-table', data: { heading: NASTY, plans: [
+        { name: NASTY, price: '1,000', period: '円', description: NASTY, features: [NASTY], highlighted: false, buttonText: NASTY, buttonLink: '#' },
+      ] } },
+      { id: 'b5', type: 'team', data: { heading: NASTY, items: [{ name: NASTY, role: NASTY, bio: NASTY, photo: '' }] } },
+      { id: 'b6', type: 'three-col', data: { col1Icon: NASTY, col1Title: NASTY, col1Text: NASTY } },
+    ] }] as never,
+    seo, settings, 'テスト店',
+  );
+  assert.equal(/<img src=x onerror/.test(html), false, '生成テキストがHTMLとして出ている');
+  assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'), '文字として出ていない');
+});
+
+test('リンクの欄に javascript: を入れても押せる形にしない', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'b1', type: 'hero', data: { heading: 'h', subheading: 's', ctaText: 'c', ctaLink: 'javascript:alert(1)' } },
+      { id: 'b2', type: 'cta', data: { heading: 'h', buttonText: 'b', buttonLink: 'javascript:alert(1)' } },
+      { id: 'b3', type: 'nav', data: { logo: 'L', links: [], showCta: true, ctaText: 'c', ctaLink: 'javascript:alert(1)' } },
+      { id: 'b4', type: 'image', data: { src: 'javascript:alert(1)', alt: 'a' } },
+    ] }] as never,
+    seo, settings, 'テスト店',
+  );
+  assert.equal(/javascript:/.test(html), false, 'javascript: のリンクが残っている');
+});
+
+test('色や高さの欄から、属性や別の宣言へ抜け出せない', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'b1', type: 'hero', data: { heading: 'h', subheading: 's', ctaText: 'c', ctaLink: '#', bgColor: '"><script>alert(1)</script><x y="' } },
+      { id: 'b2', type: 'image', data: { src: '/a.jpg', alt: 'a', height: '1;background:url(javascript:alert(1))' } },
+      { id: 'b3', type: 'map', data: { heading: 'm', embedUrl: 'javascript:alert(1)', height: 320 } },
+    ] }] as never,
+    seo, settings, 'テスト店',
+  );
+  assert.equal(/<script>alert\(1\)<\/script>/.test(html), false, '属性から抜け出せている');
+  assert.equal(/javascript:/.test(html), false);
+});
+
+test('カウントダウンの日付を、スクリプトの外へ出さない', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'b1', type: 'countdown', data: { heading: 'h', subtext: '', targetDate: '2026-01-01"));alert(1);//', bgColor: '#000', textColor: '#fff' } },
+    ] }] as never,
+    seo, settings, 'テスト店',
+  );
+  // 属性側はエスケープされている
+  assert.match(html, /data-target="2026-01-01&quot;\)\);alert\(1\);\/\/"/);
+  // スクリプト側は、引用符を閉じずに文字列のまま渡している
+  const asString = 'new Date("2026-01-01\\"));alert(1);//")';
+  assert.ok(html.includes(asString), '日付をスクリプトの文字列として渡していない');
+});
+
+test('送信後の転送先に、スクリプトを書けない', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'b1', type: 'contact', data: { heading: 'h', subtext: '', fields: ['name', 'email', 'message'], buttonText: 'send', redirectUrl: "javascript:alert(1)" } },
+    ] }] as never,
+    seo, settings, 'テスト店',
+  );
+  assert.equal(/javascript:/.test(html), false);
+});
+
 test('生成HTMLを変えたら EXPORT_VERSION を上げる（既存の公開HTMLが再生成される）', () => {
   assert.ok(EXPORT_VERSION >= 3, '公開HTMLを変更したのに EXPORT_VERSION が上がっていない');
   assert.match(basic, new RegExp(`<!--lhpv:${EXPORT_VERSION}-->$`), '版数の埋め込みが末尾に無い');
