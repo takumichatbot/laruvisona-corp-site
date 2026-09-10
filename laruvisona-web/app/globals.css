@@ -3,6 +3,24 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* 端末に元から入っている日本語フォント。
+     Apple はヒラギノ角ゴ、Windows は游ゴシック、Android/Linux は Noto Sans CJK。
+     0バイトで日本語が組める。 */
+  --font-jp-system:
+    system-ui,
+    -apple-system,
+    'Hiragino Kaku Gothic ProN',
+    'Hiragino Sans',
+    'Noto Sans CJK JP',
+    'Yu Gothic UI', 'Yu Gothic', Meiryo,
+    sans-serif;
+
+  /* 会社のブランド書体の既定値。
+     components/BrandFonts.tsx を置いた画面だけ、実際の書体に差し替わる。
+     置かない画面（管理画面・顧客の公開ページ）は端末フォントのまま。 */
+  --font-noto-sans-jp: var(--font-jp-system);
+  --font-space-grotesk: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 @theme inline {
@@ -27,6 +45,16 @@ body {
 
 h1, h2, h3, h4 {
   font-family: var(--font-noto-sans-jp), 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+}
+
+/* 顧客が公開したページの中には、アプリ側から書体を指定しない。
+   顧客の書き出しHTMLは body に自分の書体を当てるが、CSSでは
+   「継承した値」より「直接当たった宣言」が勝つため、上の h1〜h4 の指定が
+   顧客の見出しを上書きしてしまっていた（顧客が明朝を選んでも見出しはゴシック）。
+   ここで継承に戻すことで、顧客が選んだ書体がそのまま見出しにも効く。
+   端末フォントを強制するのではなく、指定をやめるための宣言。 */
+.laru-published :is(h1, h2, h3, h4, h5, h6) {
+  font-family: inherit;
 }
 
 .font-en h1,

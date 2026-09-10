@@ -10,6 +10,7 @@ import { WORKS, ACCENT_STYLES } from '@/lib/works-data';
 import LarubotContactForm from '@/components/LarubotContactForm';
 import Intro from '@/components/Intro';
 import { track } from '@/lib/analytics';
+import BrandFonts from '@/components/BrandFonts';
 
 // 受託開発の進め方（#process セクション）
 const PROCESS_STEPS = [
@@ -122,6 +123,8 @@ export default function Home() {
 
   return (
     <>
+    {/* 会社サイトのブランド書体。共通レイアウトには置かない */}
+    <BrandFonts />
     {showIntro && <Intro onComplete={() => { setShowIntro(false); window.dispatchEvent(new Event('lv:intro-done')); }} />}
     {/* bg必須: globals.css の非レイヤー body{background:#fff} が Tailwind v4 のレイヤー化
         ユーティリティ(bodyのbg-[#030712])に勝つため、LPはここで暗背景を敷く */}

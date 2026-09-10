@@ -66,17 +66,13 @@ test('システムフォントで組む', () => {
   assert.match(page, /font-system-jp/);
   const css = read('app/globals.css');
   assert.match(css, /\.font-system-jp/);
-  // 既存の body には Noto Sans JP のグローバル指定がある（従来からのもの）。
-  // 今回追加したシステムフォントは、それを書き換えずクラスとして足すこと。
-  // グローバルに当てると既存の全ページの見た目が変わってしまう。
-  const globalRules = css.split('.font-system-jp')[0];
-  assert.equal(/system-ui/.test(globalRules), false,
-    'システムフォントをグローバルに当てている（既存ページに影響する）');
   assert.match(css, /\.font-system-jp[\s\S]{0,600}?system-ui/, 'クラスとして定義されていない');
-  // globals.css の h1〜h6 への直接指定に負けないよう、見出しにも明示的に当てる。
+  // globals.css の h1〜h4 への直接指定に負けないよう、見出しにも明示的に当てる。
   // これが無いと見出しだけ Web フォントのままになり、実測で11ファイル245KBが残った。
   assert.match(css, /\.font-system-jp :is\(h1, h2, h3, h4, h5, h6\)/,
     '見出しにシステムフォントが当たらない');
+  // 新LPはブランド書体を読み込まない（読み込んでも使わないので転送量だけ増える）
+  assert.equal(/BrandFonts/.test(page), false, '新LPが使わないWebフォントを読み込んでいる');
 });
 
 test('主CTAは目的が1つで、長いページに繰り返し置かれている', () => {

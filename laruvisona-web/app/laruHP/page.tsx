@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import BrandFonts from '@/components/BrandFonts';
 
 
 // ショーケースのモックに、業種画像ライブラリ(AI生成)の実写を敷く。
@@ -460,6 +461,8 @@ export default function LaruHPLandingPage() {
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900 overflow-x-hidden">
+      {/* このLPのブランド書体。管理画面には配らない */}
+      <BrandFonts />
 
       {/* ヒーローの初期状態。JSが動く環境でだけ隠す。
           JS無効・動きを減らす設定・別タブで開かれた場合は、この class が付かないので

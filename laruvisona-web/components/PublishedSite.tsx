@@ -68,5 +68,15 @@ export default function PublishedSite({ html, style }: { html: string; style?: R
     }
   }, []);
 
-  return <div ref={ref} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: inertize(html) }} style={style} />;
+  // laru-published: この中の書体は顧客の設定が決める。
+  // アプリ側の h1〜h4 の指定が顧客の見出しを上書きしないようにするための目印。
+  return (
+    <div
+      ref={ref}
+      className="laru-published"
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: inertize(html) }}
+      style={style}
+    />
+  );
 }

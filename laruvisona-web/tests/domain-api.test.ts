@@ -325,3 +325,80 @@ test('別名ホストの配信は、そのホストが属するサイトの正�
   // 公開中のサイトに限る
   assert.match(p, /sites\.published=is\.true/);
 });
+
+// ── フォント配布（案B） ──────────────────────────────
+//
+// 監督レビュー(e836ed3) 3:
+//   共通レイアウトの日本語Webフォントと、顧客本文への強制指定だけを外す。
+//   会社のブランド書体と、顧客が選んだ書体は維持する。
+
+/** 会社のブランド書体を読み込む画面。ここ以外には配らない */
+const BRAND_FONT_ROUTES = [
+  'app/page.tsx',                 // 会社トップ
+  'app/laruHP/page.tsx',          // LARU HP のLP
+  'app/services/layout.tsx',
+  'app/works/layout.tsx',
+  'app/contact/layout.tsx',
+  'app/blog/layout.tsx',
+  'app/privacy/layout.tsx',
+  'app/terms/layout.tsx',
+];
+
+/** ブランド書体を配ってはいけない画面 */
+const NO_BRAND_FONT_ROUTES = [
+  'app/layout.tsx',               // 全ページ共通
+  'app/laruHP/layout.tsx',        // 管理画面ぜんぶ
+  'app/hp/[slug]/page.tsx',       // 顧客の公開ページ
+  'app/hp/[slug]/shop/page.tsx',
+  'app/lp-next/page.tsx',         // 端末フォントで組んである
+];
+
+test('共通レイアウトは日本語Webフォントを配らない', () => {
+  const layout = code('app/layout.tsx');
+  assert.equal(/next\/font\/google/.test(layout), false,
+    '共通レイアウトでWebフォントを読み込んでいる（全ページに配られる）');
+  assert.equal(/Noto_Sans_JP/.test(layout), false);
+});
+
+test('ブランド書体は、ブランドを見せる画面だけが読み込む', () => {
+  for (const f of BRAND_FONT_ROUTES) {
+    assert.match(code(f), /BrandFonts/, `ブランド書体が抜けている: ${f}`);
+  }
+  for (const f of NO_BRAND_FONT_ROUTES) {
+    assert.equal(/BrandFonts/.test(code(f)), false, `ブランド書体を配っている: ${f}`);
+  }
+});
+
+test('ブランド書体の部品は、会社の2書体を維持している', () => {
+  const bf = code('components/BrandFonts.tsx');
+  assert.match(bf, /Space_Grotesk/, '欧文のブランド書体が消えている');
+  assert.match(bf, /Noto_Sans_JP/, '和文のブランド書体が消えている');
+  assert.match(bf, /--font-space-grotesk:/);
+  assert.match(bf, /--font-noto-sans-jp:/);
+});
+
+test('ブランド書体を置かない画面の既定は端末フォント', () => {
+  const css = code('app/globals.css');
+  assert.match(css, /--font-jp-system:/);
+  assert.match(css, /--font-noto-sans-jp: var\(--font-jp-system\)/,
+    '既定が端末フォントになっていない');
+});
+
+test('顧客の公開ページの見出しに、アプリ側から書体を指定しない', () => {
+  // 端末フォントを強制するのではなく、指定をやめて顧客の設定を継承させる。
+  const css = code('app/globals.css');
+  assert.match(css, /\.laru-published :is\(h1, h2, h3, h4, h5, h6\) \{\s*font-family: inherit;/,
+    '顧客の見出しがアプリ側の書体で上書きされたままになっている');
+  assert.equal(/\.laru-published[^{]*\{[^}]*system-ui/.test(css), false,
+    '顧客の見出しに端末フォントを強制している');
+  assert.match(code('components/PublishedSite.tsx'), /className="laru-published"/);
+});
+
+test('顧客が選んだ書体は、これまでどおり読み込む', () => {
+  const ex = code('lib/html-export.ts');
+  assert.match(ex, /fonts\.googleapis\.com\/css2\?family=\$\{font\.url\}/,
+    '顧客が選んだ書体の読み込みを消している');
+  for (const key of ['noto', 'zen', 'mincho', 'rounded', 'biz', 'kaisei']) {
+    assert.match(ex, new RegExp(`'${key}':`), `書体の選択肢が減っている: ${key}`);
+  }
+});
