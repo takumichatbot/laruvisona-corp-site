@@ -12,7 +12,6 @@
  *  - 料金と無料期間は、決済で使っている定義から持ってくる。
  *  - 未実装の機能、架空の利用者数、作った口コミは載せない。
  */
-import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import BrandFonts from '@/components/BrandFonts';
@@ -65,87 +64,92 @@ const HOW_FAQ = [
 const FAQ = [...HOW_FAQ, ...FACT_FAQ.slice(0, 5)];
 
 export default function LaruHPLandingPage() {
-  const [device, setDevice] = useState<'pc' | 'sp'>('pc');
-
   return (
     <main className="bg-white text-slate-900">
       {/* ブランドを見せる画面なので、ここだけブランド書体を読む */}
       <BrandFonts />
-      {/* ── 最初の画面 ───────────────────────────────────────────── */}
-      <section className="px-5 pt-16 pb-10 md:pt-24 md:pb-16">
-        <div className="max-w-5xl mx-auto">
-          <p className="text-[12px] font-bold tracking-widest text-sky-700 mb-4">LARU HP</p>
-          <h1 className="text-[30px] leading-[1.45] md:text-[46px] md:leading-[1.4] font-bold tracking-[0.01em] mb-5">
-            写真と、文章と、料金と、予約。
-            <br />
-            ばらばらの材料が、1枚のサイトになる。
-          </h1>
-          <p className="text-[15px] md:text-[17px] leading-[1.95] text-slate-600 max-w-[34em] mb-8">
-            小さなお店のためのホームページです。4つの質問に答えるところから始まり、
-            出来上がった画面を見ながら直して、そのまま公開できます。
-            公開したあとも、同じ画面から自分で直せます。
-          </p>
-          <div className="flex flex-wrap gap-3 items-center">
-            <Link href="/laruHP/studio"
-              className="inline-flex items-center justify-center min-h-[52px] px-7 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800">
-              作りはじめる
-            </Link>
-            <a href="#work"
-              className="inline-flex items-center justify-center min-h-[52px] px-7 rounded-xl border border-slate-300 font-bold hover:border-slate-500">
-              できあがりを見る
-            </a>
-            <span className="text-[12px] text-slate-500">{TERMS.firstMonthFree}・{TERMS.taxNote}</span>
+      {/* ── 最初の画面：言葉と、実物を並べる ─────────────────────
+          主役は「材料が1枚のサイトになる」ところ。だから、説明の隣に
+          その場で動く実物を置く。スマホでは、短い言葉と入口を先に出してから
+          実物を続ける（完成形が早く目に入るように）。 */}
+      <section className="px-5 pt-10 pb-8 md:pt-16 md:pb-14">
+        <div className="max-w-[1400px] mx-auto md:grid md:grid-cols-[minmax(300px,32%)_1fr] md:gap-10">
+          <div className="md:sticky md:top-10 md:self-start">
+            <p className="text-[12px] font-bold tracking-widest text-sky-700 mb-3">LARU HP</p>
+            <h1 className="text-[25px] leading-[1.4] md:text-[40px] md:leading-[1.35] font-bold tracking-[0.01em] mb-4">
+              <span className="hidden md:inline">写真と、文章と、料金と、予約。<br /></span>
+              ばらばらの材料が、
+              <br className="hidden md:block" />
+              1枚のサイトになる。
+            </h1>
+            <p className="text-[14px] md:text-[15px] leading-[1.9] md:leading-[1.95] text-slate-600 max-w-[30em] mb-5 md:mb-6">
+              <span className="md:hidden">写真・文章・料金・予約。</span>
+              小さなお店のためのホームページです。4つの質問に答えると、たたき台ができます。
+              <span className="hidden md:inline">出来上がった画面を見ながら直して、そのまま公開できます。</span>
+            </p>
+            <div className="flex flex-wrap gap-3 items-center mb-5">
+              <Link href="/laruHP/studio"
+                className="inline-flex items-center justify-center min-h-[52px] px-7 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800">
+                作りはじめる
+              </Link>
+              <a href="#price"
+                className="inline-flex items-center justify-center min-h-[52px] px-6 rounded-xl border border-slate-300 font-bold hover:border-slate-500">
+                料金を見る
+              </a>
+            </div>
+            <p className="text-[12px] text-slate-500 mb-6">{TERMS.firstMonthFree}・{TERMS.taxNote}</p>
+            <ul className="hidden md:block border-t border-slate-200 pt-5 space-y-2.5">
+              {[
+                'CSSもHTMLも書きません',
+                '公開したあとも、同じ画面から自分で直せます',
+                '予約と問い合わせのフォームが最初から入っています',
+              ].map(t => (
+                <li key={t} className="text-[13px] text-slate-600 leading-relaxed flex gap-2">
+                  <span className="text-sky-600 font-bold">・</span>{t}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mt-8 md:mt-0">
+            <p className="text-[13px] font-bold text-slate-700 mb-1">これが、できあがるものです</p>
+            <p className="text-[12px] text-slate-500 leading-relaxed mb-3">
+              画面写真ではありません。いま、この場で作っているお店のサイトです。
+              <span className="hidden sm:inline">ボタンを押すと、材料が1枚に組み上がります。</span>
+            </p>
+            <AssembleDemo />
           </div>
         </div>
       </section>
 
-      {/* ── 何が作れるか（実際の作品）───────────────────────────── */}
+      {/* ── 見本の全体 ───────────────────────────────────────────
+          上のデモは3つの節を取り出したもの。ページ全体はこちらで見せる。 */}
       <section id="work" className="px-5 py-14 md:py-20 bg-slate-50 border-y border-slate-200">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-[22px] md:text-[28px] font-bold mb-2">できあがるもの</h2>
+          <h2 className="text-[22px] md:text-[28px] font-bold mb-2">この見本の、ページ全体</h2>
           <p className="text-[14px] text-slate-600 leading-[1.9] max-w-[34em] mb-6">
-            LARU HP で作った見本です。ここに出ているのは、実際に公開されるページを
-            そのまま撮ったものです。パソコンとスマホを切り替えて見られます。
+            上のデモは、この見本から3つの節を取り出したものです。
+            公開すると、こうなります。実際に公開されるページをそのまま撮っています。
           </p>
-
-          <div className="flex gap-2 mb-5">
-            {(['pc', 'sp'] as const).map(k => (
-              <button key={k} type="button" onClick={() => setDevice(k)}
-                aria-pressed={device === k}
-                className={`px-4 py-2 rounded-full text-[13px] font-bold border ${device === k ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}>
-                {k === 'pc' ? 'パソコン' : 'スマホ'}
-              </button>
-            ))}
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-            <div className="max-h-[560px] overflow-y-auto">
-              {device === 'pc' ? (
+          <div className="grid md:grid-cols-[1fr_300px] gap-6 items-start">
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <div className="max-h-[520px] overflow-y-auto">
                 <Image src="/lp/work-salon-pc.jpg" alt="美容室の見本サイト（パソコンでの表示）"
                   width={1100} height={1833} className="w-full h-auto" />
-              ) : (
-                <div className="py-6 flex justify-center bg-slate-100">
-                  <Image src="/lp/work-salon-sp.jpg" alt="美容室の見本サイト（スマホでの表示）"
-                    width={420} height={1830} className="w-[300px] h-auto rounded-[22px] border-[8px] border-slate-800 shadow-xl" />
-                </div>
-              )}
+              </div>
+              <p className="text-[11px] text-slate-500 px-4 py-2 border-t border-slate-100">パソコン</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden">
+              <div className="max-h-[520px] overflow-y-auto py-5 flex justify-center">
+                <Image src="/lp/work-salon-sp.jpg" alt="美容室の見本サイト（スマホでの表示）"
+                  width={420} height={1830} className="w-[220px] h-auto rounded-[18px] border-[7px] border-slate-800 shadow-xl" />
+              </div>
+              <p className="text-[11px] text-slate-500 px-4 py-2 border-t border-slate-200 bg-white">スマホ</p>
             </div>
           </div>
           <p className="text-[11px] text-slate-500 mt-3">
             見本の「結い庵」は架空のお店です。写真は生成した素材で、実在の店舗・施術実績ではありません。
           </p>
-        </div>
-      </section>
-
-      {/* ── 組み上がるところ ────────────────────────────────────── */}
-      <section className="px-5 py-14 md:py-20">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-[22px] md:text-[28px] font-bold mb-2">部品が、そろって、そろう</h2>
-          <p className="text-[14px] text-slate-600 leading-[1.9] max-w-[34em] mb-6">
-            サイトは「最初の画面」「メニューと料金」「写真」「予約」といった部品でできています。
-            下は、その部品が組み上がるところです。雰囲気や書体のボタンを押すと、その場で作り直します。
-          </p>
-          <AssembleDemo />
         </div>
       </section>
 

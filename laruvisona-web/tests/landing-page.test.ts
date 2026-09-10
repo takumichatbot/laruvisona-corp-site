@@ -87,12 +87,40 @@ test('デモは、動きを減らす設定なら組み上がった状態で出�
 test('デモのボタンは本物で、押すと作り直す', () => {
   assert.match(demo, /onClick=\{\(\) => setPresetId\(p\.id\)\}/);
   assert.match(demo, /onClick=\{\(\) => setFont\(f\.value\)\}/);
-  assert.match(demo, /useMemo\(\(\) => exportToHTML\(/, '押しても作り直していない');
+  assert.match(demo, /useMemo\(\(\) => withDemoBridge\(exportToHTML\(/, '押しても作り直していない');
   assert.match(demo, /aria-pressed=/, '押した状態が読み上げに伝わらない');
 });
 
 test('デモは3Dの見た目をCSSだけで作る', () => {
-  assert.match(demo, /perspective:1500px/);
+  assert.match(demo, /perspective:1800px/);
   assert.match(demo, /translate3d\(/);
   assert.equal(/WebGLRenderingContext|canvas/.test(demo), false);
+});
+
+test('デモは画面の幅に合わせる（固定の縮尺にしない）', () => {
+  // 1440px の組み方を固定の倍率で縮めていたので、スマホでは横が切れて
+  // 文字も読めなかった。幅を測って、狭いところではスマホの組み方に切り替える。
+  assert.match(demo, /ResizeObserver/, '幅を測っていない');
+  assert.match(demo, /device === 'sp' \? 390 : 1440/, '画面ごとの組み方になっていない');
+  assert.equal(/transform: 'scale\(0\.\d+\)'/.test(demo), false, '固定の倍率が残っている');
+});
+
+test('デモの中は、組み上がったあと本当に触れる', () => {
+  // 「押せる実物」と説明する以上、pointer-events で殺してはいけない。
+  // ばらけているあいだだけ止める。
+  assert.equal(/^\s*a,button,form\{pointer-events:none\}/m.test(demo), false, '中の操作を全部止めている');
+  assert.match(demo, /html\[data-locked="1"\] \[data-lhp-block\]\{pointer-events:none\}/);
+  assert.match(demo, /type: 'goto'/, 'ページ内の移動ができない');
+});
+
+test('デモの送信は、どこへも送らない', () => {
+  // 実際の予約を入れてしまわないこと。中の fetch を差し替えて、
+  // その場で受け付けたとだけ出す。
+  assert.match(demo, /window\.fetch = function\(\)/);
+  assert.match(demo, /実際の予約は送っていません/);
+});
+
+test('デモの入れ物は、この画面から切り離す', () => {
+  assert.match(demo, /sandbox="allow-scripts allow-forms"/);
+  assert.equal(/allow-same-origin/.test(demo), false);
 });
