@@ -1,0 +1,354 @@
+{
+  "name": "結い庵",
+  "slug": "yuian",
+  "industry": "beauty",
+  "blocks_json": {
+    "v": 2,
+    "pages": [
+      {
+        "id": "page-main",
+        "name": "トップページ",
+        "path": "/",
+        "blocks": [
+          {
+            "id": "s-1",
+            "type": "hero",
+            "data": {
+              "heading": "結い庵",
+              "subheading": "国立・大学通りの、予約制ヘアサロン。\n朝、鏡の前でうまくいく髪を。",
+              "ctaText": "ご予約・空き状況",
+              "ctaLink": "#booking",
+              "bgColor": "#2a2724",
+              "textColor": "#ffffff",
+              "bgImage": "/salon/hero.jpg"
+            }
+          },
+          {
+            "id": "s-2",
+            "type": "heading",
+            "data": {
+              "text": "切ってから、毎日がはじまる",
+              "subtext": "",
+              "align": "center"
+            }
+          },
+          {
+            "id": "s-3",
+            "type": "paragraph",
+            "data": {
+              "text": "仕上がりの写真がきれいなのは、当たり前だと思っています。\n結い庵が基準にしているのは、そのあとの毎朝です。ご自身で乾かしたときにまとまるか。二か月後に伸びても形が崩れないか。そこから逆算して、切る位置と量を決めます。\n\n一日にお迎えするのは6名まで。担当者が最初から最後までひとりで受け持ちます。カウンセリングに20分いただくのは、髪の話だけでなく、朝にかけられる時間や、いつも使っている道具をうかがうためです。",
+              "align": "left"
+            }
+          },
+          {
+            "id": "s-4",
+            "type": "price-table",
+            "data": {
+              "heading": "メニューと料金",
+              "subtext": "すべてシャンプー・ブロー込み。表示は税込です。",
+              "plans": [
+                {
+                  "name": "カット",
+                  "price": "6,600",
+                  "period": "円",
+                  "description": "カウンセリング20分＋カット＋仕上げ",
+                  "features": [
+                    "骨格と生えぐせを見て設計",
+                    "再現方法をその場でお伝えします",
+                    "前髪の調整は1か月以内なら無料"
+                  ],
+                  "highlighted": false,
+                  "buttonText": "このメニューで予約",
+                  "buttonLink": "#booking"
+                },
+                {
+                  "name": "カラー＋カット",
+                  "price": "13,200",
+                  "period": "円〜",
+                  "description": "髪と頭皮の状態に合わせて薬剤を調整",
+                  "features": [
+                    "白髪ぼかしも同料金",
+                    "根元だけのリタッチは9,900円",
+                    "色持ちのためのケアをお渡しします"
+                  ],
+                  "highlighted": true,
+                  "buttonText": "このメニューで予約",
+                  "buttonLink": "#booking"
+                },
+                {
+                  "name": "髪質改善トリートメント",
+                  "price": "8,800",
+                  "period": "円",
+                  "description": "広がり・うねりが気になる方へ",
+                  "features": [
+                    "4回で扱いやすさが変わります",
+                    "カットと同日でも承ります",
+                    "施術時間 約60分"
+                  ],
+                  "highlighted": false,
+                  "buttonText": "このメニューで予約",
+                  "buttonLink": "#booking"
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-5",
+            "type": "tabs",
+            "data": {
+              "heading": "そのほかのメニュー",
+              "items": [
+                {
+                  "label": "パーマ",
+                  "body": "デジタルパーマ＋カット　16,500円〜\nコールドパーマ＋カット　14,300円〜\n前髪パーマ　3,300円\n\nくせを活かす形にするか、伸ばして落ち着かせるかは、髪の状態を見てご相談します。"
+                },
+                {
+                  "label": "ヘッドスパ",
+                  "body": "ヘッドスパ 40分　5,500円\nヘッドスパ 20分（施術に追加）　3,300円\n\n頭皮の乾燥・べたつき・においが気になる方に。炭酸で洗ってから、首肩までほぐします。"
+                },
+                {
+                  "label": "着付け・セット",
+                  "body": "ヘアセット　5,500円〜\n着付け（訪問着・振袖以外）　11,000円〜\n\n成人式・結婚式は前撮りを含めてご相談ください。早朝の対応も承ります。"
+                },
+                {
+                  "label": "学生・お子さま",
+                  "body": "高校生以下カット　4,400円\n小学生以下カット　3,300円\n\n初めてのお子さまは、椅子に座れなくても大丈夫です。落ち着くまでお待ちします。"
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-6",
+            "type": "team",
+            "data": {
+              "heading": "担当するスタイリスト",
+              "items": [
+                {
+                  "photo": "/salon/staff-1.jpg",
+                  "name": "結城 奈緒",
+                  "role": "店主 / スタイリスト",
+                  "bio": "青山で12年。乾かすだけで決まる髪を得意としています。"
+                },
+                {
+                  "photo": "/salon/staff-2.jpg",
+                  "name": "寺内 悠",
+                  "role": "スタイリスト",
+                  "bio": "くせ毛・多毛のご相談を多く承っています。"
+                },
+                {
+                  "photo": "/salon/staff-3.jpg",
+                  "name": "間宮 千夏",
+                  "role": "スタイリスト / ヘッドスパ",
+                  "bio": "頭皮ケアと白髪ぼかしが専門。着付けも承ります。"
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-7",
+            "type": "gallery",
+            "data": {
+              "heading": "スタイル",
+              "images": [
+                "/salon/style-1.jpg",
+                "/salon/style-2.jpg",
+                "/salon/style-3.jpg",
+                "/salon/style-4.jpg"
+              ],
+              "columns": "2"
+            }
+          },
+          {
+            "id": "s-8",
+            "type": "before-after",
+            "data": {
+              "heading": "広がる髪を、乾かすだけにする",
+              "beforeImage": "/salon/before.jpg",
+              "afterImage": "/salon/after.jpg",
+              "beforeLabel": "来店時",
+              "afterLabel": "施術後"
+            }
+          },
+          {
+            "id": "s-9",
+            "type": "faq",
+            "data": {
+              "heading": "はじめての方へ",
+              "items": [
+                {
+                  "q": "写真を持っていったほうがいいですか",
+                  "a": "あると助かりますが、無くても大丈夫です。「朝どこが決まらないか」を教えていただければ、そこから決めていきます。"
+                },
+                {
+                  "q": "どのくらい時間がかかりますか",
+                  "a": "カットで約90分、カラーと合わせて約150分です。カウンセリングの20分を含んでいます。"
+                },
+                {
+                  "q": "子どもを連れて行っても平気ですか",
+                  "a": "平日はベビーカーのまま入れます。土日は席の間隔の都合で、事前にお知らせください。"
+                },
+                {
+                  "q": "駐車場はありますか",
+                  "a": "専用駐車場はありません。徒歩1分にコインパーキングが2か所あります。ご利用の場合は駐車券をお持ちください。1時間分を負担します。"
+                },
+                {
+                  "q": "予約の変更・キャンセルは",
+                  "a": "前日までにご連絡ください。当日のキャンセルは、次回のご予約時に施術料の30%を申し受けます。"
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-10",
+            "type": "hours",
+            "data": {
+              "heading": "営業時間",
+              "schedule": [
+                {
+                  "day": "月",
+                  "hours": "10:00〜19:00",
+                  "closed": false
+                },
+                {
+                  "day": "火",
+                  "hours": "",
+                  "closed": true
+                },
+                {
+                  "day": "水",
+                  "hours": "10:00〜19:00",
+                  "closed": false
+                },
+                {
+                  "day": "木",
+                  "hours": "10:00〜19:00",
+                  "closed": false
+                },
+                {
+                  "day": "金",
+                  "hours": "10:00〜20:00",
+                  "closed": false
+                },
+                {
+                  "day": "土",
+                  "hours": "9:00〜19:00",
+                  "closed": false
+                },
+                {
+                  "day": "日",
+                  "hours": "9:00〜18:00",
+                  "closed": false
+                }
+              ],
+              "note": "第3月曜は定休日です。最終受付は終了の90分前になります。"
+            }
+          },
+          {
+            "id": "s-11",
+            "type": "booking",
+            "data": {
+              "mode": "simple",
+              "heading": "ご予約",
+              "subtext": "ご希望の日時を第2希望までお知らせください。翌営業日までにご返信します。\nお急ぎの場合はお電話（03-0000-0000）へどうぞ。",
+              "serviceTypes": [
+                "カット",
+                "カラー＋カット",
+                "髪質改善トリートメント",
+                "パーマ",
+                "ヘッドスパ",
+                "ヘアセット・着付け",
+                "まず相談したい"
+              ],
+              "timeSlots": [
+                "10:00",
+                "11:00",
+                "12:00",
+                "13:00",
+                "14:00",
+                "15:00",
+                "16:00",
+                "17:00",
+                "18:00"
+              ],
+              "buttonText": "この内容で予約を申し込む",
+              "buttonColor": "#8a6a43",
+              "bgColor": "#f7f4ef"
+            }
+          },
+          {
+            "id": "s-12",
+            "type": "two-col",
+            "data": {
+              "col1Title": "アクセス",
+              "col1Text": "東京都国立市中0-0-0 結い庵ビル 2F\nJR中央線 国立駅 南口より徒歩8分\n大学通りを直進、2つ目の信号を右折してすぐ",
+              "col2Title": "お問い合わせ",
+              "col2Text": "電話 03-0000-0000\n受付は営業時間内にお願いします\n施術中は折り返しになることがあります"
+            }
+          },
+          {
+            "id": "s-13",
+            "type": "map",
+            "data": {
+              "heading": "地図",
+              "embedUrl": "",
+              "height": 320
+            }
+          },
+          {
+            "id": "s-14",
+            "type": "contact",
+            "data": {
+              "heading": "お問い合わせ",
+              "subtext": "予約以外のご相談はこちらから。2営業日以内にご返信します。",
+              "fields": [
+                "name",
+                "email",
+                "phone",
+                "message"
+              ],
+              "buttonText": "送信する",
+              "buttonColor": "#2a2724",
+              "bgColor": "#ffffff"
+            }
+          }
+        ],
+        "seo": {
+          "title": "結い庵 | 国立の予約制ヘアサロン",
+          "description": "朝、自分で乾かしてまとまる髪に。国立・大学通りの予約制ヘアサロン。カット6,600円、カラー＋カット13,200円〜。",
+          "keywords": "国立 美容室,国立 ヘアサロン,髪質改善,白髪ぼかし",
+          "ogTitle": "結い庵 | 国立の予約制ヘアサロン",
+          "ogDescription": "朝、自分で乾かしてまとまる髪に。",
+          "ogImage": "/salon/hero.jpg"
+        }
+      }
+    ]
+  },
+  "seo_json": {
+    "title": "結い庵 | 国立の予約制ヘアサロン",
+    "description": "朝、自分で乾かしてまとまる髪に。国立・大学通りの予約制ヘアサロン。",
+    "keywords": "国立 美容室,ヘアサロン,髪質改善",
+    "ogTitle": "結い庵",
+    "ogDescription": "国立の予約制ヘアサロン",
+    "ogImage": "/salon/hero.jpg"
+  },
+  "settings_json": {
+    "colorScheme": "modern-pink",
+    "style": "elegant",
+    "designStyle": "elegant",
+    "fontFamily": "mincho",
+    "accentColor": "#8a6a43",
+    "heroLayout": "split",
+    "headerStyle": "solid",
+    "animLevel": "none",
+    "larubot": false,
+    "laruseo": false,
+    "globalFooter": {
+      "enabled": true,
+      "logo": "",
+      "text": "結い庵　東京都国立市中0-0-0 結い庵ビル2F　03-0000-0000",
+      "links": [],
+      "copyright": "© 結い庵"
+    },
+    "customCss": "\n/* 結い庵 — 明朝で組むための調整。\n   顧客が「明朝」を選んだときに、そのまま気持ちよく読める値にしている。 */\n:root{ --yui-ink:#2a2724; --yui-accent:#8a6a43; --yui-cream:#f7f4ef; --yui-line:#e2dcd2; }\n\nbody{ color:var(--yui-ink); background:#fff; }\n\n/* 明朝は線が細い。字間と行送りを広げて、面で読ませる */\n.lhp-section p, .lhp-faq-a, .lhp-price-desc, .lhp-col p{\n  font-size:16.5px; line-height:2.05; letter-spacing:.02em; color:#3b3733;\n}\n@media(max-width:640px){\n  .lhp-section p, .lhp-faq-a, .lhp-col p{ font-size:16px; line-height:1.95; }\n}\n\n/* 読み幅を上限で止める。1440pxで1行が長くなりすぎるのを防ぐ */\n.lhp-section > p, .lhp-section-sub{ max-width:34em; margin-left:auto; margin-right:auto; }\n\n/* 見出し。明朝の縦画を活かして、字間はやや詰める */\n.lhp-section-title{\n  font-size:clamp(21px,3.2vw,27px); letter-spacing:.06em; font-weight:600;\n  color:var(--yui-ink); margin-bottom:.9em;\n}\n.lhp-section-title::after{\n  content:\"\"; display:block; width:34px; height:1px; background:var(--yui-accent);\n  margin:.7em auto 0;\n}\n\n/* 節の間隔。既定は広すぎて、間が抜けて見える */\n.lhp-section{ padding-top:clamp(48px,7vw,80px); padding-bottom:clamp(48px,7vw,80px); }\n\n/* ヒーロー。写真を主役にして、文字は左下に寄せる */\n.lhp-hero{ min-height:clamp(420px,72vh,640px); }\n.lhp-hero-split .lhp-hero-inner{ gap:clamp(24px,4vw,56px); align-items:center; }\n.lhp-hero-split-img{ border-radius:2px; overflow:hidden; aspect-ratio:4/3; }\n.lhp-hero-split-img img{ width:100%; height:100%; object-fit:cover; }\n.lhp-hero h1{ font-size:clamp(34px,6vw,58px); letter-spacing:.14em; font-weight:500; }\n.lhp-hero-sub{ font-size:clamp(14px,2.2vw,17px); line-height:2; letter-spacing:.04em; opacity:.92; }\n.lhp-btn-primary{\n  background:var(--yui-accent); color:#fff; border-radius:2px;\n  padding:16px 30px; letter-spacing:.08em; font-weight:500;\n  min-height:52px; display:inline-flex; align-items:center;\n}\n\n/* 料金表。既定の青はサロンの色ではない */\n.lhp-price-card{ border:1px solid var(--yui-line); border-radius:2px; box-shadow:none; }\n.lhp-price-featured{ background:var(--yui-cream); border-color:var(--yui-accent); color:var(--yui-ink); }\n.lhp-price-featured *{ color:var(--yui-ink) !important; }\n.lhp-price-badge{ background:var(--yui-accent); color:#fff; letter-spacing:.08em; }\n.lhp-price-amount{ font-size:30px; letter-spacing:.02em; }\n.lhp-price-period{ font-size:15px; margin-left:2px; }\n.lhp-price-features li{ font-size:14px; line-height:1.9; }\n.lhp-price-btn{\n  background:var(--yui-accent); color:#fff; border-radius:2px; letter-spacing:.06em;\n  min-height:48px; display:flex; align-items:center; justify-content:center;\n}\n\n/* 写真。4:5で切り、間を詰める */\n.lhp-gallery{ gap:10px; max-width:900px; margin:0 auto; }\n.lhp-gallery-img{ aspect-ratio:4/5; object-fit:cover; border-radius:2px; }\n\n/* スタイリスト。円は小さすぎたので大きくする */\n.lhp-section [style*=\"border-radius:50%\"]{ width:132px !important; height:132px !important; }\n\n/* 営業時間 */\n.lhp-hours{ max-width:420px; margin:0 auto; }\n.lhp-hours th,.lhp-hours td{ padding:12px 10px; border-bottom:1px solid var(--yui-line); }\n.lhp-hours-note{ max-width:34em; margin:1.2em auto 0; font-size:14px; color:#6b645c; }\n\n/* よくある質問 */\n.lhp-faq{ max-width:40em; margin:0 auto; }\n.lhp-faq-item{ border-bottom:1px solid var(--yui-line); }\n.lhp-faq-q{ padding:18px 4px; font-weight:500; letter-spacing:.03em; min-height:56px; }\n\n/* 予約。指で押せる大きさにする */\n#booking input,#booking select,#booking textarea{\n  min-height:52px; font-size:16px; border-radius:2px; border:1px solid var(--yui-line);\n}\n#booking button,.lhp-contact button{\n  min-height:56px; font-size:16px; border-radius:2px; letter-spacing:.08em;\n}\n\n/* 予約への導線をスマホで常に出す */\n@media(max-width:640px){\n  body{ padding-bottom:72px; }\n  .yui-fixed-cta{ display:flex; }\n}\n.yui-fixed-cta{ display:none; }\n"
+  }
+}
