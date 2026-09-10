@@ -4,7 +4,10 @@
 // リンク/画像の URL は http(s)・相対パス・# のみ許可。
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // 引用符も落とす。alt="..." のような属性の中へ入るので、
+  // " が残っていると属性から抜け出して別の属性を書ける。
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function safeUrl(u: string): string {
