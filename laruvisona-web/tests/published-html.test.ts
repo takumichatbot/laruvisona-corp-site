@@ -235,13 +235,38 @@ test('写真の見せ場を、パソコンとスマホで別に決められる',
 });
 
 
-test('一括再生成は、1件だけに絞れる', () => {
+test('一括再生成は、範囲を絞れる（1件・件数・書かずに対象だけ）', () => {
   // 絞れないと、同じデータベースの他のサイトまで作り直してしまう。
   // 検証環境では、別の検証が使っている印が消えて原因の分からない失敗になり、
   // 本番では、1件直したいだけのときに全件へ触れることになる。
   const route = readFileSync(new URL('../app/api/admin/republish-all/route.ts', import.meta.url), 'utf8');
-  assert.match(route, /const \{ onlyOutdated, slug \} = await req\.json\(\)/);
+  assert.match(route, /onlyOutdated, slug, limit, dryRun/);
   assert.match(route, /if \(typeof slug === 'string' && slug\) query = query\.eq\('slug', slug\)/);
+  assert.match(route, /if \(typeof limit === 'number' && limit > 0\) query = query\.limit\(/);
+  assert.match(route, /if \(dryRun\) \{/);
+});
+
+test('起動しただけでは、顧客の公開HTMLを作り直さない', () => {
+  // 作り直すとデータベースの published_html が上書きされる。生成物は行に残るので、
+  // コードを戻しても表示は戻らない。自社ページだけ先に出したいときに、
+  // デプロイした時点で全顧客の再生成が始まってしまうと、出す範囲を選べない。
+  const server = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
+  const fn = server.slice(
+    server.indexOf('async function triggerRepublishOutdated'),
+    server.indexOf('setTimeout(triggerRepublishOutdated'),
+  );
+  assert.ok(fn.length > 0, 'triggerRepublishOutdated が見つからない');
+  assert.match(fn, /REPUBLISH_ON_BOOT !== '1'/);
+  assert.match(fn, /REPUBLISH_ON_BOOT !== '1'[\s\S]{0,240}return;/);
+});
+
+test('公開HTMLの控えを取って、書き戻せる道がある', () => {
+  // 作り直しを戻す方法がこれしかない（EXPORT_VERSION を下げても、
+  // すでに書かれた published_html は戻らない）。
+  const route = readFileSync(new URL('../app/api/admin/published-html-backup/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /export async function GET/);
+  assert.match(route, /export async function POST/);
+  assert.match(route, /published_html/);
 });
 
 test('生成HTMLを変えたら EXPORT_VERSION を上げる（既存の公開HTMLが再生成される）', () => {

@@ -19,10 +19,11 @@ export const stripe = new Proxy({} as Stripe, {
   },
 });
 
-export const PLAN = {
-  priceId: process.env.STRIPE_PRICE_ID!,
-  amount: 999,
-  currency: 'jpy',
-  firstMonthAmount: 1,
-  minimumMonths: 6,
-};
+// 以前ここに PLAN 定数（amount: 999 / firstMonthAmount: 1）があった。
+// どこからも参照されておらず、いまの料金（初月無料・2ヶ月目から課金）とも
+// 食い違っていたので消した。参照は無かったので、決済の動きは変わらない。
+//
+// 料金の正は2か所。
+//   ・画面に出す数字 …… lib/laruhp-facts.ts
+//   ・実際に請求する額 …… Stripe 側の価格ID（STRIPE_PRICE_ID）
+// 決済ルート（app/api/stripe/checkout・upgrade）は価格IDだけを見ている。
