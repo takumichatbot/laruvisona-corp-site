@@ -26,7 +26,10 @@ create table if not exists public.site_domains (
   site_id uuid not null references public.sites(id) on delete cascade,
   host text not null,
   status text not null default 'pending_ownership'
-    check (status in ('pending_ownership','pending_dns','ssl_pending','connected','failed','legacy','release_pending')),
+    -- alias: このサイトの別名。所有は確認できていて、配信側（Render等）が
+    --        主な公開URLへ転送しているホスト。主URLにはできないが、
+    --        転送元として画面に出す。
+    check (status in ('pending_ownership','pending_dns','ssl_pending','connected','failed','legacy','release_pending','alias')),
 
   -- テナント固有の所有確認トークン。
   -- 検証と削除が同時に走ったときの fencing token も兼ねる
@@ -56,6 +59,8 @@ create table if not exists public.site_domains (
   -- 新しい世代の外部登録を消しに行かないようにする。
   release_operation_id uuid,
   release_lease_until timestamptz,
+  -- alias のとき、どのホストへ転送されているか（同じサイトの確認済みホスト）
+  redirects_to text,
 
   -- 処理の世代。所有確認トークンとは別物。
   --   verification_token … 利用者がDNSに置く値。行を作り直さない限り変わらない
@@ -77,6 +82,11 @@ alter table public.site_domains add column if not exists render_register_started
 alter table public.site_domains add column if not exists external_registration_owned boolean;
 alter table public.site_domains add column if not exists release_operation_id uuid;
 alter table public.site_domains add column if not exists release_lease_until timestamptz;
+alter table public.site_domains add column if not exists redirects_to text;
+-- 既存インストールの制約に alias を足す
+alter table public.site_domains drop constraint if exists site_domains_status_check;
+alter table public.site_domains add constraint site_domains_status_check
+  check (status in ('pending_ownership','pending_dns','ssl_pending','connected','failed','legacy','release_pending','alias'));
 
 create unique index if not exists site_domains_host_key on public.site_domains (host);
 create index if not exists site_domains_site_idx on public.site_domains (site_id);
@@ -242,7 +252,8 @@ create or replace function public.laruhp_domain_apply_check(
   p_status text,
   p_render_domain_id text,
   p_last_error text,
-  p_make_primary boolean
+  p_make_primary boolean,
+  p_redirects_to text default null
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   v_row public.site_domains%rowtype;
@@ -272,6 +283,8 @@ begin
       else render_registered_at end,
     last_error = p_last_error,
     last_checked_at = v_now,
+    -- 別名でなくなったら転送先も消す
+    redirects_to = case when p_status = 'alias' then p_redirects_to else null end,
     ownership_verified_at = case
       when p_status in ('pending_dns','ssl_pending','connected') then coalesce(ownership_verified_at, v_now)
       else ownership_verified_at end,
@@ -317,6 +330,8 @@ begin
      or v_row.operation_epoch is distinct from p_epoch then
     return jsonb_build_object('ok', false, 'reason', 'gone');
   end if;
+  -- alias（転送されるホスト）は主URLにできない。
+  -- 主URLにすると、そのホスト自身へ転送し続ける輪ができる。
   if v_row.status not in ('connected', 'legacy') then
     return jsonb_build_object('ok', false, 'reason', 'not_connected');
   end if;
@@ -579,7 +594,7 @@ do $$
 declare f text;
 begin
   foreach f in array array[
-    'laruhp_domain_apply_check(uuid,text,text,bigint,text,text,text,boolean)',
+    'laruhp_domain_apply_check(uuid,text,text,bigint,text,text,text,boolean,text)',
     'laruhp_domain_set_primary(uuid,text,text,bigint)',
     'laruhp_domain_finish_release(uuid,text,text,bigint,boolean)',
     'laruhp_domain_resolve_queue_entry(uuid,text)',
@@ -596,6 +611,7 @@ begin
   end loop;
   -- 旧シグネチャが残っていると authenticated から呼べてしまうので落とす
   execute 'drop function if exists public.laruhp_domain_apply_check(uuid,text,text,text,text,text,boolean)';
+  execute 'drop function if exists public.laruhp_domain_apply_check(uuid,text,text,bigint,text,text,text,boolean)';
   execute 'drop function if exists public.laruhp_domain_set_primary(uuid,text,text)';
   execute 'drop function if exists public.laruhp_domain_finish_release(uuid,text,text)';
   execute 'drop function if exists public.laruhp_domain_mark_release_failed(uuid,text,text)';

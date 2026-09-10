@@ -60,7 +60,9 @@ test('到達確認は固定文字列ではなく署名付きの往復で行う',
   const ports = code('lib/domain-ports.ts');
   assert.match(ports, /createChallenge\(secret, host\)/);
   assert.match(ports, /verifyProof\(secret, c, json\.proof\)/);
-  assert.match(ports, /if \(!secret\) return 'unavailable'/);
+  assert.match(ports, /if \(!secret\) return \{ result: 'unavailable' \}/);
+  // 3xx は追わず、転送先ホストだけを持ち帰る
+  assert.match(ports, /return \{ result: 'redirected', redirectHost \}/);
 
   const route = code('app/api/domain-probe/route.ts');
   assert.match(route, /verifyChallenge\(/);
@@ -271,4 +273,35 @@ test('操作ボタンのタップ領域は44px以上', () => {
     const body = part.slice(0, part.indexOf('</button'));
     assert.ok(/min-h-\[44px\]/.test(body), `44px未満のボタンがある: ${body.slice(0, 80)}`);
   }
+});
+
+// ── 画面（apex/www の主従表示） ──
+
+test('設定画面は「主な公開URL」「転送」「準備中・失敗」を書き分ける', () => {
+  const ui = code('app/laruHP/settings/DomainSettings.tsx');
+  // 3つの状態がそれぞれ別の文言で出ること
+  assert.match(ui, /主な公開URL/);
+  assert.match(ui, /へ転送/);
+  assert.match(ui, /準備中です。まだこのドメインでは公開されていません。/);
+  // 転送先はホスト名を明示する（「どこへ行くのか」が分かるように）
+  assert.match(ui, /\{d\.forwardsTo\}/);
+  // 転送されるホストにDNS手順を出さない（もう設定は終わっている）
+  assert.match(ui, /d\.status !== 'connected' && d\.status !== 'alias'/);
+});
+
+test('ドメイン一覧APIは、各ホストの転送先を返す', () => {
+  const route = code('app/api/sites/[id]/domain/route.ts');
+  assert.match(route, /forwardsTo: forwardTargetFor\(r, site\.custom_domain\)/);
+});
+
+test('別名ホストの配信は、そのホストが属するサイトの正規URLからしか作らない', () => {
+  const p = code('proxy.ts');
+  // 観測値（redirects_to）を配信の宛先に使わない
+  assert.equal(/redirects_to/.test(p), false, '観測した転送先を配信に使っている');
+  // 転送はパスとクエリを保つ
+  assert.match(p, /to\.search = request\.nextUrl\.search/);
+  // 恒久転送（308）でメソッドを変えない
+  assert.match(p, /NextResponse\.redirect\(to, 308\)/);
+  // 公開中のサイトに限る
+  assert.match(p, /sites\.published=is\.true/);
 });

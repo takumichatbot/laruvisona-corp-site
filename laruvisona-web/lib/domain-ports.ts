@@ -73,24 +73,39 @@ export const probePort: ProbePort = {
     // 固定の応答を返すだけの確認は、別のサーバーで真似できる。
     // 毎回の nonce と期限に対して、共有鍵でしか作れない署名が返るかで見る。
     const secret = probeSecret();
-    if (!secret) return 'unavailable';
+    if (!secret) return { result: 'unavailable' };
 
     const c = createChallenge(secret, host);
     const qs = new URLSearchParams({ host: c.host, nonce: c.nonce, exp: String(c.exp), sig: c.sig });
     try {
-      // リダイレクトは追わない。別ホストへ飛ばされた先の応答で判断しないため。
+      // リダイレクトは追わない。転送先の応答で「届いた」と判断しないため。
+      // 3xx のときは Location のホスト名だけを持ち帰る（追跡はしない）。
       const res = await safeFetch(
         `https://${host}/api/domain-probe?${qs.toString()}`,
         { method: 'GET', headers: { accept: 'application/json' } },
         { timeoutMs: 8000, maxRedirects: 0 },
       );
-      if (res.status !== 200) { try { await res.arrayBuffer(); } catch { /* noop */ } return 'not_reached'; }
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location');
+        try { await res.arrayBuffer(); } catch { /* noop */ }
+        let redirectHost: string | null = null;
+        if (loc) {
+          try { redirectHost = new URL(loc, `https://${host}`).hostname.toLowerCase(); } catch { /* noop */ }
+        }
+        return { result: 'redirected', redirectHost };
+      }
+      if (res.status !== 200) { try { await res.arrayBuffer(); } catch { /* noop */ } return { result: 'not_reached' }; }
       const body = await readCapped(res, 4096);
       const json = JSON.parse(body) as { ok?: boolean; proof?: string };
-      if (!json.ok || !json.proof) return 'not_reached';
-      return verifyProof(secret, c, json.proof) ? 'reached' : 'not_reached';
-    } catch {
-      return 'not_reached';
+      if (!json.ok || !json.proof) return { result: 'not_reached' };
+      return { result: verifyProof(secret, c, json.proof) ? 'reached' : 'not_reached' };
+    } catch (e) {
+      // safeFetch はリダイレクト上限に当たると例外を投げる。
+      // 転送されていること自体は分かるが、転送先は取れない。
+      if (e instanceof Error && /redirect/i.test(e.message)) {
+        return { result: 'redirected', redirectHost: null };
+      }
+      return { result: 'not_reached' };
     }
   },
 };

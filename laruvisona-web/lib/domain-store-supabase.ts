@@ -13,7 +13,7 @@ import type {
 } from '@/lib/domain-service';
 import type { DomainStatus } from '@/lib/domain';
 
-const COLS = 'id, site_id, host, status, verification_token, render_domain_id, last_error, last_checked_at, operation_epoch, render_register_started_at, ownership_verified_at, external_registration_owned, release_operation_id, release_lease_until';
+const COLS = 'id, site_id, host, status, verification_token, render_domain_id, last_error, last_checked_at, operation_epoch, render_register_started_at, ownership_verified_at, external_registration_owned, release_operation_id, release_lease_until, redirects_to';
 
 type Rpc = { ok?: boolean; reason?: string; switched?: boolean; row?: DomainRecord; entries?: QueueEntry[] };
 
@@ -81,6 +81,7 @@ export async function createDomainStore(): Promise<DomainStore> {
         p_render_domain_id: input.renderDomainId,
         p_last_error: input.lastError,
         p_make_primary: input.makePrimary,
+        p_redirects_to: input.redirectsTo ?? null,
       });
       if (error) return { ok: false, reason: 'error', message: error };
       if (!data?.ok) {

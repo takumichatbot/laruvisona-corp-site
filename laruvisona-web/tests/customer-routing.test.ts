@@ -26,6 +26,21 @@ const DOMAIN_TO_SLUG: Record<string, string> = {
   'bistro-b.example': 'site-b',
 };
 
+/**
+ * site_domains の代わり。
+ * host → { slug, custom_domain } （そのホストが属するサイトの情報）。
+ * status は connected/legacy/alias のいずれかで登録済みという想定。
+ */
+const ALIAS_HOSTS: Record<string, { slug: string; custom_domain: string | null }> = {
+  'www.salon-a.example': { slug: 'site-a', custom_domain: 'salon-a.example' },
+  // 旧ドメイン。いまの主な公開URLは salon-a.example
+  'old-salon.example': { slug: 'site-a', custom_domain: 'salon-a.example' },
+  // 独自ドメインを持たないサイトの旧ホスト → 標準URLへ返す
+  'legacy-c.example': { slug: 'site-c', custom_domain: null },
+  // 壊れた登録（自分自身が主URL扱い）→ 輪になるので転送しない
+  'loop.example': { slug: 'site-a', custom_domain: 'loop.example' },
+};
+
 function installFetchStub() {
   const original = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -38,6 +53,16 @@ function installFetchStub() {
       return new Response(JSON.stringify(slug ? [{ slug }] : []), {
         status: 200, headers: { 'content-type': 'application/json' },
       });
+    }
+    // site_domains?host=eq.<host>&status=in.(...)&select=site_id,sites!inner(...)
+    if (url.pathname.endsWith('/rest/v1/site_domains')) {
+      const host = (url.searchParams.get('host') || '').replace(/^eq\./, '');
+      const hit = ALIAS_HOSTS[host];
+      // 主な公開URLとして配信中のホストは、ここでは返さない
+      return new Response(
+        JSON.stringify(hit ? [{ site_id: 'x', sites: { slug: hit.slug, custom_domain: hit.custom_domain, published: true } }] : []),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
     }
     // profiles?agency_admin_domain=... （代理店ドメインは無し）
     if (url.pathname.endsWith('/rest/v1/profiles')) {
@@ -220,3 +245,61 @@ test('DB照会に失敗したホストを、どこかのサイトへ解決しな
 });
 
 test.after(() => restore());
+
+
+// ── 別名ホスト（apex/www のもう一方、旧ドメイン） ────────────────
+
+test('別名ホスト: 主な公開URLへ308で転送する', async () => {
+  const r = await route('www.salon-a.example', '/');
+  assert.equal(r.status, 308);
+  assert.equal(r.location, 'https://salon-a.example/');
+  assert.equal(r.to, null, '転送すべきホストを配信している');
+});
+
+test('別名ホスト: 下層パスとクエリをそのまま保つ', async () => {
+  const a = await route('www.salon-a.example', '/shop');
+  assert.equal(a.location, 'https://salon-a.example/shop');
+
+  const b = await route('www.salon-a.example', '/post/abc123?utm_source=review&lang=en');
+  assert.equal(b.location, 'https://salon-a.example/post/abc123?utm_source=review&lang=en');
+});
+
+test('旧ドメインも、いまの主な公開URLへ転送する', async () => {
+  const r = await route('old-salon.example', '/shop?x=1');
+  assert.equal(r.status, 308);
+  assert.equal(r.location, 'https://salon-a.example/shop?x=1');
+});
+
+test('別名ホスト: 独自ドメインが無いサイトは標準URLへ返す', async () => {
+  const r = await route('legacy-c.example', '/shop');
+  assert.equal(r.status, 308);
+  assert.equal(r.location, 'https://laruvisona.jp/hp/site-c/shop');
+});
+
+test('別名ホスト: 自分自身へは転送しない（輪にならない）', async () => {
+  const r = await route('loop.example', '/');
+  assert.equal(r.status, 404);
+  assert.equal(r.location, null, '自分自身へ転送している');
+});
+
+test('別名ホスト: 別サイトへは決して転送しない', async () => {
+  // 転送先は「そのホストが属するサイト」の正規URLからしか作らない。
+  // 観測値（redirects_to）は配信の宛先に使わない。
+  const r = await route('www.salon-a.example', '/post/b-only-post-id');
+  assert.ok(r.location?.startsWith('https://salon-a.example/'), r.location ?? 'no location');
+  assert.ok(!r.location?.includes('bistro-b.example'), '別サイトへ転送している');
+  assert.ok(!r.location?.includes('site-b'), '別サイトへ転送している');
+});
+
+test('主な公開URLになったホストは、転送ではなく配信する', async () => {
+  // 主URLの照会が先。別名の照会に落ちない。
+  const r = await route('salon-a.example', '/shop');
+  assert.equal(r.to, '/hp/site-a/shop');
+  assert.equal(r.location, null, '主URLを転送している');
+});
+
+test('別名ホストでも API・_next は転送せず素通しする', async () => {
+  // 所有確認の往復（/api/domain-probe）と静的配信を壊さない
+  assert.equal((await route('www.salon-a.example', '/api/domain-probe?host=x')).location, null);
+  assert.equal((await route('www.salon-a.example', '/_next/static/x.js')).location, null);
+});

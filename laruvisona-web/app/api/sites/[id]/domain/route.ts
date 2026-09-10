@@ -4,7 +4,7 @@ import { createDomainStore } from '@/lib/domain-store-supabase';
 import { dnsPort, renderPort, probePort } from '@/lib/domain-ports';
 import { addDomain, releaseDomain, type Deps, type DomainRecord } from '@/lib/domain-service';
 import {
-  dnsInstructions, statusLabel, DNS_SUPPORT_NOTES, type DomainStatus,
+  dnsInstructions, statusLabel, forwardTargetFor, DNS_SUPPORT_NOTES, type DomainStatus,
 } from '@/lib/domain';
 
 // 独自ドメインの一覧・追加・解除。処理の本体は lib/domain-service.ts にある。
@@ -93,6 +93,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       isPrimary: site.custom_domain === r.host,
       // 「接続確認済み」と「主な公開URL」は別。切替できるかはここで示す。
       canBePrimary: (r.status === 'connected' || r.status === 'legacy') && site.custom_domain !== r.host,
+      // 主な公開URLでないホストは、そこへ転送される。
+      //   alias  … 外部（レジストラ・CDN）の転送設定を観測したホスト
+      //   その他 … 確認が取れていて、こちらが308で転送するホスト
+      forwardsTo: forwardTargetFor(r, site.custom_domain),
       lastError: r.last_error,
       lastCheckedAt: r.last_checked_at,
       records: dnsInstructions(r.host, r.verification_token, e),

@@ -54,6 +54,49 @@ async function slugForCustomDomain(host: string): Promise<string | null> {
   return null;
 }
 
+// 別名ホスト（apex/www のもう一方、旧ドメイン）→ そのサイトの正規URL
+//
+// sites.custom_domain は「主な公開URL」1つだけ。
+// 同じサイトに確認済みのホストがもう1つある場合（apex と www の両方、
+// 独自ドメインを変えたあとの旧ホストなど）、そのホストは配信先ではなく
+// 主な公開URLへの転送元として扱う。
+//
+// 転送先は必ず「そのホストが属するサイト自身」の正規URLから作る。
+// site_domains.redirects_to（外部の転送設定を観測した記録）は使わない。
+// 観測値を配信の宛先にすると、別サイトのホストや自分自身を指し得るため。
+//
+// キャッシュは持たない（slugForCustomDomain と同じ理由）。
+async function aliasTargetForHost(host: string): Promise<string | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const r = await fetch(
+      `${url}/rest/v1/site_domains`
+      + `?host=eq.${encodeURIComponent(host)}`
+      + `&status=in.(connected,legacy,alias)`
+      + `&select=site_id,sites!inner(slug,custom_domain,published)`
+      + `&sites.published=is.true&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' },
+    );
+    const d = await r.json();
+    if (!Array.isArray(d) || d.length === 0) return null;
+    const site = d[0]?.sites as { slug?: unknown; custom_domain?: unknown } | undefined;
+    if (!site) return null;
+
+    const primary = typeof site.custom_domain === 'string' ? site.custom_domain.toLowerCase() : null;
+    // 主な公開URLが自分自身 → 転送すると輪になる。転送しない。
+    if (primary && primary === host.toLowerCase()) return null;
+    if (primary) return `https://${primary}`;
+
+    // 主な公開URLがまだ独自ドメインでないサイト（旧ホストだけ残っている等）は
+    // 標準URLへ返す。MAIN_HOST が無ければ転送先を作れないので転送しない。
+    if (!MAIN_HOST || typeof site.slug !== 'string' || !site.slug) return null;
+    return `https://${MAIN_HOST}/hp/${site.slug}`;
+  } catch { /* 引けなければ未知のホストとして扱う */ }
+  return null;
+}
+
 // 代理店の管理画面ドメイン判定（service roleで参照）
 //
 // ここもキャッシュを持たない。代理店ドメインの解除が最大5分反映されず、
@@ -133,6 +176,20 @@ export async function proxy(request: NextRequest) {
       // 未知のホストは 404（トップページを 200 で返さない）。
       const slug = await slugForCustomDomain(hostname);
       if (!slug) {
+        // 主な公開URLではないが、このサイトの確認済みホスト（apex/wwwの
+        // もう一方、旧ドメイン）なら、パスとクエリを保ったまま正規URLへ転送する。
+        const target = await aliasTargetForHost(hostname);
+        if (target) {
+          const to = new URL(target);
+          const base = to.pathname.replace(/\/$/, '');       // /hp/<slug> か ''
+          const rest = pathname === '/' ? '' : pathname;
+          to.pathname = `${base}${rest}` || '/';
+          to.search = request.nextUrl.search;                // クエリはそのまま
+          // 念のための輪の防止（同じホスト・同じパスへは転送しない）
+          if (!(to.hostname.toLowerCase() === hostname.toLowerCase() && to.pathname === pathname)) {
+            return NextResponse.redirect(to, 308);
+          }
+        }
         return new NextResponse(null, { status: 404 });
       }
       const url = request.nextUrl.clone();

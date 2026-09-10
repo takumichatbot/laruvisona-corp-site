@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
  * 所有確認・DNSの反映・SSLの発行が終わったのかは分からなかった。
  */
 
-type Status = 'pending_ownership' | 'pending_dns' | 'ssl_pending' | 'connected' | 'failed' | 'legacy' | 'release_pending';
+type Status = 'pending_ownership' | 'pending_dns' | 'ssl_pending' | 'connected' | 'failed' | 'legacy' | 'release_pending' | 'alias';
 
 interface DnsRecord {
   purpose: string;
@@ -31,6 +31,8 @@ interface DomainEntry {
   isPrimary: boolean;
   /** 接続は確認できているが、まだ正規URLではない（切替できる） */
   canBePrimary: boolean;
+  /** 主な公開URLではないホスト。ここへ転送される（主な公開URLなら null） */
+  forwardsTo: string | null;
   lastError: string | null;
   lastCheckedAt: string | null;
   records: DnsRecord[];
@@ -52,6 +54,7 @@ const STATUS_STYLE: Record<Status, string> = {
   failed: 'bg-red-100 text-red-700',
   legacy: 'bg-slate-200 text-slate-700',
   release_pending: 'bg-orange-100 text-orange-800',
+  alias: 'bg-slate-200 text-slate-700',
 };
 
 /** 進み方を4段階で示す。どこで止まっているかが分かるようにする */
@@ -71,6 +74,7 @@ function stepIndex(status: Status): number {
     case 'legacy': return 4;
     case 'failed': return 0;
     case 'release_pending': return 0;
+    case 'alias': return 4;
   }
 }
 
@@ -185,7 +189,7 @@ export default function DomainSettings() {
       setMsg(p => ({
         ...p,
         [site.id]: res.ok
-          ? { text: `${host} を主な公開URLにしました。旧ドメインは接続したまま残っています。`, type: 'success' }
+          ? { text: `${host} を主な公開URLにしました。もう一方のドメインは、このURLへ自動で転送されます（解除しなくてかまいません）。`, type: 'success' }
           : { text: d.error || '切り替えに失敗しました', type: 'error' },
       }));
       await refreshSite(site.id, site.name);
@@ -231,11 +235,17 @@ export default function DomainSettings() {
       <div className="space-y-8">
         {sites.map(site => (
           <div key={site.id} className="space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-gray-800">{site.name}</span>
-              {site.liveDomain && (
-                <span className="text-[10px] text-gray-500">主な公開URL: {site.liveDomain}</span>
-              )}
+              {site.liveDomain
+                ? (
+                  <span className="text-[10px] text-gray-500">
+                    主な公開URL: <span className="font-mono text-gray-800">{site.liveDomain}</span>
+                  </span>
+                )
+                : (
+                  <span className="text-[10px] text-gray-500">主な公開URL: まだ独自ドメインではありません</span>
+                )}
             </div>
 
             <div className="flex gap-2">
@@ -273,7 +283,32 @@ export default function DomainSettings() {
                     <span className="font-mono text-sm text-gray-900">{d.host}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${STATUS_STYLE[d.status]}`}>{d.label}</span>
                     {d.isPrimary && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-sky-600 text-white">主な公開URL</span>}
+                    {!d.isPrimary && d.forwardsTo && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700">
+                        → <span className="font-mono">{d.forwardsTo}</span> へ転送
+                      </span>
+                    )}
                   </div>
+
+                  {/* 主な公開URL / 転送 / 準備中・失敗 のどれなのかを言葉で書く */}
+                  {d.isPrimary ? (
+                    <p className="text-[11px] text-sky-700 font-semibold">
+                      このドメインでサイトを公開しています。検索エンジンにもこのURLが載ります。
+                    </p>
+                  ) : d.forwardsTo ? (
+                    <p className="text-[11px] text-slate-600">
+                      このドメインで開いても、<span className="font-mono">{d.forwardsTo}</span> に自動で切り替わります。
+                      ページの下層やチラシのQRコードもそのまま使えます。
+                    </p>
+                  ) : d.status === 'failed' || d.status === 'release_pending' ? (
+                    <p className="text-[11px] text-red-600 font-semibold">
+                      まだこのドメインでは公開できていません。下の手順をご確認ください。
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-amber-700 font-semibold">
+                      準備中です。まだこのドメインでは公開されていません。
+                    </p>
+                  )}
 
                   {/* どこまで進んだか */}
                   <ol className="flex flex-wrap items-center gap-1.5 text-[10px]">
@@ -287,7 +322,7 @@ export default function DomainSettings() {
                   <p className="text-[11px] text-gray-600">{d.next}</p>
                   {d.lastError && <p className="text-[11px] text-red-600">前回の確認: {d.lastError}</p>}
 
-                  {d.status !== 'connected' && d.records.length > 0 && (
+                  {d.status !== 'connected' && d.status !== 'alias' && d.records.length > 0 && (
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
                       <p className="text-[11px] font-bold text-gray-700">お使いのDNSに、次のレコードを追加してください</p>
                       <ul className="space-y-2.5">

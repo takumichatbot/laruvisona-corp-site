@@ -56,6 +56,8 @@ export interface DomainRecord {
   /** 進行中の解除処理の識別子。外部削除はこの処理に紐づけて認可する */
   release_operation_id: string | null;
   release_lease_until: string | null;
+  /** alias のときの転送先ホスト */
+  redirects_to: string | null;
   /** 所有確認が一度でも通ったか */
   ownership_verified_at: string | null;
 }
@@ -77,6 +79,8 @@ export interface ApplyCheckInput {
   lastError: string | null;
   /** true のときだけ、同じトランザクションで sites.custom_domain も更新する */
   makePrimary: boolean;
+  /** alias のときの転送先 */
+  redirectsTo?: string | null;
 }
 
 export type ApplyCheckResult =
@@ -165,13 +169,20 @@ export interface RenderPort {
   unregisterById(domainId: string): Promise<{ ok: true; removed: boolean } | { ok: false; message: string }>;
 }
 
+export interface ProbeOutcome {
+  result: ProbeResult;
+  /** 3xx のとき、Location のホスト名。転送は追わない */
+  redirectHost?: string | null;
+}
+
 export interface ProbePort {
   /**
    * そのホスト名で、実際にこのサービスへ到達できたか。
-   * 署名鍵が無いなど、確認自体ができない場合は 'unavailable' を返す。
+   * 署名鍵が無いなど、確認自体ができない場合は 'unavailable'。
    * 固定の応答を返すだけのサーバーは 'reached' にならない。
+   * 3xx は 'redirected' とし、転送先は追わずにホスト名だけ返す。
    */
-  reachesService(host: string): Promise<ProbeResult>;
+  reachesService(host: string): Promise<ProbeOutcome>;
 }
 
 export interface Deps {
@@ -230,6 +241,8 @@ export interface VerifyEvidence {
   pointedBy: 'cname' | 'a' | null;
   probe: ProbeResult;
   renderCheck: RenderCheck;
+  /** 別名として確定した場合の転送先 */
+  redirectsTo: string | null;
   seen: { cname: string[]; a: string[]; txtCount: number };
 }
 
@@ -309,9 +322,35 @@ export async function verifyDomain(
 
   // 4. 署名付きの往復で、実際にこのサービスへ到達できるか
   let probe: ProbeResult = 'unavailable';
-  if (ownership) probe = await deps.probe.reachesService(host);
+  let redirectHost: string | null = null;
+  if (ownership) {
+    const outcome = await deps.probe.reachesService(host);
+    probe = outcome.result;
+    redirectHost = outcome.redirectHost ?? null;
+  }
 
-  const status = deriveStatus({ ownership, dnsPointsHere: points.pointsHere, probe, renderCheck });
+  // 4b. 転送されている場合、その先が「同じサイトの確認済みホスト」か。
+  //     Location が同じサイトを指すことだけでは根拠にしない。
+  //     所有確認（TXT）が済んでいること、外部登録がこちらの帰属であること、
+  //     転送先がこのサイトで確認済みであることを、すべて満たすときだけ別名にする。
+  let redirectToOwnHost = false;
+  if (probe === 'redirected' && ownership && redirectHost) {
+    const target = redirectHost.toLowerCase().replace(/^www\./, '');
+    const own = await deps.store.listDomains(args.siteId);
+    const confirmed = own.some(r =>
+      isServable(r.status)
+      && (r.host.toLowerCase() === redirectHost.toLowerCase()
+        || r.host.toLowerCase() === target)
+      && r.host.toLowerCase() !== host.toLowerCase());   // 自分自身への転送は輪になる
+    const attributed = renderCheck === 'verified' || renderCheck === 'not_configured'
+      || !!renderDomainId || !!row.render_register_started_at;
+    redirectToOwnHost = confirmed && attributed;
+  }
+
+  const status = deriveStatus({
+    ownership, dnsPointsHere: points.pointsHere, probe, renderCheck, redirectToOwnHost,
+  });
+  const redirectsTo = status === 'alias' ? redirectHost : null;
 
   const evidence: VerifyEvidence = {
     ownership,
@@ -319,6 +358,7 @@ export async function verifyDomain(
     pointedBy: points.how,
     probe,
     renderCheck,
+    redirectsTo,
     seen: { cname, a, txtCount: txt.length },
   };
 
@@ -336,6 +376,7 @@ export async function verifyDomain(
     renderDomainId,
     lastError,
     makePrimary,
+    redirectsTo,
   });
 
   if (!applied.ok) {

@@ -46,7 +46,7 @@ begin
   perform public.laruhp_domain_begin_release(v_site,'a.example.com');
 
   -- 3. 遅れて戻ってきた古いverifyが結果を書こうとする
-  v_apply := public.laruhp_domain_apply_check(v_site,'a.example.com','token-a',v_epoch,'connected','rd-x',null,true);
+  v_apply := public.laruhp_domain_apply_check(v_site,'a.example.com','token-a',v_epoch,'connected','rd-x',null,true,null);
   perform pg_temp.expect((v_apply->>'ok')::boolean is false, 'A: 解除開始後の古い検証は適用されない');
   perform pg_temp.expect(v_apply->>'reason' in ('gone','releasing'), 'A: 理由が返る');
 
@@ -95,7 +95,7 @@ begin
   perform pg_temp.expect((select custom_domain from public.sites where id=v_site)='chosen.example.com', 'B: 明示選択が反映される');
 
   -- 3. 遅れて完了した新候補の検証が自動採用しようとする
-  v_apply := public.laruhp_domain_apply_check(v_site,'b-new.example.com','token-bnew',v_epoch_new,'connected','rd-b',null,true);
+  v_apply := public.laruhp_domain_apply_check(v_site,'b-new.example.com','token-bnew',v_epoch_new,'connected','rd-b',null,true,null);
   perform pg_temp.expect((v_apply->>'ok')::boolean, 'B: 検証結果自体は保存される');
   perform pg_temp.expect((v_apply->>'switched')::boolean is false, 'B: 自動採用は行われない');
   perform pg_temp.expect((select custom_domain from public.sites where id=v_site)='chosen.example.com',
@@ -218,7 +218,7 @@ begin
   perform public.laruhp_domain_begin_release(v_site,'g.example.com');
   select operation_epoch into v_e from public.site_domains where host='g.example.com';
   -- 新しい世代でも、解除待ちなら検証は通さない
-  v_r := public.laruhp_domain_apply_check(v_site,'g.example.com','t-g',v_e,'connected','rd-g',null,true);
+  v_r := public.laruhp_domain_apply_check(v_site,'g.example.com','t-g',v_e,'connected','rd-g',null,true,null);
   perform pg_temp.expect((v_r->>'ok')::boolean is false, 'G: 解除待ちの行に検証結果を書けない');
   perform pg_temp.expect(v_r->>'reason'='releasing', 'G: 理由が releasing');
 end;
@@ -500,4 +500,59 @@ begin
 end;
 $$;
 
-select 'ALL SQL REGRESSION SCENARIOS PASSED (A-P)' as result;
+
+
+-- ════════════════════════════════════════════════════════════
+-- 追加Q: 別名（alias）は主な公開URLにできない
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000006';
+  v_e bigint; v_r jsonb;
+begin
+  insert into public.sites(id,user_id,name,custom_domain)
+  values (v_site,'00000000-0000-0000-0000-000000000001','q','q.example');
+  insert into public.site_domains(site_id,host,verification_token,status)
+  values (v_site,'q.example','t-q','connected'),
+         (v_site,'www.q.example','t-qw','pending_ownership');
+
+  -- www 側は転送されるので alias として確定する
+  select operation_epoch into v_e from public.site_domains where host='www.q.example';
+  v_r := public.laruhp_domain_apply_check(
+    v_site,'www.q.example','t-qw',v_e,'alias','rd-w',null,true,'q.example');
+  perform pg_temp.expect((v_r->>'ok')::boolean, 'Q: alias として保存できる');
+  perform pg_temp.expect((v_r->>'switched')::boolean is false,
+    'Q: alias を主URLに自動採用してしまう');
+  perform pg_temp.expect(
+    (select redirects_to from public.site_domains where host='www.q.example') = 'q.example',
+    'Q: 転送先が残る');
+
+  -- 明示的に主URLへ切り替えようとしても通らない（転送の輪ができる）
+  select operation_epoch into v_e from public.site_domains where host='www.q.example';
+  v_r := public.laruhp_domain_set_primary(v_site,'www.q.example','t-qw',v_e);
+  perform pg_temp.expect((v_r->>'ok')::boolean is false, 'Q: alias を主URLにできてしまう');
+  perform pg_temp.expect(v_r->>'reason'='not_connected', 'Q: 理由が返る');
+  perform pg_temp.expect(
+    (select custom_domain from public.sites where id=v_site) = 'q.example',
+    'Q: 主URLが変わっていない');
+end;
+$$;
+
+-- ════════════════════════════════════════════════════════════
+-- 追加R: 別名でなくなったら転送先を消す
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000006';
+  v_e bigint;
+begin
+  select operation_epoch into v_e from public.site_domains where host='www.q.example';
+  perform public.laruhp_domain_apply_check(
+    v_site,'www.q.example','t-qw',v_e,'connected','rd-w',null,false,null);
+  perform pg_temp.expect(
+    (select redirects_to from public.site_domains where host='www.q.example') is null,
+    'R: 転送先が残ったままになっている');
+end;
+$$;
+
+select 'ALL SQL REGRESSION SCENARIOS PASSED (A-R)' as result;

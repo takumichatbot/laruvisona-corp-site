@@ -1,0 +1,40 @@
+# ホスト	パス	HTTP	転送先(Location)	本文に出てよい印	rel=canonical
+# ── 独自ドメイン（主な公開URL） ──
+salon-a.example	/	200	-	A_ONLY_SITE_BODY	https://salon-a.example
+salon-a.example	/post/a-post	200	-	A_ONLY_ARTICLE	https://salon-a.example/post/a-post
+salon-a.example	/shop	200	-	A_PRODUCT	https://salon-a.example/shop
+salon-a.example	/sitemap.xml	200	-	-	-
+# 他サイトの記事IDは、このホストでは解決しない
+salon-a.example	/post/b-post	404	-	-	-
+salon-a.example	/does-not-exist	404	-	-	-
+# 内部パスで別サイトを指せない（越境の穴）
+salon-a.example	/hp/site-b	404	-	-	-
+salon-a.example	/hp/site-b/shop	404	-	-	-
+salon-a.example	/hp/site-b/post/b-post	404	-	-	-
+salon-a.example	/laruHP/dashboard	404	-	-	-
+# 公開済みHTMLに残る旧い記事リンクは、その記事のサイトの正規URLへ308
+salon-a.example	/hp/post/b-post	308	https://bistro-b.example/post/b-post	-	-
+# ── もう一方のサイト ──
+bistro-b.example	/	200	-	B_ONLY_SITE_BODY	https://bistro-b.example
+bistro-b.example	/shop	200	-	B_ONLY_PRODUCT	https://bistro-b.example/shop
+bistro-b.example	/post/b-post	200	-	B_ONLY_ARTICLE	https://bistro-b.example/post/b-post
+bistro-b.example	/post/b-draft	404	-	-	-
+# ── 未知のホスト ──
+unknown.example	/	404	-	-	-
+# ── 会社ホスト・サブドメイン（正規URLは独自ドメインで一意） ──
+laruvisona.jp	/hp/site-b/post/b-post	200	-	B_ONLY_ARTICLE	https://bistro-b.example/post/b-post
+laruvisona.jp	/hp/site-b/shop	200	-	B_ONLY_PRODUCT	https://bistro-b.example/shop
+site-b.laruvisona.jp	/post/b-post	200	-	B_ONLY_ARTICLE	https://bistro-b.example/post/b-post
+# ── C2: 別名ホスト（apex/www のもう一方、旧ドメイン） ──
+www.salon-a.example	/	308	https://salon-a.example/	-	-
+www.salon-a.example	/shop	308	https://salon-a.example/shop	-	-
+www.salon-a.example	/post/a-post?utm_source=flyer&lang=en	308	https://salon-a.example/post/a-post?utm_source=flyer&lang=en	-	-
+www.salon-a.example	/does-not-exist	308	https://salon-a.example/does-not-exist	-	-
+# 別名ホストでも、内部パスで別サイトへは渡さない（転送先は自分のサイトの正規URL）
+www.salon-a.example	/hp/site-b/post/b-post	308	https://salon-a.example/hp/site-b/post/b-post	-	-
+old-salon.example	/shop	308	https://salon-a.example/shop	-	-
+# 未公開サイトのホスト・確認前のホストは転送も配信もしない
+hidden.example	/	404	-	-	-
+pending.example	/	404	-	-	-
+# 基盤パスは転送しない（所有確認の往復と静的配信を壊さない）
+www.salon-a.example	/_next/static/does-not-exist.js	404	-	-	-

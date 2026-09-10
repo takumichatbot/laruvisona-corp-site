@@ -35,10 +35,11 @@ export type DomainStatus =
   | 'connected'
   | 'failed'
   | 'legacy'
-  | 'release_pending';
+  | 'release_pending'
+  | 'alias';
 
 export const DOMAIN_STATUSES: DomainStatus[] = [
-  'pending_ownership', 'pending_dns', 'ssl_pending', 'connected', 'failed', 'legacy', 'release_pending',
+  'pending_ownership', 'pending_dns', 'ssl_pending', 'connected', 'failed', 'legacy', 'release_pending', 'alias',
 ];
 
 /**
@@ -241,6 +242,8 @@ export type RenderCheck =
 export type ProbeResult =
   /** 署名付きの往復が成立し、このサービスに届いていることを確認できた */
   | 'reached'
+  /** 3xx が返った。転送先は追わない（追った先の応答を根拠にしないため） */
+  | 'redirected'
   /** 応答が無い、署名が合わない、別ホストだった */
   | 'not_reached'
   /** 署名鍵が未設定などで、この確認自体ができない */
@@ -258,6 +261,15 @@ export interface StatusInput {
    */
   probe: ProbeResult;
   renderCheck: RenderCheck;
+  /**
+   * probe が 'redirected' のとき、その転送先が
+   * 「同じサイトの、確認済みの主な公開URL」だったか。
+   *
+   * Location が同じサイトを指すことだけでは所有の根拠にしない。
+   * 呼び出し側で、申請ホストの所有確認（TXT）と外部登録の帰属を
+   * 確かめたうえで、この値を立てる。
+   */
+  redirectToOwnHost?: boolean;
 }
 
 /**
@@ -270,6 +282,13 @@ export interface StatusInput {
  */
 export function deriveStatus(input: StatusInput): DomainStatus {
   if (!input.ownership) return 'pending_ownership';
+
+  // 転送されるホスト。
+  // 所有確認が済んでいて、転送先が同じサイトの確認済みホストなら「別名」。
+  // 転送先の応答は見ない（追わない）ので、これ自体は接続済みではない。
+  if (input.probe === 'redirected') {
+    return input.redirectToOwnHost ? 'alias' : 'ssl_pending';
+  }
 
   // 到達確認は必須。ここを飛ばすと、TLSでつながるかも、こちらのサービスが
   // 応答しているかも確かめないまま主URLへ採用できてしまう。
@@ -302,6 +321,8 @@ export function statusLabel(status: DomainStatus): { label: string; next: string
       return { label: '要再確認', next: '以前からの設定で配信中です。新しい確認手順での再確認をお願いします。' };
     case 'release_pending':
       return { label: '解除待ち', next: '配信は停止しました。外部側の解除が残っています。「解除を再試行」を押してください。' };
+    case 'alias':
+      return { label: '転送設定', next: 'このドメインは主な公開URLへ転送されます。転送元として使えます。' };
   }
 }
 
@@ -391,3 +412,20 @@ export const DNS_SUPPORT_NOTES = [
   'Cloudflareのプロキシ（オレンジ色の雲）を有効にしたままでも接続できます。公開DNSからはレコードが見えませんが、実際にHTTPSで到達できるかで確認します。',
   'DNSの反映には数分〜最大48時間かかることがあります。',
 ];
+
+/**
+ * このホストが「転送元」なら、その転送先を返す。主な公開URLなら null。
+ *
+ * 主な公開URL以外の確認済みホストは、proxy.ts がパスとクエリを保ったまま
+ * 主な公開URLへ308で転送する。alias は外部側で転送されているホストなので、
+ * 観測した転送先をそのまま示す。
+ */
+export function forwardTargetFor(
+  r: { host: string; status: DomainStatus; redirects_to?: string | null },
+  primary: string | null,
+): string | null {
+  if (primary && primary === r.host) return null;
+  if (r.status === 'alias') return r.redirects_to ?? primary ?? null;
+  if (r.status === 'connected' || r.status === 'legacy') return primary ?? null;
+  return null;
+}

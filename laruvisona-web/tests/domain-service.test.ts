@@ -23,6 +23,7 @@ type Row = {
   external_registration_owned: boolean | null;
   release_operation_id: string | null;
   release_lease_until: string | null;
+  redirects_to: string | null;
 };
 
 const TARGET = 'laruvisona-corp-site.onrender.com';
@@ -70,6 +71,7 @@ function makeStore(opts: {
         verification_token: token, render_domain_id: null, last_error: null, last_checked_at: null,
         operation_epoch: 1, render_register_started_at: null, ownership_verified_at: null,
         external_registration_owned: null, release_operation_id: null, release_lease_until: null,
+        redirects_to: null,
       };
       rows.push(row);
       return { ok: true as const, row };
@@ -77,6 +79,7 @@ function makeStore(opts: {
     async applyCheck(input: {
       siteId: string; host: string; fencingToken: string; epoch: number; status: DomainStatusT;
       renderDomainId: string | null; lastError: string | null; makePrimary: boolean;
+      redirectsTo?: string | null;
     }) {
       opts.beforeApply?.();
       if (opts.failApply) return { ok: false as const, reason: 'error' as const, message: 'db down' };
@@ -90,6 +93,8 @@ function makeStore(opts: {
         return { ok: false as const, reason: 'releasing' as const };
       }
       row.status = input.status;
+      // SQL側と同じ: 別名でなくなったら転送先も消す
+      row.redirects_to = input.status === 'alias' ? (input.redirectsTo ?? null) : null;
       row.render_domain_id = input.renderDomainId ?? row.render_domain_id;
       row.last_error = input.lastError;
       row.last_checked_at = 'now';
@@ -110,6 +115,7 @@ function makeStore(opts: {
       if (row.status !== 'connected' && row.status !== 'legacy') {
         return { ok: false as const, reason: 'not_connected' as const };
       }
+      // alias（転送されるホスト）は主URLにできない
       opts.sites[siteId].custom_domain = host;
       return { ok: true as const };
     },
@@ -249,10 +255,14 @@ function makeRender(mode: 'ok' | 'unverified' | 'down' | 'off', opts: { unregist
   };
 }
 
-type ProbeR = 'reached' | 'not_reached' | 'unavailable';
-function makeProbe(result: ProbeR | boolean) {
+type ProbeR = 'reached' | 'not_reached' | 'unavailable' | 'redirected';
+type ProbeOut = { result: ProbeR; redirectHost?: string | null };
+function makeProbe(result: ProbeR | boolean, redirectHost: string | null = null) {
   const r: ProbeR = typeof result === 'boolean' ? (result ? 'reached' : 'not_reached') : result;
-  return { calls: 0, async reachesService(): Promise<ProbeR> { this.calls++; return r; } };
+  return {
+    calls: 0,
+    async reachesService(): Promise<ProbeOut> { this.calls++; return { result: r, redirectHost }; },
+  };
 }
 
 function deps(store: ReturnType<typeof makeStore>, dns: ReturnType<typeof makeDns>, render: ReturnType<typeof makeRender>, probe: ReturnType<typeof makeProbe>) {
@@ -271,6 +281,7 @@ function row(host: string, over: Partial<Row> = {}): Row {
     verification_token: TOKEN, render_domain_id: null, last_error: null, last_checked_at: null,
     operation_epoch: 1, render_register_started_at: null, ownership_verified_at: null,
     external_registration_owned: null, release_operation_id: null, release_lease_until: null,
+    redirects_to: null,
     ...over,
   };
 }

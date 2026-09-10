@@ -15,6 +15,7 @@ const {
   challengeRecordName, challengeRecordValue, generateVerificationToken,
   checkOwnership, cnameMatchesTarget, checkPointsHere, deriveStatus,
   dnsInstructions, isServable, statusLabel, looksLikeApex, DNS_SUPPORT_NOTES,
+  forwardTargetFor, DOMAIN_STATUSES,
 } = await import('../lib/domain.ts');
 
 // ── 正規化 ──
@@ -186,11 +187,48 @@ test('配信してよい状態は connected と legacy だけ', () => {
 });
 
 test('すべての状態に「次にやること」がある', () => {
-  for (const s of ['pending_ownership', 'pending_dns', 'ssl_pending', 'connected', 'failed', 'legacy', 'release_pending'] as const) {
+  // 状態を増やしたら文言も必ず増える（一覧から回すので取りこぼさない）
+  for (const s of DOMAIN_STATUSES) {
     const l = statusLabel(s);
     assert.ok(l.label.length > 0, s);
     assert.ok(l.next.length > 0, s);
   }
+});
+
+test('別名（alias）は配信先にならない', () => {
+  // 転送元であって、主な公開URLの候補ではない
+  assert.equal(isServable('alias'), false);
+});
+
+// ── 転送元の表示 ──
+
+test('主な公開URL自身は転送元にならない', () => {
+  assert.equal(forwardTargetFor({ host: 'a.example', status: 'connected' }, 'a.example'), null);
+  assert.equal(forwardTargetFor({ host: 'a.example', status: 'legacy' }, 'a.example'), null);
+});
+
+test('主な公開URL以外の確認済みホストは、主な公開URLへの転送元として表示する', () => {
+  assert.equal(forwardTargetFor({ host: 'www.a.example', status: 'connected' }, 'a.example'), 'a.example');
+  assert.equal(forwardTargetFor({ host: 'old.example', status: 'legacy' }, 'a.example'), 'a.example');
+});
+
+test('別名は観測した転送先を表示し、無ければ主な公開URLを表示する', () => {
+  assert.equal(
+    forwardTargetFor({ host: 'www.a.example', status: 'alias', redirects_to: 'a.example' }, 'a.example'),
+    'a.example');
+  assert.equal(
+    forwardTargetFor({ host: 'www.a.example', status: 'alias', redirects_to: null }, 'a.example'),
+    'a.example');
+});
+
+test('準備中・失敗のホストは転送元として表示しない', () => {
+  for (const s of ['pending_ownership', 'pending_dns', 'ssl_pending', 'failed', 'release_pending'] as const) {
+    assert.equal(forwardTargetFor({ host: 'www.a.example', status: s }, 'a.example'), null, s);
+  }
+});
+
+test('主な公開URLが未設定なら転送先も出さない', () => {
+  assert.equal(forwardTargetFor({ host: 'www.a.example', status: 'connected' }, null), null);
 });
 
 // ── 画面に出すDNS手順 ──
