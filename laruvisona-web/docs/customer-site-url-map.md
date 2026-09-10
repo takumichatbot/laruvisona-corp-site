@@ -1,107 +1,100 @@
-# 顧客サイトのURL対応表（現状と、直すべきところ）
+# 顧客サイトのURL対応表
 
-作成: 2026-09-10。**調査と設計のみ。コードは変更していない。**
-対象: `proxy.ts` / `app/hp/[slug]/**` / `app/hp/by-domain/[domain]/**` / `lib/site-origin.ts`
+更新: 2026-09-10。**訂正あり**（初版に事実誤認があった。下の「初版の誤り」参照）。
+対象: `proxy.ts` / `app/hp/[slug]/**` / `app/hp/post/[postId]` / `lib/public-site-url.ts`
 
-独自ドメイン差分（所有確認・世代管理）とは別の変更単位として扱う。
+## 初版の誤り（訂正）
+
+| 初版の記述 | 実際 |
+|---|---|
+| 独自ドメインでクエリが落ちる | **誤り。クエリは保持される。** `proxy` は `nextUrl.clone()` のあと `pathname` だけを変える。失われるのはパスであってクエリではない |
+| 記事は `/hp/[slug]/post/[postId]` | **誤り。** 実ルートは `/hp/post/[postId]` だった（slug配下には無かった）。プレビューも `/hp/preview/[token]` |
+| 標準公開URLでは記事が開く | サブドメイン形式は `/post/x` → `/hp/<slug>/post/x` へ写るが、**そのルートが存在しなかった**ので開けなかった |
 
 ## 1. ホストの種類
 
-| 種類 | 例 | 決まり方 | proxy.ts の扱い |
+| 種類 | 例 | 決まり方 | proxy の扱い |
 |---|---|---|---|
-| 主な公開URL（独自ドメイン） | `example.com` | `sites.custom_domain`。接続確認が取れたホストだけ入る | `/hp/by-domain/<host>` へ rewrite |
-| 別名（www / apex の相方） | `www.example.com` | いまは**別々の候補として個別に接続**する必要がある | 同上（別のホストとして扱われる） |
-| 標準の公開URL（サブドメイン） | `<slug>.laruvisona.jp` | `sites.slug`。ワイルドカードDNS前提 | `/hp/<slug>` へ rewrite（サブパス透過） |
-| 標準の公開URL（パス） | `laruvisona.jp/hp/<slug>` | 同上 | 実ルート |
-| 旧ホスト | 解除済みの独自ドメイン | `site_domains` から消える | システムホスト扱いにならず `/hp/by-domain/<host>` → 404 |
-| 代理店の管理画面ドメイン | `agency.example` | `profiles.agency_admin_domain` | `/` をダッシュボードへ rewrite |
-| 自社ホスト | `laruvisona.jp` / `*.onrender.com` | `MAIN_HOST` 等 | rewrite しない |
+| 独自ドメイン | `salon-a.example` | `sites.custom_domain`（確認済みのみ） | ホストから slug を引き `/hp/<slug><path>` へ。引けなければ **404** |
+| 標準URL（サブドメイン） | `<slug>.laruvisona.jp` | `sites.slug` | `/hp/<slug><path>` |
+| 標準URL（パス） | `laruvisona.jp/hp/<slug>` | 同上 | 実ルート（書き換えなし） |
+| 代理店の管理画面 | `agency.example` | `profiles.agency_admin_domain` | `/` をダッシュボードへ |
+| 自社ホスト | `laruvisona.jp` / `*.onrender.com` | `MAIN_HOST` 等 | 書き換えなし |
 
-## 2. パスごとの対応（ここが今回の本題）
+## 2. パスごとの対応（実装後）
 
-`proxy.ts` は独自ドメインの場合、`robots.txt` と `sitemap.xml` 以外の**すべてのパスを
-トップページへ rewrite する**。下層ページが独立したURLにならない。
+3つの形すべてが**同じルート** `/hp/[slug]/**` に集まる。ページの複製は無い。
 
-| パス | `<slug>.laruvisona.jp` / `/hp/<slug>` | 独自ドメイン `example.com` | 直すべきか |
-|---|---|---|---|
-| `/` | トップ | トップ | — |
-| `/shop` | ショップ（`app/hp/[slug]/shop`） | **トップが出る**（別ページにならない） | **要修正** |
-| `/post/<id>` | 記事（`app/hp/post/[postId]`） | **トップが出る** | **要修正** |
-| `/preview/<token>` | プレビュー | **トップが出る** | 要検討（顧客向けではない） |
-| 存在しないパス | 404 | **トップが200で出る**（ソフト404） | **要修正** |
-| `?lang=xx` 等のクエリ | 保持される | rewrite先が固定のため**落ちる** | **要修正** |
-| `/robots.txt` | `/hp/<slug>/robots.txt` | `/hp/by-domain/<host>/robots.txt` | — |
-| `/sitemap.xml` | `/hp/<slug>/sitemap.xml` | `/hp/by-domain/<host>/sitemap.xml` | 内容が食い違う（下記） |
-| `/api/**` | 素通し | 素通し | — |
-| `/_next/**` | 素通し | 素通し | — |
+| 外から見えるパス | 内部のルート | 備考 |
+|---|---|---|
+| `/` | `/hp/<slug>` | トップ |
+| `/shop` | `/hp/<slug>/shop` | ショップ |
+| `/post/<id>` | `/hp/<slug>/post/<id>` | **新設。** その slug のサイトに属する公開済み記事だけ |
+| `/robots.txt` | `/hp/<slug>/robots.txt` | |
+| `/sitemap.xml` | `/hp/<slug>/sitemap.xml` | |
+| 未知のパス | `/hp/<slug>/<未知>` | ルートが無いので **Next.js が 404** |
+| `/api/**` `/_next/**` | 素通し | 書き換えない（POSTを巻き込まない） |
+| `/laruHP/**` `/hp/**` | 素通し | 顧客ホストからは管理画面・プレビューへ入らない |
 
-### sitemap の食い違い
+クエリは全経路で保持される（`pathname` だけを書き換えるため）。
 
-- `/hp/<slug>/sitemap.xml` … トップ + **`/shop`** + `?lang=` 各言語
-- `/hp/by-domain/<host>/sitemap.xml` … トップ + `?lang=` 各言語のみ（`/shop` を出していない）
+### 旧い記事URLの互換
 
-独自ドメインでは `/shop` が実際に開けないので、sitemap から外れているのは
-現状の挙動としては整合している。ただし「下層ページを独立URLにする」なら
-両方に載せる必要がある。
+公開済みHTML（`lib/html-export.ts`）は `/hp/post/<id>` を出している。
+このルートは残すが、**表示せず** その記事が属するサイトの正規URLへ 308 で転送する。
+記事IDだけで表示していたため、どのホストで開いても同じ内容が出ていた。
 
-### canonical
+### canonical / JSON-LD / sitemap
 
-- `/hp/<slug>` … `generateMetadata` は canonical を設定していない
-- `/hp/by-domain/<host>` … `https://<host>`（トップ固定）
+`lib/public-site-url.ts` の `publicBase(site, host)` が、開かれたホストに合わせて
+そのサイトの正規URLを1つに決める。トップ・ショップ・記事・sitemap・robots・
+決済の戻り先が同じ基点を使う。
 
-下層ページを独立URLにすると、canonical もページごとに変える必要がある。
-いまはどのパスでもトップの canonical が出るため、下層を作った瞬間に
-重複コンテンツになる。
+| 開かれた形 | 正規URLの基点 |
+|---|---|
+| 独自ドメイン（`www.` 付きも） | `https://<custom_domain>` |
+| サブドメイン | `https://<slug>.laruvisona.jp` |
+| パス形式（独自ドメインあり） | `https://<custom_domain>`（独自ドメインが正） |
+| パス形式（独自ドメインなし） | `https://laruvisona.jp/hp/<slug>` |
 
-### GET と POST
+ショップは以前 `NEXT_PUBLIC_APP_URL` から会社ホストのURLを作っていた。
+JSON-LD にも Stripe の `successUrl` / `cancelUrl` にも同じ値を渡していたので、
+独自ドメインで買った人が会社ホストへ戻されていた。これを正規URLに揃えた。
 
-`proxy.ts` の rewrite はメソッドを問わない。フォーム送信は `/api/**`
-（rewrite 対象外）へ出しているので現状は影響しないが、
-下層ページを追加するときは **POST を rewrite で握りつぶさない**こと。
+## 3. サイトをまたがせない
 
-## 3. Render 側の apex / www の挙動
+- 記事は `slug` からサイトを引き、`news_posts.site_id` の一致を必須にする。
+  A のホストに B の記事IDを渡しても 404。
+- 非公開の記事・非公開のサイトも 404。
+- 未知のホストは、どのサイトにも解決せず 404（トップページを 200 で返さない）。
 
-Render にカスタムドメインを追加すると、apex と www の**片方を登録すると
-もう片方も候補として扱われ、一方から他方へリダイレクトされる**ことがある。
-（公式: Custom Domains の www / apex の節）
+## 4. Render の apex / www（次の差分 C2）
 
-この差分の設計との関係:
+Render は apex と www の一方を登録すると他方からリダイレクトすることがある。
+到達確認は `maxRedirects: 0` なので、**リダイレクトされる側は接続済みにならない**。
+これは意図した挙動（リダイレクト先の応答を根拠にしない）だが、利用者には
+「www を追加したのに接続済みにならない」に見える。
 
-- 到達確認（`/api/domain-probe`）は **`maxRedirects: 0`**。
-  Render 側で www → apex のリダイレクトが入るホストは、
-  リダイレクトされる側では到達確認が成立しない。
-- したがって **リダイレクトされる側のホストは「主な公開URL」にできない**。
-  これは意図した挙動（リダイレクト先の応答で接続済みと判断しない）だが、
-  利用者から見ると「www を追加したのに接続済みにならない」になる。
+C2 では、接続状態と転送関係を分けて持つ。`Location` が同じサイトを指すことだけを
+所有の根拠にしない（申請側の所有確認・外部登録の帰属・同サイトの確認済み転送先を
+すべて満たす場合にのみ「別名」として記録する）。署名付き到達確認の
+リダイレクト追跡禁止は維持する。
 
-対応案（次の差分で実装する候補）:
+## 5. 検証状況
 
-1. 到達確認で 3xx を受けたとき、`Location` のホストが**同じサイトの
-   確認済みホスト**であれば「別名（リダイレクト）」として記録し、
-   `connected` ではなく `alias` という状態にする。
-   主な公開URLにはできないが、画面には正しく「www → apex に転送」と出せる。
-2. 画面で apex と www をペアとして扱い、「どちらを正規にするか」を
-   1回選ばせる。もう一方は自動で別名にする。
+`tests/customer-routing.test.ts` で、実際の `proxy()` に本物の `NextRequest` を
+通して12件を固定した（Supabase への参照だけ差し替え、外部通信なし）。
+A/B 2サイトで解決先が混ざらないこと、クエリ保持、未知ホスト404、
+管理画面・プレビュー・APIの素通しを含む。
 
-いずれも到達確認のリダイレクト禁止は維持する（リダイレクト先の応答を
-根拠にしない、という性質は変えない）。
+`tests/public-site-url.test.ts` で正規URLの決め方と、記事のサイト所属確認・
+旧URLの転送・ページ複製の不在を固定した。
 
-## 4. 直す順番の案
+### まだ確認していないこと
 
-1. **ソフト404をやめる**（`/hp/by-domain/<host>` にしか rewrite しない現状で、
-   未知のパスを 404 にする）。SEO上の実害が一番大きい。
-2. **クエリを保持する**（`url.search` を rewrite 先に引き継ぐ）。
-3. **下層パスを独立URLにする**（`/shop`, `/post/<id>` を
-   `/hp/by-domain/<host>/shop` などへ振り分ける）。canonical と sitemap を同時に直す。
-4. **apex/www の別名**を状態として持つ（上記3節）。
-5. 旧ホストの扱い（解除後にアクセスされたときの応答）を決める。
-
-各段階で、既存の公開中サイトが落ちないことを先に確認する。
-1〜3 は `proxy.ts` と by-domain 配下だけで閉じるので、
-独自ドメインの接続処理（`site_domains`）には影響しない。
-
-## 5. まだ確認していないこと
-
-- 実際に独自ドメインで公開中の顧客サイトが存在するか（本番DBを見ていない）
-- Render の apex/www リダイレクトの実挙動（実ドメインでの接続試験が必要）
-- 現状の顧客サイトで `/shop` を使っているサイトがあるか
+- **実ビルドでのHTTP応答**（404が本当に404で返るか）。この環境では
+  `next build` が動かない（SWCのlinux/arm64バイナリが無い）。
+  未知パスを存在しないルートへ渡す形にしたので Next.js の 404 になるはずだが、
+  実ビルドでの確認は未了。
+- 実際の独自ドメインでの接続試験（Renderのapex/www挙動を含む）。
+- 本番に独自ドメインで公開中の顧客サイトがあるか（本番DBを見ていない）。

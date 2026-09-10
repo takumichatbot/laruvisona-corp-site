@@ -1,5 +1,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
+import { publicBase, siteUrl } from '@/lib/public-site-url';
 import type { Metadata } from 'next';
 import ShopClient from './ShopClient';
 
@@ -44,7 +46,7 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
 
   const { data: site } = await supabase
     .from('sites')
-    .select('id, name, settings_json')
+    .select('id, name, settings_json, slug, custom_domain')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -55,8 +57,11 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
   const allProducts = (settings.products as Product[]) || [];
   const products = allProducts.filter(p => p.active && (p.stock === null || p.stock > 0));
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
-  const shopUrl = `${appUrl}/hp/${slug}/shop`;
+  // 独自ドメインやサブドメインで開かれていても、会社ホストのURLを作らない。
+  // JSON-LD にも決済の戻り先にも同じ値を使うので、ここがずれると
+  // 購入者が別ホストへ戻される。
+  const host = (await headers()).get('host');
+  const shopUrl = siteUrl(publicBase(site as { slug?: string | null; custom_domain?: string | null }, host), 'shop');
 
   // Product JSON-LD (ItemList + individual Product schemas)
   const productJsonLd = products.length > 0 ? JSON.stringify({

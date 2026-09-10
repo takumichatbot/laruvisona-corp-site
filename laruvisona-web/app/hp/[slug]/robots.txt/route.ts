@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { publicBase, siteUrl } from '@/lib/public-site-url';
 
 function getAdminClient() {
   return createClient(
@@ -9,7 +10,7 @@ function getAdminClient() {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
@@ -17,7 +18,7 @@ export async function GET(
 
   const { data: site } = await supabase
     .from('sites')
-    .select('slug, settings_json')
+    .select('slug, custom_domain, settings_json')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -30,8 +31,9 @@ export async function GET(
   // Allow opt-out of indexing via settings
   const noIndex = settings.noIndex === true;
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
-  const sitemapUrl = `${base}/hp/${slug}/sitemap.xml`;
+  // 独自ドメイン・サブドメイン・パス形式のどれで開かれたかに合わせる
+  const base = publicBase(site as { slug?: string | null; custom_domain?: string | null }, req.headers.get('host'));
+  const sitemapUrl = siteUrl(base, 'sitemap.xml');
 
   const txt = noIndex
     ? `User-agent: *\nDisallow: /\n`

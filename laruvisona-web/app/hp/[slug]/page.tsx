@@ -1,5 +1,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
+import { publicBase } from '@/lib/public-site-url';
 import { revalidateTag } from 'next/cache';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
@@ -24,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = getServiceClient();
   const { data } = await supabase
     .from('sites')
-    .select('name, seo_json, settings_json')
+    .select('name, seo_json, settings_json, slug, custom_domain')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -33,8 +35,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const seo = (data.seo_json ?? {}) as { title?: string; description?: string; ogTitle?: string; ogDescription?: string; ogImage?: string };
   const settings = (data.settings_json ?? {}) as { noIndex?: boolean };
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
-  const canonical = `${base}/hp/${slug}`;
+  // 同じサイトがパス形式・サブドメイン形式・独自ドメイン形式で開ける。
+  // 開かれたホストに合わせて、そのサイトの正規URLを1つに決める。
+  const host = (await headers()).get('host');
+  const canonical = publicBase(data as { slug?: string | null; custom_domain?: string | null }, host);
   const ogTitle = seo.ogTitle || seo.title || data.name;
   const ogDesc = seo.ogDescription || seo.description || '';
 
@@ -79,9 +83,8 @@ interface BusinessInfo {
   sameAs?: string[];
 }
 
-function buildJsonLd(siteName: string, slug: string, seo: { description?: string }, bi: BusinessInfo): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
-  const url = `${base}/hp/${slug}`;
+function buildJsonLd(siteName: string, baseUrl: string, seo: { description?: string }, bi: BusinessInfo): string {
+  const url = baseUrl;
   const schemaType = bi.type || 'LocalBusiness';
   const name = bi.name || siteName;
 
@@ -131,7 +134,7 @@ export default async function PublishedSitePage({ params }: Props) {
 
   const { data: site } = await supabase
     .from('sites')
-    .select('published_html, name, settings_json, seo_json')
+    .select('published_html, name, settings_json, seo_json, slug, custom_domain')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -156,12 +159,16 @@ export default async function PublishedSitePage({ params }: Props) {
 
   const seo = (site.seo_json ?? {}) as { description?: string };
 
+  // JSON-LD の url は、実際に開かれているホストに合わせた正規URLにする
+  const host = (await headers()).get('host');
+  const base = publicBase(site as { slug?: string | null; custom_domain?: string | null }, host);
+
   // Ensure the first <img> in the page is eager-loaded (improves LCP)
   const eagerHtml = site.published_html.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
 
   const hasBusinessInfo = !!settings.businessInfo;
   const jsonLdStr = hasBusinessInfo
-    ? buildJsonLd(site.name, slug, seo, settings.businessInfo!)
+    ? buildJsonLd(site.name, base, seo, settings.businessInfo!)
     : null;
 
   return (

@@ -25,6 +25,35 @@ const MAIN_HOST = (process.env.NEXT_PUBLIC_APP_URL || '')
   .replace(/^https?:\/\//, '')
   .replace(/\/$/, '');
 
+// 独自ドメイン → 公開中サイトの slug（service roleで参照・5分キャッシュ）
+//
+// 以前は独自ドメインを一律 /hp/by-domain/<host> へ rewrite していたため、
+// /shop も /post/<id> も存在しないパスもトップページが 200 で返っていた。
+// ホストから slug を引いて /hp/<slug><path> へ渡すと、
+// パス形式・サブドメイン形式と同じルートを通るので、
+// 下層ページも 404 も本来の挙動になる。
+const domainSlugCache = new Map<string, { slug: string | null; t: number }>();
+async function slugForCustomDomain(host: string): Promise<string | null> {
+  const c = domainSlugCache.get(host);
+  const now = Date.now();
+  if (c && now - c.t < 5 * 60 * 1000) return c.slug;
+  let slug: string | null = null;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && key) {
+    try {
+      const r = await fetch(
+        `${url}/rest/v1/sites?custom_domain=eq.${encodeURIComponent(host)}&published=is.true&select=slug&limit=1`,
+        { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+      );
+      const d = await r.json();
+      if (Array.isArray(d) && d.length > 0 && typeof d[0]?.slug === 'string') slug = d[0].slug;
+    } catch { /* 引けなければ未知のホストとして扱う */ }
+  }
+  domainSlugCache.set(host, { slug, t: now });
+  return slug;
+}
+
 // 代理店の管理画面ドメイン判定（service roleで参照・5分キャッシュ）
 const adminDomainCache = new Map<string, { v: boolean; t: number }>();
 async function isAgencyAdminDomain(host: string): Promise<boolean> {
@@ -86,11 +115,15 @@ export async function proxy(request: NextRequest) {
         return NextResponse.rewrite(url);
       }
     } else {
+      // 独自ドメイン。ホストから公開中サイトの slug を引き、
+      // サブドメイン形式と同じルート（/hp/<slug><path>）へ渡す。
+      // 未知のホストは 404（トップページを 200 で返さない）。
+      const slug = await slugForCustomDomain(hostname);
+      if (!slug) {
+        return new NextResponse(null, { status: 404 });
+      }
       const url = request.nextUrl.clone();
-      // robots.txt / sitemap.xml は独自ドメイン専用ルートへ（それ以外はトップを表示）
-      url.pathname = (pathname === '/robots.txt' || pathname === '/sitemap.xml')
-        ? `/hp/by-domain/${hostname}${pathname}`
-        : `/hp/by-domain/${hostname}`;
+      url.pathname = `/hp/${slug}${pathname === '/' ? '' : pathname}`;
       return NextResponse.rewrite(url);
     }
   }

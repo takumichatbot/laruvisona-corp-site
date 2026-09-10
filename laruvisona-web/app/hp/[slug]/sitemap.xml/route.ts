@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { publicBase } from '@/lib/public-site-url';
 
 function getAdminClient() {
   return createClient(
@@ -9,7 +10,7 @@ function getAdminClient() {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
@@ -17,7 +18,7 @@ export async function GET(
 
   const { data: site } = await supabase
     .from('sites')
-    .select('slug, updated_at, settings_json')
+    .select('slug, custom_domain, updated_at, settings_json')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -26,8 +27,8 @@ export async function GET(
     return new Response('Not found', { status: 404 });
   }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
-  const loc = `${base}/hp/${site.slug}`;
+  // どのホストで開かれたかに合わせて、そのサイトの正規URLを出す
+  const loc = publicBase(site as { slug?: string | null; custom_domain?: string | null }, req.headers.get('host'));
   const lastmod = site.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0];
 
   // Check if shop has active products
