@@ -9,6 +9,7 @@
  * 書かないもの: 架空の導入実績、顧客ロゴ、成果の数値、未実装の機能。
  * 実在するのは、動いている製品と、公開できる会社情報だけ。
  */
+import Image from 'next/image';
 import Link from 'next/link';
 import BrandFonts from '@/components/BrandFonts';
 import BrandVisual, { BRAND_VISUAL } from '@/components/BrandVisual';
@@ -132,67 +133,132 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 誰の、どの困りごとか ───────────────────────────────── */}
+      {/* ── 誰の、どの困りごとか ─────────────────────────────────
+          同じ形のカードを並べるのをやめ、番号を振った並びにする。
+          この節は「読ませる」役で、下の「見せる」節と役割を分ける。 */}
       <section className="px-5 py-14 md:py-20 border-t border-white/10 bg-[#0a1220]">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <h2 className="text-[20px] md:text-[26px] font-bold mb-8">こういうときに、お役に立てます</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {PROBLEMS.map(p => (
-              <div key={p.who} className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-                <div className="text-[12px] font-bold text-sky-300/90 mb-2">{p.who}</div>
-                <p className="text-[15px] leading-[1.95] text-slate-200 mb-5 min-h-[3.9em]">{p.trouble}</p>
+          <ul className="space-y-6 md:space-y-7">
+            {PROBLEMS.map((p, i) => (
+              <li key={p.who} className="grid md:grid-cols-[3rem_minmax(0,15rem)_minmax(0,1fr)_auto] gap-x-6 gap-y-2 items-baseline border-b border-white/10 pb-6 last:border-0">
+                <span className="text-[13px] font-bold text-sky-300/70 tabular-nums">0{i + 1}</span>
+                <span className="text-[15px] font-bold text-slate-100">{p.who}</span>
+                <p className="text-[15px] leading-[1.95] text-slate-300">{p.trouble}</p>
                 <a href={p.href}
-                  className="inline-flex items-center gap-1 text-[13px] font-bold text-sky-300 hover:text-sky-200 min-h-[44px]">
+                  className="inline-flex items-center gap-1 text-[13px] font-bold text-sky-300 hover:text-sky-200 min-h-[44px] whitespace-nowrap">
                   {p.answer} で応えます →
                 </a>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
-      {/* ── 提供しているもの ───────────────────────────────────── */}
-      <section id="services" className="px-5 py-14 md:py-24">
+      {/* ── 提供しているもの ─────────────────────────────────────
+          3つを同じ大きさで並べない。いちばん見せられるもの（実際の画面がある
+          LARU HP）を大きく出し、残りは役割の違う形で置く。 */}
+      <section id="services" className="px-5 pt-14 md:pt-24">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-[20px] md:text-[26px] font-bold mb-2">提供しているもの</h2>
-          <p className="text-[14px] text-slate-400 mb-10">いま動いている3つです。</p>
-          <div className="space-y-5">
-            {SERVICES.map(s => (
-              <div key={s.name}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 md:p-8 grid md:grid-cols-[minmax(0,1fr)_auto] gap-6 items-center">
-                <div>
-                  <div className="flex flex-wrap items-baseline gap-3 mb-2">
-                    <span className="text-[20px] font-bold">{s.name}</span>
-                    <span className="text-[13px] text-sky-300/90">{s.lead}</span>
-                  </div>
-                  <p className="text-[14px] leading-[2] text-slate-300 max-w-[42em] mb-3">{s.body}</p>
-                  <p className="text-[13px] text-slate-400">{s.price}</p>
-                </div>
-                {s.cta.external ? (
-                  <a href={s.cta.href} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center min-h-[52px] px-6 rounded-xl border border-white/25 font-bold hover:border-white/60 whitespace-nowrap">
-                    {s.cta.label}
-                  </a>
-                ) : (
-                  <Link href={s.cta.href}
-                    className="inline-flex items-center justify-center min-h-[52px] px-6 rounded-xl bg-white/10 font-bold hover:bg-white/20 whitespace-nowrap">
-                    {s.cta.label}
-                  </Link>
-                )}
+          <p className="text-[14px] text-slate-400">いま動いている3つです。</p>
+        </div>
+      </section>
+
+      {/* LARU HP — 実際の画面を大きく見せる */}
+      <section className="px-5 py-10 md:py-14">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-8 lg:gap-12 items-center">
+            <div>
+              <div className="text-[12px] font-bold tracking-widest text-sky-300/80 mb-3">01　自社サービス</div>
+              <h3 className="text-[26px] md:text-[34px] font-bold leading-[1.4] mb-4">
+                ホームページを作って、
+                <br />
+                自分で直しつづける。
+              </h3>
+              <p className="text-[15px] leading-[2] text-slate-300 max-w-[32em] mb-5">
+                4つの質問に答えるとたたき台ができ、出来上がった画面を見ながら直して公開できます。
+                公開後も同じ画面から自分で直せます。予約・問い合わせフォーム、独自ドメイン、SSLを含みます。
+              </p>
+              <p className="text-[13px] text-slate-400 mb-6">{SERVICES[0].price}</p>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/laruHP"
+                  className="inline-flex items-center justify-center min-h-[52px] px-7 rounded-xl bg-sky-500 text-[#06121f] font-bold hover:bg-sky-400">
+                  LARU HP を見る
+                </Link>
+                <Link href="/laruHP/studio"
+                  className="inline-flex items-center justify-center min-h-[52px] px-6 rounded-xl border border-white/25 font-bold hover:border-white/60">
+                  作りはじめる
+                </Link>
               </div>
-            ))}
+            </div>
+
+            {/* 実際に動かして撮った画面。作り絵ではない */}
+            <div className="relative">
+              <div className="rounded-2xl overflow-hidden border border-white/15 bg-[#0b1524] shadow-2xl">
+                <div className="flex gap-1.5 px-4 py-2.5 border-b border-white/10 bg-white/[0.04]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/20" />
+                </div>
+                <div className="max-h-[400px] overflow-hidden">
+                  <Image src="/lp/work-salon-pc.jpg" alt="LARU HP で作った美容室のサイト（パソコンでの表示）"
+                    width={1100} height={1833} className="w-full h-auto" />
+                </div>
+              </div>
+              <div className="hidden md:block absolute -bottom-10 -left-6 w-[46%] rounded-xl overflow-hidden border border-white/15 shadow-2xl bg-[#0b1524]">
+                <Image src="/lp/studio-edit.jpg" alt="LARU HP の制作画面。中央に出来上がりが出て、右に設定が並ぶ"
+                  width={1200} height={780} className="w-full h-auto" />
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-14 md:mt-16">
+            上は、LARU HP で作った見本のサイトと、その制作画面を実際に動かして撮ったものです。
+            見本の「結い庵」は架空のお店で、写真は生成した素材です。
+          </p>
+        </div>
+      </section>
+
+      {/* LARUbot と 受託開発 — 画面写真は出さない。役割の違う置き方にする */}
+      <section className="px-5 py-10 md:py-14 border-t border-white/10">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 md:gap-14">
+          <div>
+            <div className="text-[12px] font-bold tracking-widest text-sky-300/80 mb-3">02　自社サービス</div>
+            <h3 className="text-[22px] md:text-[26px] font-bold leading-[1.45] mb-3">
+              問い合わせの一次対応を、24時間ひきうける。
+            </h3>
+            <p className="text-[14px] leading-[2] text-slate-300 mb-4">{SERVICES[1].body}</p>
+            <p className="text-[13px] text-slate-400 mb-5">{SERVICES[1].price}</p>
+            <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center min-h-[44px] text-[14px] font-bold text-sky-300 hover:text-sky-200">
+              larubot.tokyo を見る →
+            </a>
+          </div>
+          <div className="md:border-l md:border-white/10 md:pl-12">
+            <div className="text-[12px] font-bold tracking-widest text-sky-300/80 mb-3">03　受託開発</div>
+            <h3 className="text-[22px] md:text-[26px] font-bold leading-[1.45] mb-3">
+              合う道具が無いところを、つくる。
+            </h3>
+            <p className="text-[14px] leading-[2] text-slate-300 mb-4">{SERVICES[2].body}</p>
+            <p className="text-[13px] text-slate-400 mb-5">{SERVICES[2].price}</p>
+            <a href="#contact"
+              className="inline-flex items-center min-h-[44px] text-[14px] font-bold text-sky-300 hover:text-sky-200">
+              相談する →
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ── 選ぶ理由 ───────────────────────────────────────────── */}
+      {/* ── 仕事の進め方 ───────────────────────────────────────
+          カードをやめ、番号と横線だけの並びにする。 */}
       <section className="px-5 py-14 md:py-20 border-t border-white/10 bg-[#0a1220]">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <h2 className="text-[20px] md:text-[26px] font-bold mb-8">仕事の進め方で、大事にしていること</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {REASONS.map(r => (
-              <div key={r.title} className="rounded-2xl border border-white/10 p-6">
-                <div className="font-bold mb-2">{r.title}</div>
+          <div className="space-y-7">
+            {REASONS.map((r, i) => (
+              <div key={r.title} className="grid md:grid-cols-[3rem_minmax(0,18rem)_minmax(0,1fr)] gap-x-6 gap-y-1.5 items-baseline border-b border-white/10 pb-7 last:border-0">
+                <span className="text-[13px] font-bold text-sky-300/70 tabular-nums">0{i + 1}</span>
+                <div className="text-[16px] font-bold">{r.title}</div>
                 <p className="text-[14px] leading-[1.95] text-slate-300">{r.body}</p>
               </div>
             ))}
@@ -200,19 +266,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 作ったもの ─────────────────────────────────────────── */}
+      {/* ── 作ったもの ───────────────────────────────────────── */}
       <section id="works" className="px-5 py-14 md:py-24">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-[20px] md:text-[26px] font-bold mb-2">作ったもの</h2>
           <p className="text-[14px] text-slate-400 mb-8">実際に動いているものだけを載せています。</p>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-x-10 gap-y-8">
             {WORKS.filter(w => !w.placeholder).map(w => (
-              <div key={w.slug} className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <div key={w.slug} className="border-t border-white/15 pt-6">
                 <div className="text-[12px] text-sky-300/90 mb-1">{w.category}</div>
-                <div className="text-[18px] font-bold mb-1">{w.name}</div>
+                <div className="text-[20px] font-bold mb-1">{w.name}</div>
                 <div className="text-[13px] text-slate-400 mb-3">{w.tagline}</div>
                 <p className="text-[14px] leading-[1.95] text-slate-300 mb-4">{w.overview}</p>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-4">
                   <Link href={`/works/${w.slug}`}
                     className="inline-flex items-center min-h-[44px] text-[13px] font-bold text-sky-300 hover:text-sky-200">
                     くわしく見る →
@@ -228,24 +294,22 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <p className="text-[13px] text-slate-400 mt-6">
-            LARU HP で作れるサイトの見本は
-            <Link href="/laruHP#work" className="text-sky-300 hover:text-sky-200 underline mx-1">こちら</Link>
-            で見られます（架空のお店の見本です）。
-          </p>
         </div>
       </section>
 
-      {/* ── 進め方 ─────────────────────────────────────────────── */}
+      {/* ── 受託開発の進め方 ───────────────────────────────────
+          横に並ぶ流れ。上の節とは形を変える。 */}
       <section className="px-5 py-14 md:py-20 border-t border-white/10 bg-[#0a1220]">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-[20px] md:text-[26px] font-bold mb-8">受託開発の進め方</h2>
-          <ol className="grid md:grid-cols-5 gap-4">
+          <ol className="grid md:grid-cols-5 gap-6 md:gap-4">
             {PROCESS.map(s => (
-              <li key={s.n} className="rounded-2xl border border-white/10 p-5">
-                <div className="text-[12px] font-bold text-sky-300/80 mb-1">{s.n}</div>
-                <div className="font-bold mb-0.5">{s.title}</div>
-                <div className="text-[11px] text-slate-500 mb-2">{s.span}</div>
+              <li key={s.n} className="md:border-t md:border-white/20 md:pt-4">
+                <div className="flex md:block items-baseline gap-3">
+                  <span className="text-[13px] font-bold text-sky-300/70 tabular-nums md:block md:mb-1">{s.n}</span>
+                  <span className="text-[15px] font-bold">{s.title}</span>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1 mb-2">{s.span}</div>
                 <p className="text-[13px] leading-[1.9] text-slate-300">{s.body}</p>
               </li>
             ))}

@@ -65,6 +65,21 @@ const sampleHasRealCss = await inPreview(
   () => !!document.querySelector('.lhp-hero') && document.documentElement.outerHTML.includes('--lhp-d-ink'),
   'iframe');
 check('見本は実物のHTML（画像ではない）', sampleHasRealCss);
+// 写真の無い見本は、どれも「白い紙に文字」で見分けがつかない。
+// 実際に配信している写真と、料金の並びを入れて、違いが見えるようにしてある。
+const sampleContent = await inPreview(() => ({
+  img: !!document.querySelector('.lhp-hero img'),
+  price: !!document.querySelector('.lhp-price-card'),
+}), 'iframe');
+check('見本に写真が入っている', sampleContent.img);
+check('見本に料金の並びが入っている（ボタンの形と差し色が見える）', sampleContent.price);
+{
+  const notes = await page.locator('button:has-text("ではじめる"), button >> nth=0').count();
+  void notes;
+  check('見本の下に、違いを言葉で書いてある',
+    (await page.locator('text=/余白は(つめ|ふつう|ひろめ|とてもひろい)/').count()) >= 5,
+    `${await page.locator('text=/余白は/').count()}件`);
+}
 if (args.shots) await page.screenshot({ path: `${args.shots}/studio-2-mood.png`, fullPage: true });
 await page.locator('button:has-text("上質")').click();
 await page.waitForTimeout(1500);

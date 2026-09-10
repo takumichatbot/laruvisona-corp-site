@@ -1131,54 +1131,119 @@ function Intake({ intake, setIntake, onNext }: {
 /* ── ステップ2: えらぶ ──
    見本は静止画ではなく、実際の公開用HTMLをその場で作って表示している。
    選んだあとに「思っていたのと違う」が起きないようにするため。 */
+/** 入れ物の幅に合わせて縮める枠。見本ごとに幅が違っても切れない */
+function ScaledFrame({ html, width, height, title }: { html: string; width: number; height: number; title: string }) {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const apply = () => setW(el.clientWidth);
+    apply();
+    if (typeof ResizeObserver !== 'function') {
+      window.addEventListener('resize', apply);
+      return () => window.removeEventListener('resize', apply);
+    }
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const scale = w > 0 ? w / width : 0.35;
+  return (
+    <div ref={boxRef} className="relative w-full overflow-hidden bg-white" style={{ height: Math.round(height * scale) }}>
+      <iframe title={title} sandbox="allow-scripts" srcDoc={withPreviewBridge(html)}
+        className="absolute top-0 left-0 border-0"
+        style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left' }} />
+    </div>
+  );
+}
+
+/* 見本に使う写真。
+   雰囲気の違いは「色と余白と形」で出る。写真が無いと、どれも白い紙に
+   文字が載っただけの絵になり、見分けがつかない。実際に配信している
+   写真を入れて、切り取り方（写真の比率）の違いまで見えるようにする。
+   写真は見本で、その店のものではない。画面にもそう書く。 */
+const SAMPLE_PHOTOS = {
+  hero: '/salon/hero-1200.jpg',
+  heroW: 1200, heroH: 896,
+};
+
 function Mood({ intake, onBack, onPick }: {
   intake: IntakeAnswers;
   onBack: () => void;
   onPick: (presetId: string) => void;
 }) {
   const samples = useMemo(() => DESIGN_PRESETS.map(p => {
-    const seo = { ...EMPTY_SEO, title: intake.name || '店名' };
+    const name = intake.name || '店名';
+    const seo = { ...EMPTY_SEO, title: name };
     const blocks: Block[] = [
-      { id: 's-hero', type: 'hero', data: { heading: intake.name || '店名', subheading: intake.area || 'まちの名前', ctaText: 'ご予約へ', ctaLink: '#', bgColor: p.design.bg, textColor: p.design.ink } },
+      {
+        id: 's-hero', type: 'hero',
+        data: {
+          heading: name,
+          subheading: intake.area ? `${intake.area}の${INDUSTRY_WORD[intake.industry] || 'お店'}` : 'まちの名前',
+          ctaText: 'ご予約へ', ctaLink: '#',
+          bgColor: p.design.bg, textColor: p.design.ink,
+          bgImage: SAMPLE_PHOTOS.hero, bgImageWidth: SAMPLE_PHOTOS.heroW, bgImageHeight: SAMPLE_PHOTOS.heroH,
+          bgImageAlt: '',
+        },
+      },
       { id: 's-lead', type: 'heading', data: { text: '当店について', subtext: '', align: 'center' } },
-      { id: 's-p', type: 'paragraph', data: { text: intake.description || '仕上がりの写真がきれいなのは当たり前だと思っています。基準にしているのは、そのあとの毎日です。', align: 'left' } },
-      { id: 's-price', type: 'price-table', data: { heading: 'メニューと料金', subtext: '表示は税込です', plans: [
-        { name: '基本のメニュー', price: '6,600', period: '円', description: 'ご相談を含みます', features: ['ていねいに伺います'], highlighted: true, buttonText: '予約する', buttonLink: '#' },
-      ] } },
+      {
+        id: 's-price', type: 'price-table',
+        data: {
+          heading: 'メニューと料金', subtext: '表示は税込です',
+          plans: [
+            { name: '基本のメニュー', price: '6,600', period: '円', description: 'ご相談を含みます', features: ['ていねいに伺います'], highlighted: false, buttonText: '予約する', buttonLink: '#' },
+            { name: 'おすすめ', price: '13,200', period: '円〜', description: '状態に合わせて調整します', features: ['ご相談だけでも大丈夫です'], highlighted: true, buttonText: '予約する', buttonLink: '#' },
+          ],
+        },
+      },
     ];
     const html = exportToHTML(
       [{ id: 'p', name: 'p', path: '/', blocks, seo }],
       seo,
       {
         colorScheme: 'professional-blue', style: 'clean', designStyle: p.designStyle, fontFamily: p.fontFamily,
-        accentColor: p.design.accent, heroLayout: 'center', headerStyle: 'solid', animLevel: 'none',
+        accentColor: p.design.accent, heroLayout: 'split', headerStyle: 'solid', animLevel: 'none',
         larubot: false, laruseo: false, design: p.design as unknown as Record<string, unknown>,
       } as never,
-      intake.name || '店名',
+      name,
     );
     return { preset: p, html };
   }), [intake]);
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-5">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-900 mb-4">← 戻る</button>
         <div className="text-[11px] font-bold text-sky-700 mb-2">2 / 3　えらぶ</div>
         <h1 className="text-2xl font-bold text-slate-900 mb-1">どの雰囲気が近いですか</h1>
-        <p className="text-sm text-slate-500 mb-6">実際に出来上がる見た目です。あとから何度でも変えられます。</p>
+        <p className="text-sm text-slate-500 mb-1">
+          出来上がる見た目そのものです。文章と写真はあとから入れ替えます。あとから何度でも変えられます。
+        </p>
+        <p className="text-[11px] text-slate-400 mb-6">写真は見本です。お店の写真は、このあと入れ替えられます。</p>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-5">
           {samples.map(({ preset, html }) => (
             <button key={preset.id} onClick={() => onPick(preset.id)}
               className="text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-sky-500 overflow-hidden transition-colors">
-              <div className="h-64 overflow-hidden bg-white pointer-events-none">
-                <iframe title={preset.name} sandbox="allow-scripts" srcDoc={withPreviewBridge(html)}
-                  className="w-[1280px] h-[1024px] origin-top-left"
-                  style={{ transform: 'scale(0.3)', border: 0 }} />
+              <div className="pointer-events-none">
+                <ScaledFrame html={html} width={1280} height={1330} title={`${preset.name}の見本`} />
               </div>
-              <div className="p-3 border-t border-slate-100">
-                <div className="text-sm font-bold text-slate-900">{preset.name}</div>
-                <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{preset.note}</div>
+              <div className="p-4 border-t border-slate-100">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-[15px] font-bold text-slate-900">{preset.name}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    {[preset.design.bg, preset.design.accent, preset.design.ink].map((c, k) => (
+                      <span key={k} className="w-3.5 h-3.5 rounded-full border border-slate-300" style={{ background: c }} />
+                    ))}
+                  </span>
+                </div>
+                <div className="text-[12px] text-slate-500 leading-relaxed">{preset.note}</div>
+                <div className="text-[11px] text-slate-400 mt-1.5">
+                  {DESCRIBE.space[preset.design.space]}・{DESCRIBE.shape[preset.design.buttonShape]}・{DESCRIBE.photo[preset.design.photoRatio]}
+                </div>
               </div>
             </button>
           ))}
@@ -1187,6 +1252,19 @@ function Mood({ intake, onBack, onPick }: {
     </div>
   );
 }
+
+/** 見本の下に出す、違いの言葉。数字ではなく、選ぶ理由になる言い方にする */
+const DESCRIBE = {
+  space: { tight: '余白はつめ', normal: '余白はふつう', roomy: '余白はひろめ', airy: '余白はとてもひろい' } as Record<string, string>,
+  shape: { square: '角のままのボタン', soft: 'すこし丸いボタン', pill: 'まるいボタン' } as Record<string, string>,
+  photo: { '1:1': '写真は正方形', '4:5': '写真はたて長', '3:4': '写真はたて長', '4:3': '写真はよこ長', '16:9': '写真はよこ長' } as Record<string, string>,
+};
+
+/** 業種を、見本の説明に出す言葉にする */
+const INDUSTRY_WORD: Record<string, string> = {
+  beauty: '美容室', restaurant: '飲食店', clinic: 'クリニック', school: '教室',
+  retail: 'お店', service: 'サービス', other: 'お店',
+};
 
 export default function StudioPage() {
   return (
