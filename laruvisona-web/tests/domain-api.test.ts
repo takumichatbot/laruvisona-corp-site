@@ -81,8 +81,15 @@ test('到達確認は固定文字列ではなく署名付きの往復で行う',
   assert.match(ports, /createChallenge\(secret, host\)/);
   assert.match(ports, /verifyProof\(secret, c, json\.proof\)/);
   assert.match(ports, /if \(!secret\) return \{ result: 'unavailable' \}/);
-  // 3xx は追わず、転送先ホストだけを持ち帰る
-  assert.match(ports, /return \{ result: 'redirected', redirectHost \}/);
+  // 3xx は追わず、検査を通った転送先ホストだけを持ち帰る
+  assert.match(ports, /return \{ result: 'redirected', redirectHost: redirectTargetHost\(loc, origin\) \}/);
+  // 転送先URLは https・既定443・資格情報なしだけを通す
+  assert.match(ports, /url\.protocol !== 'https:'/);
+  assert.match(ports, /url\.username \|\| url\.password/);
+  assert.match(ports, /url\.port && url\.port !== '443'/);
+  // 使わない本文は上限なく読み込まない
+  assert.equal(/await res\.arrayBuffer\(\)/.test(ports), false, '応答本文を全部メモリに読んでいる');
+  assert.match(ports, /res\.body\.cancel\(\)/);
 
   const route = code('app/api/domain-probe/route.ts');
   assert.match(route, /verifyChallenge\(/);

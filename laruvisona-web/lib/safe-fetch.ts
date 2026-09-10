@@ -226,8 +226,10 @@ export async function safeFetch(
 
     const loc = res.headers.get('location');
     if (!loc) return res;
-    // bodyを捨てておく（ソケットを解放するため）
-    try { await res.arrayBuffer(); } catch { /* noop */ }
+    // 中間ホップの本文は使わない。上限なく読み込まず、読まずに解放する。
+    try {
+      if (res.body && !res.bodyUsed) await res.body.cancel();
+    } catch { /* noop */ }
 
     let next: URL;
     try { next = new URL(loc, url); } catch {

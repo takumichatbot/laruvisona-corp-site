@@ -69,6 +69,51 @@ export const renderPort: RenderPort = {
 };
 
 /**
+ * 応答の本文を「読まずに」解放する。
+ *
+ * arrayBuffer() は上限なく全部メモリに読む。転送や失敗の応答の中身は
+ * 一切使わないので、読まずに捨てる。cancel() が使えない実装のときだけ、
+ * 上限つきの読み取りにする（それでも全部は読まない）。
+ */
+async function releaseBody(res: Response): Promise<void> {
+  try {
+    if (res.body && !res.bodyUsed) { await res.body.cancel(); return; }
+  } catch { /* noop */ }
+  try { await readCapped(res, 1024); } catch { /* noop */ }
+}
+
+/**
+ * Location を「転送先として使ってよいURL」かどうか検査して、ホスト名を返す。
+ *
+ * hostname だけを取り出すと、次のどれもが正常な転送先と同じ扱いになる:
+ *   http://primary.example/            平文。所有や配信の根拠にならない
+ *   https://primary.example:8443/      別ポート。同じホスト名でも別のサービス
+ *   https://user:pass@primary.example/ 資格情報つき
+ *   ftp://primary.example/             http/https ですらない
+ *
+ * 通すのは https・既定ポート（443）・資格情報なし・ホスト名ありのときだけ。
+ * 通らなければ null を返し、呼び出し側は「転送先不明の転送」として扱う
+ * （転送先不明では別名にならない）。
+ * ここでは接続しない。文字列の検査だけ。
+ */
+export function redirectTargetHost(loc: string | null, base: string): string | null {
+  if (!loc) return null;
+  // スキームの直後の権限部が空（https:///path）。URLの解決では基点のホストを
+  // 借りてしまい、転送先を書いていないのに「自分自身へ」に化ける。書式として弾く。
+  if (/^[a-z][a-z0-9+.-]*:\/\/\//i.test(loc)) return null;
+  let url: URL;
+  try { url = new URL(loc, base); } catch { return null; }
+  if (url.protocol !== 'https:') return null;
+  if (url.username || url.password) return null;
+  if (url.port && url.port !== '443') return null;
+  const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+  if (!hostname) return null;
+  // IPアドレス直打ちや角括弧つきIPv6は、確認済みホストと一致しないので通さない
+  if (hostname.startsWith('[')) return null;
+  return hostname;
+}
+
+/**
  * 到達確認のポート。
  *
  * 2つだけ差し替えられるようにしてある。既定は本番の値で、本番のコードは
@@ -106,14 +151,11 @@ export function makeProbePort(deps: {
         );
         if (res.status >= 300 && res.status < 400) {
           const loc = res.headers.get('location');
-          try { await res.arrayBuffer(); } catch { /* noop */ }
-          let redirectHost: string | null = null;
-          if (loc) {
-            try { redirectHost = new URL(loc, origin).hostname.toLowerCase(); } catch { /* noop */ }
-          }
-          return { result: 'redirected', redirectHost };
+          await releaseBody(res);
+          // https・既定443・資格情報なし・有効なホストのときだけ転送先として扱う
+          return { result: 'redirected', redirectHost: redirectTargetHost(loc, origin) };
         }
-        if (res.status !== 200) { try { await res.arrayBuffer(); } catch { /* noop */ } return { result: 'not_reached' }; }
+        if (res.status !== 200) { await releaseBody(res); return { result: 'not_reached' }; }
         const body = await readCapped(res, 4096);
         const json = JSON.parse(body) as { ok?: boolean; proof?: string };
         if (!json.ok || !json.proof) return { result: 'not_reached' };

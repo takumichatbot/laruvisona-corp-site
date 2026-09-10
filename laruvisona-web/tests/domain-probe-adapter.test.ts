@@ -19,7 +19,7 @@ import type { AddressInfo } from 'node:net';
 
 process.env.DOMAIN_PROBE_SECRET ??= 'x'.repeat(48);
 
-const { makeProbePort } = await import('../lib/domain-ports.ts');
+const { makeProbePort, redirectTargetHost } = await import('../lib/domain-ports.ts');
 const { safeFetch, validateUrlShape, assertUrlAllowed, BlockedUrlError } = await import('../lib/safe-fetch.ts');
 
 /**
@@ -108,8 +108,100 @@ test('相対パスのLocationは、要求したホスト自身として解決す
   try {
     const out = await portFor(srv).reachesService('www.apex.example');
     assert.equal(out.result, 'redirected');
-    // 相対転送は自分自身。別サイトの根拠にはならない（判定側で自己転送を拒否する）
-    assert.equal(out.redirectHost, '127.0.0.1');
+    // 検証用サーバは平文HTTPなので、相対Locationは http:// に解決され検査で落ちる。
+    // 本番の宛先は https://<host> なので、相対Locationは自分自身のホストになる
+    // （下の redirectTargetHost の単体で固定している）。
+    assert.equal(out.redirectHost, null);
+  } finally { await srv.close(); }
+});
+
+test('相対Locationは、本番の宛先では要求したホスト自身になる', () => {
+  assert.equal(redirectTargetHost('/moved', 'https://www.apex.example'), 'www.apex.example');
+});
+
+// ── 転送先URLの検査 ──
+//
+// 監督レビュー(c29b64e) 1:
+//   hostname だけを取り出していたため、平文・別ポート・資格情報つき・
+//   http以外のスキームも、正常な転送先と同じ判定になっていた。
+
+test('https・既定443・資格情報なしの転送先だけを通す', async () => {
+  const bad = [
+    ['http://primary.example/', '平文'],
+    ['https://primary.example:8443/', '別ポート'],
+    ['https://user:password@primary.example/', '資格情報つき'],
+    ['ftp://primary.example/', 'http/https以外'],
+    ['javascript:alert(1)', 'スキームが実行系'],
+    ['https:///nohost', '権限部が空'],
+  ] as const;
+  for (const [loc, why] of bad) {
+    const srv = await serve((req, res) => { res.writeHead(308, { location: loc }); res.end(); });
+    try {
+      const out = await portFor(srv).reachesService('www.apex.example');
+      assert.equal(out.result, 'redirected', `${why}: 転送として扱えていない`);
+      assert.equal(out.redirectHost, null, `${why}: 転送先として通してしまった（${loc}）`);
+      // 検査で落としても、転送先へは接続しない
+      assert.deepEqual(srv.hits, ['GET /api/domain-probe'], `${why}: 追加の通信をしている`);
+    } finally { await srv.close(); }
+  }
+});
+
+test('正しい転送先（https・既定ポート）は通す', async () => {
+  for (const loc of ['https://primary.example/', 'https://primary.example:443/x?a=1']) {
+    const srv = await serve((req, res) => { res.writeHead(308, { location: loc }); res.end(); });
+    try {
+      const out = await portFor(srv).reachesService('www.apex.example');
+      assert.equal(out.redirectHost, 'primary.example', `通らなかった: ${loc}`);
+    } finally { await srv.close(); }
+  }
+});
+
+test('転送先URLの検査は、文字列だけで判断する（単体）', () => {
+  const base = 'https://www.apex.example';
+  assert.equal(redirectTargetHost('https://primary.example/', base), 'primary.example');
+  assert.equal(redirectTargetHost('https://PRIMARY.Example./', base), 'primary.example', '大文字・末尾ドットを正規化していない');
+  assert.equal(redirectTargetHost('https://primary.example:443/', base), 'primary.example');
+  assert.equal(redirectTargetHost('http://primary.example/', base), null, '平文を通した');
+  assert.equal(redirectTargetHost('https://primary.example:8443/', base), null, '別ポートを通した');
+  assert.equal(redirectTargetHost('https://u:p@primary.example/', base), null, '資格情報つきを通した');
+  assert.equal(redirectTargetHost('https://u@primary.example/', base), null, '利用者名つきを通した');
+  assert.equal(redirectTargetHost('ftp://primary.example/', base), null, 'ftpを通した');
+  assert.equal(redirectTargetHost('//primary.example/', base), 'primary.example', 'スキーム省略はbaseに従う');
+  assert.equal(redirectTargetHost('//primary.example/', 'http://x.example'), null, 'スキーム省略でbaseが平文なら通さない');
+  assert.equal(redirectTargetHost('https://[2001:db8::1]/', base), null, 'IPv6直打ちを通した');
+  assert.equal(redirectTargetHost('', base), null);
+  assert.equal(redirectTargetHost(null, base), null);
+  // 権限部が空だと、URLの解決では基点のホストを借りてしまう。書式として弾く。
+  assert.equal(redirectTargetHost('https:///nohost', base), null, '権限部が空のURLを通した');
+  // スキームを持たない文字列は相対参照として解決され、要求したホスト自身になる。
+  // 別サイトを指すことはなく、自己転送として lib/domain-service.ts が別名から外す。
+  assert.equal(redirectTargetHost('::::not a url', base), 'www.apex.example');
+  assert.equal(redirectTargetHost('/moved', base), 'www.apex.example');
+});
+
+// ── 本文を読まずに解放する ──
+
+test('転送の本文は、大きくても読み込まない', async () => {
+  // 5MBの本文を付けた308。中身は使わないので読まずに解放する。
+  const big = Buffer.alloc(5 * 1024 * 1024, 'x');
+  const srv = await serve((req, res) => {
+    res.writeHead(308, { location: 'https://primary.example/', 'content-type': 'text/plain' });
+    res.end(big);
+  });
+  try {
+    const started = Date.now();
+    const out = await portFor(srv).reachesService('www.apex.example');
+    assert.equal(out.redirectHost, 'primary.example');
+    assert.ok(Date.now() - started < 8000, '本文を読み切っている（時間切れ寸前）');
+  } finally { await srv.close(); }
+});
+
+test('失敗応答の本文も読み込まない', async () => {
+  const big = Buffer.alloc(5 * 1024 * 1024, 'y');
+  const srv = await serve((req, res) => { res.writeHead(500); res.end(big); });
+  try {
+    const out = await portFor(srv).reachesService('www.apex.example');
+    assert.equal(out.result, 'not_reached');
   } finally { await srv.close(); }
 });
 
