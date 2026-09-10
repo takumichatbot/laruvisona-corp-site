@@ -36,6 +36,7 @@ push・本番SQL・DNS変更・デプロイは行っていない。
 2. `.lhp-hero-img` と写真の見せ場のCSS変数（未設定なら中央のまま）
 3. 動く背景の仕掛け（`heroVideo` が無ければ何も出ない）
 4. 入力文字の直列化を直したこと（`</script>` などが文字として出る）
+5. 追加CSS（`customCss`）の中の `</style>` `<script` が、文字として出る
 
 `design` を持たないサイトには全体CSSを足さない（studio が既定値を補完しない）。
 これは `studio-check.mjs` の「以前からある作品」で毎回確かめている。
@@ -143,6 +144,10 @@ git checkout main          # 作業ブランチを取り込まなければ、そ
 | script/style への埋め込みとプレビューの隔離 | `git revert 84da3fe` |
 | 公開の条件・旧サイトのdesign・同時保存 | `git revert 70ac8f9` |
 | 画像の置き場所 | `git revert 48d3396` |
+| 自社公開と顧客HTML再生成の切り離し | `git revert 9750813` |
+| 案内ページの最初の画面と、触れるデモ | `git revert 2188124` |
+| 会社トップの組み直し・雰囲気の見本 | `git revert efa342d` |
+| 初回表示（和文webフォントを外した） | `git revert 490a141` |
 
 （`git log --oneline main..rebuild-2026-09` で一覧が出る）
 
@@ -161,4 +166,6 @@ git checkout f9a49ee -- laruvisona-web/app/laruHP/page.tsx  # LARU HP 案内ペ�
 
 1. **押し込み（push）とデプロイの判断**（齋藤さんの判断事項）
 2. **素材の差し替え**（`docs/asset-requirements-2026-09-11.md`）
-3. **自社2ページの初回表示**（`docs/perf-2026-09-11.md` に計測条件と結果）
+3. **和文の書体をどうするか**。初回表示を優先して、いまは端末の書体で組んでいる
+   （`docs/perf-2026-09-11.md` の最後）。Windows の游ゴシックは細めなので、
+   揃えたい場合は、使う文字だけを切り出した1ファイルを自分で持つ形になる。
