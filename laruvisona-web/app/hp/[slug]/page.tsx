@@ -1,13 +1,14 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
-import { publicBase } from '@/lib/public-site-url';
-import { revalidateTag } from 'next/cache';
+import { canonicalBase, isHostForSite } from '@/lib/public-site-url';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
 
-// Re-exported so publish route can call it
-export { revalidateTag };
+// 注: 以前ここで revalidateTag を再エクスポートしていたが、
+// Next.js のページは決められた export しか持てないため、
+// 本番用ビルドの型検査で失敗していた。
+// 再検証が必要な箇所は next/cache から直接 import する。
 
 function getServiceClient() {
   return createServiceClient(
@@ -37,8 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const settings = (data.settings_json ?? {}) as { noIndex?: boolean };
   // 同じサイトがパス形式・サブドメイン形式・独自ドメイン形式で開ける。
   // 開かれたホストに合わせて、そのサイトの正規URLを1つに決める。
-  const host = (await headers()).get('host');
-  const canonical = publicBase(data as { slug?: string | null; custom_domain?: string | null }, host);
+  // 正規URLは保存された公開先の方針から一意に決める（入口のホストで変えない）
+  const canonical = canonicalBase(data as { slug?: string | null; custom_domain?: string | null });
   const ogTitle = seo.ogTitle || seo.title || data.name;
   const ogDesc = seo.ogDescription || seo.description || '';
 
@@ -159,9 +160,13 @@ export default async function PublishedSitePage({ params }: Props) {
 
   const seo = (site.seo_json ?? {}) as { description?: string };
 
-  // JSON-LD の url は、実際に開かれているホストに合わせた正規URLにする
+  // このホストでこのサイトを配信してよいか。
+  // proxy がホストから slug を決めていても、内部パス /hp/<slug> を
+  // 直接指定されれば別サイトを指せる。表示側でも必ず確認する。
   const host = (await headers()).get('host');
-  const base = publicBase(site as { slug?: string | null; custom_domain?: string | null }, host);
+  if (!isHostForSite(site as { slug?: string | null; custom_domain?: string | null }, host)) notFound();
+
+  const base = canonicalBase(site as { slug?: string | null; custom_domain?: string | null });
 
   // Ensure the first <img> in the page is eager-loaded (improves LCP)
   const eagerHtml = site.published_html.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');

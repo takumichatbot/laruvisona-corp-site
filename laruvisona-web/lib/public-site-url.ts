@@ -1,13 +1,19 @@
-// 顧客が公開しているサイトの「正規URL」を1か所で決める。
+// 顧客が公開しているサイトのURLを1か所で決める。
 //
 // 同じサイトが3つの形で開ける:
 //   1. パス形式        laruvisona.jp/hp/<slug>
 //   2. サブドメイン形式 <slug>.laruvisona.jp
 //   3. 独自ドメイン形式 example.com
 //
-// canonical・JSON-LD・sitemap・記事リンク・戻るリンク・決済の戻り先が
-// ばらばらの形を作ると、同じ内容が複数のURLで出て、決済から別ホストへ
-// 戻されることになる。どの形で開かれたかを見て、そのサイトの正規URLに揃える。
+// ここで分けているのは2つの概念:
+//   canonicalBase … そのサイトの「正規URL」。保存された公開先の方針から
+//                   一意に決まり、どの入口で開かれても変わらない。
+//   isHostForSite … 受け取ったホストが、そのサイトを配信してよいホストか。
+//
+// 入口によって canonical が変わると、同じページに複数の正規URLができる。
+// また、別ホストの正規URLから origin を落として相対リンクにすると、
+// 会社ホストで「サイトのトップへ」が会社トップに戻ってしまう。
+// リンクは正規URLへの絶対URLにする。
 
 export interface PublicSite {
   slug?: string | null;
@@ -29,28 +35,17 @@ export function hostnameOf(rawHost: string | null | undefined): string {
 }
 
 /**
- * そのサイトの正規URLの基点。
+ * そのサイトの正規URL。入口のホストに依存しない。
  *
- * 独自ドメインで開かれていて、それがこのサイトの主な公開URLなら独自ドメイン。
- * サブドメインで開かれていればサブドメイン。それ以外はパス形式。
- * （独自ドメインは sites.custom_domain にしか入らない＝確認済みだけなので、
- *   ここでホストを信用してよい）
+ * 方針: 確認済みの主独自ドメインがあればそれ。無ければパス形式。
+ * （サブドメイン形式は「開ける形」ではあるが、正規URLにはしない。
+ *   独自ドメインの接続前後で正規URLが揺れないようにするため）
  */
-export function publicBase(site: PublicSite, rawHost: string | null | undefined): string {
-  const host = hostnameOf(rawHost);
-  const main = mainHost();
+export function canonicalBase(site: PublicSite): string {
   const custom = (site.custom_domain || '').trim().toLowerCase();
-  const slug = (site.slug || '').trim().toLowerCase();
-
-  if (custom && (host === custom || host === `www.${custom}`)) {
-    return `https://${custom}`;
-  }
-  if (slug && main && host === `${slug}.${main}`) {
-    return `https://${slug}.${main}`;
-  }
   if (custom) return `https://${custom}`;
-  if (slug && main) return `${appOrigin()}/hp/${slug}`;
-  return appOrigin();
+  const slug = (site.slug || '').trim().toLowerCase();
+  return slug ? `${appOrigin()}/hp/${slug}` : appOrigin();
 }
 
 /** 正規URLの基点にパスを足す */
@@ -59,17 +54,28 @@ export function siteUrl(base: string, path = ''): string {
   return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 }
 
+/** サイト内リンク。正規URLへの絶対URLにする */
+export function siteLink(site: PublicSite, path = ''): string {
+  return siteUrl(canonicalBase(site), path);
+}
+
 /**
- * サイト内リンクのパス。
- * パス形式のときだけ /hp/<slug> の接頭辞が要る。
+ * このホストで、このサイトを配信してよいか。
+ *
+ * proxy がホストから slug を決めていても、内部パス（/hp/<slug>/...）を
+ * 直接指定されると別サイトを指定できる。表示側でも必ず確認する。
  */
-export function sitePath(site: PublicSite, rawHost: string | null | undefined, path = ''): string {
-  const base = publicBase(site, rawHost);
-  const origin = appOrigin();
-  if (base.startsWith(`${origin}/hp/`)) {
-    // パス形式: /hp/<slug>/xxx
-    return siteUrl(base, path).slice(origin.length);
-  }
-  // 独自ドメイン・サブドメイン形式: /xxx
-  return path ? `/${path.replace(/^\//, '')}` : '/';
+export function isHostForSite(site: PublicSite, rawHost: string | null | undefined): boolean {
+  const host = hostnameOf(rawHost);
+  if (!host) return true;                 // Host が取れない実行経路（ビルド時など）は素通し
+  const main = mainHost();
+  const custom = (site.custom_domain || '').trim().toLowerCase();
+  const slug = (site.slug || '').trim().toLowerCase();
+
+  if (main && (host === main || host === `www.${main}`)) return true;   // 会社ホスト（パス形式）
+  if (custom && (host === custom || host === `www.${custom}`)) return true;
+  if (slug && main && host === `${slug}.${main}`) return true;
+  // localhost / onrender など、開発・基盤のホスト
+  if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.onrender.com')) return true;
+  return false;
 }

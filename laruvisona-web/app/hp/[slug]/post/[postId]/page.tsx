@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
 import { renderMarkdown, plainExcerpt } from '@/lib/markdown';
-import { publicBase, sitePath, siteUrl } from '@/lib/public-site-url';
+import { canonicalBase, siteLink, siteUrl, isHostForSite } from '@/lib/public-site-url';
 
 // 顧客サイトの記事ページ。
 //
@@ -65,8 +65,7 @@ export async function generateMetadata(
   if (!data) return { title: '記事が見つかりません', robots: { index: false, follow: false } };
 
   const { post, site } = data;
-  const host = (await headers()).get('host');
-  const canonical = siteUrl(publicBase(site, host), `post/${post.id}`);
+  const canonical = siteUrl(canonicalBase(site), `post/${post.id}`);
   const description = plainExcerpt(post.content, 120);
 
   return {
@@ -92,10 +91,17 @@ export default async function SitePostPage(
   if (!data) notFound();
 
   const { post, site } = data;
+
+  // 受け取ったホストが、このサイトを配信してよいホストか。
+  // /hp/<別サイトのslug>/post/<id> を顧客ホストで開かせない。
   const host = (await headers()).get('host');
-  const base = publicBase(site, host);
+  if (!isHostForSite(site, host)) notFound();
+
+  const base = canonicalBase(site);
   const canonical = siteUrl(base, `post/${post.id}`);
-  const backHref = sitePath(site, host);
+  // 戻るリンクは正規URLへの絶対URL。
+  // 相対 '/' にすると、会社ホストで開いたときに会社トップへ戻ってしまう。
+  const backHref = siteLink(site);
 
   const jsonLd = {
     '@context': 'https://schema.org',

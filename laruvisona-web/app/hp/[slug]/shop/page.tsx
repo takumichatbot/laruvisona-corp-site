@@ -1,7 +1,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
-import { publicBase, siteUrl } from '@/lib/public-site-url';
+import { canonicalBase, siteUrl, isHostForSite } from '@/lib/public-site-url';
 import type { Metadata } from 'next';
 import ShopClient from './ShopClient';
 
@@ -21,9 +21,16 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = getServiceClient();
-  const { data } = await supabase.from('sites').select('name').eq('slug', slug).eq('published', true).single();
+  const { data } = await supabase.from('sites')
+    .select('name, slug, custom_domain').eq('slug', slug).eq('published', true).single();
   if (!data) return { title: 'Shop' };
-  return { title: `${data.name} — ショップ` };
+  // 正規URLはトップ・記事・sitemap と同じ基点から作る
+  const canonical = siteUrl(canonicalBase(data as { slug?: string | null; custom_domain?: string | null }), 'shop');
+  return {
+    title: `${data.name} — ショップ`,
+    alternates: { canonical },
+    openGraph: { title: `${data.name} — ショップ`, url: canonical, type: 'website' },
+  };
 }
 
 interface Product {
@@ -57,11 +64,13 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
   const allProducts = (settings.products as Product[]) || [];
   const products = allProducts.filter(p => p.active && (p.stock === null || p.stock > 0));
 
-  // 独自ドメインやサブドメインで開かれていても、会社ホストのURLを作らない。
-  // JSON-LD にも決済の戻り先にも同じ値を使うので、ここがずれると
-  // 購入者が別ホストへ戻される。
+  // このホストでこのサイトを配信してよいか
   const host = (await headers()).get('host');
-  const shopUrl = siteUrl(publicBase(site as { slug?: string | null; custom_domain?: string | null }, host), 'shop');
+  if (!isHostForSite(site as { slug?: string | null; custom_domain?: string | null }, host)) notFound();
+
+  // 会社ホストのURLを作らない。JSON-LD にも決済の戻り先にも同じ値を使うので、
+  // ここがずれると購入者が別ホストへ戻される。
+  const shopUrl = siteUrl(canonicalBase(site as { slug?: string | null; custom_domain?: string | null }), 'shop');
 
   // Product JSON-LD (ItemList + individual Product schemas)
   const productJsonLd = products.length > 0 ? JSON.stringify({

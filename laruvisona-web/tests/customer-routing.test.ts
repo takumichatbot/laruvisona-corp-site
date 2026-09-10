@@ -132,20 +132,91 @@ test('会社ホストは書き換えない（パス形式はそのまま）', as
   assert.equal(r.to, null, '会社ホストのパスを書き換えている');
 });
 
-test('API・_next は顧客ホストでも素通しする', async () => {
+test('API・_next は顧客ホストでも素通しする（POSTを巻き込まない）', async () => {
   assert.equal((await route('salon-a.example', '/api/pageview')).to, null);
   assert.equal((await route('salon-a.example', '/_next/static/x.js')).to, null);
 });
 
-test('顧客ホストからプレビューや管理画面へ入れない', async () => {
-  // /laruHP は proxy の書き換え対象外だが、顧客ホストでは
-  // そのまま管理画面が出てはいけない。ここでは書き換えが
-  // 起きないこと（＝顧客サイトとして解決されないこと）を固定する。
-  const r = await route('salon-a.example', '/laruHP/dashboard');
-  assert.equal(r.to, null);
-  // /hp/preview/<token> も顧客サイト配下には写さない
-  const p = await route('salon-a.example', '/hp/preview/tok');
-  assert.equal(p.to, null);
+test('顧客ホストから内部パスで別サイトを指定できない', async () => {
+  // ここが以前の穴。/hp を素通ししていたため、Aのドメインから
+  // /hp/site-b/post/<id> を開くとBの記事が200で表示できた。
+  // 「書き換えが無い」ことは遮断の証拠にならないので、
+  // どこへ写るかを確認する（存在しないルート＝404になる）。
+  for (const path of ['/hp/site-b/post/b-post', '/hp/site-b/shop', '/hp/site-b']) {
+    const r = await route('salon-a.example', path);
+    assert.equal(r.to, `/hp/site-a${path}`, `素通ししている: ${path}`);
+    assert.ok(!r.to.startsWith('/hp/site-b'), `別サイトのルートへ渡している: ${path}`);
+  }
+});
+
+test('公開済みHTMLの旧い記事リンクは、転送だけ通す', async () => {
+  // /hp/post/<id> は本文を描画せず、その記事のサイトの正規URLへ308する。
+  // 別サイトの本文がこのホストに出ることはないので、素通ししてよい。
+  const r = await route('salon-a.example', '/hp/post/b-post');
+  assert.equal(r.to, null, '転送経路まで潰している');
+  // 記事一覧のような別の /hp パスは通さない
+  assert.equal((await route('salon-a.example', '/hp/post/b-post/extra')).to,
+    '/hp/site-a/hp/post/b-post/extra');
+  assert.equal((await route('salon-a.example', '/hp/preview/tok')).to, '/hp/site-a/hp/preview/tok');
+});
+
+test('顧客ホストから管理画面・プレビューへ入れない', async () => {
+  const admin = await route('salon-a.example', '/laruHP/dashboard');
+  assert.equal(admin.to, '/hp/site-a/laruHP/dashboard', '管理画面を素通ししている');
+  const preview = await route('salon-a.example', '/hp/preview/tok');
+  assert.equal(preview.to, '/hp/site-a/hp/preview/tok', 'プレビューを素通ししている');
+  const builder = await route('salon-a.example', '/laruHP/builder/x');
+  assert.equal(builder.to, '/hp/site-a/laruHP/builder/x');
+});
+
+test('会社ホストではパス形式がそのまま通る', async () => {
+  assert.equal((await route('laruvisona.jp', '/hp/site-b/post/b-post')).to, null);
+  assert.equal((await route('laruvisona.jp', '/laruHP/dashboard')).to, null);
+});
+
+test('割当を変えたら、次のリクエストから新しいサイトへ向く', async () => {
+  // 以前は5分キャッシュのため、割当を A→B に変えても旧Aへ案内し続けた。
+  assert.equal((await route('salon-a.example', '/shop')).to, '/hp/site-a/shop');
+  DOMAIN_TO_SLUG['salon-a.example'] = 'site-b';
+  try {
+    assert.equal((await route('salon-a.example', '/shop')).to, '/hp/site-b/shop',
+      '古い割当を使い続けている');
+  } finally {
+    DOMAIN_TO_SLUG['salon-a.example'] = 'site-a';
+  }
+});
+
+test('割当を解除したら、次のリクエストから404になる', async () => {
+  assert.equal((await route('salon-a.example', '/')).to, '/hp/site-a');
+  delete DOMAIN_TO_SLUG['salon-a.example'];
+  try {
+    const r = await route('salon-a.example', '/');
+    assert.equal(r.status, 404, '解除後も旧サイトへ案内している');
+  } finally {
+    DOMAIN_TO_SLUG['salon-a.example'] = 'site-a';
+  }
+});
+
+test('接続直後は、否定結果を持ち越さずに解決できる', async () => {
+  // 未登録のホストを一度引いたあと、登録された場合。
+  // 否定キャッシュがあると数分間404が続いていた。
+  assert.equal((await route('new-shop.example', '/')).status, 404);
+  DOMAIN_TO_SLUG['new-shop.example'] = 'site-b';
+  try {
+    assert.equal((await route('new-shop.example', '/')).to, '/hp/site-b');
+  } finally {
+    delete DOMAIN_TO_SLUG['new-shop.example'];
+  }
+});
+
+test('DB照会に失敗したホストを、どこかのサイトへ解決しない', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = (async () => { throw new Error('db down'); }) as typeof fetch;
+  try {
+    const r = await route('salon-a.example', '/');
+    assert.equal(r.status, 404);
+    assert.equal(r.to, null);
+  } finally { globalThis.fetch = original; }
 });
 
 test.after(() => restore());

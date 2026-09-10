@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { publicBase, siteUrl } from '@/lib/public-site-url';
+import { canonicalBase, siteUrl } from '@/lib/public-site-url';
 
 function getAdminClient() {
   return createClient(
@@ -10,7 +10,7 @@ function getAdminClient() {
 }
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
@@ -31,8 +31,8 @@ export async function GET(
   // Allow opt-out of indexing via settings
   const noIndex = settings.noIndex === true;
 
-  // 独自ドメイン・サブドメイン・パス形式のどれで開かれたかに合わせる
-  const base = publicBase(site as { slug?: string | null; custom_domain?: string | null }, req.headers.get('host'));
+  // 正規URLは入口のホストに依存させない
+  const base = canonicalBase(site as { slug?: string | null; custom_domain?: string | null });
   const sitemapUrl = siteUrl(base, 'sitemap.xml');
 
   const txt = noIndex

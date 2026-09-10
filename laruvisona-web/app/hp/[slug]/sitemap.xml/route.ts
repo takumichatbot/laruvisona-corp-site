@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { publicBase } from '@/lib/public-site-url';
+import { canonicalBase } from '@/lib/public-site-url';
 
 function getAdminClient() {
   return createClient(
@@ -10,7 +10,7 @@ function getAdminClient() {
 }
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
@@ -18,7 +18,7 @@ export async function GET(
 
   const { data: site } = await supabase
     .from('sites')
-    .select('slug, custom_domain, updated_at, settings_json')
+    .select('id, slug, custom_domain, updated_at, settings_json')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -27,8 +27,8 @@ export async function GET(
     return new Response('Not found', { status: 404 });
   }
 
-  // どのホストで開かれたかに合わせて、そのサイトの正規URLを出す
-  const loc = publicBase(site as { slug?: string | null; custom_domain?: string | null }, req.headers.get('host'));
+  // 正規URLは入口のホストに依存させない
+  const loc = canonicalBase(site as { slug?: string | null; custom_domain?: string | null });
   const lastmod = site.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0];
 
   // Check if shop has active products
@@ -55,6 +55,25 @@ export async function GET(
     <lastmod>${lastmod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>`);
+  }
+
+  // このサイトの公開済み記事だけを載せる。
+  // 非公開の記事や、別サイトの記事は含めない。
+  const { data: posts } = await supabase
+    .from('news_posts')
+    .select('id, published_at')
+    .eq('site_id', site.id)
+    .eq('published', true)
+    .order('published_at', { ascending: false })
+    .limit(1000);
+
+  for (const post of (posts ?? []) as Array<{ id: string; published_at: string | null }>) {
+    urls.push(`  <url>
+    <loc>${loc}/post/${post.id}</loc>
+    <lastmod>${post.published_at?.split('T')[0] || lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>`);
   }
 

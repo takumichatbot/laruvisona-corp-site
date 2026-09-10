@@ -1,3 +1,6 @@
 # Claude Code agent worktrees (temporary, not for version control)
 .claude/worktrees/
 scripts/ai-watcher/.env
+
+# 作業中の退避先（この環境ではファイルを削除できないため）
+_stale_locks/

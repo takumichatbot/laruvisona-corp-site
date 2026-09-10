@@ -25,53 +25,53 @@ const MAIN_HOST = (process.env.NEXT_PUBLIC_APP_URL || '')
   .replace(/^https?:\/\//, '')
   .replace(/\/$/, '');
 
-// 独自ドメイン → 公開中サイトの slug（service roleで参照・5分キャッシュ）
+// 独自ドメイン → 公開中サイトの slug
 //
 // 以前は独自ドメインを一律 /hp/by-domain/<host> へ rewrite していたため、
 // /shop も /post/<id> も存在しないパスもトップページが 200 で返っていた。
 // ホストから slug を引いて /hp/<slug><path> へ渡すと、
 // パス形式・サブドメイン形式と同じルートを通るので、
 // 下層ページも 404 も本来の挙動になる。
-const domainSlugCache = new Map<string, { slug: string | null; t: number }>();
+//
+// キャッシュは持たない。
+// 5分キャッシュを入れていたときは、割当を A→B に変えても
+// 同じインスタンスが旧Aへ案内し続けた（解除直後も同じ）。
+// プロセス内Mapは複数インスタンス間で整合しないので、
+// 「配信先の決定」には使わない。
+// 参照は毎回1回のRESTで、ホストが顧客ドメインのときだけ走る。
 async function slugForCustomDomain(host: string): Promise<string | null> {
-  const c = domainSlugCache.get(host);
-  const now = Date.now();
-  if (c && now - c.t < 5 * 60 * 1000) return c.slug;
-  let slug: string | null = null;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (url && key) {
-    try {
-      const r = await fetch(
-        `${url}/rest/v1/sites?custom_domain=eq.${encodeURIComponent(host)}&published=is.true&select=slug&limit=1`,
-        { headers: { apikey: key, Authorization: `Bearer ${key}` } },
-      );
-      const d = await r.json();
-      if (Array.isArray(d) && d.length > 0 && typeof d[0]?.slug === 'string') slug = d[0].slug;
-    } catch { /* 引けなければ未知のホストとして扱う */ }
-  }
-  domainSlugCache.set(host, { slug, t: now });
-  return slug;
+  if (!url || !key) return null;
+  try {
+    const r = await fetch(
+      `${url}/rest/v1/sites?custom_domain=eq.${encodeURIComponent(host)}&published=is.true&select=slug&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' },
+    );
+    const d = await r.json();
+    if (Array.isArray(d) && d.length > 0 && typeof d[0]?.slug === 'string') return d[0].slug;
+  } catch { /* 引けなければ未知のホストとして扱う */ }
+  return null;
 }
 
-// 代理店の管理画面ドメイン判定（service roleで参照・5分キャッシュ）
-const adminDomainCache = new Map<string, { v: boolean; t: number }>();
+// 代理店の管理画面ドメイン判定（service roleで参照）
+//
+// ここもキャッシュを持たない。代理店ドメインの解除が最大5分反映されず、
+// 解除済みのホストから管理画面へ入れる時間ができるため。
 async function isAgencyAdminDomain(host: string): Promise<boolean> {
-  const c = adminDomainCache.get(host);
-  const now = Date.now();
-  if (c && now - c.t < 5 * 60 * 1000) return c.v;
-  let v = false;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (url && key) {
-    try {
-      const r = await fetch(`${url}/rest/v1/profiles?agency_admin_domain=eq.${encodeURIComponent(host)}&select=id&limit=1`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
-      const d = await r.json();
-      v = Array.isArray(d) && d.length > 0;
-    } catch { /* fail open as non-admin */ }
+  if (!url || !key) return false;
+  try {
+    const r = await fetch(
+      `${url}/rest/v1/profiles?agency_admin_domain=eq.${encodeURIComponent(host)}&select=id&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' },
+    );
+    const d = await r.json();
+    return Array.isArray(d) && d.length > 0;
+  } catch {
+    return false;  // 引けなければ管理ドメインとして扱わない
   }
-  adminDomainCache.set(host, { v, t: now });
-  return v;
 }
 
 export async function proxy(request: NextRequest) {
@@ -88,12 +88,25 @@ export async function proxy(request: NextRequest) {
     (MAIN_HOST && (hostname === MAIN_HOST || hostname === `www.${MAIN_HOST}`));
 
   // Custom domain routing: rewrite non-system hostnames（主ドメインは即スキップ＝DB照会なし）
+  //
+  // /hp と /laruHP を「素通し」にしていたため、顧客のドメインから
+  // /hp/<別サイトのslug>/post/<id> を開くと、そのホスト上に
+  // 別サイトの記事・商品が 200 で表示できた。
+  // 顧客ホストでは内部パスも例外にせず、必ずそのホストのサイト配下へ写す
+  // （結果として存在しないパスになり 404 になる）。
+  //
+  // 例外は次の3つだけ:
+  //   /_next, /api … 基盤。POSTを巻き込まないためにも書き換えない
+  //   /hp/post/<id> … 公開済みHTMLの中に残っている旧い記事リンク。
+  //                   このルートは本文を描画せず、その記事が属するサイトの
+  //                   正規URLへ308で転送するだけなので、
+  //                   別サイトの本文がこのホストに出ることはない。
+  const isLegacyPostLink = /^\/hp\/post\/[^/]+\/?$/.test(pathname);
   if (
     !isSystemHost &&
     !pathname.startsWith('/_next') &&
     !pathname.startsWith('/api') &&
-    !pathname.startsWith('/hp') &&
-    !pathname.startsWith('/laruHP') &&
+    !isLegacyPostLink &&
     pathname !== '/favicon.ico'
   ) {
     // サブドメイン: <slug>.MAIN_HOST → /hp/<slug>（robots.txt/sitemap.xml等のサブパスもそのまま透過）

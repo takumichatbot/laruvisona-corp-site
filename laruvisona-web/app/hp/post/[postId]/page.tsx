@@ -1,6 +1,6 @@
 import { notFound, permanentRedirect } from 'next/navigation';
 import { createServiceClient } from '@/lib/supabase/server';
-import { publicBase, siteUrl } from '@/lib/public-site-url';
+import { canonicalBase, siteUrl } from '@/lib/public-site-url';
 
 // 旧い記事URL（/hp/post/<id>）。
 //
@@ -39,5 +39,5 @@ export default async function LegacyPostRedirect(
   // 転送先はその記事のサイトの正規URL。
   // ここでは開かれたホストを見ない（旧URLは会社ホストでしか使われず、
   // 顧客ホスト上の /hp/... は proxy が /hp/<slug>/hp/... に写さないため）。
-  permanentRedirect(siteUrl(publicBase(site, null), `post/${post.id}`));
+  permanentRedirect(siteUrl(canonicalBase(site), `post/${post.id}`));
 }

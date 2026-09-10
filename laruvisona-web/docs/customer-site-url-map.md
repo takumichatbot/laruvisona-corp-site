@@ -82,19 +82,44 @@ C2 では、接続状態と転送関係を分けて持つ。`Location` が同じ
 
 ## 5. 検証状況
 
-`tests/customer-routing.test.ts` で、実際の `proxy()` に本物の `NextRequest` を
-通して12件を固定した（Supabase への参照だけ差し替え、外部通信なし）。
-A/B 2サイトで解決先が混ざらないこと、クエリ保持、未知ホスト404、
-管理画面・プレビュー・APIの素通しを含む。
+### 実ビルド＋実HTTP（Next 16.3.4 本番用ビルド）
 
-`tests/public-site-url.test.ts` で正規URLの決め方と、記事のサイト所属確認・
-旧URLの転送・ページ複製の不在を固定した。
+`next build` を通し、`next start` にホスト名を変えて実際にHTTPで確認した。
+Supabase の応答だけローカルの読み取り専用fixtureに差し替えている（外部通信なし）。
+
+| Host | Path | HTTP | 本文 | canonical |
+|---|---|---|---|---|
+| salon-a.example | `/` | 200 | Aのみ | `https://salon-a.example` |
+| salon-a.example | `/post/a-post` | 200 | Aのみ | `.../post/a-post` |
+| salon-a.example | `/post/b-post` | **404** | — | — |
+| salon-a.example | `/shop` | 200 | Aのみ | `.../shop` |
+| salon-a.example | `/does-not-exist` | **404** | — | — |
+| salon-a.example | `/hp/site-b/post/b-post` | **404** | — | — |
+| salon-a.example | `/hp/site-b/shop` | **404** | — | — |
+| salon-a.example | `/laruHP/dashboard` | **404** | — | — |
+| salon-a.example | `/hp/post/b-post` | **308** | 本文なし | → `https://bistro-b.example/post/b-post` |
+| bistro-b.example | `/post/b-draft`（非公開） | **404** | — | — |
+| unknown.example | `/` | **404** | — | — |
+| laruvisona.jp | `/hp/site-b/post/b-post` | 200 | Bのみ | `https://bistro-b.example/post/b-post` |
+| site-b.laruvisona.jp | `/post/b-post` | 200 | Bのみ | `https://bistro-b.example/post/b-post` |
+
+同じ記事を3つの入口から開いても canonical は同一。
+会社ホストのパス形式で開いた記事の「トップへ」は
+`https://bistro-b.example`（そのサイトの正規URL）になり、会社トップへ戻らない。
+sitemap にはそのサイトの公開記事だけが載る（非公開の `b-draft` は含まれない）。
+
+### 自動テスト
+
+`tests/customer-routing.test.ts`（18件）は実際の `proxy()` に本物の `NextRequest` を通す。
+内部パス直指定の遮断、割当変更・解除・接続直後・DB照会失敗、
+API/`_next` の素通し、旧記事リンクの転送経路を含む。
+`tests/public-site-url.test.ts`（14件）は正規URLの一意性、絶対リンク、
+ホストとサイトの対応、sitemap の記事、表示側のホスト確認を固定する。
 
 ### まだ確認していないこと
 
-- **実ビルドでのHTTP応答**（404が本当に404で返るか）。この環境では
-  `next build` が動かない（SWCのlinux/arm64バイナリが無い）。
-  未知パスを存在しないルートへ渡す形にしたので Next.js の 404 になるはずだが、
-  実ビルドでの確認は未了。
 - 実際の独自ドメインでの接続試験（Renderのapex/www挙動を含む）。
 - 本番に独自ドメインで公開中の顧客サイトがあるか（本番DBを見ていない）。
+- 上のHTTP結果は、Google Fonts に到達できない環境のため
+  `app/layout.tsx` のフォント読み込みだけを差し替えた診断用コピーによるもの。
+  ルーティング・canonical・記事の所属確認には影響しない。
