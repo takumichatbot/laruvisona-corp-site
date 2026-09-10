@@ -1,4 +1,5 @@
 'use client';
+import { MONTHLY, ANNUAL, ANNUAL_TOTAL } from '@/lib/laruhp-facts';
 import { useState, useEffect, Suspense, createContext, useContext } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -51,9 +52,7 @@ function Cell({ value }: { value: Availability }) {
   return <div className="flex justify-center"><span className="text-gray-700 font-semibold text-xs">{value}</span></div>;
 }
 
-const MONTHLY = { hp: 999, lite: 2980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 } as const;
-const ANNUAL  = { hp: 833, lite: 2483, hpBot: 4150, hpBotSeo: 8166, agency: 16500 } as const;
-const ANNUAL_TOTAL = { hp: 9990, lite: 29800, hpBot: 49800, hpBotSeo: 98000, agency: 198000 } as const;
+// 料金は lib/laruhp-pricing.ts が正。案内ページと同じ数字を読む
 
 // 決済セッションを開始する共通処理。
 // 未ログイン(401)の場合は、選択中のプラン・課金区分を redirectTo に含めてログインへ誘導し、

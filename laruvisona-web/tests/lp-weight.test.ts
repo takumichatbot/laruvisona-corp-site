@@ -98,12 +98,13 @@ test('ランディングページを開いただけで通知許可を求めな�
     '利用者の操作から呼ぶための関数が無い');
 });
 
-test('既存LPの作例画像は先読みしない', () => {
-  // 実測: ファーストビューの外にある画像26枚が eager で、初回に全部読んでいた。
-  // <img> で読んでいるぶんは lazy にできる（背景画像は属性が使えないので別課題）。
+test('案内ページの画像は、必要になるまで読まない', () => {
+  // 以前は作例26枚が eager で、開いた瞬間に全部落ちていた。
+  // 作り直したページは next/image（既定で遅延）だけを使い、
+  // 先読みするのは最初の画面のすぐ下に出る作例1枚に限る。
   const lp = read('app/laruHP/page.tsx');
-  const imgs = lp.match(/<img [^>]*>/g) || [];
-  const eager = imgs.filter(t => !/loading="lazy"/.test(t));
-  assert.deepEqual(eager, [], `先読みのままの<img>が${eager.length}個ある`);
-  assert.ok(imgs.length > 0, '<img>が消えている');
+  assert.equal(/<img /.test(lp), false, '素の <img> が戻っている');
+  assert.equal((lp.match(/priority/g) || []).length, 0, '先読みする画像がある');
+  // 背景画像（属性で遅延できない）も持ち込まない
+  assert.equal(/backgroundImage:/.test(lp), false, '背景画像で重い絵を読んでいる');
 });

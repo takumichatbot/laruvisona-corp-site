@@ -66,17 +66,11 @@ test('生成の待ち時間に上限がある（無限に待たない）', () =>
   assert.match(veoLib, /reason: 'timeout_or_no_uri'/);
 });
 
-test('LPショーケースの動画は条件が揃った時だけ読み込む', () => {
+test('案内ページは動画を読み込まない', () => {
+  // 以前は業種ショーケースと背景で動画を配っていた。作り直した案内ページは
+  // 動画を使わない。素材と配信経路（/api/library-video）は残してある。
   const lp = read('../app/laruHP/page.tsx');
-  assert.match(lp, /function ShowcaseHeroMedia/, '静止画＋動画の切り替えコンポーネントが無い');
-  assert.match(lp, /prefers-reduced-motion: reduce/);
-  assert.match(lp, /min-width: 768px/, 'スマホにも動画を読ませてしまう');
-  assert.match(lp, /new IntersectionObserver/, '画面外でも読み込んでしまう');
-  assert.match(lp, /preload="none"/);
-  // 静止画は常に背景として残る＝動画が無い/失敗しても絵が消えない
-  assert.match(lp, /backgroundImage: `url\(\$\{libHero\(industry\)\}\)`/);
-  assert.ok(!/\{libHero\('\w+'\) && <div className="absolute inset-0 z-\[1\] bg-cover/.test(lp),
-    '差し替え漏れのショーケースがある');
+  assert.equal(/<video|library-video|\.mp4/.test(lp), false, '案内ページに動画が戻っている');
 });
 
 test('動画は自社LP専用で、顧客サイト生成には使わない', () => {
@@ -87,109 +81,22 @@ test('動画は自社LP専用で、顧客サイト生成には使わない', () 
   assert.ok(!/veo|library-video/i.test(siteImages), '顧客向けの画像経路に動画が混ざっている');
 });
 
-// ── LPファーストビューの背景映像 ────────────────────────────────
-const lpSrc = read('../app/laruHP/page.tsx');
-const publicRoute2 = read('../app/api/library-video/route.ts');
-
-// 実際に <video> を描いている共通部品（業種ショーケースが使う）
-const loopComp = lpSrc.slice(lpSrc.indexOf('function LoopVideo'), lpSrc.indexOf('// ショーケースのヒーロー領域'));
-
-// ── LPのファーストビューには映像を敷かない ────────────────────
-// Veoで作った lp-hero.mp4 は「開店前の無人の店内」で、業種ショーケース用の
-// 6本と同じジャンルだった。「HPを作るサービス」のファーストビューで
-// 「お客さんのお店」を流しても、商品の説明にならない。3Dを外したのと
-// 同じ理由で外している。素材と配信経路は残してあるので復帰は数行。
-test('ファーストビューの映像はスマホに読ませない', () => {
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
-  // 5MBの装飾。モバイルの通信量をゼロにするのがいちばん効く
-  assert.match(comp, /min-width: 1024px/, 'スマホ除外の条件が無い');
-  assert.match(comp, /prefers-reduced-motion: reduce/);
-  assert.match(comp, /conn\?\.saveData/);
-  assert.match(comp, /2g\$\/\.test\(conn\.effectiveType\)/);
-});
-
-test('動画を読む前に存在確認の往復をしない', () => {
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
-  // HEAD は /api/library-video → 302 → Supabase と1往復してから返る。
-  // その後にようやく動画の読み込みが始まるので、往復が丸ごと待ち時間になっていた。
-  assert.equal(/method: 'HEAD'/.test(comp), false, '存在確認の往復が復活している');
-  assert.match(comp, /requestIdleCallback/, 'ページが暇になった時点で読み始めていない');
-  assert.match(comp, /onFail=\{\(\) => setSrc\(null\)\}/, '無かったときに下地へ戻れない');
-});
-
-test('自動再生される装飾には止める手段がある（WCAG 2.2.2 レベルA）', () => {
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
-  // 自動的に始まり5秒を超えて動き続け、他のコンテンツと並行して出るものには
-  // 一時停止/停止/非表示の手段が要る。ループする背景映像はこれに該当する。
-  assert.match(comp, /aria-label=\{paused \?/, '停止ボタンに読み上げ名が無い');
-  assert.match(comp, /setPaused/, '止められない');
-  assert.match(comp, /min-h-\[44px\] min-w-\[44px\]/, 'タップ領域が小さい');
-  assert.match(comp, /focus-visible:outline/, 'キーボードで到達したときに見えない');
-  assert.match(lpSrc, /paused\?: boolean;/, 'LoopVideo が停止状態を受け取れない');
-});
-
-test('現れるまでの時間を短く保つ', () => {
-  assert.match(lpSrc, /const HERO_VIDEO_FADE_MS = /);
-  const m = lpSrc.match(/const HERO_VIDEO_FADE_MS = (\d+)/);
-  assert.ok(m && Number(m[1]) <= 700, `フェードが長すぎる（${m?.[1]}ms）。遅いと感じる原因になる`);
-});
-
-test('見え方は3つの数字で決める（映像を弱いものに差し替えない）', () => {
-  assert.match(lpSrc, /const HERO_VIDEO_OPACITY = /);
-  assert.match(lpSrc, /const HERO_VIDEO_BLUR_PX = /);
-  assert.match(lpSrc, /const HERO_VIDEO_GRAYSCALE = /);
-  const comp = lpSrc.slice(lpSrc.indexOf('function HeroBackgroundVideo'), lpSrc.indexOf('// 背景ループ映像の共通部品'));
-  assert.match(comp, /bg-gradient-to-b from-sky-50\//, '文字を守る膜が無い');
-  assert.match(comp, /aria-hidden="true"/, '装飾が読み上げ対象になっている');
-  assert.match(comp, /if \(!src\) return null;/, '取れないときに何か描いてしまう');
-  assert.match(comp, /onFail=\{\(\) => setSrc\(null\)\}/, '再生失敗で黒い箱が残る');
-});
-
-test('業種ショーケース側の映像は残す（あちらは意味が合っている）', () => {
-  assert.match(lpSrc, /function ShowcaseHeroMedia/);
-  assert.match(lpSrc, /\/api\/library-video\?industry=/);
-  assert.match(lpSrc, /<LoopVideo/);
-});
+/* ── 案内ページから動画を外した ──────────────────────────────────
+   作り直した /laruHP は動画を使わない。以前ここにあった条件
+   （静止画が先／動きを減らす設定では読まない／画面に入ってから読む／
+     止める手段がある／タブが裏では再生しない）は、動画が実際に置かれる場所
+   ＝顧客サイトのヒーローへ移した。tests/published-html.test.ts の
+   「動きのあるヒーローは、写真を先に出して動画をあとから重ねる」を参照。
+   素材と配信経路（lib/veo-prompt.ts / /api/library-video）は残してある。 */
 
 test('LP用動画の素材と配信経路は残す（内容を決め直したら戻せるように）', () => {
   assert.match(read('../lib/veo-prompt.ts'), /HERO_VIDEO_PATH = 'videos\/lp-hero\.mp4'/);
-  assert.match(publicRoute2, /target === 'lp-hero'/);
-});
-
-test('タブが裏のときは再生しない（読み込みが止まるため）', () => {
-  // ブラウザは非表示タブの映像読み込みを止めるので、その状態で play() を
-  // 呼んでも readyState 0 のまま進まない。見えているときだけ再生し、
-  // 隠れたら止める。通信量とバッテリーの節約にもなる。
-  assert.match(loopComp, /document\.visibilityState !== 'visible'/);
-  assert.match(loopComp, /addEventListener\('visibilitychange'/);
-  assert.match(loopComp, /el\.pause\(\)/);
-  assert.match(loopComp, /removeEventListener\('visibilitychange'/, '後片付けをしていない');
-});
-
-test('表示の合図は canplay だけに頼らない', () => {
-  assert.match(loopComp, /onLoadedData=\{onReady\}/);
-  assert.match(loopComp, /onPlaying=\{onReady\}/);
-  assert.match(loopComp, /onCanPlay=\{onReady\}/);
-});
-
-// ショーケース側（業種別の映像）の条件。ここは残っている。
-const showComp = lpSrc.slice(lpSrc.indexOf('function ShowcaseHeroMedia'), lpSrc.indexOf('export default function LaruHPLandingPage'));
-
-test('ショーケース映像は動きを減らす設定・スマホでは読まない', () => {
-  assert.match(showComp, /prefers-reduced-motion: reduce/);
-  assert.match(showComp, /min-width: 768px/, 'スマホに通信量を使わせない条件が無い');
-  assert.match(showComp, /IntersectionObserver/, '画面に入る前から読み込んでいる');
-});
-
-test('映像が取れなくても静止画は消えない', () => {
-  assert.match(showComp, /backgroundImage: `url\(\$\{libHero\(industry\)\}\)`/, '下地の静止画が無い');
-  assert.match(showComp, /onFail=\{\(\) => setVideoSrc\(null\)\}/, '再生失敗で黒い箱が残る');
-  assert.match(loopComp, /onError=\{onFail\}/, '再生失敗が上に伝わっていない');
+  assert.match(publicRoute, /target === 'lp-hero'/);
 });
 
 test('ヒーロー映像も公開側では生成しない', () => {
-  assert.ok(!/generateVeo/.test(publicRoute2));
-  assert.match(publicRoute2, /target === 'lp-hero'/);
+  assert.ok(!/generateVeo/.test(publicRoute));
+  assert.match(publicRoute, /target === 'lp-hero'/);
 });
 
 // ── LPファーストビュー映像の候補（3案から選ぶ） ──────────────────

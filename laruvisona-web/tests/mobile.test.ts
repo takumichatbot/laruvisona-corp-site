@@ -37,9 +37,9 @@ test('公開サイトのプレビューやLPのモックには適用しない', 
   assert.ok(!/className="laru-touch/.test(lp), 'LPに laru-touch が付いている');
 });
 
-test('ショーケースの主要導線が44px以上ある', () => {
-  const ctas = lp.match(/このテンプレで →/g) || [];
-  assert.equal(ctas.length, 6, 'テンプレ導線の数が変わっている');
-  const sized = lp.match(/inline-flex items-center min-h-\[44px\] px-4 py-2 rounded-lg hover:bg-/g) || [];
-  assert.equal(sized.length, 6, `44px未満の導線が残っている（${sized.length}/6）`);
+test('案内ページの主要導線が指で押せる大きさにある', () => {
+  // 作りはじめる / できあがりを見る / 各プラン / 相談する
+  const sized = lp.match(/min-h-\[52px\]/g) || [];
+  assert.ok(sized.length >= 5, `44pxに満たない導線がある（52px指定は${sized.length}個）`);
+  assert.equal(/min-h-\[3[0-9]px\]/.test(lp), false, '40px未満の導線が混ざっている');
 });

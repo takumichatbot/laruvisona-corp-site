@@ -10,7 +10,8 @@ import path from 'node:path';
 const root = path.join(import.meta.dirname, '..');
 const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
 const page = read('app/lp-next/page.tsx');
-const facts = read('app/lp-next/facts.ts');
+const facts = read('lib/laruhp-facts.ts');
+const factsStub = read('app/lp-next/facts.ts');
 const oldLp = read('app/laruHP/page.tsx');
 const layout = read('app/laruHP/layout.tsx');
 
@@ -120,18 +121,21 @@ test('裏の取れていない実績や効果を書かない', () => {
 });
 
 test('価格と契約条件が一次情報と一致している', () => {
-  assert.match(oldLp, /price: 999/);
-  assert.match(oldLp, /price: 4980/);
-  assert.match(oldLp, /price: 9800/);
-  assert.match(facts, /monthly: 999/);
-  assert.match(facts, /monthly: 4980/);
-  assert.match(facts, /monthly: 9800/);
-  assert.match(oldLp, /hp: 833, 'hp-bot': 4150, 'hp-bot-seo': 8166/);
-  assert.match(facts, /annualPerMonth: 833/);
-  assert.match(facts, /annualPerMonth: 4150/);
-  assert.match(facts, /annualPerMonth: 8166/);
-  assert.match(facts, /minimumMonths: 6/);
-  assert.match(facts, /税別/);
+  // 数字の置き場は lib/laruhp-facts.ts の1か所だけ。
+  // 案内ページ・料金ページ・このプレビューは、そこから読む。
+  const src = facts;
+  assert.match(src, /monthly: 999/);
+  assert.match(src, /monthly: 4980/);
+  assert.match(src, /monthly: 9800/);
+  assert.match(src, /MONTHLY = \{ hp: 999, lite: 2980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 \}/);
+  assert.match(factsStub, /export \* from '@\/lib\/laruhp-facts'/, 'プレビューが自前の数字を持ち直している');
+  assert.match(oldLp, /from '@\/lib\/laruhp-facts'/, '案内ページが一次情報から読んでいない');
+  assert.match(read('app/laruHP/plans/page.tsx'), /from '@\/lib\/laruhp-facts'/, '料金ページが自前の数字を持っている');
+  assert.match(src, /annualPerMonth: 833/);
+  assert.match(src, /annualPerMonth: 4150/);
+  assert.match(src, /annualPerMonth: 8166/);
+  assert.match(src, /minimumMonths: 6/);
+  assert.match(src, /税別/);
 });
 
 test('タップできるものは十分な大きさがある', () => {
