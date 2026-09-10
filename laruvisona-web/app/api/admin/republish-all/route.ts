@@ -9,6 +9,7 @@ import { redact, logError } from '@/lib/api-error';
 // html-export.ts を修正した際、各オーナーの手動再公開を待たずに反映させるためのエンドポイント。
 // 認証: 管理者セッション、またはサーバー内部からの Bearer ADMIN_SECRET（server.js の起動時自動実行用）。
 // body: { onlyOutdated?: boolean } — true なら EXPORT_VERSION が古いサイトだけ再生成（起動時はこちら）。
+//       { slug?: string } — そのサイトだけ再生成する。1件だけ作り直したいときに使う。
 export async function POST(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const secretOk = !!process.env.ADMIN_SECRET && bearer === process.env.ADMIN_SECRET;
@@ -24,13 +25,14 @@ export async function POST(req: Request) {
     }
   }
 
-  const { onlyOutdated } = await req.json().catch(() => ({})) as { onlyOutdated?: boolean };
+  const { onlyOutdated, slug } = await req.json().catch(() => ({})) as { onlyOutdated?: boolean; slug?: string };
 
   const service = await createServiceClient();
   let query = service
     .from('sites')
     .select('id, name, slug, industry, blocks_json, seo_json, settings_json')
     .eq('published', true);
+  if (typeof slug === 'string' && slug) query = query.eq('slug', slug);
   if (onlyOutdated) {
     query = query.not('published_html', 'like', `%<!--lhpv:${EXPORT_VERSION}-->%`);
   }

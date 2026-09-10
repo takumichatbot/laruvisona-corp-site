@@ -46,10 +46,14 @@ check('サイトIDが固定値ではなく uuid', isUuid, site.id);
 const pub = await fetch(`${BASE}/api/admin/republish-all`, {
   method: 'POST',
   headers: { 'content-type': 'application/json', authorization: `Bearer ${SECRET}` },
-  body: JSON.stringify({ onlyOutdated: false }),
+  // この作品だけを作り直す。絞らないと、同じ偽Supabaseに入っている
+  // 別の検証用サイト（そのサイトにだけ出てよい印）まで上書きしてしまう。
+  body: JSON.stringify({ onlyOutdated: false, slug: args.slug }),
 });
 const pubBody = await pub.json().catch(() => ({}));
 check('公開ルートが成功を返す', pub.ok, `HTTP ${pub.status} ${JSON.stringify(pubBody).slice(0, 120)}`);
+check('作り直したのはこの作品だけ', (pubBody.results?.length ?? pubBody.count ?? 1) === 1,
+  `${pubBody.results?.length ?? '?'}件`);
 
 // ── 3. DB に published_html が書かれた ──
 const after = await (await fetch(`http://127.0.0.1:${args['fixture-port']}/rest/v1/sites?slug=eq.${args.slug}&select=id,published,published_html`)).json();

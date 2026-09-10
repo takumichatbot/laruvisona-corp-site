@@ -20,6 +20,10 @@ set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$DIR/../.." && pwd)"
 PORT="${PORT:-3100}"
+# 偽Supabaseのポートは 54999 から動かせない。
+# NEXT_PUBLIC_SUPABASE_URL はビルド時に埋め込まれるので、起動時の環境変数では
+# proxy.ts（ミドルウェア）の参照先が変わらない。別のポートで立てると、
+# ドメインの引き当てが空振りして全部404になる。
 FIXTURE_PORT="${FIXTURE_PORT:-54999}"
 
 # サイトごとに1つだけ出てよい印。ほかが出たら越境
@@ -38,8 +42,18 @@ trap cleanup EXIT
 up() { curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$1/" 2>/dev/null; [ $? -ne 7 ]; }
 
 if ! up "$FIXTURE_PORT"; then
-  node "$DIR/fixture.cjs" >"$DIR/fixture.log" 2>&1 &
+  FIXTURE_PORT="$FIXTURE_PORT" node "$DIR/fixture.cjs" >"$DIR/fixture.log" 2>&1 &
   FIXTURE_PID=$!
+  for _ in $(seq 1 20); do up "$FIXTURE_PORT" && break; sleep 0.3; done
+fi
+
+# 印が残っているかを先に見る。
+# 偽Supabaseは動いたまま使い回されるので、他の検証が published_html を
+# 書き換えていると、原因の分からない失敗になる。先に気づけるようにする。
+if ! curl -s "http://127.0.0.1:$FIXTURE_PORT/rest/v1/sites?slug=eq.site-a&select=published_html" | grep -q "A_ONLY_SITE_BODY"; then
+  echo "偽Supabase($FIXTURE_PORT)の印が書き換わっています。" >&2
+  echo "偽Supabaseを立て直してから、もう一度実行してください。" >&2
+  exit 2
 fi
 
 if ! up "$PORT"; then

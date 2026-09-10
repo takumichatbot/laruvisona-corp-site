@@ -173,4 +173,6 @@ http.createServer((req, res) => {
     return send(200, rows[0]);
   }
   send(200, rows);
-}).listen(54999, '127.0.0.1', () => console.log('fixture on 54999'));
+}).listen(Number(process.env.FIXTURE_PORT || 54999), '127.0.0.1', function () {
+  console.log('fixture on ' + this.address().port);
+});

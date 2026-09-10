@@ -234,6 +234,16 @@ test('写真の見せ場を、パソコンとスマホで別に決められる',
   assert.match(html, /\.lhp-hero-img\{object-position:var\(--lhp-hero-pos,center\)\}/);
 });
 
+
+test('一括再生成は、1件だけに絞れる', () => {
+  // 絞れないと、同じデータベースの他のサイトまで作り直してしまう。
+  // 検証環境では、別の検証が使っている印が消えて原因の分からない失敗になり、
+  // 本番では、1件直したいだけのときに全件へ触れることになる。
+  const route = readFileSync(new URL('../app/api/admin/republish-all/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /const \{ onlyOutdated, slug \} = await req\.json\(\)/);
+  assert.match(route, /if \(typeof slug === 'string' && slug\) query = query\.eq\('slug', slug\)/);
+});
+
 test('生成HTMLを変えたら EXPORT_VERSION を上げる（既存の公開HTMLが再生成される）', () => {
   assert.ok(EXPORT_VERSION >= 3, '公開HTMLを変更したのに EXPORT_VERSION が上がっていない');
   assert.match(basic, new RegExp(`<!--lhpv:${EXPORT_VERSION}-->$`), '版数の埋め込みが末尾に無い');
