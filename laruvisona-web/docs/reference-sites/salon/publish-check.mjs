@@ -7,7 +7,7 @@
 //   1. 保存済みの blocks_json / seo_json / settings_json を持つサイトが DB にある
 //   2. 実際の公開ルート（/api/admin/republish-all）が走り、published_html を書く
 //   3. 公開URL（/hp/<slug>）が、その published_html を返す
-//   4. 画像がアプリから配信される（/salon/*.jpg）
+//   4. 画像がアプリから配信される（avif / webp / jpg のすべて）
 //   5. サイトIDは固定値ではなく、DB上の uuid が HTML に入る
 //
 // 使うのは隔離環境。Supabase の代わりに tests/http/fixture.cjs（読み書きできる
@@ -79,7 +79,7 @@ check('HTMLに実際のサイトIDが入っている', served.includes(site.id),
 check('固定のサイトIDが残っていない', !served.includes('reference-salon'));
 
 // ── 6. 画像がアプリから配信される ──
-for (const f of ['hero.jpg', 'style-1.jpg', 'staff-1.jpg']) {
+for (const f of ['hero-1200.avif', 'hero-1200.webp', 'hero-1200.jpg', 'hero-sp-780.avif', 'style-1.jpg', 'staff-1.jpg']) {
   const r = await fetch(`${BASE}/salon/${f}`);
   const len = Number(r.headers.get('content-length') || 0);
   check(`画像がアプリから配信される: ${f}`, r.ok && len > 1000, `HTTP ${r.status} ${len}B`);

@@ -52,3 +52,33 @@ test('履歴に積んでから変更する（複製・貼り付けが取り消�
   const dup = handler.slice(handler.indexOf("k === 'd'"));
   assert.match(dup.slice(0, 400), /pushHistory\(siteRef\.current\)/, '複製が Undo できない');
 });
+
+// ── 保存の中身 ──
+//
+// 保存は settings_json を丸ごと置き換える（PUT /api/sites/[id]）。
+// そのため「保存する中身を組み立てる場所」が2つあると、片方に入れ忘れた
+// 設定が保存のたびに消える。実際そうなっていた:
+//   ・30秒ごとの自動保存 …… globalFooter（フッター）が入っていなかった
+//   ・保存ボタン        …… sitePassword（サイトのパスワード）が入っていなかった
+// どちらもビルダーが知らない設定（previewToken・sequences・style など）は
+// 常に落ちていた。
+
+test('保存する中身を組み立てる場所は1つだけ', () => {
+  const spots = src.match(/settings_json: \{/g) || [];
+  assert.equal(spots.length, 1,
+    `保存の中身が${spots.length}か所で組み立てられている（食い違うと設定が消える）`);
+  assert.match(src, /const buildSavePayload = useCallback/);
+  // 自動保存も保存ボタンも、同じ組み立てを使う
+  assert.equal((src.match(/buildSavePayload\((s|site)\)/g) || []).length, 3,
+    '自動保存・保存ボタン・新規作成が同じ組み立てを使っていない');
+});
+
+test('ビルダーが扱わない設定を、保存で消さない', () => {
+  const payload = src.slice(src.indexOf('const buildSavePayload'), src.indexOf('// Keep siteRef in sync'));
+  assert.match(payload, /\.\.\.loadedSettingsRef\.current/,
+    '読み込んだ settings_json を書き戻していない（previewToken などが消える）');
+  // ビルダーが持っている設定は、すべて保存に含める
+  for (const k of ['globalFooter', 'sitePassword', 'customCss', 'lineNotifyToken', 'webhookUrl', 'clarityId', 'customPalette']) {
+    assert.match(payload, new RegExp(`${k}: s\\.${k}`), `保存に含まれていない設定: ${k}`);
+  }
+});

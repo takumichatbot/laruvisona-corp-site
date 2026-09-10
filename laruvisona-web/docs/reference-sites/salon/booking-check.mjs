@@ -1,9 +1,16 @@
-// 予約フォームを、実際のブラウザから実際に送って確認する。
+// 予約フォームの「画面側」を確認する。実サーバ・実APIの受信は確認しない。
 //
 //   node docs/reference-sites/salon/booking-check.mjs --url http://127.0.0.1:3300/hp/yuian
 //
-// 受信は同梱の小さなサーバが受ける（/api/contact の代わり）。外部へは出ない。
-// 確認するのは、目で見て分からない「押せない・送れない・戻れない」の3つ。
+// ここでは /api/contact への送信を route.fulfill で差し替え、成功・失敗の応答を
+// こちらで作って返している。つまり通っているのはブラウザまでで、Next のルートも
+// データベースも動いていない。分かるのは次の3つだけ:
+//   ・Cookieの帯が出ている間も予約ボタンが押せるか
+//   ・キーボードだけで予約まで行けるか
+//   ・失敗したときに押し直せて、入力が残るか
+//
+// 「実サーバ・実APIが受け取ったか」は api-contract-check.mjs で確認する。
+// あちらは差し替えを一切せず、実際の /api/contact が受け、受信内容まで見る。
 import { createRequire } from 'node:module';
 const require = createRequire(process.env.PLAYWRIGHT_FROM
   ? process.env.PLAYWRIGHT_FROM + '/'
@@ -60,6 +67,18 @@ page.on('pageerror', e => errs.push(String(e)));
 await page.goto(args.url, { waitUntil: 'load' });
 await page.waitForTimeout(1200);
 
+// ── 0. 料金の数字が、そのままの値で出ている ──
+// カウントアップ演出は途中の数字を描く。13,200円 が一瞬 13,197円 に見えると
+// 値段を読み違えるので、この作品（動きなし）では動かさない。
+{
+  const read = () => page.$$eval('.lhp-price-amount', els => els.map(e => e.textContent.trim()));
+  const first = await read();
+  await page.waitForTimeout(1800);
+  const later = await read();
+  check('料金がそのままの値で出ている', JSON.stringify(first) === JSON.stringify(['6,600円', '13,200円〜', '8,800円']), JSON.stringify(first));
+  check('時間が経っても料金が変わらない', JSON.stringify(first) === JSON.stringify(later), JSON.stringify(later));
+}
+
 // ── 1. Cookieの帯が出ている間も、予約ボタンが押せる ──
 const banner = page.locator('#lhp-cookie-banner');
 const sticky = page.locator('.lhp-sticky-cta-btn');
@@ -71,11 +90,28 @@ check('固定予約ボタンが帯に隠れていない', !!bb && !!sb && sb.y +
 check('固定予約ボタンは指で押せる高さ', !!sb && sb.height >= 44, `${sb ? Math.round(sb.height) : '?'}px`);
 // 実際に押せる（帯の上から届く）
 await sticky.click({ timeout: 3000 });
-await page.waitForTimeout(600);
+await page.waitForTimeout(900);
 check('押すと予約へ移動する', new URL(page.url()).hash === '#booking', page.url().split('#')[1] || 'なし');
 
+// 予約欄に着いたら、同じ場所へ行く固定ボタンは引っ込む。
+// 出したままだと、フォームの送信ボタンに重なって押し間違える。
+const isOff = () => page.locator('.lhp-sticky-cta').evaluate(el => el.classList.contains('lhp-sticky-cta-off'));
+check('予約欄を見ている間は固定ボタンを引っ込める', await isOff());
+{
+  const submit = await page.locator('#lhp-btn-booking').boundingBox();
+  const cta = await page.locator('.lhp-sticky-cta-btn').boundingBox();
+  const overlaps = !!submit && !!cta && cta.y < submit.y + submit.height && cta.y + cta.height > submit.y;
+  check('送信ボタンに重なっていない', !overlaps,
+    `送信 ${submit ? Math.round(submit.y) : '?'}〜${submit ? Math.round(submit.y + submit.height) : '?'} / 固定 ${cta ? Math.round(cta.y) : '?'}`);
+}
+
+// 画面の上に戻すと、また出る
+await page.evaluate(() => window.scrollTo(0, 0));
+await page.waitForTimeout(800);
+check('上に戻ると固定ボタンがまた出る', !(await isOff()));
+
 try { await page.getByRole('button', { name: '同意する' }).click({ timeout: 2000 }); } catch { /* noop */ }
-await page.waitForTimeout(400);
+await page.waitForTimeout(500);
 const sb2 = await sticky.boundingBox();
 check('帯を閉じたら固定ボタンが下に戻る', !!sb2 && sb2.y + sb2.height > (sb?.y ?? 0) + (sb?.height ?? 0) - 2,
   `${sb2 ? Math.round(sb2.y) : '?'}`);
@@ -115,7 +151,7 @@ check('どこに居るか見て分かる（フォーカス表示）',
   !!outline && (outline.outline !== 'none' || (outline.shadow && outline.shadow !== 'none')),
   JSON.stringify(outline));
 
-// ── 3. 実際に送る。失敗 → 再試行 → 成功 ──
+// ── 3. 送信の失敗と再試行（応答はこちらで作っている＝実APIは通っていない）──
 mode = 'fail';
 await page.fill('[data-bk="name"]', '齋藤 匠');
 await page.fill('[data-bk="phone"]', '090-0000-0000');
@@ -136,7 +172,7 @@ await page.waitForTimeout(900);
 check('もう一度押すと成功する', await page.locator('.lhp-form-success').isVisible());
 
 const last = received[received.length - 1] || {};
-check('送った中身が届いている', last.name === '齋藤 匠' && last.email === 'test@example.com'
+check('送った中身がPOSTに載っている（受信はしていない）', last.name === '齋藤 匠' && last.email === 'test@example.com'
   && String(last.message || '').includes('カラー＋カット') && String(last.message || '').includes('2026-09-20'),
   JSON.stringify(last));
 check('予約データにサイトIDが付いている', !!last.siteId, last.siteId);
@@ -145,4 +181,5 @@ check('ページの例外が出ていない', errs.length === 0, errs.join(' / '
 await b.close();
 console.log(`\n通過 ${ok.length} / 失敗 ${ng.length}`);
 if (ng.length) { ng.forEach(n => console.log('  - ' + n)); process.exit(1); }
-console.log('予約の導線（Cookie表示中・キーボード・実送信）を確認しました');
+console.log('予約フォームの画面側（Cookie表示中・キーボード・失敗時の戻り）を確認しました');
+console.log('※ 応答は差し替えです。実サーバ・実APIでの受信は api-contract-check.mjs で確認します');

@@ -75,6 +75,36 @@ test('先頭の画像は遅延読み込みにしない（LCPが遅れる）', ()
   assert.match(secondTag, /loading="lazy"/, '2枚目以降が遅延読み込みになっていない');
 });
 
+
+test('ヒーローの見出しは、書いた位置で折り返せる', () => {
+  // 和文の見出しは語の途中でも折り返せてしまう。実測でも
+  // 「朝、鏡の前でう / まくいく髪を。」と切れており、balance でも auto-phrase でも
+  // 直らなかった。折り返す位置は書き手が決められるようにしてある。
+  const h = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h1', type: 'hero', data: {
+        heading: '朝、鏡の前で\nうまくいく髪を。', subheading: 'サブ', ctaText: 'CTA', ctaLink: '#',
+        bgImage: '/salon/hero-1600.jpg', bgImageWidth: 1600, bgImageHeight: 1195,
+      } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const }, 'テスト店',
+  );
+  assert.match(h, /<h1>朝、鏡の前で<br>うまくいく髪を。<\/h1>/, '改行が <br> になっていない');
+  // 代替テキストには改行を持ち込まない
+  assert.match(h, /alt="朝、鏡の前で うまくいく髪を。"/, '画像の説明文に改行が混ざっている');
+});
+
+test('見出しに書かれたHTMLは、これまでどおり文字として出す', () => {
+  const h = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h1', type: 'hero', data: { heading: '<img src=x onerror=alert(1)>危険', subheading: '', ctaText: '', ctaLink: '#' } },
+    ] }] as never,
+    seo, settings, 'テスト店',
+  );
+  assert.equal(/<img src=x/.test(h), false, '見出しのHTMLがそのまま出ている');
+  assert.match(h, /&lt;img src=x onerror=alert\(1\)&gt;危険/);
+});
+
 test('生成HTMLを変えたら EXPORT_VERSION を上げる（既存の公開HTMLが再生成される）', () => {
   assert.ok(EXPORT_VERSION >= 3, '公開HTMLを変更したのに EXPORT_VERSION が上がっていない');
   assert.match(basic, new RegExp(`<!--lhpv:${EXPORT_VERSION}-->$`), '版数の埋め込みが末尾に無い');
@@ -106,6 +136,34 @@ function fadeGuard(html: string): string {
   assert.ok(i > -1, '.lhp-fade を付ける処理が見つからない');
   return html.slice(Math.max(0, i - 800), i);
 }
+
+test('動きなしを選んだら、料金の数字も動かさない', () => {
+  // カウントアップは途中の数字を出す。13,200円 が一瞬 13,197円 に見えると
+  // 値段を読み違える。動きなし・端末の「動きを減らす」設定では止める。
+  const none = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'p1', type: 'price-table', data: { heading: '料金', plans: [
+        { name: 'カラー＋カット', price: '13,200', period: '円', description: '', features: [], highlighted: true, buttonText: '予約', buttonLink: '#' },
+      ] } },
+    ] }] as never,
+    seo, { ...settings, animLevel: 'none' as const }, 'テスト店',
+  );
+  assert.match(none, /var reduce=animLevel==='none'\s*\|\|\(window\.matchMedia&&window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\)/);
+  assert.match(none, /var cio=!reduce&&new IntersectionObserver/, 'カウントアップが常に動く');
+  assert.match(none, /if\(cio\)document\.querySelectorAll\('\.lhp-price-amount/);
+});
+
+test('打ち込み演出は、見出しの改行を壊さない', () => {
+  const bold = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h1', type: 'hero', data: { heading: '朝、鏡の前で\nうまくいく髪を。', subheading: '', ctaText: '', ctaLink: '#' } },
+    ] }] as never,
+    seo, { ...settings, designStyle: 'bold' }, 'テスト店',
+  );
+  // 打ち直すと <br> が消えて1行に戻るので、改行のある見出しでは打たない
+  assert.match(bold, /if\(h1&&!h1\.querySelector\('br'\)\)\{/);
+  assert.match(bold, /if\(!reduce&&\(style==='bold'\|\|style==='sharp'\)\)\{/);
+});
 
 test('動きなしを選んだら、写真・質問・料金表も隠された状態から始まらない', () => {
   const html = renderWithAnim('none');
@@ -166,7 +224,56 @@ test('予約フォームの入力から、値が取れる形になっている',
     assert.match(booking, new RegExp(`id="${id}"`));
   }
   // 送信する中身
-  assert.match(booking, /name:val\('name'\),email:val\('email'\),phone:val\('phone'\)/);
+  assert.match(booking, /name:nm,email:em,phone:val\('phone'\)/);
+});
+
+test('予約の必須項目が、実APIの必須項目と揃っている', () => {
+  // /api/contact は siteId・name・email が無いと 400 を返す。
+  // 画面（ラベル）・入力制約（required）・送信前の確認を、そこに合わせる。
+  assert.match(booking, /id="lhp-bkf-email"[^>]*required/, 'メール欄に required が無い');
+  assert.match(booking, /id="lhp-bkf-name"[^>]*required/, 'お名前欄に required が無い');
+  assert.match(booking, /<label class="lhp-form-label" for="lhp-bkf-email">メールアドレス<span class="lhp-req">必須<\/span>/);
+  assert.match(booking, /<label class="lhp-form-label" for="lhp-bkf-name">お名前<span class="lhp-req">必須<\/span>/);
+  // 任意の欄は、必須と見分けがつくこと
+  assert.match(booking, /for="lhp-bkf-phone">電話番号<span class="lhp-opt">任意<\/span>/);
+  // 送信前に自分でも確かめる（novalidate や自動入力の抜けで素通りしないように）
+  assert.match(booking, /var nm=val\('name'\),em=val\('email'\);/);
+  assert.match(booking, /if\(!nm\|\|!em\)\{/);
+  assert.match(booking, /お名前とメールアドレスをご入力ください。/);
+});
+
+test('メニューと日時の区切りは、文字としての改行になる', () => {
+  // 生成されたJSに出るのは \n（改行のエスケープ）。
+  // \\n（バックスラッシュそのもの＋n）だと、受信側に「\n」という2文字が届く。
+  assert.ok(booking.includes("+'\\n'+"), '区切りが改行のエスケープになっていない');
+  assert.equal(booking.includes("+'\\\\n'+"), false, 'バックスラッシュがそのまま送られる形になっている');
+});
+
+const contactHtml = exportToHTML(
+  [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+    { id: 'ct', type: 'contact', data: {
+      heading: 'お問い合わせ', subtext: '', fields: ['name', 'email', 'phone', 'message'],
+      buttonText: '送信する', buttonColor: '#2a2724', bgColor: '#fff',
+    } },
+  ] }] as never,
+  seo, settings, 'テスト店',
+);
+
+test('お問い合わせフォームも、フォーム自身のプロパティから値を取らない', () => {
+  // f.name はフォームの name 属性を返すので、入力値は取れない。
+  // 予約フォームと同じ取り違えがこちらにも残っており、name が抜けたまま
+  // 送られて /api/contact が 400「Missing required fields」を返していた。
+  assert.equal(/f\.name\.value|f\.email\.value|f\.message\.value|f\.phone\?\.value/.test(contactHtml), false,
+    'フォーム自身のプロパティから入力値を取ろうとしている');
+  assert.match(contactHtml, /function cv\(k\)\{var el=f\.querySelector\('\[data-ct="'\+k\+'"\]'\)/);
+  for (const k of ['name', 'email', 'phone', 'message']) {
+    assert.match(contactHtml, new RegExp(`data-ct="${k}"`), `入力の目印が無い: ${k}`);
+  }
+  assert.match(contactHtml, /name:nm,email:em,phone:cv\('phone'\),message:ms/);
+  // 必須の表示と、送信前の確認
+  assert.match(contactHtml, /for="lhp-ctf-email">メールアドレス<span class="lhp-req">必須<\/span>/);
+  assert.match(contactHtml, /for="lhp-ctf-phone">電話番号<span class="lhp-opt">任意<\/span>/);
+  assert.match(contactHtml, /if\(!nm\|\|!em\|\|!ms\)\{/);
 });
 
 test('送信に失敗したら、押し直せる状態に戻る', () => {
@@ -188,6 +295,12 @@ test('スマホの固定予約ボタンは、実際のリンクとして出る',
   assert.match(booking, /予約する<\/a>/);
   assert.match(booking, /\.lhp-sticky-cta-btn\{[^}]*min-height:52px/, '指で押せる高さが無い');
   assert.match(booking, /env\(safe-area-inset-bottom\)/, 'ホームバーに重なる');
+});
+
+test('予約欄を見ている間は、固定予約ボタンを引っ込める', () => {
+  // 同じ場所へ行くボタンが、フォームの送信ボタンに重なって押し間違えのもとになる
+  assert.match(booking, /\.lhp-sticky-cta-off\{transform:translateY\(130%\);opacity:0;pointer-events:none\}/);
+  assert.match(booking, /new IntersectionObserver\(function\(es\)\{\s*sticky\.classList\.toggle\('lhp-sticky-cta-off',es\[0\]\.isIntersecting\);/);
 });
 
 test('固定予約ボタンは、設定で出し入れできる', () => {
