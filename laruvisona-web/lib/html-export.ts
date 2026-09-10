@@ -3,7 +3,7 @@ import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 6;
+export const EXPORT_VERSION = 7;
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -48,7 +48,17 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       const heroW = raw('bgImageWidth');
       const heroH = raw('bgImageHeight');
       const heroSizes = raw('bgImageSizes') || '(max-width: 768px) 100vw, 62vw';
-      const heroAlt = str('bgImageAlt') || str('heading');
+      // 見出しは改行を活かす。
+      //
+      // 日本語の見出しは語の途中でも折り返せてしまうので、幅と文字サイズ次第で
+      // 「朝、鏡の前でう／まくいく髪を。」のように読めない切れ方になる。
+      // 折り返しの位置だけは書き手が決められるようにし、改行を <br> にして出す。
+      // （text-wrap:balance も word-break:auto-phrase も、和文の語の切れ目までは
+      //   見てくれない。実測しても切れ方は変わらなかった。）
+      const headingText = String(d['heading'] ?? '');
+      const headingHtml = escapeHtml(headingText).replace(/\r?\n/g, '<br>');
+      // 代替テキストに改行は要らない
+      const heroAlt = str('bgImageAlt') || escapeHtml(headingText.replace(/\s+/g, ' ').trim());
       const heroPos = raw('bgImagePosition');
       const heroImgTag = `<img src="${raw('bgImage')}" alt="${heroAlt}"`
         + (heroW ? ` width="${heroW}"` : '') + (heroH ? ` height="${heroH}"` : '')
@@ -73,7 +83,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 <section data-lhp-anim class="lhp-hero lhp-hero-${layout}"${abAttr} style="${bgStyle};color:${raw('textColor')}">
   <div class="lhp-hero-inner" style="${heroInnerStyle}">
     <div class="lhp-hero-content">
-      <h1>${str('heading')}</h1>
+      <h1>${headingHtml}</h1>
       <p class="lhp-hero-sub">${str('subheading')}</p>
       <a href="${raw('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
     </div>
@@ -563,15 +573,24 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
   <form class="lhp-form" id="lhp-form-contact" novalidate>
+    <p class="lhp-form-hint">「必須」の欄はご入力をお願いします。ご返信は、いただいたメールアドレスへお送りします。</p>
     <div class="lhp-form-row">
-      <input type="text" name="name" placeholder="お名前" aria-label="お名前" required />
-      <input type="email" name="email" placeholder="メールアドレス" aria-label="メールアドレス" required />
+      <div>
+        <label class="lhp-form-label" for="lhp-ctf-name">お名前<span class="lhp-req">必須</span></label>
+        <input id="lhp-ctf-name" type="text" name="name" data-ct="name" placeholder="山田 花子" autocomplete="name" required aria-required="true" />
+      </div>
+      <div>
+        <label class="lhp-form-label" for="lhp-ctf-email">メールアドレス<span class="lhp-req">必須</span></label>
+        <input id="lhp-ctf-email" type="email" name="email" data-ct="email" placeholder="example@example.com" autocomplete="email" inputmode="email" required aria-required="true" />
+      </div>
     </div>
-    <input type="tel" name="phone" placeholder="電話番号" aria-label="電話番号" />
+    <label class="lhp-form-label" for="lhp-ctf-phone">電話番号<span class="lhp-opt">任意</span></label>
+    <input id="lhp-ctf-phone" type="tel" name="phone" data-ct="phone" placeholder="090-0000-0000" autocomplete="tel" />
     ${typeSelectHtml}
     ${conditionalHtml}
     ${extraFieldsHtml}
-    <textarea name="message" placeholder="お問い合わせ内容" aria-label="お問い合わせ内容" rows="5" required></textarea>
+    <label class="lhp-form-label" for="lhp-ctf-message">お問い合わせ内容<span class="lhp-req">必須</span></label>
+    <textarea id="lhp-ctf-message" name="message" data-ct="message" placeholder="ご相談の内容をお書きください" rows="5" required aria-required="true"></textarea>
     <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
     <button type="submit" id="lhp-btn-contact" style="background-color:${btnColor}">${btnText}</button>
     <p class="lhp-form-note" id="lhp-note-contact"></p>
@@ -582,14 +601,28 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   ${conditionalScript}
   var f=document.getElementById('lhp-form-contact');
   if(!f)return;
+  /* 値は data-ct で名指しして取る。
+     f.name は「フォーム自身の name 属性」を返すので、入力欄は取れない。
+     予約フォームと同じ取り違えがここにも残っていた（name が undefined のまま
+     送られ、/api/contact が 400「Missing required fields」を返していた）。 */
+  function cv(k){var el=f.querySelector('[data-ct="'+k+'"]');return el?el.value:'';}
   f.addEventListener('submit',async function(e){
     e.preventDefault();
-    if(f._hp&&f._hp.value)return;
+    var hp=f.querySelector('[name="_hp"]');
+    if(hp&&hp.value)return;
     var btn=document.getElementById('lhp-btn-contact');
     var note=document.getElementById('lhp-note-contact');
-    btn.textContent='送信中...';btn.disabled=true;
+    /* このフォームは novalidate なので、必須の確認はここで行う */
+    var nm=cv('name'),em=cv('email'),ms=cv('message');
+    if(!nm||!em||!ms){
+      note.textContent='お名前・メールアドレス・お問い合わせ内容をご入力ください。';
+      var miss=f.querySelector(!nm?'[data-ct="name"]':!em?'[data-ct="email"]':'[data-ct="message"]');
+      if(miss){try{miss.focus();}catch(err){}}
+      return;
+    }
+    btn.textContent='送信中...';btn.disabled=true;note.textContent='';
     try{
-      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:f.name.value,email:f.email.value,phone:f.phone?.value||'',message:f.message.value})});
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:nm,email:em,phone:cv('phone'),message:ms})});
       var d=await r.json();
       if(d.ok){
         f.innerHTML='<div class="lhp-form-success">${escapeHtml(raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。')}</div>';
@@ -842,29 +875,42 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
   <form class="lhp-form" id="lhp-form-booking">
+    <!-- 受付に必要なのは、お名前とメールアドレス。/api/contact が
+         siteId・name・email の3つを必須にしているので、画面の表示と
+         input の required をそれに合わせている。 -->
+    <p class="lhp-form-hint">「必須」の欄はご入力をお願いします。空き状況のご連絡は、いただいたメールアドレスへお送りします。</p>
     <div style="margin-bottom:16px">
-      <label for="lhp-bkf-service" style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">サービスを選択</label>
-      <select id="lhp-bkf-service" name="service" data-bk="service" style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
+      <label class="lhp-form-label" for="lhp-bkf-service">サービスを選択<span class="lhp-opt">任意</span></label>
+      <select id="lhp-bkf-service" name="service" data-bk="service">
         ${((d['serviceTypes'] as string[]) || []).map(s => `<option>${escapeHtml(s)}</option>`).join('')}
       </select>
     </div>
     <div class="lhp-form-row">
       <div>
-        <label for="lhp-bkf-date" style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の日程</label>
+        <label class="lhp-form-label" for="lhp-bkf-date">ご希望の日程<span class="lhp-opt">任意</span></label>
         <input id="lhp-bkf-date" name="date" data-bk="date" type="date" />
       </div>
       <div>
-        <label for="lhp-bkf-time" style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の時間</label>
-        <select id="lhp-bkf-time" name="time" data-bk="time" style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
+        <label class="lhp-form-label" for="lhp-bkf-time">ご希望の時間<span class="lhp-opt">任意</span></label>
+        <select id="lhp-bkf-time" name="time" data-bk="time">
           ${((d['timeSlots'] as string[]) || []).map(t => `<option>${escapeHtml(t)}</option>`).join('')}
         </select>
       </div>
     </div>
     <div class="lhp-form-row">
-      <input id="lhp-bkf-name" name="customerName" data-bk="name" type="text" placeholder="お名前" autocomplete="name" required />
-      <input id="lhp-bkf-phone" name="phone" data-bk="phone" type="tel" placeholder="電話番号" autocomplete="tel" />
+      <div>
+        <label class="lhp-form-label" for="lhp-bkf-name">お名前<span class="lhp-req">必須</span></label>
+        <input id="lhp-bkf-name" name="customerName" data-bk="name" type="text" placeholder="山田 花子" autocomplete="name" required aria-required="true" />
+      </div>
+      <div>
+        <label class="lhp-form-label" for="lhp-bkf-phone">電話番号<span class="lhp-opt">任意</span></label>
+        <input id="lhp-bkf-phone" name="phone" data-bk="phone" type="tel" placeholder="090-0000-0000" autocomplete="tel" />
+      </div>
     </div>
-    <input id="lhp-bkf-email" name="email" data-bk="email" type="email" placeholder="メールアドレス" autocomplete="email" />
+    <div>
+      <label class="lhp-form-label" for="lhp-bkf-email">メールアドレス<span class="lhp-req">必須</span></label>
+      <input id="lhp-bkf-email" name="email" data-bk="email" type="email" placeholder="example@example.com" autocomplete="email" inputmode="email" required aria-required="true" />
+    </div>
     <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
     <button type="submit" id="lhp-btn-booking" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
     <p class="lhp-form-note" id="lhp-note-booking"></p>
@@ -884,6 +930,16 @@ ${d['stickyCta'] ? `
      f.name は「フォーム自身の name 属性」を返すので、入力欄は取れない
      （f.email / f.phone も同様に取れず、送信前に落ちていた）。 */
   function val(k){var el=f.querySelector('[data-bk="'+k+'"]');return el?el.value:'';}
+
+  /* 予約欄が画面に入っている間は、下の固定ボタンを隠す。
+     同じ場所へ行くボタンが送信ボタンに重なると、押し間違えのもとになる。 */
+  var sticky=document.querySelector('.lhp-sticky-cta');
+  var sec=document.getElementById('booking');
+  if(sticky&&sec&&typeof IntersectionObserver==='function'){
+    new IntersectionObserver(function(es){
+      sticky.classList.toggle('lhp-sticky-cta-off',es[0].isIntersecting);
+    },{threshold:0.12}).observe(sec);
+  }
 
   /* 料金表などから選ばれたメニューを引き継ぐ */
   function pickService(label){
@@ -916,11 +972,20 @@ ${d['stickyCta'] ? `
     var btn=document.getElementById('lhp-btn-booking');
     var note=document.getElementById('lhp-note-booking');
     var label=btn.textContent;
+    /* 送る前に、実APIの必須項目（siteId・name・email）を満たしているか見る。
+       ここを通さずに送ると 400「Missing required fields」で戻ってくる。 */
+    var nm=val('name'),em=val('email');
+    if(!nm||!em){
+      note.textContent='お名前とメールアドレスをご入力ください。';
+      var miss=f.querySelector(nm?'[data-bk="email"]':'[data-bk="name"]');
+      if(miss){try{miss.focus();}catch(err){}}
+      return;
+    }
     btn.textContent='送信中...';btn.disabled=true;note.textContent='';
     try{
       var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
         siteId:window.__LHPSID||'',type:'booking',
-        name:val('name'),email:val('email'),phone:val('phone'),
+        name:nm,email:em,phone:val('phone'),
         message:val('service')+'\\n'+val('date')+' '+val('time')
       })});
       var d=await r.json();
@@ -1346,6 +1411,11 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-form button{width:100%;padding:14px;border:none;border-radius:var(--lhp-btn-r);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}
 .lhp-form button:hover{opacity:.85}
 .lhp-form-note{font-size:.75rem;color:#9ca3af;text-align:center;margin-top:8px}
+.lhp-form-label{display:block;font-weight:700;font-size:.9rem;margin-bottom:8px}
+.lhp-req,.lhp-opt{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:3px;font-size:.7rem;font-weight:700;letter-spacing:.04em;vertical-align:middle;line-height:1.6}
+.lhp-req{background:#fdecec;color:#b02a2a}
+.lhp-opt{background:#f1f0ee;color:#6b645c}
+.lhp-form-hint{font-size:.82rem;line-height:1.8;color:#6b645c;margin:0 0 18px}
 .lhp-hours{width:100%;max-width:400px;margin:24px auto 0;border-collapse:collapse}
 .lhp-hours th,.lhp-hours td{padding:10px 16px;border-bottom:1px solid #f3f4f6;text-align:left;font-size:.9rem}
 .lhp-hours th{width:4rem;font-weight:700;color:#374151}
@@ -1357,7 +1427,10 @@ details[open] .lhp-faq-q::after{content:'−'}
    PCでは出さない（本文のCTAで足りるため）。 */
 .lhp-sticky-cta{display:none}
 @media(max-width:640px){
-  .lhp-sticky-cta{display:block;position:fixed;left:0;right:0;bottom:var(--lhp-cookie-h,0px);z-index:60;transition:bottom .2s;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid rgba(0,0,0,.08)}
+  .lhp-sticky-cta{display:block;position:fixed;left:0;right:0;bottom:var(--lhp-cookie-h,0px);z-index:60;transition:bottom .2s,transform .25s,opacity .25s;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid rgba(0,0,0,.08)}
+  /* 予約欄そのものを見ている間は引っ込める。同じ場所へ行くボタンが、
+     送信ボタンに重なって押し間違えのもとになる。 */
+  .lhp-sticky-cta-off{transform:translateY(130%);opacity:0;pointer-events:none}
   .lhp-sticky-cta-btn{display:flex;align-items:center;justify-content:center;min-height:52px;width:100%;color:#fff;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:.04em}
   body:has(.lhp-sticky-cta){padding-bottom:78px}
 }
@@ -1769,11 +1842,20 @@ window.addEventListener('popstate',function(){
     els.forEach(function(el){io.observe(el);});
   }
 
+  /* 「動きなし」を選んだ場合と、端末側で動きを減らす設定のときは、
+     この下の演出（打ち込み・数字のカウントアップ）も止める。
+     とくに料金は、途中の数字（13,200円 → 13,197円 …）が一瞬でも
+     見えると値段を読み違える。 */
+  var reduce=animLevel==='none'
+    ||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
   /* ── typewriter (bold / sharp styles) ── */
   var style='${designStyle}';
-  if(style==='bold'||style==='sharp'){
+  if(!reduce&&(style==='bold'||style==='sharp')){
     var h1=document.querySelector('.lhp-hero h1');
-    if(h1){
+    /* 見出しに改行が入っているときは打ち込まない。
+       打ち直すと、書き手が決めた折り返しが消えて1行に戻ってしまう。 */
+    if(h1&&!h1.querySelector('br')){
       var txt=h1.textContent||'';
       h1.textContent='';
       h1.style.borderRight='3px solid rgba(255,255,255,.7)';
@@ -1798,7 +1880,7 @@ window.addEventListener('popstate',function(){
     };
     requestAnimationFrame(tick);
   }
-  var cio=new IntersectionObserver(function(entries){
+  var cio=!reduce&&new IntersectionObserver(function(entries){
     entries.forEach(function(e){
       if(!e.isIntersecting)return;
       var el=e.target;
@@ -1812,7 +1894,7 @@ window.addEventListener('popstate',function(){
       cio.unobserve(el);
     });
   },{threshold:0.6});
-  document.querySelectorAll('.lhp-price-amount,.lhp-stat-num,.lhp-three-col-title').forEach(function(el){
+  if(cio)document.querySelectorAll('.lhp-price-amount,.lhp-stat-num,.lhp-three-col-title').forEach(function(el){
     if((el.textContent||'').match(/[0-9]{2,}/))cio.observe(el);
   });
 })();

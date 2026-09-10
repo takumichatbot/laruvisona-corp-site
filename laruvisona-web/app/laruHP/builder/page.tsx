@@ -577,7 +577,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
               <div className="absolute bottom-2 right-2 z-20 bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">B バリアント</div>
             )}
             <div className="relative z-10 max-w-2xl">
-              {editable('heading', 'h1', 'text-4xl font-black mb-4 block w-full')}
+              {editable('heading', 'h1', 'text-4xl font-black mb-4 block w-full whitespace-pre-line')}
               {editable('subheading', 'p', 'text-lg mb-8 block opacity-90 w-full')}
               <span
                 contentEditable
@@ -2053,6 +2053,18 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             })()}
             {block?.type === 'hero' && (
               <>
+                {/* 見出しは画布でも直せるが、そちらでは改行を入れられない。
+                    和文の見出しは折り返し位置で読みやすさが変わるので、
+                    改行を打てる欄をここに置く。公開HTMLでは <br> になる。 */}
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">見出し（改行できます）</span>
+                  <textarea id="hero-heading" rows={2} value={(d.heading as string) || ''}
+                    onChange={e => onDataChange(block.id, { ...d, heading: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white resize-y" />
+                  <span className="text-slate-600 text-[10px] mt-1 block">
+                    改行した位置で折り返します。意味の切れ目で改行すると読みやすくなります
+                  </span>
+                </label>
                 <label className="block">
                   <span className="text-slate-400 block mb-1">背景色</span>
                   <div className="flex gap-2">
@@ -4308,6 +4320,11 @@ function BuilderContent() {
   const undoStack = useRef<SiteData[]>([]);
   const redoStack = useRef<SiteData[]>([]);
   const siteRef = useRef<SiteData>(defaultSiteData);
+  // 読み込んだ settings_json をそのまま覚えておく。
+  // 保存は settings_json を丸ごと置き換えるので、ビルダーが扱わない設定
+  // （globalFooter・previewToken・sequences・style など）を書き戻さないと、
+  // 一度保存しただけで消えてしまう。
+  const loadedSettingsRef = useRef<Record<string, unknown>>({});
   const canvasRef = useRef<HTMLDivElement>(null);
   const [showBuilderTour, setShowBuilderTour] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -4355,6 +4372,25 @@ function BuilderContent() {
     });
   }, []);
 
+  // 保存する中身は1か所で作る。
+  // 以前は自動保存と手動保存で別々に書いており、自動保存では globalFooter が、
+  // 手動保存では sitePassword が抜けていた（保存するたびに片方が消えていた）。
+  const buildSavePayload = useCallback((s: SiteData) => ({
+    name: s.siteName,
+    blocks_json: { v: 2, pages: s.pages },
+    seo_json: s.pages[0]?.seo || emptySeo,
+    settings_json: {
+      ...loadedSettingsRef.current,
+      colorScheme: s.colorScheme, designStyle: s.designStyle, larubot: s.larubot, laruseo: s.laruseo,
+      notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId,
+      laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily,
+      accentColor: s.accentColor, heroLayout: s.heroLayout, headerStyle: s.headerStyle,
+      animLevel: s.animLevel, globalFooter: s.globalFooter, customPalette: s.customPalette,
+      lineNotifyToken: s.lineNotifyToken, clarityId: s.clarityId, webhookUrl: s.webhookUrl,
+      sitePassword: s.sitePassword,
+    },
+  }), []);
+
   // Keep siteRef in sync for undo/redo to read current state without stale closure
   useEffect(() => { siteRef.current = site; }, [site]);
 
@@ -4373,19 +4409,14 @@ function BuilderContent() {
       await fetch(`/api/sites/${dbSiteId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: s.siteName,
-          blocks_json: { v: 2, pages: s.pages },
-          seo_json: s.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: s.colorScheme, designStyle: s.designStyle, larubot: s.larubot, laruseo: s.laruseo, notifyEmail: s.notifyEmail, gaTrackingId: s.gaTrackingId, larubotPublicId: s.larubotPublicId, laruseoPublicId: s.laruseoPublicId, customCss: s.customCss, fontFamily: s.fontFamily, accentColor: s.accentColor, heroLayout: s.heroLayout, headerStyle: s.headerStyle, animLevel: s.animLevel, customPalette: s.customPalette, lineNotifyToken: s.lineNotifyToken, clarityId: s.clarityId, webhookUrl: s.webhookUrl, sitePassword: s.sitePassword },
-        }),
+        body: JSON.stringify(buildSavePayload(s)),
       });
       localStorage.setItem('laruHP_builder', JSON.stringify(s));
       setIsDirty(false);
       setLastSavedAt(new Date());
     }, 30000);
     return () => clearTimeout(timer);
-  }, [isDirty, dbSiteId]);
+  }, [isDirty, dbSiteId, buildSavePayload]);
 
   // Warn before leaving with unsaved changes
   useEffect(() => {
@@ -4657,6 +4688,7 @@ function BuilderContent() {
             setCurrentPageId(pages[0].id);
             setPublished(s.published);
             setPublishedSlug(s.slug);
+            loadedSettingsRef.current = (s.settings_json as Record<string, unknown>) || {};
             if (s.settings_json?.previewToken) setPreviewToken(s.settings_json.previewToken);
           }
         })
@@ -5147,12 +5179,7 @@ function BuilderContent() {
   const handleSave = async () => {
     setSaving(true);
     setSaveError(false as string | false);
-    const payload = {
-      name: site.siteName,
-      blocks_json: { v: 2, pages: site.pages },
-      seo_json: site.pages[0]?.seo || emptySeo,
-      settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, accentColor: site.accentColor, heroLayout: site.heroLayout, headerStyle: site.headerStyle, animLevel: site.animLevel, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl },
-    };
+    const payload = buildSavePayload(site);
     try {
       if (dbSiteId) {
         const res = await fetch(`/api/sites/${dbSiteId}`, {
@@ -5221,13 +5248,7 @@ function BuilderContent() {
       const res = await fetch('/api/sites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: site.siteName,
-          blocks_json: { v: 2, pages: site.pages },
-          seo_json: site.pages[0]?.seo || emptySeo,
-          settings_json: { colorScheme: site.colorScheme, designStyle: site.designStyle, larubot: site.larubot, laruseo: site.laruseo, notifyEmail: site.notifyEmail, gaTrackingId: site.gaTrackingId, larubotPublicId: site.larubotPublicId, laruseoPublicId: site.laruseoPublicId, customCss: site.customCss, fontFamily: site.fontFamily, accentColor: site.accentColor, heroLayout: site.heroLayout, headerStyle: site.headerStyle, animLevel: site.animLevel, globalFooter: site.globalFooter, customPalette: site.customPalette, lineNotifyToken: site.lineNotifyToken, clarityId: site.clarityId, webhookUrl: site.webhookUrl, sitePassword: site.sitePassword },
-          industry: onboardingData?.industry,
-        }),
+        body: JSON.stringify({ ...buildSavePayload(site), industry: onboardingData?.industry }),
       });
       // 未ログイン: 作業をローカル保存して登録へ誘導（サイレント失敗を防ぐ）
       if (res.status === 401) {
