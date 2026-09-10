@@ -46,6 +46,33 @@ const SALON = {
 };
 SITES.push(SALON);
 
+// 「サイト全体の設定」が無い、以前からある作品。
+// 新しい設定を暗黙に足していないこと（開いて直して保存しても増えないこと）を
+// 確かめるために置いてある。design も designPreset も持たない。
+const LEGACY = {
+  id: 'd41d8cd9-8f00-4b20-a204-9800998ecf84',
+  user_id: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+  slug: 'kyuu-site',
+  name: '以前からある作品',
+  custom_domain: null,
+  published: true,
+  published_html: '',
+  updated_at: '2026-09-10T00:00:00Z',
+  view_count: 0,
+  industry: 'beauty',
+  blocks_json: { v: 2, pages: [{ id: 'page-main', name: 'トップページ', path: '/', blocks: [
+    { id: 'lb-hero', type: 'hero', data: { heading: '以前からある見出し', subheading: '設定を持たない作品', ctaText: 'お問い合わせ', ctaLink: '#contact' } },
+    { id: 'lb-text', type: 'paragraph', data: { text: 'ここは本文です。', align: 'left' } },
+  ] }] },
+  seo_json: { title: '以前からある作品', description: '設定を持たない作品', keywords: '', ogImage: '' },
+  settings_json: {
+    colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
+    accentColor: '#c2410c', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
+    customCss: '.lhp-hero h1{letter-spacing:.08em}',
+  },
+};
+SITES.push(LEGACY);
+
 // 受信した問い合わせ・予約。/api/contact が insert する先。
 const CONTACTS = [];
 const TABLES = { sites: SITES, news_posts: POSTS, contacts: CONTACTS, profiles: [
@@ -71,6 +98,20 @@ function match(row, key, spec) {
   return true;
 }
 
+/* 検査から操作する切り替え。
+   「保存できなかったとき」「保存の途中で別の画面が更新したとき」を
+   本物の失敗として起こすために使う。応答の差し替えではなく、
+   ここが実際に失敗を返すので、アプリ側の経路はそのまま通る。 */
+const CONTROL = { failWrites: false, beforeUpdate: null };
+
+/** 更新のたびに進む時刻。同じミリ秒で2回呼ばれても必ず進む */
+let lastTouch = 0;
+function touch() {
+  const now = Math.max(Date.now(), lastTouch + 1);
+  lastTouch = now;
+  return new Date(now).toISOString();
+}
+
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   const m = url.pathname.match(/^\/rest\/v1\/([a-z_]+)$/);
@@ -78,6 +119,21 @@ http.createServer((req, res) => {
     res.writeHead(code, { 'content-type': 'application/json' });
     res.end(JSON.stringify(body));
   };
+
+  if (url.pathname === '/__control') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      if (req.method === 'POST') {
+        let next = {};
+        try { next = JSON.parse(body || '{}'); } catch { /* noop */ }
+        if ('failWrites' in next) CONTROL.failWrites = !!next.failWrites;
+        if ('beforeUpdate' in next) CONTROL.beforeUpdate = next.beforeUpdate;
+      }
+      send(200, CONTROL);
+    });
+    return;
+  }
   // 認証。利用者のセッションを持ってきたら、その利用者を返す。
   // 持っていなければ未ログイン（公開ルートの認可を確かめられるように）。
   if (url.pathname.startsWith('/auth/')) {
@@ -114,12 +170,27 @@ http.createServer((req, res) => {
         return send(code, rows[0]);
       };
       if (t === 'sites' && req.method === 'PATCH') {
+        if (CONTROL.failWrites) return send(500, { message: 'fixture: 書き込みを失敗させています' });
+        /* 読み取りと書き込みのあいだに、別の画面が更新した状況を作る。
+           一度だけ効く。合成の元が古くなるので、上書きが起きるなら露見する。 */
+        if (CONTROL.beforeUpdate) {
+          const { id, settings_json } = CONTROL.beforeUpdate;
+          const left = (CONTROL.beforeUpdate.times ?? 1) - 1;
+          CONTROL.beforeUpdate = left > 0 ? { ...CONTROL.beforeUpdate, times: left } : null;
+          const target = SITES.find(x => x.id === id);
+          if (target) {
+            target.settings_json = { ...target.settings_json, ...settings_json };
+            target.updated_at = touch();
+          }
+        }
         let rows = SITES.slice();
         for (const [k, val] of url.searchParams) {
           if (['select', 'limit', 'order', 'offset'].includes(k)) continue;
           rows = rows.filter(r => match(r, k, val));
         }
-        rows.forEach(r => Object.assign(r, patch));
+        // 本番の sites には、更新のたびに updated_at を進める仕掛けがある。
+        // 同時更新の検出はこの値で行うので、偽物でも同じように進める。
+        rows.forEach(r => Object.assign(r, patch, { updated_at: touch() }));
         return out(rows, 200);
       }
       if (t === 'contacts' && req.method === 'POST') {

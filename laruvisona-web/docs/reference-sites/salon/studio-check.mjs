@@ -25,14 +25,26 @@ const cookieValue = 'base64-' + Buffer.from(JSON.stringify(session)).toString('b
 const site = (await (await fetch(`${FIX}/rest/v1/sites?slug=eq.${args.slug}&select=id`)).json())[0];
 const ID = site.id;
 const readDb = async () => (await (await fetch(`${FIX}/rest/v1/sites?id=eq.${ID}&select=blocks_json,settings_json,published_html`)).json())[0];
+// 検査で入れた値を残さないよう、始める前の姿を控えておく
+const ORIGINAL = await readDb();
 
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ja-JP' });
 await ctx.addCookies(['sb-127-auth-token', 'sb-localhost-auth-token'].map(name => ({ name, value: cookieValue, domain: '127.0.0.1', path: '/' })));
 await ctx.route(/fonts\.googleapis\.com|fonts\.gstatic\.com|larubot\.tokyo|googletagmanager|clarity\.ms/, r => r.abort());
 const page = await ctx.newPage();
+
+/* プレビューは sandbox="allow-scripts" の箱で、生成元を持たない。
+   親のページからは中の document へ触れないので、フレームの中で読む。 */
+const inPreview = async (fn, sel = 'iframe[title="できあがりの見え方"]') => {
+  const h = await page.locator(sel).first().elementHandle();
+  const f = await h.contentFrame();
+  return f.evaluate(fn);
+};
+
 const errs = [];
 page.on('pageerror', e => errs.push(String(e)));
+
 
 /* ── 1. はじめての人の流れ（ヒアリング → 雰囲気 → 編集）── */
 await page.goto(`${BASE}/laruHP/studio`, { waitUntil: 'load' });
@@ -49,10 +61,9 @@ await page.locator('button:has-text("雰囲気を選ぶ")').click();
 await page.waitForTimeout(1200);
 check('雰囲気の見本が出る', (await page.locator('iframe').count()) >= 5, `${await page.locator('iframe').count()}件`);
 // 見本が静止画ではなく、実際の公開用HTMLであること
-const sampleHasRealCss = await page.locator('iframe').first().evaluate(f => {
-  const d = f.contentDocument;
-  return !!d && !!d.querySelector('.lhp-hero') && d.documentElement.outerHTML.includes('--lhp-d-ink');
-});
+const sampleHasRealCss = await inPreview(
+  () => !!document.querySelector('.lhp-hero') && document.documentElement.outerHTML.includes('--lhp-d-ink'),
+  'iframe');
 check('見本は実物のHTML（画像ではない）', sampleHasRealCss);
 if (args.shots) await page.screenshot({ path: `${args.shots}/studio-2-mood.png`, fullPage: true });
 await page.locator('button:has-text("上質")').click();
@@ -68,10 +79,11 @@ const outline = await page.locator('aside').first().textContent();
 check('節の一覧が、分かる言葉で出る', /最初の画面|メニューと料金|予約/.test(outline || ''), (outline || '').slice(0, 40));
 
 // プレビューの中身が公開用と同じ作りであること
-const previewInfo = await page.locator('iframe[title="できあがりの見え方"]').evaluate(f => {
-  const d = f.contentDocument;
-  return { blocks: d.querySelectorAll('[data-lhp-block]').length, hasHero: !!d.querySelector('.lhp-hero'), hasDesign: d.documentElement.outerHTML.includes('--lhp-d-ink') };
-});
+const previewInfo = await inPreview(() => ({
+  blocks: document.querySelectorAll('[data-lhp-block]').length,
+  hasHero: !!document.querySelector('.lhp-hero'),
+  hasDesign: document.documentElement.outerHTML.includes('--lhp-d-ink'),
+}));
 check('プレビューは節ごとに押せる形になっている', previewInfo.blocks >= 10, `${previewInfo.blocks}個`);
 check('プレビューにサイト全体の設定が効いている', previewInfo.hasDesign);
 
@@ -83,10 +95,10 @@ check('プレビューを押すと、その節の設定が開く', (await page.l
 /* ── 4. 見た目を変えると、その場でプレビューが変わる ── */
 await page.locator('button:has-text("サイト全体")').click();
 await page.waitForTimeout(400);
-const beforeCss = await page.locator('iframe[title="できあがりの見え方"]').evaluate(f => f.contentDocument.documentElement.outerHTML.match(/--lhp-d-accent:[^;]*/)?.[0] || '');
+const beforeCss = await inPreview(() => document.documentElement.outerHTML.match(/--lhp-d-accent:[^;]*/)?.[0] || '');
 await page.locator('input[type="color"]').first().fill('#123456');
 await page.waitForTimeout(900);
-const afterInk = await page.locator('iframe[title="できあがりの見え方"]').evaluate(f => f.contentDocument.documentElement.outerHTML.match(/--lhp-d-ink:[^;]*/)?.[0] || '');
+const afterInk = await inPreview(() => document.documentElement.outerHTML.match(/--lhp-d-ink:[^;]*/)?.[0] || '');
 check('色を変えると、すぐプレビューに出る', afterInk.includes('#123456'), `${beforeCss} → ${afterInk}`);
 check('未保存だと分かる', (await page.locator('text=未保存の変更があります').count()) > 0);
 check('読み込んだ直後を未保存にしない', beforeCss !== '' || true);
@@ -118,16 +130,126 @@ const after = await readDb();
 check('公開すると、公開用HTMLが書かれる', (after.published_html || '').length > 1000, `${(after.published_html || '').length} 文字`);
 check('公開用HTMLに、いま設定した色が入っている', (after.published_html || '').includes('--lhp-d-ink:#123456'));
 
-/* ── 8. 元に戻す（この検査で入れた色を残さない）── */
+/* ── 8. 公開できるのは「保存済み」のときだけ ── */
 {
-  const restore = { ...saved.settings_json };
-  delete restore.design;
-  delete restore.designPreset;
-  await fetch(`${FIX}/rest/v1/sites?id=eq.${ID}`, {
-    method: 'PATCH', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ settings_json: restore }),
-  });
+  await page.goto(`${BASE}/laruHP/studio?siteId=${ID}`, { waitUntil: 'load' });
+  await page.waitForTimeout(1800);
+  await page.locator('button:has-text("公開の準備")').first().click();
+  await page.waitForTimeout(300);
+  const btn = page.locator('aside button:has-text("公開")').last();
+  check('保存済みなら公開を押せる', await btn.isEnabled());
+
+  // 直したあと（未保存）は押せない
+  await page.locator('button:has-text("サイト全体")').click();
+  await page.waitForTimeout(300);
+  await page.locator('input[type="color"]').first().fill('#654321');
+  await page.waitForTimeout(500);
+  await page.locator('button:has-text("公開の準備")').first().click();
+  await page.waitForTimeout(300);
+  check('未保存だと公開を押せない', await page.locator('aside button:has-text("公開")').last().isDisabled());
+  check('未保存だと理由が出る', (await page.locator('text=先に「保存」を押してください').count()) > 0);
+
 }
+
+/* ── 8b. 保存が失敗したときは、公開させない・入力を捨てない ──
+   応答の差し替えではなく、保存先そのものを失敗させる。
+   アプリの経路（API → データベース → 画面）はそのまま通る。 */
+{
+  const control = (body) => fetch(`${FIX}/__control`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+
+  await page.goto(`${BASE}/laruHP/studio?siteId=${ID}`, { waitUntil: 'load' });
+  await page.waitForTimeout(1800);
+  await page.locator('button:has-text("サイト全体")').click();
+  await page.waitForTimeout(300);
+  await page.locator('input[type="color"]').first().fill('#654321');
+  await page.waitForTimeout(500);
+
+  await control({ failWrites: true });
+  await page.locator('header button:has-text("保存")').click();
+  await page.waitForTimeout(1800);
+  check('保存に失敗したら保存済みと出さない', (await page.locator('text=/保存できませんでした|保存できていません/').count()) > 0,
+    (await page.locator('header').first().innerText()).replace(/\n/g, ' / '));
+  await page.locator('button:has-text("公開の準備")').first().click();
+  await page.waitForTimeout(400);
+  check('保存に失敗した状態では公開を押せない', await page.locator('aside button:has-text("公開")').last().isDisabled());
+  check('保存に失敗した理由が公開の欄にも出る', (await page.locator('text=保存できていません。保存し直してから公開してください').count()) > 0);
+  await page.locator('button:has-text("サイト全体")').click();
+  await page.waitForTimeout(300);
+  check('保存に失敗しても、直した内容は画面に残る', (await page.locator('input[type="color"]').first().inputValue()) === '#654321');
+
+  // 元に戻せば、そのまま保存できる
+  await control({ failWrites: false });
+  await page.locator('header button:has-text("保存")').click();
+  await page.waitForTimeout(1800);
+  check('直してから保存し直せる', (await page.locator('text=/に保存|保存済み/').count()) > 0);
+  await page.locator('button:has-text("公開の準備")').first().click();
+  await page.waitForTimeout(400);
+  check('保存できたら公開を押せる', await page.locator('aside button:has-text("公開")').last().isEnabled());
+}
+
+/* ── 9. 以前からある作品に、設定を勝手に足さない ── */
+{
+  const LEGACY_ID = 'd41d8cd9-8f00-4b20-a204-9800998ecf84';
+  const readLegacy = async () => (await (await fetch(`${FIX}/rest/v1/sites?id=eq.${LEGACY_ID}&select=settings_json,published_html,blocks_json`)).json())[0];
+  const before = await readLegacy();
+  check('前提: この作品はサイト全体の設定を持たない', before.settings_json.design === undefined);
+
+  await page.goto(`${BASE}/laruHP/studio?siteId=${LEGACY_ID}`, { waitUntil: 'load' });
+  await page.waitForTimeout(1800);
+  await page.locator('button:has-text("サイト全体")').click();
+  await page.waitForTimeout(400);
+  check('設定を使っていないことが画面に出る', (await page.locator('text=まだ「サイト全体」の設定を使っていません').count()) > 0);
+  check('使っていないあいだは色の欄を出さない', (await page.locator('input[type="color"]').count()) === 0);
+
+  // 文章だけ直して保存する（プレビューの最初の節を押して、その欄を出す）
+  await page.locator('iframe[title="できあがりの見え方"]').contentFrame().locator('[data-lhp-block]').first().click({ position: { x: 30, y: 30 } });
+  await page.waitForTimeout(600);
+  await page.locator('aside textarea').first().fill('直した見出し');
+  await page.waitForTimeout(600);
+  await page.locator('header button:has-text("保存")').click();
+  await page.waitForTimeout(1500);
+  const afterSave = await readLegacy();
+  check('文章を直して保存しても、設定が増えない', afterSave.settings_json.design === undefined, JSON.stringify(afterSave.settings_json.design));
+  check('もとの指定は消えていない', afterSave.settings_json.customCss === before.settings_json.customCss && afterSave.settings_json.accentColor === before.settings_json.accentColor);
+
+  // 公開しても、全体CSSが足されない
+  await page.locator('button:has-text("公開の準備")').first().click();
+  await page.waitForTimeout(300);
+  await page.locator('aside button:has-text("公開")').last().click();
+  await page.waitForTimeout(2500);
+  const afterPub = await readLegacy();
+  check('公開しても、全体CSSが足されない', !(afterPub.published_html || '').includes('--lhp-d-ink'), `${(afterPub.published_html || '').length} 文字`);
+  check('公開はできている', (afterPub.published_html || '').includes('直した見出し'));
+
+  // 使いはじめると、そのときだけ入る
+  await page.locator('button:has-text("サイト全体")').click();
+  await page.waitForTimeout(400);
+  await page.locator('button:has-text("ではじめる")').first().click();
+  await page.waitForTimeout(700);
+  check('使いはじめると色の欄が出る', (await page.locator('input[type="color"]').count()) > 0);
+  await page.locator('header button:has-text("保存")').click();
+  await page.waitForTimeout(1500);
+  const adopted = await readLegacy();
+  check('使いはじめたときだけ、設定が入る', !!adopted.settings_json.design);
+
+  // 元に戻す
+  {
+    const restore = { ...adopted.settings_json };
+    delete restore.design; delete restore.designPreset;
+    await fetch(`${FIX}/rest/v1/sites?id=eq.${LEGACY_ID}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ settings_json: restore, blocks_json: before.blocks_json }),
+    });
+  }
+}
+
+/* ── 10. 元に戻す（この検査で入れた色を残さない）── */
+await fetch(`${FIX}/rest/v1/sites?id=eq.${ID}`, {
+  method: 'PATCH', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ settings_json: ORIGINAL.settings_json, blocks_json: ORIGINAL.blocks_json }),
+});
 
 check('画面の例外が出ていない', errs.length === 0, errs.slice(0, 2).join(' / '));
 await b.close();

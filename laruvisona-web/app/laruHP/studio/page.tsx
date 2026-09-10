@@ -45,7 +45,11 @@ interface StudioSettings {
   laruseo: boolean;
   notifyEmail: string;
   customCss: string;
-  design: SiteDesign;
+  /* 「サイト全体の設定」。null は未設定。
+     以前からある作品には、この設定そのものが無い。無いものに既定値を入れて
+     保存すると、色・余白・角丸・写真の比率が新しく指定され、見え方が変わる。
+     利用者が使いはじめると決めたときだけ入る。 */
+  design: SiteDesign | null;
   designPreset: string;
   globalFooter?: Record<string, unknown>;
 }
@@ -78,7 +82,7 @@ function toExportSettings(s: StudioSettings) {
     style: 'clean',
     designStyle: s.designStyle,
     fontFamily: s.fontFamily,
-    accentColor: s.design.accent || s.accentColor,
+    accentColor: s.design?.accent || s.accentColor,
     heroLayout: s.heroLayout,
     headerStyle: s.headerStyle,
     animLevel: s.animLevel,
@@ -86,7 +90,9 @@ function toExportSettings(s: StudioSettings) {
     laruseo: s.laruseo,
     notifyEmail: s.notifyEmail,
     customCss: s.customCss,
-    design: s.design as unknown as Record<string, unknown>,
+    /* 未設定なら、鍵ごと送らない。settings_json_patch は差分の合成なので、
+       送らなければ保存されている状態（未設定）のまま残る。 */
+    ...(s.design ? { design: s.design as unknown as Record<string, unknown> } : {}),
     designPreset: s.designPreset,
     globalFooter: s.globalFooter,
   };
@@ -328,6 +334,11 @@ function StudioInner() {
 
   const siteRef = useRef(site);
   useEffect(() => { siteRef.current = site; }, [site]);
+  /* 押した瞬間の状態で判断したいので、控えを持つ。
+     useCallback の中の saveState は、作られた時点の値のまま古くなる。 */
+  const saveStateRef = useRef<SaveState>({ kind: 'clean', at: null });
+  useEffect(() => { saveStateRef.current = saveState; }, [saveState]);
+  const publishingRef = useRef(false);
   const editSeq = useRef(0);
   // 読み込みで入れ替えた分は「編集」ではない。
   // ここを時間差（setTimeout）で打ち消すと、順番によって未保存のまま残る。
@@ -369,8 +380,8 @@ function StudioInner() {
             larubot: !!st.larubot, laruseo: !!st.laruseo,
             notifyEmail: (st.notifyEmail as string) || '',
             customCss: (st.customCss as string) || '',
-            // 既存サイトに design が無ければ、いまの見え方を変えない既定値を入れる
-            design: st.design ? normalizeDesign(st.design) : { ...DEFAULT_DESIGN, accent: (st.accentColor as string) || DEFAULT_DESIGN.accent },
+            // 無いものは無いまま持つ。既定値を入れて保存すると見え方が変わる
+            design: st.design ? normalizeDesign(st.design) : null,
             designPreset: (st.designPreset as string) || '',
             globalFooter: st.globalFooter as Record<string, unknown> | undefined,
           },
@@ -404,7 +415,17 @@ function StudioInner() {
   }, []);
 
   const setDesign = useCallback((patch: Partial<SiteDesign>) => {
-    setSite(prev => ({ ...prev, settings: { ...prev.settings, design: { ...prev.settings.design, ...patch } } }));
+    setSite(prev => prev.settings.design
+      ? { ...prev, settings: { ...prev.settings, design: { ...prev.settings.design, ...patch } } }
+      : prev);   // 使いはじめる前は、触っても何も入れない
+  }, []);
+
+  /** 「サイト全体の設定」を使いはじめる。ここで初めて design が入る */
+  const adoptDesign = useCallback((base: SiteDesign, presetId = '') => {
+    setSite(prev => ({
+      ...prev,
+      settings: { ...prev.settings, design: { ...base }, accentColor: base.accent, designPreset: presetId },
+    }));
   }, []);
 
   /* ── プレビューのHTML ── */
@@ -477,12 +498,27 @@ function StudioInner() {
   // 画面内の遷移ではなく、読み込みからやり直す必要がある。
   const reload = useCallback(() => {
     if (!siteId) return;
-    if (saveState.kind === 'dirty' && !confirm('保存していない変更があります。読み直すと消えます。よろしいですか')) return;
+    const st = saveStateRef.current;
+    if (st.kind === 'saving') { alert('保存しています。終わってから読み直してください'); return; }
+    // 失敗したときも、直した内容は画面にしか無い。読み直せば消える。
+    if (st.kind === 'dirty' && !confirm('保存していない変更があります。読み直すと消えます。よろしいですか')) return;
+    if (st.kind === 'failed' && !confirm('保存できていない変更があります。読み直すと消えます。よろしいですか')) return;
     window.location.reload();
-  }, [siteId, saveState.kind]);
+  }, [siteId]);
 
+  /* 公開は「保存されている内容」を出す処理。
+     画面の内容がまだ保存されていないと、見ているものと違うものが出る。
+     だから、保存が済んでいるときだけ押せるようにする。 */
   const publish = useCallback(async () => {
     if (!siteId) return;
+    if (publishingRef.current) return;              // 二重押し
+    const st = saveStateRef.current;
+    if (st.kind === 'saving') { setPublishNote('保存しています。終わってから公開してください'); return; }
+    if (st.kind === 'dirty') { setPublishNote('先に保存してください。公開されるのは、保存された内容です'); return; }
+    if (st.kind === 'failed') { setPublishNote('保存できていません。保存し直してから公開してください'); return; }
+
+    publishingRef.current = true;
+    const seq = editSeq.current;
     setPublishing(true);
     setPublishNote('');
     try {
@@ -490,11 +526,13 @@ function StudioInner() {
       const b = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((b.error as string) || `公開できませんでした (${res.status})`);
       setPublishedAt(new Date().toISOString());
-      setSavedSincePublish(false);
+      // 公開しているあいだに続きを直していたら、「いまの内容が出ている」とは書かない
+      setSavedSincePublish(editSeq.current !== seq);
       setPublishNote('公開しました');
     } catch (e) {
       setPublishNote(e instanceof Error ? e.message : '公開できませんでした');
     }
+    publishingRef.current = false;
     setPublishing(false);
   }, [siteId]);
 
@@ -623,7 +661,7 @@ function StudioInner() {
 
         <div className="ml-auto flex items-center gap-3">
           <SaveBadge state={saveState} />
-          <button onClick={reload} disabled={!siteId}
+          <button onClick={reload} disabled={!siteId || saveState.kind === 'saving'}
             className="text-xs font-bold text-slate-500 hover:text-slate-900 disabled:opacity-30">読み直す</button>
           <button onClick={save} disabled={saveState.kind === 'saving'}
             className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-bold disabled:opacity-50">
@@ -707,6 +745,7 @@ function StudioInner() {
                 site={site}
                 setSite={setSite}
                 setDesign={setDesign}
+                adoptDesign={adoptDesign}
                 seo={page?.seo || EMPTY_SEO}
                 onSeo={next => setSite(prev => ({ ...prev, pages: prev.pages.map((p, i) => i === 0 ? { ...p, seo: next } : p) }))}
               />
@@ -786,15 +825,9 @@ function defaultDataFor(type: string): Record<string, unknown> {
   return base[type] ?? {};
 }
 
-/* ── サイト全体の設定 ── */
-function DesignPanel({ site, setSite, setDesign, seo, onSeo }: {
-  site: StudioSite;
-  setSite: React.Dispatch<React.SetStateAction<StudioSite>>;
-  setDesign: (patch: Partial<SiteDesign>) => void;
-  seo: SEOSettings;
-  onSeo: (next: SEOSettings) => void;
-}) {
-  const d = site.settings.design;
+
+/** 色・文字・余白・形。「サイト全体の設定」を使っている作品にだけ出す */
+function DesignFields({ d, setDesign }: { d: SiteDesign; setDesign: (patch: Partial<SiteDesign>) => void }) {
   const swatch = (key: keyof SiteDesign, label: string, hint?: string) => (
     <Row key={key} label={label} hint={hint}>
       <div className="flex gap-2 items-center">
@@ -815,35 +848,6 @@ function DesignPanel({ site, setSite, setDesign, seo, onSeo }: {
 
   return (
     <>
-      <div className="mb-4">
-        <div className="text-sm font-bold text-slate-900">サイト全体</div>
-        <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
-          ここで決めた色や余白が、すべての節に効きます。CSSを書く必要はありません。
-        </div>
-      </div>
-
-      <Row label="雰囲気を選び直す" hint="いまの文章と写真はそのまま、見た目だけ入れ替わります">
-        <div className="grid grid-cols-2 gap-1.5">
-          {DESIGN_PRESETS.map(p => (
-            <button key={p.id} type="button"
-              onClick={() => setSite(prev => ({
-                ...prev,
-                settings: { ...prev.settings, design: { ...p.design }, designStyle: p.designStyle, fontFamily: p.fontFamily, accentColor: p.design.accent, designPreset: p.id },
-              }))}
-              className={`text-left px-2 py-1.5 rounded-lg border text-[12px] font-bold ${site.settings.designPreset === p.id ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
-              {p.name}
-            </button>
-          ))}
-        </div>
-      </Row>
-
-      <Row label="書体">
-        <select className={inputCls} value={site.settings.fontFamily}
-          onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, fontFamily: e.target.value } }))}>
-          {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
-      </Row>
-
       <div className="text-[11px] font-bold text-slate-400 mt-5 mb-2">色</div>
       {swatch('ink', '文字の色')}
       {swatch('bg', '地の色')}
@@ -897,6 +901,75 @@ function DesignPanel({ site, setSite, setDesign, seo, onSeo }: {
           <option value="16:9">よこ長（16:9）</option>
         </select>
       </Row>
+
+    </>
+  );
+}
+
+/* ── サイト全体の設定 ── */
+function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
+  site: StudioSite;
+  setSite: React.Dispatch<React.SetStateAction<StudioSite>>;
+  setDesign: (patch: Partial<SiteDesign>) => void;
+  adoptDesign: (base: SiteDesign, presetId?: string) => void;
+  seo: SEOSettings;
+  onSeo: (next: SEOSettings) => void;
+}) {
+  const d = site.settings.design;
+  return (
+    <>
+      <div className="mb-4">
+        <div className="text-sm font-bold text-slate-900">サイト全体</div>
+        <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
+          ここで決めた色や余白が、すべての節に効きます。CSSを書く必要はありません。
+        </div>
+      </div>
+
+      {!d && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3">
+          <div className="text-[12px] font-bold text-amber-900 mb-1">この作品は、まだ「サイト全体」の設定を使っていません</div>
+          <div className="text-[11px] text-amber-900/80 leading-relaxed mb-2">
+            いまの見え方は、これまでの指定のままです。使いはじめると、色・余白・角の丸み・
+            写真の切り取り方が下の設定で置き換わります。見え方が変わるので、
+            変えたくなければ、このままで大丈夫です。
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {DESIGN_PRESETS.map(p => (
+              <button key={p.id} type="button"
+                onClick={() => adoptDesign(p.design, p.id)}
+                className="text-left px-2 py-1.5 rounded-lg border border-amber-300 bg-white text-[12px] font-bold text-amber-900 hover:border-amber-500">
+                {p.name}ではじめる
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {d && (
+        <Row label="雰囲気を選び直す" hint="いまの文章と写真はそのまま、見た目だけ入れ替わります">
+          <div className="grid grid-cols-2 gap-1.5">
+            {DESIGN_PRESETS.map(p => (
+              <button key={p.id} type="button"
+                onClick={() => setSite(prev => ({
+                  ...prev,
+                  settings: { ...prev.settings, design: { ...p.design }, designStyle: p.designStyle, fontFamily: p.fontFamily, accentColor: p.design.accent, designPreset: p.id },
+                }))}
+                className={`text-left px-2 py-1.5 rounded-lg border text-[12px] font-bold ${site.settings.designPreset === p.id ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </Row>
+      )}
+
+      <Row label="書体">
+        <select className={inputCls} value={site.settings.fontFamily}
+          onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, fontFamily: e.target.value } }))}>
+          {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+      </Row>
+
+      {d && <DesignFields d={d} setDesign={setDesign} />}
 
       <div className="text-[11px] font-bold text-slate-400 mt-5 mb-2">写真の見せ方</div>
       <Row label="最初の画面の組み方">
@@ -967,9 +1040,15 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
           {siteId && published && !savedSincePublish && '公開しています。いまの内容が出ています。'}
         </div>
         {saveState.kind === 'dirty' && (
-          <div className="text-[12px] font-bold text-amber-700 mb-2">先に「保存」を押してください。</div>
+          <div className="text-[12px] font-bold text-amber-700 mb-2">先に「保存」を押してください。公開されるのは、保存された内容です。</div>
         )}
-        <button onClick={onPublish} disabled={!siteId || publishing || saveState.kind === 'dirty'}
+        {saveState.kind === 'saving' && (
+          <div className="text-[12px] font-bold text-slate-600 mb-2">保存しています。終わると公開できます。</div>
+        )}
+        {saveState.kind === 'failed' && (
+          <div className="text-[12px] font-bold text-rose-700 mb-2">保存できていません。保存し直してから公開してください。</div>
+        )}
+        <button onClick={onPublish} disabled={!siteId || publishing || saveState.kind !== 'clean'}
           className="w-full py-2.5 rounded-lg bg-sky-600 text-white text-sm font-bold disabled:opacity-40">
           {publishing ? '公開しています…' : published ? 'この内容で公開し直す' : '公開する'}
         </button>
