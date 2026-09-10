@@ -1,204 +1,215 @@
-[
-  {
-    "variant": "now",
-    "page": "hp",
-    "label": "顧客サイト",
-    "viewport": "pc",
-    "runs": 3,
-    "total": 1542270,
-    "appFont": 254383,
-    "appFontFiles": 11,
-    "appFontCss": 103266,
-    "customerFont": 586680,
-    "customerFontFiles": 30,
-    "customerFontCss": 299825,
-    "css": 133226,
-    "js": 155999,
-    "customerFontCssGzipRef": 102030,
-    "lcp": 512,
-    "lcpAll": [
-      520,
-      472,
-      512
-    ],
-    "cls": 0.0011,
-    "clsAll": [
-      0.0011,
-      0.0011,
-      0.0011
-    ],
-    "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "bodyFont": "\"Zen Kaku Gothic New\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
-    "loadedFaces": {
-      "Noto Sans JP": 11,
-      "Zen Kaku Gothic New": 30
+{
+  "correctedAt": "2026-09-10",
+  "correction": "フォント用CSSを css と appFontCss の両方で合計に足していた二重計上を除いた。これは再計算であり、再測定ではない。各リクエストのバイト数は初回計測のまま。",
+  "note": "appFontCss は css の内訳。合計には css として一度だけ含む",
+  "rows": [
+    {
+      "variant": "now",
+      "page": "hp",
+      "label": "顧客サイト",
+      "viewport": "pc",
+      "runs": 3,
+      "total": 1439004,
+      "appFont": 254383,
+      "appFontFiles": 11,
+      "appFontCss": 103266,
+      "customerFont": 586680,
+      "customerFontFiles": 30,
+      "customerFontCss": 299825,
+      "css": 133226,
+      "js": 155999,
+      "customerFontCssGzipRef": 102030,
+      "lcp": 512,
+      "lcpAll": [
+        520,
+        472,
+        512
+      ],
+      "cls": 0.0011,
+      "clsAll": [
+        0.0011,
+        0.0011,
+        0.0011
+      ],
+      "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "bodyFont": "\"Zen Kaku Gothic New\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "loadedFaces": {
+        "Noto Sans JP": 11,
+        "Zen Kaku Gothic New": 30
+      },
+      "totalBeforeCorrection": 1542270
+    },
+    {
+      "variant": "now",
+      "page": "top",
+      "label": "会社トップ",
+      "viewport": "pc",
+      "runs": 3,
+      "total": 1419880,
+      "appFont": 753717,
+      "appFontFiles": 38,
+      "appFontCss": 103266,
+      "customerFont": 0,
+      "customerFontFiles": 0,
+      "customerFontCss": 0,
+      "css": 133226,
+      "js": 482593,
+      "customerFontCssGzipRef": 0,
+      "lcp": 2080,
+      "lcpAll": [
+        2104,
+        2080,
+        1760
+      ],
+      "cls": 0.0066,
+      "clsAll": [
+        0.0066,
+        0.0066,
+        0.0066
+      ],
+      "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "loadedFaces": {
+        "Noto Sans JP": 74
+      },
+      "totalBeforeCorrection": 1523146
+    },
+    {
+      "variant": "now",
+      "page": "lp",
+      "label": "新LP",
+      "viewport": "pc",
+      "runs": 3,
+      "total": 313804,
+      "appFont": 0,
+      "appFontFiles": 0,
+      "appFontCss": 103266,
+      "customerFont": 0,
+      "customerFontFiles": 0,
+      "customerFontCss": 0,
+      "css": 133226,
+      "js": 156925,
+      "customerFontCssGzipRef": 0,
+      "lcp": 480,
+      "lcpAll": [
+        484,
+        480,
+        468
+      ],
+      "cls": 0,
+      "clsAll": [
+        0,
+        0,
+        0
+      ],
+      "h1Font": "system-ui, -apple-system, \"Hiragino Kaku Gothic ProN\", \"Hiragino Sans\", \"Noto Sans CJK JP\", \"Yu Gothic UI\", \"Yu Gothic\", Meiryo, sans-serif",
+      "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "loadedFaces": {},
+      "totalBeforeCorrection": 417070
+    },
+    {
+      "variant": "now",
+      "page": "hp",
+      "label": "顧客サイト",
+      "viewport": "mobile",
+      "runs": 3,
+      "total": 1439004,
+      "appFont": 254383,
+      "appFontFiles": 11,
+      "appFontCss": 103266,
+      "customerFont": 586680,
+      "customerFontFiles": 30,
+      "customerFontCss": 299825,
+      "css": 133226,
+      "js": 155999,
+      "customerFontCssGzipRef": 102030,
+      "lcp": 496,
+      "lcpAll": [
+        476,
+        556,
+        496
+      ],
+      "cls": 0.0035,
+      "clsAll": [
+        0.0035,
+        0.0035,
+        0.0035
+      ],
+      "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "bodyFont": "\"Zen Kaku Gothic New\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "loadedFaces": {
+        "Noto Sans JP": 11,
+        "Zen Kaku Gothic New": 30
+      },
+      "totalBeforeCorrection": 1542270
+    },
+    {
+      "variant": "now",
+      "page": "top",
+      "label": "会社トップ",
+      "viewport": "mobile",
+      "runs": 3,
+      "total": 1419880,
+      "appFont": 753717,
+      "appFontFiles": 38,
+      "appFontCss": 103266,
+      "customerFont": 0,
+      "customerFontFiles": 0,
+      "customerFontCss": 0,
+      "css": 133226,
+      "js": 482593,
+      "customerFontCssGzipRef": 0,
+      "lcp": 1656,
+      "lcpAll": [
+        1680,
+        1640,
+        1656
+      ],
+      "cls": 0.0057,
+      "clsAll": [
+        0.0057,
+        0.0057,
+        0.0057
+      ],
+      "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "loadedFaces": {
+        "Noto Sans JP": 74
+      },
+      "totalBeforeCorrection": 1523146
+    },
+    {
+      "variant": "now",
+      "page": "lp",
+      "label": "新LP",
+      "viewport": "mobile",
+      "runs": 3,
+      "total": 313804,
+      "appFont": 0,
+      "appFontFiles": 0,
+      "appFontCss": 103266,
+      "customerFont": 0,
+      "customerFontFiles": 0,
+      "customerFontCss": 0,
+      "css": 133226,
+      "js": 156925,
+      "customerFontCssGzipRef": 0,
+      "lcp": 452,
+      "lcpAll": [
+        464,
+        432,
+        452
+      ],
+      "cls": 0,
+      "clsAll": [
+        0,
+        0,
+        0
+      ],
+      "h1Font": "system-ui, -apple-system, \"Hiragino Kaku Gothic ProN\", \"Hiragino Sans\", \"Noto Sans CJK JP\", \"Yu Gothic UI\", \"Yu Gothic\", Meiryo, sans-serif",
+      "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
+      "loadedFaces": {},
+      "totalBeforeCorrection": 417070
     }
-  },
-  {
-    "variant": "now",
-    "page": "top",
-    "label": "会社トップ",
-    "viewport": "pc",
-    "runs": 3,
-    "total": 1523146,
-    "appFont": 753717,
-    "appFontFiles": 38,
-    "appFontCss": 103266,
-    "customerFont": 0,
-    "customerFontFiles": 0,
-    "customerFontCss": 0,
-    "css": 133226,
-    "js": 482593,
-    "customerFontCssGzipRef": 0,
-    "lcp": 2080,
-    "lcpAll": [
-      2104,
-      2080,
-      1760
-    ],
-    "cls": 0.0066,
-    "clsAll": [
-      0.0066,
-      0.0066,
-      0.0066
-    ],
-    "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "loadedFaces": {
-      "Noto Sans JP": 74
-    }
-  },
-  {
-    "variant": "now",
-    "page": "lp",
-    "label": "新LP",
-    "viewport": "pc",
-    "runs": 3,
-    "total": 417070,
-    "appFont": 0,
-    "appFontFiles": 0,
-    "appFontCss": 103266,
-    "customerFont": 0,
-    "customerFontFiles": 0,
-    "customerFontCss": 0,
-    "css": 133226,
-    "js": 156925,
-    "customerFontCssGzipRef": 0,
-    "lcp": 480,
-    "lcpAll": [
-      484,
-      480,
-      468
-    ],
-    "cls": 0,
-    "clsAll": [
-      0,
-      0,
-      0
-    ],
-    "h1Font": "system-ui, -apple-system, \"Hiragino Kaku Gothic ProN\", \"Hiragino Sans\", \"Noto Sans CJK JP\", \"Yu Gothic UI\", \"Yu Gothic\", Meiryo, sans-serif",
-    "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "loadedFaces": {}
-  },
-  {
-    "variant": "now",
-    "page": "hp",
-    "label": "顧客サイト",
-    "viewport": "mobile",
-    "runs": 3,
-    "total": 1542270,
-    "appFont": 254383,
-    "appFontFiles": 11,
-    "appFontCss": 103266,
-    "customerFont": 586680,
-    "customerFontFiles": 30,
-    "customerFontCss": 299825,
-    "css": 133226,
-    "js": 155999,
-    "customerFontCssGzipRef": 102030,
-    "lcp": 496,
-    "lcpAll": [
-      476,
-      556,
-      496
-    ],
-    "cls": 0.0035,
-    "clsAll": [
-      0.0035,
-      0.0035,
-      0.0035
-    ],
-    "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "bodyFont": "\"Zen Kaku Gothic New\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
-    "loadedFaces": {
-      "Noto Sans JP": 11,
-      "Zen Kaku Gothic New": 30
-    }
-  },
-  {
-    "variant": "now",
-    "page": "top",
-    "label": "会社トップ",
-    "viewport": "mobile",
-    "runs": 3,
-    "total": 1523146,
-    "appFont": 753717,
-    "appFontFiles": 38,
-    "appFontCss": 103266,
-    "customerFont": 0,
-    "customerFontFiles": 0,
-    "customerFontCss": 0,
-    "css": 133226,
-    "js": 482593,
-    "customerFontCssGzipRef": 0,
-    "lcp": 1656,
-    "lcpAll": [
-      1680,
-      1640,
-      1656
-    ],
-    "cls": 0.0057,
-    "clsAll": [
-      0.0057,
-      0.0057,
-      0.0057
-    ],
-    "h1Font": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "loadedFaces": {
-      "Noto Sans JP": 74
-    }
-  },
-  {
-    "variant": "now",
-    "page": "lp",
-    "label": "新LP",
-    "viewport": "mobile",
-    "runs": 3,
-    "total": 417070,
-    "appFont": 0,
-    "appFontFiles": 0,
-    "appFontCss": 103266,
-    "customerFont": 0,
-    "customerFontFiles": 0,
-    "customerFontCss": 0,
-    "css": 133226,
-    "js": 156925,
-    "customerFontCssGzipRef": 0,
-    "lcp": 452,
-    "lcpAll": [
-      464,
-      432,
-      452
-    ],
-    "cls": 0,
-    "clsAll": [
-      0,
-      0,
-      0
-    ],
-    "h1Font": "system-ui, -apple-system, \"Hiragino Kaku Gothic ProN\", \"Hiragino Sans\", \"Noto Sans CJK JP\", \"Yu Gothic UI\", \"Yu Gothic\", Meiryo, sans-serif",
-    "bodyFont": "\"Noto Sans JP\", \"Hiragino Kaku Gothic ProN\", Meiryo, sans-serif",
-    "loadedFaces": {}
-  }
-]
+  ]
+}

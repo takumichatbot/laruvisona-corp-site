@@ -7,6 +7,28 @@
 このファイルは「再検証できること」を目的にしている。
 数値の出どころ、除外したもの、代用したものをすべて書く。
 
+## 訂正（2026-09-10・集計のみ）
+
+初回の集計スクリプトは、フォント用CSSを `css` と `appFontCss` の**両方で合計に足していた**。
+1リクエストを2回数えていたので、フォント用CSSを読み込むページの合計が
+**約101KB多く出ていた**。
+
+`docs/font-measurement/recount.mjs` で、保存済みのデータから合計だけを数え直した。
+**これは再計算であり、再測定ではない**（ブラウザは開いていない。各リクエストのバイト数は初回のまま）。
+訂正前の値は各行の `totalBeforeCorrection` に残してある。
+
+| 画面 | 案 | 訂正前 | 訂正後 |
+|---|---|---|---|
+| 顧客サイト | now | 1,506 | **1,405** |
+| 顧客サイト | b | 1,056 | 1,056（変わらず） |
+| 会社トップ | now | 1,487 | **1,387** |
+| 会社トップ | b | 1,487 | **1,386** |
+| 新LP | now | 407 | **306** |
+| 新LP | b | 205 | 205（変わらず） |
+
+以前「HTML等の差」と書いた約101KBも、この二重計上分だった。
+集計スクリプトは修正済み（`appFontCss` は `css` の内訳として扱い、合計には一度だけ入る）。
+
 ---
 
 ## 1. 何が問題だったか
@@ -68,6 +90,7 @@ h1, h2, h3, h4 { font-family: var(--font-noto-sans-jp), ...; }
 | **測定回数** | 各（案 × 画面 × 端末）を **3回**。表の値は**中央値**。各回の値は `*.samples.json` に全部入っている |
 | **キャッシュ条件** | 毎回まっさらな browser context で開く（キャッシュ空・ストレージ空・Service Worker なし）。2回目・3回目も新しい context なので、すべて初回訪問（コールド）の値 |
 | 転送量の数え方 | ブラウザ自身の集計（CDP `Network.loadingFinished` の `encodedDataLength`）。Resource Timing は別オリジンの一部を数え落とし、顧客の書体が 0 件に見えたため使わない |
+| 合計の作り方 | **1リクエストを1区分にだけ数える。** `appFontCss`（会社書体の@font-face宣言のCSS）は `css` の**内訳**であって、合計には `css` として一度だけ入る |
 | データ | `tests/http/fixture.cjs`（PostgREST の応答を模した読み取り専用サーバ）。顧客サイトの本文は実際のヘアサロンのページに近い日本語量で、両案で完全に同一 |
 
 ### 代用・除外したもの（重要）
@@ -105,39 +128,43 @@ h1, h2, h3, h4 { font-family: var(--font-noto-sans-jp), ...; }
 
 ---
 
-## 4. 実測値（中央値・3回）
+## 4. 実測値（中央値・3回・二重計上を除いた集計）
 
-転送量は KB。「アプリ」＝会社のブランド書体、「顧客」＝顧客が選んだ書体。
+転送量は KB。「会社書体」＝会社のブランド書体、「顧客書体」＝顧客が選んだ書体。
+**会社CSS は「CSS計」の内訳**で、合計には CSS計 として一度だけ入っている。
 
 ### スマホ（390×844 dpr2）
 
-| 画面 | 案 | 合計 | アプリ書体 | 件数 | アプリCSS | 顧客書体 | 件数 | 顧客CSS | LCP | CLS |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 顧客サイト | now | 1,506 | 248 | 11 | 101 | 573 | 30 | 293 | 496 ms | 0.0035 |
-| 顧客サイト | **b** | **1,056** | **0** | **0** | **0** | 573 | 30 | 293 | 356 ms | 0.0033 |
-| 会社トップ | now | 1,487 | 736 | 38 | 101 | 0 | 0 | 0 | 1,656 ms | 0.0057 |
-| 会社トップ | **b** | 1,487 | 736 | 38 | 101 | 0 | 0 | 0 | 1,780 ms | 0.0057 |
-| 新LP | now | 407 | 0 | 0 | 101 | 0 | 0 | 0 | 452 ms | 0 |
-| 新LP | **b** | **205** | 0 | 0 | **0** | 0 | 0 | 0 | 360 ms | 0 |
+| 画面 | 案 | 合計 | 会社書体 | 件数 | CSS計 | （うち会社CSS） | 顧客書体 | 件数 | 顧客CSS | LCP | CLS |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 顧客サイト | now | 1,405 | 248 | 11 | 130 | 101 | 573 | 30 | 293 | 496 ms | 0.0035 |
+| 顧客サイト | **b** | **1,056** | **0** | **0** | **29** | **0** | 573 | 30 | 293 | 356 ms | 0.0033 |
+| 会社トップ | now | 1,387 | 736 | 38 | 130 | 101 | 0 | 0 | 0 | 1,656 ms | 0.0057 |
+| 会社トップ | **b** | 1,386 | 736 | 38 | 130 | 101 | 0 | 0 | 0 | 1,780 ms | 0.0057 |
+| 新LP | now | 306 | 0 | 0 | 130 | 101 | 0 | 0 | 0 | 452 ms | 0 |
+| 新LP | **b** | **205** | 0 | 0 | **29** | **0** | 0 | 0 | 0 | 360 ms | 0 |
 
 ### PC（1440×900）
 
-| 画面 | 案 | 合計 | アプリ書体 | 件数 | アプリCSS | 顧客書体 | 件数 | 顧客CSS | LCP | CLS |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 顧客サイト | now | 1,506 | 248 | 11 | 101 | 573 | 30 | 293 | 512 ms | 0.0011 |
-| 顧客サイト | **b** | **1,056** | **0** | **0** | **0** | 573 | 30 | 293 | 380 ms | 0.0011 |
-| 会社トップ | now | 1,487 | 736 | 38 | 101 | 0 | 0 | 0 | 2,080 ms | 0.0066 |
-| 会社トップ | **b** | 1,487 | 736 | 38 | 101 | 0 | 0 | 0 | 1,584 ms | 0.0066 |
-| 新LP | now | 407 | 0 | 0 | 101 | 0 | 0 | 0 | 480 ms | 0 |
-| 新LP | **b** | **205** | 0 | 0 | **0** | 0 | 0 | 0 | 388 ms | 0 |
+| 画面 | 案 | 合計 | 会社書体 | 件数 | CSS計 | （うち会社CSS） | 顧客書体 | 件数 | 顧客CSS | LCP | CLS |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 顧客サイト | now | 1,405 | 248 | 11 | 130 | 101 | 573 | 30 | 293 | 512 ms | 0.0011 |
+| 顧客サイト | **b** | **1,056** | **0** | **0** | **29** | **0** | 573 | 30 | 293 | 380 ms | 0.0011 |
+| 会社トップ | now | 1,387 | 736 | 38 | 130 | 101 | 0 | 0 | 0 | 2,080 ms | 0.0066 |
+| 会社トップ | **b** | 1,386 | 736 | 38 | 130 | 101 | 0 | 0 | 0 | 1,584 ms | 0.0066 |
+| 新LP | now | 306 | 0 | 0 | 130 | 101 | 0 | 0 | 0 | 480 ms | 0 |
+| 新LP | **b** | **205** | 0 | 0 | **29** | **0** | 0 | 0 | 0 | 388 ms | 0 |
 
 ### 差
 
-| 画面 | 減った転送量 | 減少率 |
-|---|---|---|
-| 顧客サイト | **−450 KB**（アプリ書体248＋アプリCSS101＝349KB＋HTML等の差） | **−30%** |
-| 新LP | **−202 KB** | **−50%** |
-| 会社トップ | ±0（ブランド書体を維持） | 0% |
+| 画面 | 減った転送量 | 減少率 | 内訳 |
+|---|---|---|---|
+| 顧客サイト | **−349 KB** | **−25%** | 会社書体 248KB ＋ 会社書体のCSS 101KB |
+| 新LP | **−101 KB** | **−33%** | 会社書体のCSS 101KB（フォント本体は元から0件） |
+| 会社トップ | ±0（1KBは回ごとのばらつき） | 0% | ブランド書体を維持 |
+
+減った分は、**会社のブランド書体とそのCSSだけ**。
+顧客が選んだ書体（573KB＋CSS）は両案とも同じだけ読み込まれている。
 
 **CLS は変わっていない**（顧客サイト スマホ 0.0035 → 0.0033、PC 0.0011 → 0.0011）。
 顧客が選んだ書体は両案とも読み込まれるので、書体差し替えによるズレは残る。
@@ -145,8 +172,6 @@ h1, h2, h3, h4 { font-family: var(--font-noto-sans-jp), ...; }
 > 2026-09-10 初版レポートの「顧客サイト 854KB→184KB（−78%）」「CLS .031→0」は、
 > **顧客が選んだ書体を読み込まない条件での値だった**。顧客サイト全体の削減率でも、
 > CLSが0になるという結果でもない。上の表が正しい。
-
----
 
 ## 5. 見出しの書体（この変更のもう一つの効果）
 
@@ -168,33 +193,109 @@ h1, h2, h3, h4 { font-family: var(--font-noto-sans-jp), ...; }
 
 ## 6. 再現手順
 
+### 必要な資産（先に用意する）
+
+計測は、外部へ出られない環境でも動くように、2つの資産をローカルに置いて行う。
+`run.sh` はどちらも無ければ止まる。
+
+**(a) 会社のブランド書体** — 既定の置き場: `public/fonts/`
+
+Google Fonts へ出られる環境（齋藤さんの Mac など）で一度 `next build` すると、
+`next/font/google` が実ファイルを落としてくる。そこから取り出す。
+
 ```bash
-# 1. 会社のブランド書体の実ファイルを用意する
-#    （Google Fonts へ出られる環境で next build したときの
-#     .next/static/media/*.woff2 と、フォント用CSSチャンク）
-#    url(../media/x.woff2) を /fonts/x.woff2 に書き換えて public/fonts/ へ置く
+# 会社のブランド書体を読み込む版（＝いまの main）でビルドする
+npx next build
 
-# 2. 変種を作る
-python3 docs/font-measurement/make-variant.py now   # 変更前
-python3 docs/font-measurement/make-variant.py b     # 採用実装
+# 生成物: .next/static/media/*.woff2 と、@font-face だけのCSSチャンク2つ
+#   Noto Sans JP  … @font-face が 300件以上ある大きい方
+#   Space Grotesk … @font-face が数件の小さい方
+grep -l "font-family:Noto Sans JP"  .next/static/chunks/*.css   # → noto 用
+grep -l "font-family:Space Grotesk" .next/static/chunks/*.css   # → space 用
 
-# 3. ビルドして起動（fixture も一緒に立てる）
-rm -rf .next/cache && npx next build
-node tests/http/fixture.cjs &
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54999 \
-NEXT_PUBLIC_APP_URL=https://laruvisona.jp \
-NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-stub SUPABASE_SERVICE_ROLE_KEY=service-stub \
-npx next start -p 3200 &
-
-# 4. 計測（第3引数は測定回数）
-node docs/font-measurement/measure.mjs now 3200 3
-node docs/font-measurement/measure.mjs b 3200 3
+# public/fonts/ に置き、CSS内の url(../media/x.woff2) を /fonts/x.woff2 に直す
+mkdir -p public/fonts
+cp .next/static/media/*.woff2 public/fonts/
+sed 's|\.\./media/|/fonts/|g' <上のnoto用CSS>  > public/fonts/noto.css
+sed 's|\.\./media/|/fonts/|g' <上のspace用CSS> > public/fonts/space.css
 ```
 
-生の記録:
+**(b) 顧客が選んだ書体のCSS** — 既定の置き場: `tmp/customer-font.css`
 
-- `docs/font-measurement/now.samples.json` / `b.samples.json` … 各回の全数値（18サンプル×2案）
-- `docs/font-measurement/now.summary.json` / `b.summary.json` … 中央値と、各回のLCP・CLS、計算後の書体
+顧客サイトが `fonts.googleapis.com` へ出す要求に、これを返す。
+本物を使えるならそれが最善（`https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap`
+の中身を保存する）。外部へ出られない場合は (a) の noto 用CSSから作る。
+
+```bash
+mkdir -p tmp
+sed -e 's|/fonts/|https://fonts.gstatic.com/s/zenkakugothicnew/|g' \
+    -e 's|font-family:Noto Sans JP|font-family:Zen Kaku Gothic New|g' \
+    public/fonts/noto.css > tmp/customer-font.css
+```
+
+> 会社側とファミリ名を分けるのが要点。同じ名前にすると、ブラウザが会社側の
+> @font-face を使ってしまい「顧客の書体が1件も読み込まれない」という
+> 実態と違う結果になる。
+
+Playwright も要る（`npx playwright install chromium`、または導入済みのものを
+`PLAYWRIGHT_FROM` で指す）。
+
+### 計測
+
+```bash
+bash docs/font-measurement/run.sh now b
+```
+
+1つの案につき **変種を作る → ビルド → 起動 → 案が反映されているか確認 → 計測 → 終了**
+を順に行い、それが終わってから次の案へ進む。
+最後に作った変種を両方の案として測る事故を防ぐため、計測の直前に
+「配信されているHTMLが、いま作った案と一致しているか」を確かめて、
+違えばそこで止まる。
+
+場所は環境変数で変えられる（既定はリポジトリ直下）:
+
+| 変数 | 既定 | 用途 |
+|---|---|---|
+| `APP_ROOT` | スクリプトの2つ上 | アプリのルート |
+| `OUT_DIR` | `$APP_ROOT/tmp/measure` | 出力先 |
+| `BRAND_FONTS` | `$APP_ROOT/public/fonts` | (a) の置き場 |
+| `CUSTOMER_CSS` | `$APP_ROOT/tmp/customer-font.css` | (b) の置き場 |
+| `PORT` / `FIXTURE_PORT` | 3200 / 54999 | 待ち受けポート |
+| `RUNS` | 3 | 1条件あたりの測定回数 |
+| `PLAYWRIGHT_FROM` | （空） | playwright の解決基点 |
+
+個別に動かすこともできる:
+
+```bash
+python3 docs/font-measurement/make-variant.py b --app-root .
+rm -rf .next/cache && npx next build
+node tests/http/fixture.cjs &
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54999 NEXT_PUBLIC_APP_URL=https://laruvisona.jp \
+NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-stub SUPABASE_SERVICE_ROLE_KEY=service-stub \
+npx next start -p 3200 &
+node docs/font-measurement/measure.mjs --variant b --port 3200 --runs 3 \
+  --brand-fonts ./public/fonts --customer-css ./tmp/customer-font.css --out ./tmp/measure
+```
+
+計測が終わったら、書き換えたファイルを戻す:
+
+```bash
+git checkout -- app/layout.tsx app/globals.css components/BrandFonts.tsx
+```
+
+### 集計だけをやり直す
+
+保存済みのデータから合計を数え直す（ブラウザは開かない）:
+
+```bash
+node docs/font-measurement/recount.mjs --in ./docs/font-measurement --variants now,b
+```
+
+### 生の記録
+
+- `docs/font-measurement/now.samples.json` / `b.samples.json` … 各回の全数値（各18サンプル）
+- `docs/font-measurement/now.summary.json` / `b.summary.json` … 中央値、各回のLCP・CLS、計算後の書体
+- どちらも `correction` に訂正の経緯、各行の `totalBeforeCorrection` に訂正前の合計が入っている
 
 ---
 
@@ -204,4 +305,4 @@ node docs/font-measurement/measure.mjs b 3200 3
   実際に使うウェイトだけに絞れるかは**未計測**。顧客サイトの転送量の大半はここにある。
 - 顧客サイトの CLS（スマホ 0.0033）は、顧客の書体が差し替わるときのズレ。
   `size-adjust` 付きのフォールバック指定で減らせる可能性があるが**未計測**。
-- 会社トップの合計 1,487KB のうち 736KB がブランド書体。ここを削るかは事業判断。
+- 会社トップの合計 1,386KB のうち 736KB＋CSS101KB がブランド書体。ここを削るかは事業判断。
