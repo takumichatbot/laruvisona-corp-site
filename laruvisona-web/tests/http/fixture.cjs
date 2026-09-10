@@ -2,7 +2,7 @@
 const http = require('http');
 const SITES = [
   { id: 'id-a', slug: 'site-a', name: 'Aサロン', custom_domain: 'salon-a.example', published: true,
-    published_html: '<h1>A_ONLY_SITE_BODY</h1>', seo_json: { title: 'Aサロン' }, settings_json: { products: [{ id:'pa', name:'A_PRODUCT', description:'', price: 1000, active: true, stock: null }] },
+    published_html: '<div class="lhp"><h1>A_ONLY_SITE_BODY 髪と、これからの時間を整える</h1><p>東京・国立の閑静な住宅街にある、完全予約制のヘアサロンです。一日にお迎えするお客様の人数を絞り、カウンセリングから仕上げまで担当者が一人で担当します。</p><h2>当店が大切にしていること</h2><p>髪質・骨格・生活習慣は一人ひとり違います。写真どおりに切ることよりも、翌朝ご自身で再現できるかどうかを基準にご提案しています。薬剤はダメージの少ないものを中心に取り揃え、頭皮の状態に合わせて調整します。</p><h2>メニューと料金</h2><ul><li>カット（シャンプー・ブロー込み）… 6,600円</li><li>カラー＋カット … 13,200円〜</li><li>デジタルパーマ＋カット … 16,500円〜</li><li>髪質改善トリートメント … 8,800円</li><li>ヘッドスパ（40分）… 5,500円</li></ul><h2>ご予約の流れ</h2><p>お電話またはウェブ予約フォームから、ご希望の日時を第三希望までお知らせください。当日は施術開始の五分前を目安にお越しいただけますと、ゆとりを持ってご案内できます。遅れる場合はご一報いただければ、可能な範囲で調整いたします。</p><h2>お客様の声</h2><p>「くせ毛で毎朝苦労していましたが、乾かすだけでまとまるようになりました」（三十代・会社員）</p><p>「白髪染めの頻度が減り、髪の負担が軽くなった実感があります」（五十代・自営業）</p><h2>アクセス</h2><p>JR中央線 国立駅 南口より徒歩八分。大学通りを直進し、二つ目の信号を右折してすぐ。近隣にコインパーキングがございます。営業時間は十時から十九時、火曜定休です。</p></div>', seo_json: { title: 'Aサロン' }, settings_json: { products: [{ id:'pa', name:'A_PRODUCT', description:'', price: 1000, active: true, stock: null }] },
     updated_at: '2026-09-01T00:00:00Z', view_count: 0 },
   { id: 'id-b', slug: 'site-b', name: 'Bビストロ', custom_domain: 'bistro-b.example', published: true,
     published_html: '<h1>B_ONLY_SITE_BODY</h1>', seo_json: { title: 'Bビストロ' }, settings_json: { products: [{ id:'pb', name:'B_ONLY_PRODUCT', description:'', price: 2000, active: true, stock: null }] },
