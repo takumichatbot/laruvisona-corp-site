@@ -3,7 +3,7 @@ import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 3;
+export const EXPORT_VERSION = 4;
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1850,6 +1850,14 @@ ${animScript}
 </script>
 <script>
 (function(){
+  /* 動きを切っているときは、何も隠さない。
+     この仕掛けは [data-lhp-anim] とは別系統で、以前は animLevel を見ていなかった。
+     そのため「アニメーションなし」を選んでいても、ギャラリーの写真・質問・料金表が
+     opacity:0 のまま始まり、スクロールするまで出てこなかった
+     （印刷・スクリーンショット・スクロールしない閲覧では最後まで空白のまま）。 */
+  if('${animLevel}'==='none')return;
+  /* 端末側で「動きを減らす」設定にしている人にも出さない */
+  try{ if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return; }catch(e){}
   var els=document.querySelectorAll('.lhp-section-wrap,.lhp-cta,.lhp-testimonials-bg,.lhp-col,.lhp-card,.lhp-review-card,.lhp-faq-item,.lhp-gallery-img,.lhp-price-card,.lhp-buy-card,.lhp-hero-inner');
   if(!('IntersectionObserver' in window))return;
   var style=document.createElement('style');

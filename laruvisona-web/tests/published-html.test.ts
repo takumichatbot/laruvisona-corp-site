@@ -78,3 +78,54 @@ test('生成HTMLを変えたら EXPORT_VERSION を上げる（既存の公開HTM
   assert.ok(EXPORT_VERSION >= 3, '公開HTMLを変更したのに EXPORT_VERSION が上がっていない');
   assert.match(basic, new RegExp(`<!--lhpv:${EXPORT_VERSION}-->$`), '版数の埋め込みが末尾に無い');
 });
+
+// ── 動きを切ったときに、内容が隠れないこと ──────────────
+//
+// 美容室の基準作品を組んでいて見つかった。
+// 公開HTMLには表示アニメーションが2系統ある:
+//   1. [data-lhp-anim] … 節ごと。animLevel を見ている（上のテストで固定済み）
+//   2. .lhp-fade       … ギャラリーの写真・質問・料金表・カード。**見ていなかった**
+// そのため animLevel:'none' を選んでも 2 は opacity:0 で始まり、
+// スクロールするまで出てこなかった。印刷・スクリーンショット・
+// スクロールしない閲覧では、最後まで空白のままになる。
+
+function renderWithAnim(anim: 'none' | 'subtle' | 'full') {
+  const blocks = [
+    { id: 'b1', type: 'hero', data: { heading: '見出し', subheading: 'サブ', ctaText: 'CTA', ctaLink: '#', bgColor: '#0f172a', textColor: '#fff' } },
+    { id: 'b2', type: 'gallery', data: { heading: 'スタイル', images: ['/a.jpg', '/b.jpg'], columns: '2' } },
+    { id: 'b3', type: 'faq', data: { heading: 'よくある質問', items: [{ q: 'Q1', a: 'A1' }] } },
+  ];
+  const page = { id: 'home', name: 'ホーム', path: '/', blocks: blocks as never, seo };
+  return exportToHTML([page], seo, { ...settings, animLevel: anim }, 'テスト院');
+}
+
+/** .lhp-fade を付ける処理の直前に、早期returnがあるか */
+function fadeGuard(html: string): string {
+  const i = html.indexOf("var els=document.querySelectorAll('.lhp-section-wrap");
+  assert.ok(i > -1, '.lhp-fade を付ける処理が見つからない');
+  return html.slice(Math.max(0, i - 800), i);
+}
+
+test('動きなしを選んだら、写真・質問・料金表も隠された状態から始まらない', () => {
+  const html = renderWithAnim('none');
+  assert.match(html, /\[data-lhp-anim\]\{opacity:1!important/);
+  assert.match(fadeGuard(html), /if\('none'==='none'\)return;/,
+    'animLevel を見ずに .lhp-fade を付けている（内容が空白のままになる）');
+});
+
+test('動きありのときは、これまでどおり順に出る', () => {
+  for (const lv of ['subtle', 'full'] as const) {
+    const html = renderWithAnim(lv);
+    assert.equal(/if\('none'==='none'\)return;/.test(html), false, `${lv} で止めてしまっている`);
+    assert.match(html, /IntersectionObserver/, `${lv} でスクロール連動が消えている`);
+    assert.match(html, /lhp-fade\{opacity:0/, `${lv} で仕掛けが入っていない`);
+  }
+});
+
+test('端末が「動きを減らす」設定なら、写真・質問も隠さない', () => {
+  const guard = fadeGuard(renderWithAnim('full'));
+  assert.match(guard, /prefers-reduced-motion: reduce/,
+    '端末の設定を見ていない（動きを減らす設定の人に内容が出ない恐れ）');
+  assert.match(guard.slice(guard.indexOf('prefers-reduced-motion')), /return/,
+    '見ているだけで止めていない');
+});
