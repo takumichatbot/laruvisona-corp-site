@@ -376,12 +376,16 @@ test('ブランド書体は、ブランドを見せる画面だけが読み込�
   }
 });
 
-test('ブランド書体の部品は、会社の2書体を維持している', () => {
+test('ブランド書体は、欧文だけをwebフォントで配る', () => {
+  // 和文をwebフォントで配ると、@font-face の宣言だけで CSS 292KB（転送102KB）に
+  // なる（文字の範囲ごとに124個 × 太さ3つ）。これが描画をせき止めて、
+  // 回線とCPUを絞った条件の初回表示が 3.6〜3.9秒になっていた。
+  // 和文は端末の書体で組む（0バイト）。記録: docs/perf-2026-09-11.md
   const bf = code('components/BrandFonts.tsx');
   assert.match(bf, /Space_Grotesk/, '欧文のブランド書体が消えている');
-  assert.match(bf, /Noto_Sans_JP/, '和文のブランド書体が消えている');
   assert.match(bf, /--font-space-grotesk:/);
-  assert.match(bf, /--font-noto-sans-jp:/);
+  assert.equal(/Noto_Sans_JP/.test(bf), false, '和文のwebフォントが戻っている');
+  assert.equal(/--font-noto-sans-jp:/.test(bf), false, '和文の指定が戻っている');
 });
 
 test('ブランド書体を置かない画面の既定は端末フォント', () => {

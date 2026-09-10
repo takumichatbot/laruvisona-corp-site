@@ -120,7 +120,9 @@ const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
     st.setAttribute('data-explode','');
     st.textContent = [
       'html{--e:1}',
-      'body{perspective:1800px;background:#eceff4}',
+      /* ばらけているあいだは、部品が左右へ出る。少し引いて全部を入れる。
+         この縮小は入れ物の中だけで起きるので、外のページは動かない。 */
+      'body{perspective:1800px;background:#eceff4;transform:scale(calc(1 - .14 * var(--e)));transform-origin:top center;transition:transform .9s cubic-bezier(.2,.8,.2,1)}',
       '#lhp-cookie-banner{display:none!important}',
       '[data-lhp-block]{transform-style:preserve-3d;',
       /* 公開CSS側に transform:none!important があるので、同じ強さで上書きする */
@@ -216,6 +218,15 @@ function withDemoBridge(html: string): string {
 
 type Device = 'pc' | 'sp';
 
+/* 枠の大きさ。
+   高さを実測してから広げると、写真が届くたびに場所がずれる（読んでいる
+   途中で文字が動く）。この見本の中身はこちらで決めているので、実測した
+   高さを定数にして、最初の描画から正しい場所を取る。
+   縦横比はCSSで与える（JavaScript が動く前から高さが決まる）。 */
+const PC_H = 2400;
+const SP_H = 2950;
+const SWITCH_PX = 700;
+
 export default function AssembleDemo({ initialDevice }: { initialDevice?: Device } = {}) {
   const [presetId, setPresetId] = useState('refined');
   const [font, setFont] = useState('mincho');
@@ -223,7 +234,11 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
   const [reduced, setReduced] = useState(false);
   const [device, setDevice] = useState<Device>(initialDevice ?? 'pc');
   const [autoDevice, setAutoDevice] = useState(true);
-  const [contentH, setContentH] = useState(1600);
+  /* 中身の高さは固定にする。
+     測ってから広げると、写真が届くたびに場所がずれる（読んでいる途中で
+     文字が動く）。この見本の中身はこちらで決めているので、実測した高さを
+     そのまま定数にしてある。少し余らせて、下が切れないようにする。 */
+  const [contentTall, setContentTall] = useState(false);
   const [boxW, setBoxW] = useState(0);
   const [near, setNear] = useState(false);
   const [note, setNote] = useState('');
@@ -234,23 +249,19 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
 
   const preset = DESIGN_PRESETS.find(p => p.id === presetId) || DESIGN_PRESETS[2];
   const frameW = device === 'sp' ? 390 : 1440;
-  const fit = boxW > 0 ? Math.min(1, boxW / frameW) : 0.5;
-  /* ばらけているあいだは、部品が左右へ出る。少し引いて全部が入るようにする。
-     組み上がると元の大きさに戻る（近づいて中を触れる）。 */
-  const shown = assembled || reduced;
-  const scale = shown ? fit : fit * 0.86;
-  const stageH = Math.round(contentH * fit) + 24;
+  const contentH = (device === 'sp' ? SP_H : PC_H) + (contentTall ? 600 : 0);
+  const fit = boxW > 0 ? Math.min(1, boxW / frameW) : 0;
+  const scale = fit;
 
   /* 幅を見る。狭いところではスマホの組み方に切り替える */
   useEffect(() => {
     const el = outerRef.current;
     if (!el) return;
     const apply = () => {
-      const w = el.clientWidth;
-      setBoxW(w);
-      /* 560px より狭いところは、パソコンの組み方を縮めても読めない。
-         スマホの組み方（390px）に切り替えて、大きく見せる。 */
-      if (autoDevice) setDevice(w < 560 ? 'sp' : 'pc');
+      setBoxW(el.clientWidth);
+      /* 切り替えの境目は、下の枠の縦横比を決めているCSSと同じ値にする。
+         ここがずれると、読み込みの途中で高さが変わって画面がずれる。 */
+      if (autoDevice) setDevice(window.matchMedia(`(min-width: ${SWITCH_PX}px)`).matches ? 'pc' : 'sp');
     };
     apply();
     if (typeof ResizeObserver !== 'function') {
@@ -295,7 +306,8 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
       const d = e.data as { source?: string; type?: string; h?: number; y?: number } | null;
       if (!d || d.source !== 'lhp-demo') return;
       if (d.type === 'ready') { post({ type: 'explode', e: assembled || reduced ? 0 : 1 }); return; }
-      if (d.type === 'height' && typeof d.h === 'number' && d.h > 400) { setContentH(d.h); return; }
+      // 決めてある高さに収まらないときだけ広げる（ふだんは動かさない）
+      if (d.type === 'height' && typeof d.h === 'number') { setContentTall(d.h > (device === 'sp' ? SP_H : PC_H)); return; }
       if (d.type === 'goto' && typeof d.y === 'number') {
         const stage = stageRef.current;
         if (!stage) return;
@@ -308,7 +320,7 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [assembled, reduced, post, scale]);
+  }, [assembled, reduced, post, scale, device]);
 
   useEffect(() => { post({ type: 'explode', e: assembled || reduced ? 0 : 1 }); }, [assembled, reduced, html, post]);
   useEffect(() => { if (!note) return; const t = setTimeout(() => setNote(''), 4000); return () => clearTimeout(t); }, [note]);
@@ -373,15 +385,19 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
             {d === 'pc' ? 'パソコン' : 'スマホ'}
           </button>
         ))}
+        {/* 文言が変わっても場所が動かないよう、幅を決めておく */}
         <button type="button" onClick={() => setAssembled(v => !v)}
-          className="ml-auto px-4 py-1.5 min-h-[36px] rounded-full text-[12px] font-bold bg-sky-600 text-white hover:bg-sky-700">
+          className="ml-auto w-[128px] px-2 py-1.5 min-h-[36px] rounded-full text-[12px] font-bold bg-sky-600 text-white hover:bg-sky-700">
           {assembled ? 'もう一度ばらす' : '組み上げる'}
         </button>
       </div>
 
       <div ref={stageRef}
-        className="order-1 sm:order-3 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden"
-        style={{ height: stageH }}>
+        /* 縦横比はここで決める。JavaScript が動く前から高さが決まるので、
+           読み込みの途中で下の内容が動かない。
+           数値は PC_H / SP_H と、上下の余白ぶんに合わせてある。
+           境目の 700px は SWITCH_PX と同じにすること。 */
+        className="order-1 sm:order-3 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden aspect-[390/2974] min-[700px]:aspect-[1440/2424]">
         {!near && (
           <div className="absolute inset-0 grid place-items-center text-[12px] text-slate-400">読み込んでいます…</div>
         )}
@@ -389,12 +405,13 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
           ref={frameRef}
           title="お店のサイトの見本。組み上がったあとは中を触れます"
           sandbox="allow-scripts allow-forms"
-          srcDoc={near ? html : undefined}
+          /* 幅を測る前は置かない。仮の倍率で置くと、測った瞬間にずれる */
+          hidden={fit === 0}
+          srcDoc={near && fit > 0 ? html : undefined}
           className="border-0"
           style={{
             width: frameW, height: contentH,
             transform: `scale(${scale})`, transformOrigin: 'top left',
-            transition: 'transform .9s cubic-bezier(.2,.8,.2,1)',
             position: 'absolute', top: 12,
             left: '50%', marginLeft: -(frameW * scale) / 2,
           }}
