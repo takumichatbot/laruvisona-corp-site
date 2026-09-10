@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
+import { withPreviewBridge } from '@/lib/preview-frame';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
 import { exportToHTML } from '@/lib/html-export';
@@ -6205,9 +6206,11 @@ function BuilderContent() {
                 'w-full max-w-5xl border border-t-0 border-gray-300 rounded-b-xl shadow-2xl'
               }`} style={{ height: previewDevice === 'mobile' ? '812px' : '80vh' }}>
                 <iframe
-                  srcDoc={previewHtml}
+                  /* allow-same-origin は付けない。付けると、公開HTMLの中で動いた
+                     ものが、ログイン済みのこの編集画面へ手を伸ばせてしまう。 */
+                  srcDoc={withPreviewBridge(previewHtml)}
                   title="サイトプレビュー"
-                  sandbox="allow-scripts allow-same-origin"
+                  sandbox="allow-scripts"
                   className="w-full h-full border-0"
                   style={{ display: 'block' }}
                 />

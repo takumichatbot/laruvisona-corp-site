@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { jsonForScript } from '@/lib/safe-markup';
 import PwaInit from '@/components/PwaInit';
 
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,7 @@ export default function LaruHPLayout({ children }: { children: React.ReactNode }
       {/* Font Awesome の CDN 読み込みはやめた。laruHP 配下では1つも使っておらず
           （使っているのは会社サイト側の2ファイルだけ・5種類）、
           描画をブロックする外部CSSとWebフォントを全ページで読んでいただけだった。 */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonForScript(jsonLd) }} />
       <PwaInit />
       {children}
     </>

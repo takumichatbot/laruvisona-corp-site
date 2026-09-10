@@ -1,4 +1,5 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { jsonForScript, safeToken } from '@/lib/safe-markup';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { canonicalBase, isHostForSite } from '@/lib/public-site-url';
@@ -126,7 +127,7 @@ function buildJsonLd(siteName: string, baseUrl: string, seo: { description?: str
     obj.sameAs = bi.sameAs.filter(Boolean);
   }
 
-  return JSON.stringify(obj);
+  return jsonForScript(obj);
 }
 
 export default async function PublishedSitePage({ params }: Props) {
@@ -184,12 +185,12 @@ export default async function PublishedSitePage({ params }: Props) {
       )}
       {gaTrackingId && (
         <>
-          <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`} />
-          <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaTrackingId}')` }} />
+          <script async src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(safeToken(gaTrackingId))}`} />
+          <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config',${jsonForScript(safeToken(gaTrackingId))})` }} />
         </>
       )}
       {clarityId && (
-        <script dangerouslySetInnerHTML={{ __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${clarityId}")` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script",${jsonForScript(safeToken(clarityId))})` }} />
       )}
       {larubotPublicId && (
         <script src="https://larubot.tokyo/static/embed.js" data-public-id={larubotPublicId} defer />
@@ -198,9 +199,9 @@ export default async function PublishedSitePage({ params }: Props) {
         <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
       )}
       {/* Pageview tracking（ISR下でも訪問ごとに記録）*/}
-      <script dangerouslySetInnerHTML={{ __html: `fetch('/api/pageview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:'${slug}'}),keepalive:true}).catch(function(){});` }} />
+      <script dangerouslySetInnerHTML={{ __html: `fetch('/api/pageview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:${jsonForScript(slug)}}),keepalive:true}).catch(function(){});` }} />
       {/* Heatmap tracking */}
-      <script dangerouslySetInnerHTML={{ __html: `(function(){var S='${slug}',P='/api/heatmap?slug='+S,Q=[];function flush(){if(!Q.length)return;fetch(P,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Q),keepalive:true});Q=[];}document.addEventListener('click',function(e){Q.push({type:'click',x:e.clientX,y:e.clientY,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});});window.addEventListener('scroll',function(){var d=Math.round((scrollY/(document.body.scrollHeight-innerHeight||1))*100);Q.push({type:'scroll',scrollDepth:d,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});},{passive:true});window.addEventListener('beforeunload',flush);setInterval(flush,30000);})()` }} />
+      <script dangerouslySetInnerHTML={{ __html: `(function(){var S=${jsonForScript(slug)},P='/api/heatmap?slug='+encodeURIComponent(S),Q=[];function flush(){if(!Q.length)return;fetch(P,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Q),keepalive:true});Q=[];}document.addEventListener('click',function(e){Q.push({type:'click',x:e.clientX,y:e.clientY,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});});window.addEventListener('scroll',function(){var d=Math.round((scrollY/(document.body.scrollHeight-innerHeight||1))*100);Q.push({type:'scroll',scrollDepth:d,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});},{passive:true});window.addEventListener('beforeunload',flush);setInterval(flush,30000);})()` }} />
       {/* Popup */}
       {hasActivePopup && (
         <script src={`/api/popup?slug=${slug}`} defer />

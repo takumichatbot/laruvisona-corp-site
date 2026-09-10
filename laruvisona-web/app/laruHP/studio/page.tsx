@@ -26,6 +26,7 @@ import {
   GOALS, INDUSTRY_CHOICES, type FieldDef, type IntakeAnswers,
 } from '@/lib/studio-schema';
 import { cleanIncomingText } from '@/lib/safe-markup';
+import { withPreviewBridge } from '@/lib/preview-frame';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
 
 /* ─────────────────────────────────────────────────────────────────────── */
@@ -92,9 +93,19 @@ function toExportSettings(s: StudioSettings) {
 }
 
 /* ── プレビュー ─────────────────────────────────────────────────────────
-   公開用のHTMLをそのまま iframe に流し込む。srcdoc は親と同じ生成元なので、
-   読み込み後に中の document へ触れる。押された場所から data-lhp-block を
-   たどって、どの節かを親へ返す。HTMLには何も足していない。 */
+   公開用のHTMLを iframe に流し込む。
+
+   以前は srcdoc をそのまま使っていた。srcdoc は親と同じ生成元なので、
+   中で動いたスクリプトが親（＝ログイン済みの編集画面）の window に手が届く。
+   公開HTMLの中身は、人が打った文字だけとは限らない（AI生成・取り込み・連携先の
+   応答が同じ欄に入る）。中で何かが動いたとしても、編集画面には届かない形にする。
+
+   そのため sandbox="allow-scripts" だけを付ける。allow-same-origin は付けない。
+   こうすると iframe は生成元を持たない別の箱になり、
+     ・中から親の DOM・Cookie・localStorage へ触れない
+     ・親からも中の document へ触れない
+   代わりに、節を選ぶ／位置を戻すといったやり取りは postMessage で行う。
+   受け取る側は必ず送信元（window オブジェクトそのもの）を確認する。 */
 
 function Preview({ html, device, selectedId, onSelect }: {
   html: string;
@@ -107,57 +118,38 @@ function Preview({ html, device, selectedId, onSelect }: {
   const onSelectRef = useRef(onSelect);
   useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
-  const attach = useCallback(() => {
+  const post = useCallback((msg: Record<string, unknown>) => {
     const win = ref.current?.contentWindow;
-    const doc = ref.current?.contentDocument;
-    if (!win || !doc) return;
-    // 書き換えのたびに読み直されるので、見ていた位置へ戻す
-    win.scrollTo(0, scrollRef.current);
-    win.addEventListener('scroll', () => { scrollRef.current = win.scrollY; }, { passive: true });
-
-    const style = doc.createElement('style');
-    style.setAttribute('data-studio', '');
-    style.textContent = `
-      /* 編集中は、来た人に出す帯を出さない（下が隠れて中身が見えない） */
-      #lhp-cookie-banner{display:none!important}
-      [data-lhp-block]{outline-offset:-2px}
-      [data-lhp-block]:hover{outline:2px dashed rgba(37,99,235,.55)}
-      [data-lhp-studio-selected]{outline:3px solid #2563eb !important}
-      html{scroll-behavior:auto}
-    `;
-    doc.head.appendChild(style);
-
-    doc.addEventListener('click', (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      const holder = target?.closest?.('[data-lhp-block]') as HTMLElement | null;
-      // プレビューの中では、リンクや送信で画面を移動させない
-      const link = target?.closest?.('a,button');
-      if (link) { e.preventDefault(); e.stopPropagation(); }
-      if (holder) onSelectRef.current(holder.getAttribute('data-lhp-block') || '');
-    }, true);
-    doc.addEventListener('submit', (e: Event) => e.preventDefault(), true);
+    if (!win) return;
+    win.postMessage({ source: 'lhp-studio', ...msg }, '*');
   }, []);
 
+  /* 受け取るのは、この iframe の window から来たものだけ。
+     生成元は「無し」になるので、origin ではなく送信元そのもので確かめる。 */
   useEffect(() => {
-    const doc = ref.current?.contentDocument;
-    if (!doc) return;
-    doc.querySelectorAll('[data-lhp-studio-selected]').forEach(el => el.removeAttribute('data-lhp-studio-selected'));
-    if (selectedId) {
-      const el = doc.querySelector(`[data-lhp-block="${CSS.escape(selectedId)}"]`);
-      if (el) {
-        el.setAttribute('data-lhp-studio-selected', '');
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }
-    }
-  }, [selectedId, html]);
+    const onMessage = (e: MessageEvent) => {
+      if (!ref.current || e.source !== ref.current.contentWindow) return;
+      const d = e.data as { source?: string; type?: string; id?: string; y?: number } | null;
+      if (!d || d.source !== 'lhp-studio-preview') return;
+      if (d.type === 'ready') { post({ type: 'scrollTo', y: scrollRef.current }); return; }
+      if (d.type === 'scroll') { scrollRef.current = Number(d.y) || 0; return; }
+      if (d.type === 'select') { onSelectRef.current(String(d.id || '')); return; }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [post]);
+
+  useEffect(() => { post({ type: 'select', id: selectedId || '' }); }, [selectedId, html, post]);
+
+  const srcDoc = useMemo(() => withPreviewBridge(html), [html]);
 
   return (
     <div className={`mx-auto h-full ${device === 'sp' ? 'w-[390px]' : 'w-full max-w-[1440px]'}`}>
       <iframe
         ref={ref}
         title="できあがりの見え方"
-        srcDoc={html}
-        onLoad={attach}
+        sandbox="allow-scripts"
+        srcDoc={srcDoc}
         className={`w-full h-full bg-white ${device === 'sp' ? 'rounded-[28px] border-[10px] border-slate-800 shadow-2xl' : 'rounded-lg border border-slate-300 shadow-sm'}`}
       />
     </div>
@@ -1101,7 +1093,7 @@ function Mood({ intake, onBack, onPick }: {
             <button key={preset.id} onClick={() => onPick(preset.id)}
               className="text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-sky-500 overflow-hidden transition-colors">
               <div className="h-64 overflow-hidden bg-white pointer-events-none">
-                <iframe title={preset.name} srcDoc={html}
+                <iframe title={preset.name} sandbox="allow-scripts" srcDoc={withPreviewBridge(html)}
                   className="w-[1280px] h-[1024px] origin-top-left"
                   style={{ transform: 'scale(0.3)', border: 0 }} />
               </div>

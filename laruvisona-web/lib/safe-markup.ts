@@ -148,3 +148,63 @@ export function cleanIncomingText(input: unknown, maxLength = 20000): string {
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
     .slice(0, maxLength);
 }
+
+/* ── <script> と <style> の中に値を置く ──────────────────────────────
+   HTMLの中では、script も style も「終わりの札が出たらそこで終わり」。
+   中身がJSONとして正しいかどうかは関係がない。JSON.stringify は
+   </script> を文字列のままにするので、これだけでは外へ出られてしまう。 */
+
+/**
+ * `<script>` の中に置くJSON。
+ *
+ * `<` `>` `&` をUnicodeエスケープする。JSONとしての意味は変わらないので
+ * 受け取る側の JSON.parse や JS の解釈はそのまま。行区切り文字（U+2028/2029）は
+ * JavaScriptでは改行として扱われるため、これも逃がす。
+ */
+export function jsonForScript(value: unknown): string {
+  return JSON.stringify(value === undefined ? null : value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+/**
+ * `<style>` の中に置くCSS。利用者が書いた追加CSSなど。
+ *
+ * CSSとしての自由は残したいので、値を捨てるのではなく
+ * 「札を閉じられる形」だけを壊す。`</style` を含む文字列は、
+ * CSSの意味を変えずに `<\/style` と書ける。
+ */
+export function safeStyleText(input: unknown): string {
+  return String(input ?? '')
+    .replace(/<(\/?)(style|script)\b/gi, '<\\$1$2')
+    .replace(/<!--/g, '<\\!--')
+    .replace(/(expression|javascript)\s*(?=\()/gi, '$1\\ ')
+    .replace(/@import/gi, '@\\import');
+}
+
+/**
+ * 外部サービスのIDなど、記号を含まないはずの値。
+ * 英数字と `-` `_` だけを通す。属性にもJS文字列にも安全に置ける。
+ */
+export function safeToken(input: unknown, maxLength = 64): string {
+  const s = String(input ?? '').trim();
+  if (!s) return '';
+  if (!/^[A-Za-z0-9_-]+$/.test(s)) return '';
+  return s.slice(0, maxLength);
+}
+
+/**
+ * CSSの色。名前・#rgb・rgb()・hsl() だけを通す。
+ * `:root{--x:...}` のように、閉じ札の外に出られる場所で使う。
+ */
+export function safeCssColor(input: unknown, fallback: string): string {
+  const s = String(input ?? '').trim();
+  if (!s) return fallback;
+  if (/^#[0-9a-fA-F]{3,8}$/.test(s)) return s;
+  if (/^[a-zA-Z]{3,20}$/.test(s)) return s;
+  if (/^(rgb|rgba|hsl|hsla)\([0-9a-zA-Z.,%\s/-]{1,60}\)$/.test(s)) return s;
+  return fallback;
+}

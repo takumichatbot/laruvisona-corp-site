@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { jsonForScript } from '@/lib/safe-markup';
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -116,7 +117,7 @@ export default async function SitePostPage(
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonForScript(jsonLd) }} />
       <article className="mx-auto max-w-3xl px-5 py-10 md:py-16">
         <Link
           href={backHref}

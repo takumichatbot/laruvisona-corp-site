@@ -1,4 +1,5 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { jsonForScript } from '@/lib/safe-markup';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { canonicalBase, siteUrl, isHostForSite } from '@/lib/public-site-url';
@@ -73,7 +74,7 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
   const shopUrl = siteUrl(canonicalBase(site as { slug?: string | null; custom_domain?: string | null }), 'shop');
 
   // Product JSON-LD (ItemList + individual Product schemas)
-  const productJsonLd = products.length > 0 ? JSON.stringify({
+  const productJsonLd = products.length > 0 ? jsonForScript({
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: `${site.name} — ショップ`,

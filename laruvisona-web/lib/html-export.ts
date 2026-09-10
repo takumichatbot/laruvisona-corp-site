@@ -1,11 +1,11 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { designCss } from '@/lib/site-design';
-import { escapeHtml, safeUrl, safeCssValue } from '@/lib/safe-markup';
+import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeToken, safeCssColor } from '@/lib/safe-markup';
 
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 8;
+export const EXPORT_VERSION = 9;
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
@@ -14,8 +14,11 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
      以前は生のまま差し込んでいたので、色やリンクの欄に " を入れるだけで
      属性から抜け出せた（取り込みやAI生成の文字列も同じ欄に入る）。 */
   const raw = (key: string) => escapeHtml(String(d[key] ?? ''));
-  /* エスケープしない生の値。JSON.stringify して <script> に渡すときだけ使う */
+  /* エスケープしない生の値。jsonForScript を通して <script> に渡すときだけ使う。
+     JSON.stringify だけでは </script> がそのまま残り、札を閉じて外へ出られる。 */
   const rawValue = (key: string) => String(d[key] ?? '');
+  /* <script> の中に置くJSON。ここを通さずに JSON.stringify を直接書かない */
+  const js = (value: unknown) => jsonForScript(value);
   /* href / src。javascript: などは押した瞬間に動くので、形で弾く */
   const url = (key: string, fallback = '#') => escapeHtml(safeUrl(d[key], fallback));
   /* style の値。区切り文字を含むものは既定値に落とす */
@@ -373,7 +376,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 (function(){
   var sid=window.__LHPSID; if(!sid)return;
   var box=document.getElementById('lhp-item-box-${bid}'); if(!box)return;
-  var PID=${JSON.stringify(pid)}, BUY=${JSON.stringify(rawValue('buyText') || '購入する')}, QB='width:40px;height:40px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:20px;font-weight:700;cursor:pointer;color:#0f172a';
+  var PID=${js(pid)}, BUY=${js(rawValue('buyText') || '購入する')}, QB='width:40px;height:40px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:20px;font-weight:700;cursor:pointer;color:#0f172a';
   var p=null,vid=null,qty=1;
   var EMO={'サービス':'⚙️','コース・講座':'📚','チケット':'🎟️','デジタルコンテンツ':'💾','その他':'📦'};
   function yen(n){return '¥'+n.toLocaleString();}
@@ -502,7 +505,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
           return `<input type="text" name="cond_${escapeHtml(f)}" placeholder="${escapeHtml(f)}" />`;
         }).join('')}</div>`
       ).join('') : '';
-      const conditionalScript = typeOptions.length > 0 ? `window.lhpTypeChange=function(v){${typeOptions.map(o => `document.getElementById('lhp-cond-${escapeHtml(o)}')&&(document.getElementById('lhp-cond-${escapeHtml(o)}').style.display=v===${JSON.stringify(o)}?'block':'none');`).join('')}};` : '';
+      const conditionalScript = typeOptions.length > 0 ? `window.lhpTypeChange=function(v){${typeOptions.map(o => `document.getElementById('lhp-cond-${escapeHtml(o)}')&&(document.getElementById('lhp-cond-${escapeHtml(o)}').style.display=v===${js(o)}?'block':'none');`).join('')}};` : '';
       const extraFieldsHtml = extraFields.map(f => {
         if (f === 'company') return `<input type="text" name="company" placeholder="会社名" />`;
         if (f === 'date') return `<input type="datetime-local" name="date" />`;
@@ -582,7 +585,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     try{
       var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:v('lhp-mf-name'),email:v('lhp-mf-email'),phone:v('lhp-mf-phone'),message:v('lhp-mf-message')})});
       var res=await r.json();
-      if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。'}</div>';${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${JSON.stringify(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}}
+      if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。'}</div>';${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${js(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}}
       else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
     }catch(e){btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
   };
@@ -648,7 +651,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       var d=await r.json();
       if(d.ok){
         f.innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。'}</div>';
-        ${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${JSON.stringify(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}
+        ${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${js(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}
       }
       else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。再度お試しください。';}
     }catch(err){btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
@@ -741,7 +744,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </section>
 <script>
 (function(){
-  var t=new Date(${JSON.stringify(rawValue('targetDate'))}).getTime();
+  var t=new Date(${js(rawValue('targetDate'))}).getTime();
   function tick(){
     var d=t-Date.now();
     if(d<0)d=0;
@@ -1676,7 +1679,7 @@ export function exportToHTML(
   </div>
 </nav>
 <script>
-var LHP_SEO=${JSON.stringify(pageSeoMap)};
+var LHP_SEO=${jsonForScript(pageSeoMap)};
 function lhpPage(e,id){
   if(e)e.preventDefault();
   document.querySelectorAll('.lhp-page').forEach(function(el){el.hidden=true;});
@@ -1731,7 +1734,7 @@ window.addEventListener('popstate',function(){
     .replace('data-lhp-anim', 'data-lhp-instant data-lhp-anim');
 
   const siteIdScript = businessInfo?.siteId
-    ? `<script>window.__LHPSID='${businessInfo.siteId}';</script>`
+    ? `<script>window.__LHPSID=${jsonForScript(businessInfo.siteId)};</script>`
     : '';
 
   // Dynamic OGP image via /api/og, falling back to hero bgImage if available
@@ -1761,7 +1764,7 @@ window.addEventListener('popstate',function(){
 </script>` : '';
 
   const pwScript = settings.sitePassword ? `<script>(function(){
-  var pw=${JSON.stringify(settings.sitePassword)};
+  var pw=${jsonForScript(settings.sitePassword)};
   var key='lhp-pw-ok';
   if(sessionStorage.getItem(key)===pw)return;
   var ov=document.createElement('div');
@@ -1800,18 +1803,18 @@ window.addEventListener('popstate',function(){
   };
 
   const laruBotScript = (settings.larubot && settings.larubotPublicId)
-    ? `<script src="https://larubot.tokyo/static/embed.js" data-public-id="${settings.larubotPublicId}" defer></script>`
+    ? `<script src="https://larubot.tokyo/static/embed.js" data-public-id="${escapeHtml(safeToken(settings.larubotPublicId))}" defer></script>`
     : '';
 
   const laruSeoScript = (settings.laruseo && settings.laruseoPublicId)
-    ? `<script src="https://larubot.tokyo/embed/blog.js" data-id="${settings.laruseoPublicId}" data-limit="6" defer></script>`
+    ? `<script src="https://larubot.tokyo/embed/blog.js" data-id="${escapeHtml(safeToken(settings.laruseoPublicId))}" data-limit="6" defer></script>`
     : '';
 
   const gaScript = settings.gaTrackingId ? `
-<script async src="https://www.googletagmanager.com/gtag/js?id=${settings.gaTrackingId}"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${settings.gaTrackingId}');</script>` : '';
+<script async src="https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(safeToken(settings.gaTrackingId))}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config',${jsonForScript(safeToken(settings.gaTrackingId))});</script>` : '';
 
-  const clarityScript = settings.clarityId ? `<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${settings.clarityId}");</script>` : '';
+  const clarityScript = settings.clarityId ? `<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script",${jsonForScript(safeToken(settings.clarityId))});</script>` : '';
 
   const gaEventScript = settings.gaTrackingId ? `<script>
 (function(){
@@ -1999,7 +2002,7 @@ ${seo.keywords ? `<meta name="keywords" content="${escapeHtml(seo.keywords)}">` 
 <meta name="twitter:image" content="${escapeHtml(seo.ogImage || ogImageUrl)}">
 <meta name="robots" content="index,follow">
 ${businessInfo?.slug ? `<link rel="canonical" href="${appUrl}/hp/${escapeHtml(businessInfo.slug)}">` : ''}
-<script type="application/ld+json">${JSON.stringify(schema)}</script>
+<script type="application/ld+json">${jsonForScript(schema)}</script>
 ${siteIdScript}
 ${abScript}
 ${gaScript}
@@ -2007,7 +2010,7 @@ ${clarityScript}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=${font.url}&display=swap" rel="stylesheet">
-<style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern}--lhp-accent:${accentColor};}${CSS}</style>
+<style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern}--lhp-accent:${safeCssColor(accentColor, '#f59e0b')};}${CSS}</style>
 <style>${fontCss}
 ${animLevel === 'none' ? '[data-lhp-anim]{opacity:1!important;transform:none!important}' : `[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:${animLevel === 'subtle' ? '.4s' : '.6s'};animation:lhp-auto-reveal .6s ease 1s forwards}
 html.lhp-js [data-lhp-anim]{animation:none}
@@ -2025,7 +2028,7 @@ ${heroLayout === 'split' ? `/* 左右に分けるヒーロー。内側の幅を�
 ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
 ${settings.design ? `<style>${designCss(settings.design)}</style>` : ''}
-${settings.customCss ? `<style>${settings.customCss}</style>` : ''}
+${settings.customCss ? `<style>${safeStyleText(settings.customCss)}</style>` : ''}
 </head>
 <body class="lhp-style-${designStyle}">
 ${pwScript}

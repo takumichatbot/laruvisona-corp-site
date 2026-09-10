@@ -1,4 +1,5 @@
 import './globals.css';
+import { jsonForScript } from '@/lib/safe-markup';
 import SmoothScroll from '@/components/SmoothScroll';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import LarubotWidget from '@/components/LarubotWidget';
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: jsonForScript({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: '株式会社LaruVisona',
