@@ -145,3 +145,46 @@ test('接続できないときも「存在しない」にしない', async () =>
     if (!r.ok) assert.equal(r.reason, 'api_error');
   } finally { globalThis.fetch = original; }
 });
+
+// 監督レビュー(435fe95) R1: 配列の中身が読めない応答を「不存在」にしない
+test('配列内の壊れた項目を、正常な不存在と区別する', async () => {
+  const broken: unknown[][] = [
+    [null],
+    [{}],
+    [{ customDomain: { id: 'known-id' } }],           // name が無い
+    [{ customDomain: null }],
+    [{ customDomain: { name: 123 } }],                 // name が文字列でない
+    [{ customDomain: { name: 'x.example', id: 5 } }],  // id が文字列でない
+    [{ customDomain: { name: 'x.example' }, cursor: 7 }], // cursor が文字列でない
+    ['string item'],
+    [[{ customDomain: { name: 'x.example' } }]],       // 入れ子の配列
+  ];
+  for (const body of broken) {
+    const s = stubFetch(() => ({ body }));
+    try {
+      const r = await findDomain(CFG, 'target.example');
+      assert.equal(r.ok, false, `壊れた応答を通した: ${JSON.stringify(body)}`);
+      if (!r.ok) assert.equal(r.reason, 'malformed', JSON.stringify(body));
+    } finally { s.restore(); }
+  }
+});
+
+test('正常な空配列は、正常な不存在として扱う', async () => {
+  const s = stubFetch(() => ({ body: [] }));
+  try {
+    const r = await findDomain(CFG, 'target.example');
+    assert.equal(r.ok, true);
+    if (r.ok) assert.equal(r.domain, null);
+  } finally { s.restore(); }
+});
+
+test('読める項目と読めない項目が混ざっていたら、読み飛ばさない', async () => {
+  const s = stubFetch(url => {
+    if (url.searchParams.get('name')) return { body: [] };
+    return { body: [{ customDomain: { id: 'a', name: 'a.example' }, cursor: 'c0' }, null] };
+  });
+  try {
+    const r = await findDomain(CFG, 'target.example');
+    assert.equal(r.ok, false, '読める分だけで結論を出している');
+  } finally { s.restore(); }
+});

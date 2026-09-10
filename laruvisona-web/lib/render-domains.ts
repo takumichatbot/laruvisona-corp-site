@@ -98,8 +98,36 @@ export type FindResult =
   | { ok: false; reason: 'api_error' | 'malformed' | 'incomplete'; message: string };
 
 interface ListPage {
-  customDomain?: RenderDomain;
+  customDomain: RenderDomain;
   cursor?: string;
+}
+
+/**
+ * 一覧の1要素が、こちらの想定する形かを確かめる。
+ *
+ * 配列であることしか見ていなかったため、[null] / [{}] /
+ * customDomain に name が無い、といった応答を「読み飛ばして」しまい、
+ * 「正常に照会できて、対象は存在しなかった」と同じ結果になっていた。
+ * 形が分からない応答は、不存在の証拠にならない。
+ */
+function parseItem(raw: unknown): ListPage | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const cd = o.customDomain;
+  if (typeof cd !== 'object' || cd === null || Array.isArray(cd)) return null;
+  const d = cd as Record<string, unknown>;
+  if (typeof d.name !== 'string' || d.name.length === 0) return null;
+  if (d.id !== undefined && typeof d.id !== 'string') return null;
+  if (d.verificationStatus !== undefined && typeof d.verificationStatus !== 'string') return null;
+  if (o.cursor !== undefined && typeof o.cursor !== 'string') return null;
+  return {
+    customDomain: {
+      name: d.name,
+      ...(typeof d.id === 'string' ? { id: d.id } : {}),
+      ...(typeof d.verificationStatus === 'string' ? { verificationStatus: d.verificationStatus } : {}),
+    },
+    ...(typeof o.cursor === 'string' ? { cursor: o.cursor } : {}),
+  };
 }
 
 /** 1ページ分の取得。形が違えば「確認できなかった」として返す */
@@ -125,14 +153,24 @@ async function listPage(
   if (!Array.isArray(body)) {
     return { ok: false, reason: 'malformed', message: 'Renderの応答の形式が想定と違います' };
   }
-  return { ok: true, items: body as ListPage[] };
+
+  // 空配列は「このページには何も無い」という正常な結果。
+  // 中身がある場合は、1件でも読めない形があれば全体を malformed にする。
+  const items: ListPage[] = [];
+  for (const raw of body) {
+    const item = parseItem(raw);
+    if (!item) {
+      return { ok: false, reason: 'malformed', message: 'Renderの応答に解釈できない項目があります' };
+    }
+    items.push(item);
+  }
+  return { ok: true, items };
 }
 
 function pick(items: ListPage[], host: string): RenderDomain | null {
   const want = host.toLowerCase();
   for (const it of items) {
-    const d = it?.customDomain;
-    if (d && typeof d.name === 'string' && d.name.toLowerCase() === want) return d;
+    if (it.customDomain.name.toLowerCase() === want) return it.customDomain;
   }
   return null;
 }
