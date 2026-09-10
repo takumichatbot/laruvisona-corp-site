@@ -49,11 +49,31 @@ test('副作用のあるverifyとprimaryはPOSTのみ', () => {
   assert.equal(/export async function GET/.test(primary), false);
 });
 
+/** safeFetch を使っている本番のファイル。ここに guard: が現れてはいけない */
+const PRODUCTION_FILES_USING_SAFE_FETCH = [
+  'lib/domain-ports.ts',
+  'app/api/contact/route.ts',
+  'app/api/ai/scan-url/route.ts',
+];
+
 test('顧客が入力したドメインへの接続は safeFetch を通し、リダイレクトを追わない', () => {
   const s = code('lib/domain-ports.ts');
-  assert.match(s, /safeFetch\(\s*`https:\/\/\$\{host\}\/api\/domain-probe\?/);
-  assert.match(s, /maxRedirects: 0/);
+  // 本番の既定値: 宛先は https、取得は safeFetch
+  assert.match(s, /deps\.fetchUrl \?\? safeFetch/);
+  assert.match(s, /deps\.originOf \?\? \(\(host: string\) => `https:\/\/\$\{host\}`\)/);
+  assert.match(s, /\$\{origin\}\/api\/domain-probe\?/);
+  // 追わない指定。maxRedirects:0 は例外になり Location が読めなかったので使わない
+  assert.match(s, /redirect: 'manual'/);
+  assert.equal(/maxRedirects: 0/.test(s), false, 'maxRedirects:0 は308を例外にする');
   assert.equal(/\bawait fetch\(/.test(s), false, '素のfetchが混ざっている');
+});
+
+test('SSRF検査の差し替えは、本番のコードには入っていない', () => {
+  // safeFetch の guard はループバックの検証用サーバへ繋ぐテスト専用の口。
+  // 本番のコードから渡していないことを固定する。
+  for (const f of PRODUCTION_FILES_USING_SAFE_FETCH) {
+    assert.equal(/guard\s*:/.test(code(f)), false, `本番コードで guard を渡している: ${f}`);
+  }
 });
 
 test('到達確認は固定文字列ではなく署名付きの往復で行う', () => {

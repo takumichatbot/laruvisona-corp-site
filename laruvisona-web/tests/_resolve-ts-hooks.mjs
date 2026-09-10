@@ -1,7 +1,28 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+// tsconfig の paths と同じ意味。"@/lib/x" → <プロジェクト直下>/lib/x
+const ROOT = new URL('../', import.meta.url);
+
+function resolveAlias(specifier) {
+  const rest = specifier.slice(2);                 // "@/" を外す
+  const base = new URL(rest, ROOT);
+  for (const ext of ['', '.ts', '.tsx', '.js', '/index.ts']) {
+    const candidate = new URL(base.href + ext);
+    const path = fileURLToPath(candidate);
+    if (existsSync(path) && !path.endsWith('/')) {
+      return { url: pathToFileURL(path).href, shortCircuit: true };
+    }
+  }
+  return null;
+}
+
 export async function resolve(specifier, context, nextResolve) {
+  // アプリのコードは "@/lib/..." で書かれている。Nextのエイリアスをここで再現する。
+  if (specifier.startsWith('@/')) {
+    const hit = resolveAlias(specifier);
+    if (hit) return hit;
+  }
   try {
     return await nextResolve(specifier, context);
   } catch (e) {

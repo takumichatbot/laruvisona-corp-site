@@ -1037,3 +1037,171 @@ test('R1: 外部に何も無い候補の取消は、そのまま完了できる'
   if (res.ok) assert.equal(res.released, true);
   assert.equal((await store.pendingQueue('plain.example')).length, 0, '不要な積み残しを作っている');
 });
+
+// ── C2: 別名（転送されるホスト）の判定 ────────────────
+//
+// 監督レビュー(e836ed3) 2:
+//   転送先から www. を外して照合していたため、
+//   www.primary.example → www.primary.example の自己転送でも
+//   primary.example が接続済みなら別名として保存できた。
+//   照合は転送先そのもので行う。
+
+/** 転送されるホストの検証を1回まわす。DNSと所有確認は通っている前提。 */
+async function verifyRedirected(opts: {
+  host: string;
+  redirectTo: string | null;
+  rows: Row[];
+  custom?: string | null;
+}) {
+  const sites = { s1: { user_id: 'u1', custom_domain: (opts.custom ?? null) as string | null } };
+  const store = makeStore({ sites, rows: opts.rows });
+  const res = await verifyDomain(
+    deps(store,
+      makeDns({ txt: [challengeRecordValue(TOKEN)], a: [APEX_IP] }),
+      makeRender('ok'),
+      makeProbe('redirected', opts.redirectTo)),
+    { siteId: 's1', userId: 'u1', host: opts.host });
+  return { res, store, sites };
+}
+
+test('C2: 転送先が同じサイトの確認済みホストなら別名になる', async () => {
+  const { res, store } = await verifyRedirected({
+    host: 'www.primary.example',
+    redirectTo: 'primary.example',
+    rows: [
+      row('www.primary.example'),
+      row('primary.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }),
+    ],
+    custom: 'primary.example',
+  });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.equal(res.status, 'alias');
+  assert.equal(res.evidence.redirectsTo, 'primary.example');
+  assert.equal(store.rows.find(r => r.host === 'www.primary.example')?.redirects_to, 'primary.example');
+});
+
+test('C2: 自分自身への転送は別名にしない（wwwを外して照合しない）', async () => {
+  // primary.example は接続済み。www.primary.example が自分自身へ転送している。
+  // www を外して照合していた頃は、これが別名として保存できていた。
+  const { res, store } = await verifyRedirected({
+    host: 'www.primary.example',
+    redirectTo: 'www.primary.example',
+    rows: [
+      row('www.primary.example'),
+      row('primary.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }),
+    ],
+    custom: 'primary.example',
+  });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.notEqual(res.status, 'alias', '自己転送を別名として受け入れている');
+  assert.equal(res.evidence.redirectsTo, null);
+  assert.equal(store.rows.find(r => r.host === 'www.primary.example')?.redirects_to, null);
+});
+
+test('C2: 逆向きの自己転送（apex → apex）も別名にしない', async () => {
+  const { res } = await verifyRedirected({
+    host: 'primary.example',
+    redirectTo: 'primary.example',
+    rows: [
+      row('primary.example'),
+      row('www.primary.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }),
+    ],
+    custom: 'www.primary.example',
+  });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.notEqual(res.status, 'alias');
+});
+
+test('C2: 転送先が未確認のホストなら別名にしない（wwwを外した名前で代用しない）', async () => {
+  // 確認済みなのは primary.example だけ。転送先の www.primary.example は未確認。
+  const { res } = await verifyRedirected({
+    host: 'old.example',
+    redirectTo: 'www.primary.example',
+    rows: [
+      row('old.example'),
+      row('primary.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }),
+      row('www.primary.example', { id: 'd3', status: 'pending_dns', verification_token: 'c'.repeat(32) }),
+    ],
+    custom: 'primary.example',
+  });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.notEqual(res.status, 'alias', '未確認のホストへの転送を別名にしている');
+});
+
+test('C2: 転送先が別サイトのホストなら別名にしない', async () => {
+  const sites = {
+    s1: { user_id: 'u1', custom_domain: null as string | null },
+    s2: { user_id: 'u1', custom_domain: 'other.example' as string | null },
+  };
+  const store = makeStore({
+    sites,
+    rows: [
+      row('www.mine.example'),
+      { ...row('other.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }), site_id: 's2' },
+    ],
+  });
+  const res = await verifyDomain(
+    deps(store,
+      makeDns({ txt: [challengeRecordValue(TOKEN)], a: [APEX_IP] }),
+      makeRender('ok'),
+      makeProbe('redirected', 'other.example')),
+    { siteId: 's1', userId: 'u1', host: 'www.mine.example' });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.notEqual(res.status, 'alias', '別サイトのホストへの転送を別名にしている');
+});
+
+test('C2: 転送先が取れないときは別名にしない', async () => {
+  const { res } = await verifyRedirected({
+    host: 'www.primary.example',
+    redirectTo: null,
+    rows: [
+      row('www.primary.example'),
+      row('primary.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }),
+    ],
+    custom: 'primary.example',
+  });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.notEqual(res.status, 'alias');
+});
+
+test('C2: 所有確認が取れていなければ、転送先が正しくても別名にしない', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: 'primary.example' as string | null } };
+  const store = makeStore({
+    sites,
+    rows: [
+      row('www.primary.example'),
+      row('primary.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }),
+    ],
+  });
+  const res = await verifyDomain(
+    deps(store,
+      makeDns({ txt: [], a: [APEX_IP] }),          // TXTが無い＝所有確認できていない
+      makeRender('ok'),
+      makeProbe('redirected', 'primary.example')),
+    { siteId: 's1', userId: 'u1', host: 'www.primary.example' });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.notEqual(res.status, 'alias');
+  assert.equal(res.status, 'pending_ownership');
+});
+
+test('C2: 大文字small差・末尾ドットがあっても同じホストとして扱う', async () => {
+  const { res } = await verifyRedirected({
+    host: 'www.primary.example',
+    redirectTo: 'WWW.Primary.Example',   // 実装側で小文字化される
+    rows: [
+      row('www.primary.example'),
+      row('primary.example', { id: 'd2', status: 'connected', verification_token: 'b'.repeat(32) }),
+    ],
+    custom: 'primary.example',
+  });
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.notEqual(res.status, 'alias', '大文字違いの自己転送をすり抜けさせている');
+});

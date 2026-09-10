@@ -159,11 +159,33 @@ export async function assertUrlAllowed(raw: string | URL): Promise<UrlShape> {
   return shape;
 }
 
+/** URLを検査して通す関数。既定は assertUrlAllowed（SSRF検査つき）。 */
+export type UrlGuard = (raw: string | URL) => Promise<UrlShape>;
+
 export type SafeFetchOptions = {
   /** ミリ秒。既定10秒 */
   timeoutMs?: number;
-  /** 追従するリダイレクトの最大数。既定3 */
+  /** 追従するリダイレクトの最大数。既定3。redirect:'manual' のときは使わない */
   maxRedirects?: number;
+  /**
+   * 'follow'（既定）… リダイレクトを1ホップずつ検査しながら追う。
+   *                    上限を超えたら BlockedUrlError('too_many_redirects')。
+   * 'manual'        … 追わずに最初の応答をそのまま返す。3xx でも例外にしない。
+   *
+   * 'manual' は「転送されたこと自体」を判定材料にする用途のためにある。
+   * 到達確認は転送先の応答を根拠にしてはいけないので追ってはならないが、
+   * 追わないことを maxRedirects:0 で表すと例外になり、Location が読めなかった。
+   * 転送先へは1バイトも出さないまま、最初の応答だけを呼び出し側に渡す。
+   */
+  redirect?: 'follow' | 'manual';
+  /**
+   * URLの検査を差し替える。既定は assertUrlAllowed。
+   *
+   * 差し替えてよいのは、実際にソケットを開く回帰テストで
+   * ループバックの検証用サーバへ繋ぐときだけ。本番のコードからは渡さない
+   * （tests/domain-api.test.ts が、本番コードに guard: が無いことを固定している）。
+   */
+  guard?: UrlGuard;
 };
 
 /**
@@ -177,12 +199,24 @@ export async function safeFetch(
 ): Promise<Response> {
   const timeoutMs = opts.timeoutMs ?? 10_000;
   const maxRedirects = opts.maxRedirects ?? 3;
+  const guard: UrlGuard = opts.guard ?? assertUrlAllowed;
 
   let current: string = (raw instanceof URL ? raw : new URL(String(raw))).toString();
   let currentInit: RequestInit = { ...init };
 
+  // 追わない場合。検査は同じように行い、最初の応答をそのまま返す。
+  // bodyは読まずに渡すので、呼び出し側が readCapped するか捨てる。
+  if (opts.redirect === 'manual') {
+    const { url } = await guard(current);
+    return await fetch(url, {
+      ...currentInit,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  }
+
   for (let hop = 0; hop <= maxRedirects; hop++) {
-    const { url } = await assertUrlAllowed(current);
+    const { url } = await guard(current);
     const res = await fetch(url, {
       ...currentInit,
       redirect: 'manual',

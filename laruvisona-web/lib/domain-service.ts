@@ -331,20 +331,28 @@ export async function verifyDomain(
 
   // 4b. 転送されている場合、その先が「同じサイトの確認済みホスト」か。
   //     Location が同じサイトを指すことだけでは根拠にしない。
-  //     所有確認（TXT）が済んでいること、外部登録がこちらの帰属であること、
-  //     転送先がこのサイトで確認済みであることを、すべて満たすときだけ別名にする。
+  //
+  //     以前は転送先から www. を外して照合していた。そのため
+  //     www.primary.example → www.primary.example の自己転送でも、
+  //     primary.example が接続済みなら別名として保存できた（監督レビュー e836ed3）。
+  //     照合は転送先そのもので行い、www を外した別のホストでは代用しない。
   let redirectToOwnHost = false;
   if (probe === 'redirected' && ownership && redirectHost) {
-    const target = redirectHost.toLowerCase().replace(/^www\./, '');
-    const own = await deps.store.listDomains(args.siteId);
-    const confirmed = own.some(r =>
-      isServable(r.status)
-      && (r.host.toLowerCase() === redirectHost.toLowerCase()
-        || r.host.toLowerCase() === target)
-      && r.host.toLowerCase() !== host.toLowerCase());   // 自分自身への転送は輪になる
-    const attributed = renderCheck === 'verified' || renderCheck === 'not_configured'
-      || !!renderDomainId || !!row.render_register_started_at;
-    redirectToOwnHost = confirmed && attributed;
+    const from = host.toLowerCase();
+    const to = redirectHost.toLowerCase();
+
+    // 自分自身への転送は、まずここで落とす（輪になる）
+    if (to !== from) {
+      const own = await deps.store.listDomains(args.siteId);
+      // 転送先そのものが、このサイトの確認済み（配信できる）ホストであること
+      const confirmed = own.some(r =>
+        isServable(r.status)
+        && r.host.toLowerCase() === to
+        && r.host.toLowerCase() !== from);
+      const attributed = renderCheck === 'verified' || renderCheck === 'not_configured'
+        || !!renderDomainId || !!row.render_register_started_at;
+      redirectToOwnHost = confirmed && attributed;
+    }
   }
 
   const status = deriveStatus({
