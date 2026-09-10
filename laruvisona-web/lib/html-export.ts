@@ -5,7 +5,7 @@ import { escapeHtml, safeUrl, safeCssValue } from '@/lib/safe-markup';
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 7;
+export const EXPORT_VERSION = 8;
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
@@ -66,11 +66,13 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       const headingHtml = escapeHtml(headingText).replace(/\r?\n/g, '<br>');
       // 代替テキストに改行は要らない
       const heroAlt = str('bgImageAlt') || escapeHtml(headingText.replace(/\s+/g, ' ').trim());
-      const heroPos = raw('bgImagePosition');
-      const heroImgTag = `<img src="${url('bgImage', '')}" alt="${heroAlt}"`
+      // 写真のどこを見せるか。パソコンとスマホで別に決められる。
+      // スマホは切り取りが縦に長くなるので、同じ位置だと主役が外れることがある。
+      const heroPos = css('bgImagePosition');
+      const heroPosSp = css('bgImagePositionSp');
+      const heroImgTag = `<img class="lhp-hero-img" src="${url('bgImage', '')}" alt="${heroAlt}"`
         + (heroW ? ` width="${heroW}"` : '') + (heroH ? ` height="${heroH}"` : '')
         + ` sizes="${heroSizes}"`
-        + (heroPos ? ` style="object-position:${heroPos}"` : '')
         + ` loading="eager" fetchpriority="high" decoding="async">`;
       const heroPicture = heroSources.length
         ? `<picture>${heroSources.map(sc => `<source${sc.type ? ` type="${escapeHtml(sc.type)}"` : ''}`
@@ -78,16 +80,29 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
             + `${sc.srcset ? ` srcset="${escapeHtml(sc.srcset)}"` : ''}`
             + ` sizes="${escapeHtml(sc.sizes || heroSizes)}">`).join('')}${heroImgTag}</picture>`
         : heroImgTag;
+      /* 動きのあるヒーロー。
+         写真（poster）を先に出し、動画はあとから重ねる。読み込みで見出しや
+         ボタンを待たせない。音は出さず、画面の中で再生し、止める手段を置く。
+         端末が「動きを減らす」設定のとき、または動きを「なし」にしているときは
+         そもそも取りに行かない（poster のまま）。 */
+      const heroVideo = safeUrl(d['heroVideo'], '');
+      const heroVideoWebm = safeUrl(d['heroVideoWebm'], '');
+      const videoBox = heroVideo || heroVideoWebm ? `
+      <div class="lhp-hero-media" data-lhp-hero-video${heroVideo ? ` data-src="${escapeHtml(heroVideo)}"` : ''}${heroVideoWebm ? ` data-src-webm="${escapeHtml(heroVideoWebm)}"` : ''}>
+        <button type="button" class="lhp-hero-vbtn" data-lhp-vtoggle aria-label="背景の動きを止める" hidden>停止</button>
+      </div>` : '';
       const imgCol = (layout === 'split' && raw('bgImage'))
-        ? `<div class="lhp-hero-split-img">${heroPicture}</div>`
+        ? `<div class="lhp-hero-split-img">${heroPicture}${videoBox}</div>`
         : layout === 'split'
           ? `<div class="lhp-hero-split-img" style="background:rgba(255,255,255,0.12)"></div>`
           : '';
       const bgStyle = layout === 'split'
         ? `background-color:${raw('bgColor') || '#1e293b'}`
         : `background-color:${raw('bgColor')};${raw('bgImage') ? `background-image:url(${raw('bgImage')});background-size:cover;background-position:center;` : ''}`;
+      // 写真の見せ場を、ブロックごとのCSS変数で渡す（PCとスマホで別）
+      const posVars = (heroPos ? `--lhp-hero-pos:${heroPos};` : '') + (heroPosSp ? `--lhp-hero-pos-sp:${heroPosSp};` : '');
       return `
-<section data-lhp-anim class="lhp-hero lhp-hero-${layout}"${abAttr} style="${bgStyle};color:${raw('textColor')}">
+<section data-lhp-anim class="lhp-hero lhp-hero-${layout}"${abAttr} style="${posVars}${bgStyle};color:${raw('textColor')}">
   <div class="lhp-hero-inner" style="${heroInnerStyle}">
     <div class="lhp-hero-content">
       <h1>${headingHtml}</h1>
@@ -1364,6 +1379,17 @@ a{color:inherit;text-decoration:none}
 }
 .lhp-hero{min-height:var(--lhp-hero-h);display:flex;align-items:center;justify-content:var(--lhp-hero-jc,center);text-align:var(--lhp-hero-ta,center);padding:var(--lhp-hero-pd);position:relative;background-size:cover;background-position:center}
 .lhp-hero-inner{position:relative;z-index:1;max-width:720px;margin:0 auto;text-align:var(--lhp-hero-ta,center);width:100%}
+/* 写真の見せ場。パソコンとスマホで別に決められる */
+.lhp-hero-img{object-position:var(--lhp-hero-pos,center)}
+@media(max-width:768px){.lhp-hero-img{object-position:var(--lhp-hero-pos-sp,var(--lhp-hero-pos,center))}}
+/* 動きのあるヒーロー。写真が先、動画はあとから重なる */
+.lhp-hero-split-img{position:relative}
+.lhp-hero-media{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;pointer-events:none}
+.lhp-hero-media.lhp-on{opacity:1;pointer-events:auto}
+.lhp-hero-media video{width:100%;height:100%;object-fit:cover;object-position:var(--lhp-hero-pos,center);display:block}
+@media(max-width:768px){.lhp-hero-media video{object-position:var(--lhp-hero-pos-sp,var(--lhp-hero-pos,center))}}
+.lhp-hero-vbtn{position:absolute;right:10px;bottom:10px;z-index:2;min-height:32px;padding:4px 12px;border:0;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-family:inherit;cursor:pointer}
+.lhp-hero-vbtn:hover{background:rgba(0,0,0,.75)}
 [style*="--lhp-hero-ta:left"] .lhp-hero-inner,[style*="--lhp-hero-ta: left"] .lhp-hero-inner{margin:0}
 .lhp-hero h1{font-size:clamp(1.75rem,4vw,3.25rem);font-weight:var(--lhp-h1-w);margin-bottom:16px;line-height:var(--lhp-h1-lh)}
 .lhp-hero-sub{font-size:1.05rem;opacity:.88;margin-bottom:32px;line-height:1.7}
@@ -1881,6 +1907,48 @@ window.addEventListener('popstate',function(){
       setTimeout(type,400);
     }
   }
+
+  /* ── ヒーローの動画 ──
+     写真（poster）を先に出しているので、動画は「あってもなくても成立する」飾り。
+     動きを減らす設定・動きなしの設定のときは取りに行かない。
+     画面に入ってから読み、音は出さず、止める手段を出す。 */
+  document.querySelectorAll('[data-lhp-hero-video]').forEach(function(box){
+    var mp4=box.getAttribute('data-src'), webm=box.getAttribute('data-src-webm');
+    if(reduce||(!mp4&&!webm))return;
+    var made=false;
+    var build=function(){
+      if(made)return; made=true;
+      var v=document.createElement('video');
+      v.muted=true; v.defaultMuted=true; v.loop=true; v.playsInline=true;
+      v.setAttribute('playsinline','');
+      v.setAttribute('muted','');
+      v.setAttribute('aria-hidden','true');
+      v.preload='auto';
+      if(webm){var s1=document.createElement('source');s1.src=webm;s1.type='video/webm';v.appendChild(s1);}
+      if(mp4){var s2=document.createElement('source');s2.src=mp4;s2.type='video/mp4';v.appendChild(s2);}
+      box.insertBefore(v,box.firstChild);
+      var btn=box.querySelector('[data-lhp-vtoggle]');
+      v.addEventListener('playing',function(){
+        box.classList.add('lhp-on');
+        if(btn){btn.hidden=false;}
+      });
+      v.addEventListener('error',function(){ box.classList.remove('lhp-on'); if(btn)btn.hidden=true; });
+      if(btn){
+        btn.addEventListener('click',function(){
+          if(v.paused){v.play();btn.textContent='停止';btn.setAttribute('aria-label','背景の動きを止める');}
+          else{v.pause();btn.textContent='再生';btn.setAttribute('aria-label','背景の動きを再生する');}
+        });
+      }
+      var p=v.play();
+      if(p&&p.catch)p.catch(function(){ /* 自動再生できない端末では写真のまま */ });
+    };
+    if(typeof IntersectionObserver==='function'){
+      var vio=new IntersectionObserver(function(es){
+        es.forEach(function(e){ if(e.isIntersecting){ build(); vio.disconnect(); } });
+      },{rootMargin:'200px'});
+      vio.observe(box);
+    } else { build(); }
+  });
 
   /* ── count-up for numbers ── */
   function animCount(el,target,prefix,suffix){

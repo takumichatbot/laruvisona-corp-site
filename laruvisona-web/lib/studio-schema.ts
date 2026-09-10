@@ -54,6 +54,26 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
       { key: 'ctaLink', label: 'ボタンの行き先', type: 'text', placeholder: '#booking' },
       { key: 'bgImage', label: '写真', type: 'image' },
       { key: 'bgImageAlt', label: '写真の説明', type: 'text', hint: '目の見えない方の読み上げと、写真が出ないときに使います' },
+      {
+        key: 'bgImagePosition', label: '写真の見せ場（パソコン）', type: 'select',
+        hint: '切り取られたときに、どこを残すか',
+        options: [
+          { value: '', label: '中央' }, { value: '50% 20%', label: '上より' },
+          { value: '50% 80%', label: '下より' }, { value: '20% 50%', label: '左より' },
+          { value: '80% 50%', label: '右より' },
+        ],
+      },
+      {
+        key: 'bgImagePositionSp', label: '写真の見せ場（スマホ）', type: 'select',
+        hint: 'スマホは縦に長く切られるので、別に決められます',
+        options: [
+          { value: '', label: 'パソコンと同じ' }, { value: '50% 20%', label: '上より' },
+          { value: '50% 80%', label: '下より' }, { value: '20% 50%', label: '左より' },
+          { value: '80% 50%', label: '右より' },
+        ],
+      },
+      { key: 'heroVideo', label: '動く背景（mp4）', type: 'text', hint: '写真が先に出て、動画はあとから重なります。音は出ません。端末が「動きを減らす」設定のときは読み込みません' },
+      { key: 'heroVideoWebm', label: '動く背景（webm・任意）', type: 'text' },
       { key: 'bgColor', label: '地の色', type: 'color' },
       { key: 'textColor', label: '文字の色', type: 'color' },
     ],

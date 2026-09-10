@@ -2066,6 +2066,33 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     改行した位置で折り返します。意味の切れ目で改行すると読みやすくなります
                   </span>
                 </label>
+                {/* 写真の見せ場と、動く背景。公開ページでは写真が先に出て、
+                    動画はあとから重なる（音なし・止められる・動きを減らす設定に従う）。 */}
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">写真の見せ場（PC / スマホ）</span>
+                  <div className="flex gap-2">
+                    {(['bgImagePosition', 'bgImagePositionSp'] as const).map(k => (
+                      <select key={k} value={(d[k] as string) || ''}
+                        onChange={e => onDataChange(block.id, { ...d, [k]: e.target.value })}
+                        className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                        <option value="">{k === 'bgImagePosition' ? '中央' : 'PCと同じ'}</option>
+                        <option value="50% 20%">上より</option>
+                        <option value="50% 80%">下より</option>
+                        <option value="20% 50%">左より</option>
+                        <option value="80% 50%">右より</option>
+                      </select>
+                    ))}
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="text-slate-400 block mb-1">動く背景（mp4のURL・任意）</span>
+                  <input type="text" value={(d.heroVideo as string) || ''} placeholder="/salon/hero.mp4"
+                    onChange={e => onDataChange(block.id, { ...d, heroVideo: e.target.value.trim() })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                  <span className="text-slate-600 text-[10px] mt-1 block">
+                    写真が先に出ます。音は出ません。端末の「動きを減らす」設定では読み込みません
+                  </span>
+                </label>
                 <label className="block">
                   <span className="text-slate-400 block mb-1">背景色</span>
                   <div className="flex gap-2">

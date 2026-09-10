@@ -180,6 +180,60 @@ test('送信後の転送先に、スクリプトを書けない', () => {
   assert.equal(/javascript:/.test(html), false);
 });
 
+
+test('動きのあるヒーローは、写真を先に出して動画をあとから重ねる', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: {
+        heading: 'あ', subheading: '', ctaText: 'c', ctaLink: '#',
+        bgImage: '/salon/hero-1600.jpg', bgImageWidth: 1600, bgImageHeight: 1195,
+        heroVideo: '/salon/hero.mp4', heroVideoWebm: '/salon/hero.webm',
+      } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const }, 'テスト店',
+  );
+  // 写真は今までどおり最優先で読む
+  assert.match(html, /<img class="lhp-hero-img" src="\/salon\/hero-1600\.jpg"[^>]*fetchpriority="high"/);
+  // 動画はHTMLに置かない。読み込みで見出しやボタンを待たせないため
+  assert.equal(/<video/.test(html), false, '動画をHTMLに直接置いている');
+  assert.match(html, /data-lhp-hero-video data-src="\/salon\/hero\.mp4" data-src-webm="\/salon\/hero\.webm"/);
+  // 止める手段がある
+  assert.match(html, /class="lhp-hero-vbtn" data-lhp-vtoggle/);
+  // 音は出さず、画面の中で再生する
+  assert.match(html, /v\.muted=true; v\.defaultMuted=true; v\.loop=true; v\.playsInline=true;/);
+  // 動きを減らす設定・動きなしのときは取りに行かない
+  assert.match(html, /if\(reduce\|\|\(!mp4&&!webm\)\)return;/);
+  // 画面に入ってから読む
+  assert.match(html, /new IntersectionObserver\([\s\S]{0,200}rootMargin:'200px'/);
+});
+
+test('動画を入れていないヒーローは、動画の仕掛けを持ち込まない', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: { heading: 'あ', subheading: '', ctaText: 'c', ctaLink: '#', bgImage: '/a.jpg' } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const }, 'テスト店',
+  );
+  assert.equal(/class="lhp-hero-media"/.test(html), false, '動画の入れ物が出ている');
+});
+
+test('写真の見せ場を、パソコンとスマホで別に決められる', () => {
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: {
+        heading: 'あ', subheading: '', ctaText: 'c', ctaLink: '#',
+        bgImage: '/a.jpg', bgImagePosition: '50% 30%', bgImagePositionSp: '40% 20%',
+      } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const }, 'テスト店',
+  );
+  assert.match(html, /--lhp-hero-pos:50% 30%;/);
+  assert.match(html, /--lhp-hero-pos-sp:40% 20%;/);
+  assert.match(html, /@media\(max-width:768px\)\{\.lhp-hero-img\{object-position:var\(--lhp-hero-pos-sp,var\(--lhp-hero-pos,center\)\)\}\}/);
+  // 設定していないサイトは、これまでどおり中央
+  assert.match(html, /\.lhp-hero-img\{object-position:var\(--lhp-hero-pos,center\)\}/);
+});
+
 test('生成HTMLを変えたら EXPORT_VERSION を上げる（既存の公開HTMLが再生成される）', () => {
   assert.ok(EXPORT_VERSION >= 3, '公開HTMLを変更したのに EXPORT_VERSION が上がっていない');
   assert.match(basic, new RegExp(`<!--lhpv:${EXPORT_VERSION}-->$`), '版数の埋め込みが末尾に無い');
@@ -399,7 +453,7 @@ test('左右に分けるヒーローは、写真が主役になる幅を持つ',
   );
   assert.match(split, /\.lhp-hero-split \.lhp-hero-inner\{[^}]*max-width:1180px/, '内側が広がっていない');
   assert.match(split, /\.lhp-hero-split-img\{flex:1 1 62%/, '写真の取り分が小さいまま');
-  assert.match(split, /<div class="lhp-hero-split-img"><img src="\/hero\.jpg"/);
+  assert.match(split, /<div class="lhp-hero-split-img"><img class="lhp-hero-img" src="\/hero\.jpg"/);
 });
 
 // ── ヒーローの写真 ────────────────────────────────────
@@ -443,7 +497,7 @@ test('形式と大きさの出し分けは picture で行う', () => {
   assert.match(h, /<source type="image\/webp"/);
   assert.match(h, /alt="自然光の入る店内。木の鏡台と椅子"/, '写真の説明が見出しの使い回しになっている');
   // 対応していないブラウザ向けに、元のjpgが最後に残る
-  assert.match(h, /<img src="\/salon\/hero-1600\.jpg"/);
+  assert.match(h, /<img class="lhp-hero-img" src="\/salon\/hero-1600\.jpg"/);
 });
 
 test('スマホだけ別の切り取りを配れる', () => {

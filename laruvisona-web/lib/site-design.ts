@@ -200,7 +200,12 @@ ${d.titleRule === 'short' ? `/* 飾り線は、見出しの寄せに合わせる
 .lhp-section-title::after{content:"";display:block;width:34px;height:1px;background:var(--lhp-d-accent);margin:.7em auto 0 0}
 .lhp-section-title[style*="text-align:center"]::after,.lhp-cta .lhp-section-title::after{margin-left:auto;margin-right:auto}` : ''}
 ${d.titleRule === 'underline' ? `.lhp-section-title{border-bottom:1px solid var(--lhp-d-line);padding-bottom:.5em}` : ''}
-.lhp-hero h1{letter-spacing:${(d.headingTracking + 0.02).toFixed(3)}em;font-weight:${d.headingWeight}}
+/* 最初の画面の見出し。既定のままだと 1440px で 52px になり、和文だと
+   1行に入る字数が少なくて意図しない所で折り返す。設定の「見出しの大きさ」で決める */
+.lhp-hero h1{
+  font-size:clamp(${(26 * d.headingScale).toFixed(1)}px,${(3.4 * d.headingScale).toFixed(2)}vw,${(42 * d.headingScale).toFixed(1)}px);
+  letter-spacing:${(d.headingTracking + 0.02).toFixed(3)}em;font-weight:${d.headingWeight};line-height:1.6;
+}
 
 /* 節の間隔 */
 .lhp-section{padding-top:var(--lhp-d-pad);padding-bottom:var(--lhp-d-pad)}
@@ -219,8 +224,12 @@ ${d.titleRule === 'underline' ? `.lhp-section-title{border-bottom:1px solid var(
 
 /* 面と罫線 */
 .lhp-card,.lhp-price-card,.lhp-testimonial{border:1px solid var(--lhp-d-line);border-radius:var(--lhp-d-r)}
+/* おすすめの札。地色を薄い面にするので、文字色は本文と同じに戻す。
+   既定のスタイルは濃い地を前提に白文字を当てており、そのままだと読めない */
 .lhp-price-featured{background:var(--lhp-d-surface);border-color:var(--lhp-d-accent)}
-.lhp-price-badge{background:var(--lhp-d-accent);color:var(--lhp-d-on-accent);letter-spacing:.08em}
+.lhp-price-featured,.lhp-price-featured *{color:var(--lhp-d-ink)}
+.lhp-price-featured .lhp-price-btn{color:var(--lhp-d-on-accent)}
+.lhp-price-badge,.lhp-price-featured .lhp-price-badge{background:var(--lhp-d-accent);color:var(--lhp-d-on-accent);letter-spacing:.08em}
 .lhp-faq-item{border:none;border-bottom:1px solid var(--lhp-d-line);border-radius:0}
 .lhp-faq-q{min-height:56px}
 .lhp-hours th,.lhp-hours td{border-bottom:1px solid var(--lhp-d-line)}
