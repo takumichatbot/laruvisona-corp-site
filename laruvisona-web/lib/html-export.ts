@@ -3,7 +3,7 @@ import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 4;
+export const EXPORT_VERSION = 5;
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -692,7 +692,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       <ul class="lhp-price-features">
         ${(p.features||[]).map(f => `<li>✓ ${escapeHtml(f)}</li>`).join('')}
       </ul>
-      <a href="${escapeHtml(p.buttonLink)}" class="lhp-price-btn">${escapeHtml(p.buttonText)}</a>
+      <a href="${escapeHtml(p.buttonLink)}" class="lhp-price-btn" data-lhp-menu="${escapeHtml(p.name)}">${escapeHtml(p.buttonText)}</a>
     </div>`).join('')}
   </div>
 </section>`;
@@ -819,52 +819,90 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   <p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>
   <form class="lhp-form" id="lhp-form-booking">
     <div style="margin-bottom:16px">
-      <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">サービスを選択</label>
-      <select style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
+      <label for="lhp-bkf-service" style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">サービスを選択</label>
+      <select id="lhp-bkf-service" name="service" data-bk="service" style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
         ${((d['serviceTypes'] as string[]) || []).map(s => `<option>${escapeHtml(s)}</option>`).join('')}
       </select>
     </div>
     <div class="lhp-form-row">
       <div>
-        <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の日程</label>
-        <input type="date" />
+        <label for="lhp-bkf-date" style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の日程</label>
+        <input id="lhp-bkf-date" name="date" data-bk="date" type="date" />
       </div>
       <div>
-        <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の時間</label>
-        <select style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
+        <label for="lhp-bkf-time" style="font-weight:700;font-size:.9rem;display:block;margin-bottom:8px">ご希望の時間</label>
+        <select id="lhp-bkf-time" name="time" data-bk="time" style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:1rem;font-family:inherit">
           ${((d['timeSlots'] as string[]) || []).map(t => `<option>${escapeHtml(t)}</option>`).join('')}
         </select>
       </div>
     </div>
     <div class="lhp-form-row">
-      <input type="text" placeholder="お名前" required />
-      <input type="tel" placeholder="電話番号" />
+      <input id="lhp-bkf-name" name="customerName" data-bk="name" type="text" placeholder="お名前" autocomplete="name" required />
+      <input id="lhp-bkf-phone" name="phone" data-bk="phone" type="tel" placeholder="電話番号" autocomplete="tel" />
     </div>
-    <input type="email" placeholder="メールアドレス" />
+    <input id="lhp-bkf-email" name="email" data-bk="email" type="email" placeholder="メールアドレス" autocomplete="email" />
     <input type="text" name="_hp" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" aria-hidden="true" />
     <button type="submit" id="lhp-btn-booking" style="background-color:${raw('buttonColor')}">${str('buttonText')}</button>
     <p class="lhp-form-note" id="lhp-note-booking"></p>
   </form>
 </section>
+${d['stickyCta'] ? `
+<!-- スマホで画面下に出しておく予約ボタン。ブロックの設定（stickyCta）で出し入れする。
+     CSSだけの飾りではなく、実際に #booking へ入るリンク。 -->
+<div class="lhp-sticky-cta" role="complementary" aria-label="予約への近道">
+  <a href="#booking" class="lhp-sticky-cta-btn" style="background-color:${raw('buttonColor')}">${escapeHtml(String(d['stickyCtaText'] || d['buttonText'] || 'ご予約へ'))}</a>
+</div>` : ''}
 <script>
 (function(){
   var f=document.getElementById('lhp-form-booking');
   if(!f)return;
+  /* 値は data-bk で名指しして取る。
+     f.name は「フォーム自身の name 属性」を返すので、入力欄は取れない
+     （f.email / f.phone も同様に取れず、送信前に落ちていた）。 */
+  function val(k){var el=f.querySelector('[data-bk="'+k+'"]');return el?el.value:'';}
+
+  /* 料金表などから選ばれたメニューを引き継ぐ */
+  function pickService(label){
+    var sel=f.querySelector('[data-bk="service"]');
+    if(!sel||!label)return false;
+    for(var i=0;i<sel.options.length;i++){
+      if(sel.options[i].text===label){sel.selectedIndex=i;return true;}
+    }
+    return false;
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target&&e.target.closest?e.target.closest('[data-lhp-menu]'):null;
+    if(!t)return;
+    if(pickService(t.getAttribute('data-lhp-menu'))){
+      var sel=f.querySelector('[data-bk="service"]');
+      /* 引き継いだことが分かるように、その欄へ寄せて印を出す */
+      setTimeout(function(){
+        try{sel.focus({preventScroll:true});}catch(err){sel.focus();}
+        sel.style.transition='box-shadow .6s';
+        sel.style.boxShadow='0 0 0 3px rgba(0,0,0,.12)';
+        setTimeout(function(){sel.style.boxShadow='';},1200);
+      },420);
+    }
+  });
+
   f.addEventListener('submit',async function(e){
     e.preventDefault();
-    if(f._hp&&f._hp.value)return;
+    var hp=f.querySelector('[name="_hp"]');
+    if(hp&&hp.value)return;
     var btn=document.getElementById('lhp-btn-booking');
     var note=document.getElementById('lhp-note-booking');
-    btn.textContent='送信中...';btn.disabled=true;
-    var sel=f.querySelector('select');
-    var dt=f.querySelector('input[type=date]');
-    var tsel=f.querySelectorAll('select')[1];
+    var label=btn.textContent;
+    btn.textContent='送信中...';btn.disabled=true;note.textContent='';
     try{
-      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',type:'booking',name:f.name.value,email:f.email.value,phone:f.phone.value,message:(sel?sel.value:'')+'\\n'+(dt?dt.value:'')+(tsel?' '+tsel.value:'')})});
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        siteId:window.__LHPSID||'',type:'booking',
+        name:val('name'),email:val('email'),phone:val('phone'),
+        message:val('service')+'\\n'+val('date')+' '+val('time')
+      })});
       var d=await r.json();
-      if(d.ok){f.innerHTML='<div class="lhp-form-success">✅ 予約リクエストを受け付けました！確認のご連絡をお送りします。</div>';}
-      else{btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
-    }catch(err){btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
+      if(r.ok&&d.ok){f.innerHTML='<div class="lhp-form-success">✅ 予約リクエストを受け付けました。折り返しご連絡します。</div>';}
+      else{btn.textContent=label;btn.disabled=false;note.textContent=(d&&d.error)?d.error:'送信に失敗しました。時間をおいて、もう一度お試しください。';}
+    }catch(err){btn.textContent=label;btn.disabled=false;note.textContent='送信に失敗しました。通信状況をご確認のうえ、もう一度お試しください。';}
   });
 })();
 </script>`;
@@ -1287,6 +1325,16 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-closed th,.lhp-closed td{color:#9ca3af;background:#fafafa}
 .lhp-holiday{color:#ef4444;font-weight:600}
 .lhp-hours-note{text-align:center;color:#9ca3af;font-size:.8rem;margin-top:8px}
+/* スマホで画面下に出しておく予約ボタン。
+   指で押せる高さを確保し、iPhoneのホームバーぶんを避ける。
+   PCでは出さない（本文のCTAで足りるため）。 */
+.lhp-sticky-cta{display:none}
+@media(max-width:640px){
+  .lhp-sticky-cta{display:block;position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid rgba(0,0,0,.08)}
+  .lhp-sticky-cta-btn{display:flex;align-items:center;justify-content:center;min-height:52px;width:100%;color:#fff;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:.04em}
+  body:has(.lhp-sticky-cta){padding-bottom:78px}
+}
+@media(max-width:640px) and (prefers-reduced-motion:reduce){ .lhp-sticky-cta{backdrop-filter:none} }
 .lhp-gallery{display:grid;gap:8px;margin-top:24px}
 .lhp-gallery-2{grid-template-columns:repeat(2,1fr)}
 .lhp-gallery-3{grid-template-columns:repeat(3,1fr)}
@@ -1783,7 +1831,7 @@ html.lhp-js [data-lhp-anim]{animation:none}
 [data-lhp-anim].lhp-visible{opacity:1;transform:none}`}
 ${headerStyle === 'solid' ? '.lhp-nav{background:#1e293b!important;border-bottom:1px solid rgba(255,255,255,0.1)!important}' : ''}
 ${headerStyle === 'colored' ? `.lhp-nav{background:var(--lhp-primary)!important}` : ''}
-${heroLayout === 'split' ? `.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:40px}.lhp-hero-split .lhp-hero-content{flex:1}.lhp-hero-split-img{flex:0 0 42%;border-radius:16px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img{width:100%;height:100%;object-fit:cover}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column}.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:16/9}}` : ''}
+${heroLayout === 'split' ? `/* 左右に分けるヒーロー。内側の幅を広げないと、写真が42%＝約300pxにしかならず、   1440pxの画面で切手のように小さく見える。写真を主役にできる幅にする。 */.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:clamp(28px,4vw,56px);max-width:1180px;width:100%;margin:0 auto}.lhp-hero-split .lhp-hero-content{flex:1 1 46%;min-width:0}.lhp-hero-split-img{flex:1 1 54%;border-radius:4px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img{width:100%;height:100%;object-fit:cover}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column}.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:16/9}}` : ''}
 ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
 ${settings.customCss ? `<style>${settings.customCss}</style>` : ''}

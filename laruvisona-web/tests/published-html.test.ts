@@ -129,3 +129,86 @@ test('端末が「動きを減らす」設定なら、写真・質問も隠さ�
   assert.match(guard.slice(guard.indexOf('prefers-reduced-motion')), /return/,
     '見ているだけで止めていない');
 });
+
+// ── シンプル予約フォーム ──────────────────────────────
+//
+// 監督レビュー(5348247)1: 入力に name が無いのに f.name.value を読んでいた。
+// f.name は「フォーム自身の name 属性」を返すので、入力欄は取れない。
+// f.email / f.phone に至っては undefined で、送信前に例外で落ちていた。
+
+const booking = exportToHTML(
+  [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+    { id: 'p1', type: 'price-table', data: { heading: '料金', plans: [
+      { name: 'カラー＋カット', price: '13,200', period: '円〜', description: '', features: [], highlighted: true, buttonText: '予約', buttonLink: '#booking' },
+    ] } },
+    { id: 'bk', type: 'booking', data: {
+      mode: 'simple', heading: 'ご予約', subtext: '',
+      serviceTypes: ['カット', 'カラー＋カット'], timeSlots: ['10:00', '11:00'],
+      buttonText: '申し込む', buttonColor: '#8a6a43', bgColor: '#fff',
+      stickyCta: true, stickyCtaText: '予約する',
+    } },
+  ] }] as never,
+  seo, settings, 'テスト店',
+);
+
+test('予約フォームの入力から、値が取れる形になっている', () => {
+  // 値の取り出しはフォームのプロパティに頼らない
+  assert.equal(/f\.name\.value|f\.email\.value|f\.phone\.value/.test(booking), false,
+    'フォーム自身のプロパティから入力値を取ろうとしている（送信前に落ちる）');
+  assert.match(booking, /function val\(k\)\{var el=f\.querySelector\('\[data-bk="'\+k\+'"\]'\)/);
+  for (const k of ['service', 'date', 'time', 'name', 'phone', 'email']) {
+    assert.match(booking, new RegExp(`data-bk="${k}"`), `入力の目印が無い: ${k}`);
+  }
+  // ラベルと入力がひも付いている
+  for (const id of ['lhp-bkf-service', 'lhp-bkf-date', 'lhp-bkf-time']) {
+    assert.match(booking, new RegExp(`for="${id}"`), `ラベルがひも付いていない: ${id}`);
+    assert.match(booking, new RegExp(`id="${id}"`));
+  }
+  // 送信する中身
+  assert.match(booking, /name:val\('name'\),email:val\('email'\),phone:val\('phone'\)/);
+});
+
+test('送信に失敗したら、押し直せる状態に戻る', () => {
+  assert.match(booking, /btn\.textContent=label;btn\.disabled=false/);
+  assert.match(booking, /もう一度お試しください/);
+  // HTTPの失敗も成否に含める
+  assert.match(booking, /if\(r\.ok&&d\.ok\)/, 'HTTPの失敗を成功として扱っている');
+});
+
+test('料金表で選んだメニューが、予約の欄に引き継がれる', () => {
+  assert.match(booking, /data-lhp-menu="カラー＋カット"/, '料金表のボタンがメニュー名を持っていない');
+  assert.match(booking, /function pickService\(label\)/);
+  assert.match(booking, /sel\.options\[i\]\.text===label/, '選択肢の文言で突き合わせていない');
+});
+
+test('スマホの固定予約ボタンは、実際のリンクとして出る', () => {
+  // CSSだけの飾りではなく、押せる要素があること
+  assert.match(booking, /<div class="lhp-sticky-cta"[^>]*>\s*<a href="#booking" class="lhp-sticky-cta-btn"/);
+  assert.match(booking, /予約する<\/a>/);
+  assert.match(booking, /\.lhp-sticky-cta-btn\{[^}]*min-height:52px/, '指で押せる高さが無い');
+  assert.match(booking, /env\(safe-area-inset-bottom\)/, 'ホームバーに重なる');
+});
+
+test('固定予約ボタンは、設定で出し入れできる', () => {
+  const off = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'bk', type: 'booking', data: { mode: 'simple', heading: 'ご予約', subtext: '', serviceTypes: ['カット'], timeSlots: ['10:00'], buttonText: '申し込む', buttonColor: '#000', bgColor: '#fff' } },
+    ] }] as never,
+    seo, settings, 'テスト店',
+  );
+  assert.equal(/lhp-sticky-cta"/.test(off), false, '設定していないのに固定ボタンが出ている');
+});
+
+test('左右に分けるヒーローは、写真が主役になる幅を持つ', () => {
+  // 内側の幅を広げないと、写真が42%＝約300pxにしかならず、
+  // 1440pxの画面で切手のように小さく見えていた。
+  const split = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: { heading: '店名', subheading: 'サブ', ctaText: '予約', ctaLink: '#booking', bgColor: '#2a2724', textColor: '#fff', bgImage: '/hero.jpg' } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const }, 'テスト店',
+  );
+  assert.match(split, /\.lhp-hero-split \.lhp-hero-inner\{[^}]*max-width:1180px/, '内側が広がっていない');
+  assert.match(split, /\.lhp-hero-split-img\{flex:1 1 54%/, '写真の取り分が小さいまま');
+  assert.match(split, /<div class="lhp-hero-split-img"><img src="\/hero\.jpg"/);
+});
