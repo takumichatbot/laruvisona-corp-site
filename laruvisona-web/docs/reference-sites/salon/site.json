@@ -14,7 +14,7 @@
             "id": "s-1",
             "type": "hero",
             "data": {
-              "heading": "朝、鏡の前でうまくいく髪を。",
+              "heading": "朝、鏡の前で\nうまくいく髪を。",
               "subheading": "結い庵｜国立・大学通りの予約制ヘアサロン",
               "ctaText": "ご予約フォームへ",
               "ctaLink": "#booking",
@@ -343,7 +343,7 @@
           "keywords": "国立 美容室,国立 ヘアサロン,髪質改善,白髪ぼかし",
           "ogTitle": "結い庵 | 国立の予約制ヘアサロン",
           "ogDescription": "朝、自分で乾かしてまとまる髪に。",
-          "ogImage": "/salon/hero.jpg"
+          "ogImage": "/salon/hero-1200.jpg"
         }
       }
     ]
@@ -354,7 +354,7 @@
     "keywords": "国立 美容室,ヘアサロン,髪質改善",
     "ogTitle": "結い庵",
     "ogDescription": "国立の予約制ヘアサロン",
-    "ogImage": "/salon/hero.jpg"
+    "ogImage": "/salon/hero-1200.jpg"
   },
   "settings_json": {
     "colorScheme": "modern-pink",
