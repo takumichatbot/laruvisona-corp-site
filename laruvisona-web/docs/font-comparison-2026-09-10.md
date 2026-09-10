@@ -17,6 +17,18 @@
 **これは再計算であり、再測定ではない**（ブラウザは開いていない。各リクエストのバイト数は初回のまま）。
 訂正前の値は各行の `totalBeforeCorrection` に残してある。
 
+合計は既存の `total` から引き算せず、**重複しない内訳から毎回組み立て直す**
+（`html + appFont + customerFont + customerFontCss + css + js + img + other`。
+`appFontCss` は `css` の内訳なので足さない）。
+`totalBeforeCorrection` はまだ無いときにだけ書き、`summary` は訂正後の `samples` からのみ作る。
+そのため**何度実行しても値は変わらない**。確かめ方:
+
+```bash
+node docs/font-measurement/recount.mjs --in ./docs/font-measurement --variants now,b
+node docs/font-measurement/recount.mjs --in ./docs/font-measurement --variants now,b --check yes
+# → すべて「OK 変化なし」になる（旧データ・訂正済みデータ・新しく測ったデータのいずれでも）
+```
+
 | 画面 | 案 | 訂正前 | 訂正後 |
 |---|---|---|---|
 | 顧客サイト | now | 1,506 | **1,405** |
@@ -289,12 +301,18 @@ git checkout -- app/layout.tsx app/globals.css components/BrandFonts.tsx
 
 ```bash
 node docs/font-measurement/recount.mjs --in ./docs/font-measurement --variants now,b
+
+# 書き換えずに、値が変わらないことだけ確かめる
+node docs/font-measurement/recount.mjs --in ./docs/font-measurement --variants now,b --check yes
 ```
+
+`--in` は `<dir>/<案>.samples.json` と `<dir>/<案>/samples.json` のどちらの置き方でも読める
+（前者はこのリポジトリの記録、後者は `measure.mjs` の出力）。
 
 ### 生の記録
 
 - `docs/font-measurement/now.samples.json` / `b.samples.json` … 各回の全数値（各18サンプル）
-- `docs/font-measurement/now.summary.json` / `b.summary.json` … 中央値、各回のLCP・CLS、計算後の書体
+- `docs/font-measurement/now.summary.json` / `b.summary.json` … 中央値、各回のLCP・CLS、計算後の書体（訂正後samplesから毎回作り直す）
 - どちらも `correction` に訂正の経緯、各行の `totalBeforeCorrection` に訂正前の合計が入っている
 
 ---

@@ -20,6 +20,7 @@
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
+import { totalOf, summarize } from './summarize.mjs';
 
 const DEFAULTS = {
   variant: 'now',
@@ -180,7 +181,8 @@ for (const vp of VIEWPORTS) {
         else if (/\.(png|jpe?g|webp|avif|svg|gif|mp4|webm)(\?|$)/.test(name)) b.img += bytes;
         else b.other += bytes;
       }
-      const total = html + b.appFont + b.customerFont + b.customerFontCss + b.css + b.js + b.img + b.other;
+      const counted = { html, ...b };
+      const total = totalOf(counted);   // 重複しない内訳から作る（summarize.mjs と同じ式）
 
       if (run === 1) await page.screenshot({ path: `${OUT}/${pg.key}-${vp.key}.png` });
 
@@ -199,29 +201,7 @@ for (const vp of VIEWPORTS) {
 }
 await browser.close();
 
-const median = a => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
-const groups = new Map();
-for (const s of samples) {
-  const k = `${s.page}|${s.viewport}`;
-  if (!groups.has(k)) groups.set(k, []);
-  groups.get(k).push(s);
-}
-const summary = [];
-for (const arr of groups.values()) {
-  const f = arr[0];
-  summary.push({
-    variant: VARIANT, page: f.page, label: f.label, viewport: f.viewport, runs: arr.length,
-    total: median(arr.map(x => x.total)),
-    appFont: median(arr.map(x => x.appFont)), appFontFiles: f.appFontFiles,
-    appFontCss: median(arr.map(x => x.appFontCss)),
-    customerFont: median(arr.map(x => x.customerFont)), customerFontFiles: f.customerFontFiles,
-    customerFontCss: median(arr.map(x => x.customerFontCss)),
-    css: median(arr.map(x => x.css)), js: median(arr.map(x => x.js)),
-    lcp: median(arr.map(x => x.lcp)), lcpAll: arr.map(x => x.lcp),
-    cls: median(arr.map(x => x.cls)), clsAll: arr.map(x => x.cls),
-    h1Font: f.h1Font, bodyFont: f.bodyFont, loadedFaces: f.loadedFaces,
-  });
-}
+const summary = summarize(samples);
 
 const meta = {
   variant: VARIANT,

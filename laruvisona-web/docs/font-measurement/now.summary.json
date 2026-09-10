@@ -1,7 +1,8 @@
 {
   "correctedAt": "2026-09-10",
-  "correction": "フォント用CSSを css と appFontCss の両方で合計に足していた二重計上を除いた。これは再計算であり、再測定ではない。各リクエストのバイト数は初回計測のまま。",
+  "correction": "フォント用CSSを css と appFontCss の両方で合計に足していた二重計上を除いた。これは再計算であり、再測定ではない。各リクエストのバイト数は初回計測のまま。合計は内訳から組み立て直すので、何度実行しても同じ値になる。",
   "note": "appFontCss は css の内訳。合計には css として一度だけ含む",
+  "totalFormula": "html + appFont + customerFont + customerFontCss + css + js + img + other（appFontCss は css の内訳なので足さない）",
   "rows": [
     {
       "variant": "now",
@@ -18,7 +19,6 @@
       "customerFontCss": 299825,
       "css": 133226,
       "js": 155999,
-      "customerFontCssGzipRef": 102030,
       "lcp": 512,
       "lcpAll": [
         520,
@@ -54,7 +54,6 @@
       "customerFontCss": 0,
       "css": 133226,
       "js": 482593,
-      "customerFontCssGzipRef": 0,
       "lcp": 2080,
       "lcpAll": [
         2104,
@@ -89,7 +88,6 @@
       "customerFontCss": 0,
       "css": 133226,
       "js": 156925,
-      "customerFontCssGzipRef": 0,
       "lcp": 480,
       "lcpAll": [
         484,
@@ -122,7 +120,6 @@
       "customerFontCss": 299825,
       "css": 133226,
       "js": 155999,
-      "customerFontCssGzipRef": 102030,
       "lcp": 496,
       "lcpAll": [
         476,
@@ -158,7 +155,6 @@
       "customerFontCss": 0,
       "css": 133226,
       "js": 482593,
-      "customerFontCssGzipRef": 0,
       "lcp": 1656,
       "lcpAll": [
         1680,
@@ -193,7 +189,6 @@
       "customerFontCss": 0,
       "css": 133226,
       "js": 156925,
-      "customerFontCssGzipRef": 0,
       "lcp": 452,
       "lcpAll": [
         464,
