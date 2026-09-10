@@ -3,7 +3,7 @@ import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 5;
+export const EXPORT_VERSION = 6;
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -37,8 +37,32 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       const heroInnerStyle = layout === 'center'
         ? 'text-align:center;align-items:center'
         : 'text-align:left;align-items:flex-start';
+      // ヒーローの写真。
+      // 最初の画面に出るので、遅延読み込みにしない・優先で取りに行く。
+      // 幅と高さを書いて、読み込み前後で位置がずれないようにする。
+      // bgImageSources があれば <picture> にして、対応している形式（AVIF/WebP）と
+      // 画面幅に合った大きさだけを落とす。media を付ければ、スマホだけ別の
+      // 切り取りを配ることもできる。
+      type HeroSource = { type?: string; srcset?: string; sizes?: string; media?: string };
+      const heroSources = (d['bgImageSources'] as HeroSource[] | undefined) || [];
+      const heroW = raw('bgImageWidth');
+      const heroH = raw('bgImageHeight');
+      const heroSizes = raw('bgImageSizes') || '(max-width: 768px) 100vw, 62vw';
+      const heroAlt = str('bgImageAlt') || str('heading');
+      const heroPos = raw('bgImagePosition');
+      const heroImgTag = `<img src="${raw('bgImage')}" alt="${heroAlt}"`
+        + (heroW ? ` width="${heroW}"` : '') + (heroH ? ` height="${heroH}"` : '')
+        + ` sizes="${escapeHtml(heroSizes)}"`
+        + (heroPos ? ` style="object-position:${escapeHtml(String(heroPos))}"` : '')
+        + ` loading="eager" fetchpriority="high" decoding="async">`;
+      const heroPicture = heroSources.length
+        ? `<picture>${heroSources.map(sc => `<source${sc.type ? ` type="${escapeHtml(sc.type)}"` : ''}`
+            + `${sc.media ? ` media="${escapeHtml(sc.media)}"` : ''}`
+            + `${sc.srcset ? ` srcset="${escapeHtml(sc.srcset)}"` : ''}`
+            + ` sizes="${escapeHtml(sc.sizes || heroSizes)}">`).join('')}${heroImgTag}</picture>`
+        : heroImgTag;
       const imgCol = (layout === 'split' && raw('bgImage'))
-        ? `<div class="lhp-hero-split-img"><img src="${raw('bgImage')}" alt="${str('heading')}" loading="eager"></div>`
+        ? `<div class="lhp-hero-split-img">${heroPicture}</div>`
         : layout === 'split'
           ? `<div class="lhp-hero-split-img" style="background:rgba(255,255,255,0.12)"></div>`
           : '';
@@ -1182,7 +1206,10 @@ const STYLE_EXTRAS: Record<string, string> = {
   elegant: `
 /* elegant: glassmorphism cards, slow refined animations, hero vertical line */
 .lhp-hero{position:relative;overflow:hidden}
-.lhp-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.05) 100%);pointer-events:none;z-index:0}
+/* 文字を写真の上に重ねるヒーローだけ、読みやすさのために暗く落とす。
+   左右に分けるヒーローは写真が別の列にあり、文字は地色の上に乗るので、
+   ここで暗くすると地色（明るい色を選んでいても）が灰色に濁る。 */
+.lhp-hero:not(.lhp-hero-split)::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.05) 100%);pointer-events:none;z-index:0}
 .lhp-hero-inner{position:relative;z-index:1}
 .lhp-hero-inner::before{content:'';display:block;width:1px;height:48px;background:rgba(255,255,255,.45);margin:0 auto 28px;opacity:0;transform:scaleY(0);transform-origin:top;transition:opacity .8s,transform .8s}
 .lhp-hero .lhp-visible .lhp-hero-inner::before,.lhp-hero .lhp-hero-inner::before{opacity:1;transform:scaleY(1)}
@@ -1330,7 +1357,7 @@ details[open] .lhp-faq-q::after{content:'−'}
    PCでは出さない（本文のCTAで足りるため）。 */
 .lhp-sticky-cta{display:none}
 @media(max-width:640px){
-  .lhp-sticky-cta{display:block;position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid rgba(0,0,0,.08)}
+  .lhp-sticky-cta{display:block;position:fixed;left:0;right:0;bottom:var(--lhp-cookie-h,0px);z-index:60;transition:bottom .2s;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid rgba(0,0,0,.08)}
   .lhp-sticky-cta-btn{display:flex;align-items:center;justify-content:center;min-height:52px;width:100%;color:#fff;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:.04em}
   body:has(.lhp-sticky-cta){padding-bottom:78px}
 }
@@ -1831,7 +1858,7 @@ html.lhp-js [data-lhp-anim]{animation:none}
 [data-lhp-anim].lhp-visible{opacity:1;transform:none}`}
 ${headerStyle === 'solid' ? '.lhp-nav{background:#1e293b!important;border-bottom:1px solid rgba(255,255,255,0.1)!important}' : ''}
 ${headerStyle === 'colored' ? `.lhp-nav{background:var(--lhp-primary)!important}` : ''}
-${heroLayout === 'split' ? `/* 左右に分けるヒーロー。内側の幅を広げないと、写真が42%＝約300pxにしかならず、   1440pxの画面で切手のように小さく見える。写真を主役にできる幅にする。 */.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:clamp(28px,4vw,56px);max-width:1180px;width:100%;margin:0 auto}.lhp-hero-split .lhp-hero-content{flex:1 1 46%;min-width:0}.lhp-hero-split-img{flex:1 1 54%;border-radius:4px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img{width:100%;height:100%;object-fit:cover}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column}.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:16/9}}` : ''}
+${heroLayout === 'split' ? `/* 左右に分けるヒーロー。内側の幅を広げないと、写真が42%＝約300pxにしかならず、   1440pxの画面で切手のように小さく見える。写真を主役にできる幅にする。 */.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:clamp(28px,4vw,56px);max-width:1180px;width:100%;margin:0 auto}.lhp-hero-split .lhp-hero-content{flex:1 1 38%;min-width:0}.lhp-hero-split-img{flex:1 1 62%;border-radius:4px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img,.lhp-hero-split-img picture{width:100%;height:100%;display:block}.lhp-hero-split-img img{object-fit:cover;object-position:center}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column;gap:24px}/* 16:9 は横長すぎて、店内写真だと椅子や鏡が切れる。4:3 で場の様子を残す */.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:4/3}.lhp-hero-split .lhp-hero-content{width:100%}}` : ''}
 ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
 ${settings.customCss ? `<style>${settings.customCss}</style>` : ''}
@@ -1858,14 +1885,28 @@ ${animScript}
 <script>
 (function(){
   var KEY='lhp_cookie_consent';
+  /* この帯は画面下に固定で出る。スマホの固定予約ボタンと同じ場所なので、
+     出ている間はボタンの位置を帯のぶん持ち上げる。
+     持ち上げないと、予約ボタンが帯の下に隠れて押せない。 */
+  function shiftFixed(px){
+    document.documentElement.style.setProperty('--lhp-cookie-h', px + 'px');
+  }
   if(!localStorage.getItem(KEY)){
     var b=document.getElementById('lhp-cookie-banner');
-    if(b)b.style.display='block';
+    if(b){
+      b.style.display='block';
+      shiftFixed(b.offsetHeight);
+      if(window.ResizeObserver){
+        try{ new ResizeObserver(function(){ shiftFixed(b.offsetHeight); }).observe(b); }catch(e){}
+      }
+      window.addEventListener('resize',function(){ if(b.style.display!=='none') shiftFixed(b.offsetHeight); });
+    }
   }
   function dismiss(val){
     localStorage.setItem(KEY,val);
     var b=document.getElementById('lhp-cookie-banner');
     if(b)b.style.display='none';
+    shiftFixed(0);
   }
   var acc=document.getElementById('lhp-cookie-accept');
   var rej=document.getElementById('lhp-cookie-reject');

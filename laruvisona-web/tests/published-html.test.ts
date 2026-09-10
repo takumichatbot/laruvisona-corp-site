@@ -4,6 +4,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 
 process.env.NEXT_PUBLIC_APP_URL = 'https://laruvisona.jp';
 
@@ -209,6 +210,133 @@ test('左右に分けるヒーローは、写真が主役になる幅を持つ',
     seo, { ...settings, heroLayout: 'split' as const }, 'テスト店',
   );
   assert.match(split, /\.lhp-hero-split \.lhp-hero-inner\{[^}]*max-width:1180px/, '内側が広がっていない');
-  assert.match(split, /\.lhp-hero-split-img\{flex:1 1 54%/, '写真の取り分が小さいまま');
+  assert.match(split, /\.lhp-hero-split-img\{flex:1 1 62%/, '写真の取り分が小さいまま');
   assert.match(split, /<div class="lhp-hero-split-img"><img src="\/hero\.jpg"/);
+});
+
+// ── ヒーローの写真 ────────────────────────────────────
+//
+// 最初の画面に出る写真なので、遅延読み込みにしない・優先で取りに行く・
+// 幅と高さを書いて読み込み前後で位置がずれないようにする。
+// 形式と大きさの出し分けは <picture> で行う。
+
+function renderHero(data: Record<string, unknown>) {
+  return exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: { heading: '結い庵', subheading: 'サブ', ctaText: 'ご予約フォームへ', ctaLink: '#booking', bgColor: '#faf7f2', textColor: '#3a2e25', ...data } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const }, '結い庵',
+  );
+}
+
+test('ヒーローの写真は遅延読み込みにせず、優先で取りに行く', () => {
+  const h = renderHero({ bgImage: '/salon/hero.jpg' });
+  assert.match(h, /loading="eager" fetchpriority="high" decoding="async"/);
+  assert.equal(/loading="lazy"[^>]*lhp-hero/.test(h), false);
+});
+
+test('ヒーローの写真は寸法を書いて、読み込みで位置がずれないようにする', () => {
+  const h = renderHero({ bgImage: '/salon/hero.jpg', bgImageWidth: 1600, bgImageHeight: 1200 });
+  assert.match(h, /width="1600" height="1200"/);
+});
+
+test('形式と大きさの出し分けは picture で行う', () => {
+  const h = renderHero({
+    bgImage: '/salon/hero-1600.jpg',
+    bgImageWidth: 1600, bgImageHeight: 1200,
+    bgImageAlt: '自然光の入る店内。木の鏡台と椅子',
+    bgImageSizes: '(max-width: 768px) 100vw, 62vw',
+    bgImageSources: [
+      { type: 'image/avif', srcset: '/salon/hero-800.avif 800w, /salon/hero-1600.avif 1600w' },
+      { type: 'image/webp', srcset: '/salon/hero-800.webp 800w, /salon/hero-1600.webp 1600w' },
+    ],
+  });
+  assert.match(h, /<picture><source type="image\/avif" srcset="[^"]*hero-1600\.avif 1600w" sizes="[^"]*">/);
+  assert.match(h, /<source type="image\/webp"/);
+  assert.match(h, /alt="自然光の入る店内。木の鏡台と椅子"/, '写真の説明が見出しの使い回しになっている');
+  // 対応していないブラウザ向けに、元のjpgが最後に残る
+  assert.match(h, /<img src="\/salon\/hero-1600\.jpg"/);
+});
+
+test('スマホだけ別の切り取りを配れる', () => {
+  const h = renderHero({
+    bgImage: '/salon/hero-1600.jpg',
+    bgImageSources: [{ type: 'image/webp', media: '(max-width: 768px)', srcset: '/salon/hero-sp-780.webp 780w' }],
+  });
+  assert.match(h, /media="\(max-width: 768px\)"/);
+});
+
+test('分割ヒーローは写真が主役、文字が脇（62% / 38%）', () => {
+  const h = renderHero({ bgImage: '/salon/hero.jpg' });
+  assert.match(h, /\.lhp-hero-split-img\{flex:1 1 62%/);
+  assert.match(h, /\.lhp-hero-split \.lhp-hero-content\{flex:1 1 38%/);
+  // スマホは縦に分ける。16:9だと椅子や鏡が切れる
+  assert.match(h, /@media\(max-width:768px\)\{[^}]*flex-direction:column/);
+  assert.match(h, /\.lhp-hero-split-img\{width:100%;flex:none;aspect-ratio:4\/3\}/);
+});
+
+test('写真が無いときは、これまでどおり空の枠になる', () => {
+  const h = renderHero({});
+  assert.match(h, /<div class="lhp-hero-split-img" style="background:rgba\(255,255,255,0\.12\)"><\/div>/);
+  assert.equal(/<picture>/.test(h), false);
+});
+
+test('左右に分けるヒーローは、地色を暗く覆わない', () => {
+  // 文字を写真に重ねるヒーローは読みやすさのために暗く落とす。
+  // 分割ヒーローは文字が地色の上に乗るので、暗くすると
+  // 明るい地色を選んでいても灰色に濁る。
+  const split = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: { heading: '見出し', subheading: 'サブ', ctaText: '予約', ctaLink: '#booking', bgColor: '#faf7f2', textColor: '#3a2e25', bgImage: '/hero.jpg' } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const, designStyle: 'elegant' }, 'テスト店',
+  );
+  assert.match(split, /\.lhp-hero:not\(\.lhp-hero-split\)::before\{[^}]*linear-gradient\(180deg,rgba\(0,0,0,\.3\)/);
+  assert.equal(/[^)]\.lhp-hero::before\{content:'';position:absolute;inset:0;background:linear-gradient\(180deg,rgba\(0,0,0/.test(split), false,
+    '分割ヒーローにも暗い覆いがかかっている');
+});
+
+test('Cookieの帯が出ている間も、固定予約ボタンが隠れない', () => {
+  // どちらも画面下に固定で出る。帯のほうが手前（z-index 9999）なので、
+  // 位置を動かさないと予約ボタンが帯の下に隠れて押せない。
+  assert.match(booking, /\.lhp-sticky-cta\{[^}]*bottom:var\(--lhp-cookie-h,0px\)/,
+    '固定予約ボタンが帯のぶん持ち上がらない');
+  assert.match(booking, /shiftFixed\(b\.offsetHeight\)/, '帯の高さを測っていない');
+  assert.match(booking, /function dismiss\(val\)\{[\s\S]{0,220}?shiftFixed\(0\)/,
+    '帯を閉じたあとに位置が戻らない');
+});
+
+test('スマホの固定予約ボタンは、ビルダーの画面から切り替えられる', () => {
+  // JSONに書けるだけでは、利用者は使えない。
+  const builder = readFileSync(new URL('../app/laruHP/builder/page.tsx', import.meta.url), 'utf8');
+  assert.match(builder, /id="bk-sticky-cta"[\s\S]{0,200}?checked=\{!!d\.stickyCta\}/,
+    'ビルダーに切り替えが無い');
+  assert.match(builder, /onDataChange\(block\.id, \{ \.\.\.d, stickyCta: e\.target\.checked \}\)/,
+    '切り替えがブロックのデータに保存されない');
+  assert.match(builder, /id="bk-sticky-cta-text"[\s\S]{0,220}?stickyCtaText: e\.target\.value/,
+    '文言を変えられない');
+});
+
+// ── 共通の変更が、ほかのテンプレートを崩していないこと ──
+
+test('どの業種テンプレートも、これまでどおり組み上がる', async () => {
+  const { INDUSTRY_TEMPLATES } = await import('../lib/templates.ts');
+  for (const [key, tpl] of Object.entries(INDUSTRY_TEMPLATES) as [string, { blocks: unknown[]; fontFamily: string; designStyle: string }][]) {
+    const page = { id: 'home', name: 'ホーム', path: '/', blocks: tpl.blocks as never, seo };
+    for (const heroLayout of ['center', 'left', 'split'] as const) {
+      const html = exportToHTML([page] as never, seo,
+        { ...settings, heroLayout, designStyle: tpl.designStyle, fontFamily: tpl.fontFamily } as never,
+        `${key}テスト`);
+      assert.ok(html.length > 3000, `${key}/${heroLayout}: 組み上がっていない`);
+      assert.match(html, /<\/html>/, `${key}/${heroLayout}: HTMLが閉じていない`);
+      // 文字を写真に重ねるヒーローでは、これまでどおり暗く落とす
+      if (heroLayout !== 'split' && tpl.designStyle === 'elegant') {
+        assert.match(html, /\.lhp-hero:not\(\.lhp-hero-split\)::before/, `${key}: 覆いが消えている`);
+      }
+      // 固定予約ボタンは、設定していないテンプレートには出ない
+      assert.equal(/lhp-sticky-cta"/.test(html), false, `${key}/${heroLayout}: 設定していない固定ボタンが出ている`);
+      // 写真無しのヒーローで <picture> を作らない
+      assert.equal(/<picture><\/picture>/.test(html), false, `${key}/${heroLayout}: 空のpictureが出ている`);
+    }
+  }
 });

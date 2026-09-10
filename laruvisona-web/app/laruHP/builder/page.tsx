@@ -2616,6 +2616,24 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     onChange={e => onDataChange(block.id, { ...d, timeSlots: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })}
                     className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
                 </label>
+                {/* スマホで画面下に出しておく予約ボタン。
+                    公開サイトでは #booking へ入るリンクとして出る。 */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input id="bk-sticky-cta" type="checkbox" checked={!!d.stickyCta}
+                    onChange={e => onDataChange(block.id, { ...d, stickyCta: e.target.checked })}
+                    className="w-4 h-4 accent-sky-500" />
+                  <span className="text-slate-300">スマホの画面下に予約ボタンを出す</span>
+                </label>
+                {!!d.stickyCta && (
+                  <label className="block">
+                    <span className="text-slate-400 block mb-1">そのボタンの文言</span>
+                    <input id="bk-sticky-cta-text" type="text" value={(d.stickyCtaText as string) || ''}
+                      placeholder={(d.buttonText as string) || 'ご予約へ'}
+                      onChange={e => onDataChange(block.id, { ...d, stickyCtaText: e.target.value })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white" />
+                    <div className="text-slate-600 text-[10px] mt-1">空欄なら送信ボタンと同じ文言になります</div>
+                  </label>
+                )}
                 <label className="block">
                   <span className="text-slate-400 block mb-1">サービス種別（カンマ区切り）</span>
                   <input type="text" value={((d.serviceTypes as string[]) || []).join(', ')} placeholder="初回相談, フォロー"
