@@ -70,6 +70,7 @@ npx next start -p 3300 &
 | `delivery-check.mjs` | **普通に起動しただけで画像が配信されるか**（srcset で実際に選ばれた1枚まで） | 追跡されているファイルだけの取得から `next build` → `next start` |
 | `concurrent-save-check.mjs` | 設定の一部保存が、**あいだに入った別の更新を消さないか** | 実API。偽DB側で読み取りと書き込みの隙間に更新を差し込む |
 | `studio-check.mjs` | 制作画面の通し（きく→えらぶ→編集→保存→読み直し→公開）と、保存失敗時に公開させないこと | 実ブラウザ。保存失敗は保存先を実際に失敗させる |
+| `republish-safety-check.mjs` | 一括再生成を**絞れる・戻せる**こと（控え→再生成→書き戻し） | 実API。`server.js` の起動条件も見る |
 
 ```bash
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/publish-check.mjs --port 3300
@@ -81,6 +82,7 @@ node docs/reference-sites/salon/heading-check.mjs --url http://127.0.0.1:3300/hp
 node docs/reference-sites/salon/concurrent-save-check.mjs --port 3300
 node docs/reference-sites/salon/studio-check.mjs --port 3300
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/delivery-check.mjs --port 3300
+ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/republish-safety-check.mjs --port 3300
 ```
 
 ### 取得したままの状態で確かめる

@@ -200,9 +200,21 @@ app.prepare().then(() => {
   setInterval(triggerSequences, 15 * 60 * 1000);
 
   // デプロイ後の一括再公開: html-export の EXPORT_VERSION が上がっていたら、
-  // 古いバージョンの published_html だけを自動再生成（オーナーの手動再公開を不要にする）
+  // 古いバージョンの published_html だけを作り直す。
+  //
+  // これは顧客のサイトの中身を書き換える処理で、生成物はデータベースに残る。
+  // コードを戻しても表示は戻らない。自社ページだけを先に出したいときに、
+  // 起動しただけで全顧客の再生成が始まってしまうと、出す範囲を選べない。
+  //
+  // そのため、既定では走らせない。走らせるのは REPUBLISH_ON_BOOT=1 を
+  // 明示したときだけ。控え（GET /api/admin/published-html-backup）を取ってから
+  // 立てる。手順は docs/rebuild-migration-2026-09-11.md にある。
   async function triggerRepublishOutdated() {
     if (!process.env.ADMIN_SECRET) return;
+    if (process.env.REPUBLISH_ON_BOOT !== '1') {
+      console.log('[republish] 起動時の一括再生成はしない（REPUBLISH_ON_BOOT=1 のときだけ走る）');
+      return;
+    }
     try {
       const r = await fetch(`${SELF}/api/admin/republish-all`, {
         method: 'POST',

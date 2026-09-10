@@ -5,11 +5,22 @@ import { exportToHTML, EXPORT_VERSION } from '@/lib/html-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { redact, logError } from '@/lib/api-error';
 
-// 全公開サイトの published_html を最新の html-export で一括再生成する。
-// html-export.ts を修正した際、各オーナーの手動再公開を待たずに反映させるためのエンドポイント。
-// 認証: 管理者セッション、またはサーバー内部からの Bearer ADMIN_SECRET（server.js の起動時自動実行用）。
-// body: { onlyOutdated?: boolean } — true なら EXPORT_VERSION が古いサイトだけ再生成（起動時はこちら）。
-//       { slug?: string } — そのサイトだけ再生成する。1件だけ作り直したいときに使う。
+// 公開サイトの published_html を、いまの html-export で作り直す。
+//
+// これは**データベースを書き換える処理**である。生成物は行に残るので、
+// コードを戻しただけでは表示は戻らない。だから、
+//   ・起動時に自動で走らせない（REPUBLISH_ON_BOOT を明示したときだけ）
+//   ・走らせる前に、いまの published_html を控えておく
+//     （GET /api/admin/published-html-backup → 保存 → 戻すときは POST で書き戻す）
+//   ・まず1件、次に少数、と範囲を絞れるようにする
+// という順で扱う。手順は docs/rebuild-migration-2026-09-11.md にある。
+//
+// 認証: 管理者セッション、またはサーバー内部からの Bearer ADMIN_SECRET。
+// body:
+//   { onlyOutdated?: boolean } EXPORT_VERSION が古いものだけ
+//   { slug?: string }          そのサイトだけ
+//   { limit?: number }         先頭から件数を絞る（少しずつ出すとき）
+//   { dryRun?: boolean }       書かずに、対象だけ返す
 export async function POST(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const secretOk = !!process.env.ADMIN_SECRET && bearer === process.env.ADMIN_SECRET;
@@ -25,7 +36,8 @@ export async function POST(req: Request) {
     }
   }
 
-  const { onlyOutdated, slug } = await req.json().catch(() => ({})) as { onlyOutdated?: boolean; slug?: string };
+  const { onlyOutdated, slug, limit, dryRun } = await req.json().catch(() => ({})) as
+    { onlyOutdated?: boolean; slug?: string; limit?: number; dryRun?: boolean };
 
   const service = await createServiceClient();
   let query = service
@@ -36,9 +48,20 @@ export async function POST(req: Request) {
   if (onlyOutdated) {
     query = query.not('published_html', 'like', `%<!--lhpv:${EXPORT_VERSION}-->%`);
   }
+  if (typeof limit === 'number' && limit > 0) query = query.limit(Math.floor(limit));
   const { data: sites, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 書かずに、何が対象になるかだけ返す
+  if (dryRun) {
+    return NextResponse.json({
+      version: EXPORT_VERSION,
+      dryRun: true,
+      total: (sites ?? []).length,
+      targets: (sites ?? []).map(s => ({ id: s.id, slug: s.slug, name: s.name })),
+    });
+  }
 
   const results: { id: string; slug: string | null; ok: boolean; error?: string }[] = [];
 
