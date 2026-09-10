@@ -16,7 +16,7 @@
             "data": {
               "heading": "結い庵",
               "subheading": "国立・大学通りの、予約制ヘアサロン。\n朝、鏡の前でうまくいく髪を。",
-              "ctaText": "ご予約・空き状況",
+              "ctaText": "ご予約フォームへ",
               "ctaLink": "#booking",
               "bgColor": "#2a2724",
               "textColor": "#ffffff",
@@ -24,7 +24,7 @@
             }
           },
           {
-            "id": "s-2",
+            "id": "s-lead",
             "type": "heading",
             "data": {
               "text": "切ってから、毎日がはじまる",
@@ -36,7 +36,7 @@
             "id": "s-3",
             "type": "paragraph",
             "data": {
-              "text": "仕上がりの写真がきれいなのは、当たり前だと思っています。\n結い庵が基準にしているのは、そのあとの毎朝です。ご自身で乾かしたときにまとまるか。二か月後に伸びても形が崩れないか。そこから逆算して、切る位置と量を決めます。\n\n一日にお迎えするのは6名まで。担当者が最初から最後までひとりで受け持ちます。カウンセリングに20分いただくのは、髪の話だけでなく、朝にかけられる時間や、いつも使っている道具をうかがうためです。",
+              "text": "仕上がりの写真がきれいなのは、当たり前だと思っています。結い庵が基準にしているのは、そのあとの毎朝です。ご自身で乾かしたときにまとまるか。二か月後に伸びても形が崩れないか。そこから逆算して、切る位置と量を決めます。\n\n一日にお迎えするのは6名まで。担当者が最初から最後までひとりで受け持ちます。カウンセリングに20分いただくのは、髪の話だけでなく、朝にかけられる時間や、いつも使っている道具をうかがうためです。",
               "align": "left"
             }
           },
@@ -58,7 +58,7 @@
                     "前髪の調整は1か月以内なら無料"
                   ],
                   "highlighted": false,
-                  "buttonText": "このメニューで予約",
+                  "buttonText": "このメニューで予約する",
                   "buttonLink": "#booking"
                 },
                 {
@@ -72,7 +72,7 @@
                     "色持ちのためのケアをお渡しします"
                   ],
                   "highlighted": true,
-                  "buttonText": "このメニューで予約",
+                  "buttonText": "このメニューで予約する",
                   "buttonLink": "#booking"
                 },
                 {
@@ -86,7 +86,7 @@
                     "施術時間 約60分"
                   ],
                   "highlighted": false,
-                  "buttonText": "このメニューで予約",
+                  "buttonText": "このメニューで予約する",
                   "buttonLink": "#booking"
                 }
               ]
@@ -162,11 +162,11 @@
             "id": "s-8",
             "type": "before-after",
             "data": {
-              "heading": "広がる髪を、乾かすだけにする",
+              "heading": "イメージ：広がる髪を、乾かすだけにする",
               "beforeImage": "/salon/before.jpg",
               "afterImage": "/salon/after.jpg",
-              "beforeLabel": "来店時",
-              "afterLabel": "施術後"
+              "beforeLabel": "イメージ（施術前）",
+              "afterLabel": "イメージ（施術後）"
             }
           },
           {
@@ -249,7 +249,7 @@
             "data": {
               "mode": "simple",
               "heading": "ご予約",
-              "subtext": "ご希望の日時を第2希望までお知らせください。翌営業日までにご返信します。\nお急ぎの場合はお電話（03-0000-0000）へどうぞ。",
+              "subtext": "ご希望の日時を選んで送ってください。折り返し、空いているお時間をご連絡します。\nお急ぎの場合はお電話（03-0000-0000）へどうぞ。",
               "serviceTypes": [
                 "カット",
                 "カラー＋カット",
@@ -272,7 +272,9 @@
               ],
               "buttonText": "この内容で予約を申し込む",
               "buttonColor": "#8a6a43",
-              "bgColor": "#f7f4ef"
+              "bgColor": "#f7f4ef",
+              "stickyCta": true,
+              "stickyCtaText": "ご予約フォームへ"
             }
           },
           {
@@ -345,10 +347,10 @@
     "globalFooter": {
       "enabled": true,
       "logo": "",
-      "text": "結い庵　東京都国立市中0-0-0 結い庵ビル2F　03-0000-0000",
+      "text": "結い庵（架空のサロン）　東京都国立市中0-0-0 結い庵ビル2F　03-0000-0000　※ LARU HP の見本ページです。実在の店舗ではなく、写真はすべて生成素材です。施術前後の画像はイメージで、実際の施術実績ではありません。",
       "links": [],
       "copyright": "© 結い庵"
     },
-    "customCss": "\n/* 結い庵 — 明朝で組むための調整。\n   顧客が「明朝」を選んだときに、そのまま気持ちよく読める値にしている。 */\n:root{ --yui-ink:#2a2724; --yui-accent:#8a6a43; --yui-cream:#f7f4ef; --yui-line:#e2dcd2; }\n\nbody{ color:var(--yui-ink); background:#fff; }\n\n/* 明朝は線が細い。字間と行送りを広げて、面で読ませる */\n.lhp-section p, .lhp-faq-a, .lhp-price-desc, .lhp-col p{\n  font-size:16.5px; line-height:2.05; letter-spacing:.02em; color:#3b3733;\n}\n@media(max-width:640px){\n  .lhp-section p, .lhp-faq-a, .lhp-col p{ font-size:16px; line-height:1.95; }\n}\n\n/* 読み幅を上限で止める。1440pxで1行が長くなりすぎるのを防ぐ */\n.lhp-section > p, .lhp-section-sub{ max-width:34em; margin-left:auto; margin-right:auto; }\n\n/* 見出し。明朝の縦画を活かして、字間はやや詰める */\n.lhp-section-title{\n  font-size:clamp(21px,3.2vw,27px); letter-spacing:.06em; font-weight:600;\n  color:var(--yui-ink); margin-bottom:.9em;\n}\n.lhp-section-title::after{\n  content:\"\"; display:block; width:34px; height:1px; background:var(--yui-accent);\n  margin:.7em auto 0;\n}\n\n/* 節の間隔。既定は広すぎて、間が抜けて見える */\n.lhp-section{ padding-top:clamp(48px,7vw,80px); padding-bottom:clamp(48px,7vw,80px); }\n\n/* ヒーロー。写真を主役にして、文字は左下に寄せる */\n.lhp-hero{ min-height:clamp(420px,72vh,640px); }\n.lhp-hero-split .lhp-hero-inner{ gap:clamp(24px,4vw,56px); align-items:center; }\n.lhp-hero-split-img{ border-radius:2px; overflow:hidden; aspect-ratio:4/3; }\n.lhp-hero-split-img img{ width:100%; height:100%; object-fit:cover; }\n.lhp-hero h1{ font-size:clamp(34px,6vw,58px); letter-spacing:.14em; font-weight:500; }\n.lhp-hero-sub{ font-size:clamp(14px,2.2vw,17px); line-height:2; letter-spacing:.04em; opacity:.92; }\n.lhp-btn-primary{\n  background:var(--yui-accent); color:#fff; border-radius:2px;\n  padding:16px 30px; letter-spacing:.08em; font-weight:500;\n  min-height:52px; display:inline-flex; align-items:center;\n}\n\n/* 料金表。既定の青はサロンの色ではない */\n.lhp-price-card{ border:1px solid var(--yui-line); border-radius:2px; box-shadow:none; }\n.lhp-price-featured{ background:var(--yui-cream); border-color:var(--yui-accent); color:var(--yui-ink); }\n.lhp-price-featured *{ color:var(--yui-ink) !important; }\n.lhp-price-badge{ background:var(--yui-accent); color:#fff; letter-spacing:.08em; }\n.lhp-price-amount{ font-size:30px; letter-spacing:.02em; }\n.lhp-price-period{ font-size:15px; margin-left:2px; }\n.lhp-price-features li{ font-size:14px; line-height:1.9; }\n.lhp-price-btn{\n  background:var(--yui-accent); color:#fff; border-radius:2px; letter-spacing:.06em;\n  min-height:48px; display:flex; align-items:center; justify-content:center;\n}\n\n/* 写真。4:5で切り、間を詰める */\n.lhp-gallery{ gap:10px; max-width:900px; margin:0 auto; }\n.lhp-gallery-img{ aspect-ratio:4/5; object-fit:cover; border-radius:2px; }\n\n/* スタイリスト。円は小さすぎたので大きくする */\n.lhp-section [style*=\"border-radius:50%\"]{ width:132px !important; height:132px !important; }\n\n/* 営業時間 */\n.lhp-hours{ max-width:420px; margin:0 auto; }\n.lhp-hours th,.lhp-hours td{ padding:12px 10px; border-bottom:1px solid var(--yui-line); }\n.lhp-hours-note{ max-width:34em; margin:1.2em auto 0; font-size:14px; color:#6b645c; }\n\n/* よくある質問 */\n.lhp-faq{ max-width:40em; margin:0 auto; }\n.lhp-faq-item{ border-bottom:1px solid var(--yui-line); }\n.lhp-faq-q{ padding:18px 4px; font-weight:500; letter-spacing:.03em; min-height:56px; }\n\n/* 予約。指で押せる大きさにする */\n#booking input,#booking select,#booking textarea{\n  min-height:52px; font-size:16px; border-radius:2px; border:1px solid var(--yui-line);\n}\n#booking button,.lhp-contact button{\n  min-height:56px; font-size:16px; border-radius:2px; letter-spacing:.08em;\n}\n\n/* 予約への導線をスマホで常に出す */\n@media(max-width:640px){\n  body{ padding-bottom:72px; }\n  .yui-fixed-cta{ display:flex; }\n}\n.yui-fixed-cta{ display:none; }\n"
+    "customCss": "\n/* 結い庵 — 明朝で組むための調整。\n   顧客が「明朝」を選んだときに、そのまま気持ちよく読める値にしている。 */\n:root{ --yui-ink:#2a2724; --yui-accent:#8a6a43; --yui-cream:#f7f4ef; --yui-line:#e2dcd2; }\n\nbody{ color:var(--yui-ink); background:#fff; }\n\n/* 明朝は線が細い。字間と行送りを広げて、面で読ませる */\n.lhp-section p, .lhp-faq-a, .lhp-price-desc, .lhp-col p{\n  font-size:16.5px; line-height:2.05; letter-spacing:.02em; color:#3b3733;\n}\n@media(max-width:640px){\n  .lhp-section p, .lhp-faq-a, .lhp-col p{ font-size:16px; line-height:1.95; }\n}\n\n/* 読み幅を上限で止める。1440pxで1行が長くなりすぎるのを防ぐ */\n.lhp-section > p, .lhp-section-sub{ max-width:34em; margin-left:auto; margin-right:auto; }\n\n/* 見出し。明朝の縦画を活かして、字間はやや詰める */\n.lhp-section-title{\n  font-size:clamp(21px,3.2vw,27px); letter-spacing:.06em; font-weight:600;\n  color:var(--yui-ink); margin-bottom:.9em;\n}\n.lhp-section-title::after{\n  content:\"\"; display:block; width:34px; height:1px; background:var(--yui-accent);\n  margin:.7em auto 0;\n}\n\n/* 節の間隔。既定は広すぎて、間が抜けて見える */\n.lhp-section{ padding-top:clamp(48px,7vw,80px); padding-bottom:clamp(48px,7vw,80px); }\n\n/* ヒーロー。写真を主役にして、文字は左下に寄せる */\n.lhp-hero{ min-height:clamp(420px,72vh,640px); }\n.lhp-hero-split .lhp-hero-inner{ gap:clamp(24px,4vw,56px); align-items:center; }\n.lhp-hero-split-img{ border-radius:2px; overflow:hidden; aspect-ratio:4/3; }\n.lhp-hero-split-img img{ width:100%; height:100%; object-fit:cover; }\n.lhp-hero h1{ font-size:clamp(34px,6vw,58px); letter-spacing:.14em; font-weight:500; }\n.lhp-hero-sub{ font-size:clamp(14px,2.2vw,17px); line-height:2; letter-spacing:.04em; opacity:.92; }\n.lhp-btn-primary{\n  background:var(--yui-accent); color:#fff; border-radius:2px;\n  padding:16px 30px; letter-spacing:.08em; font-weight:500;\n  min-height:52px; display:inline-flex; align-items:center;\n}\n\n/* 料金表。既定の青はサロンの色ではない */\n.lhp-price-card{ border:1px solid var(--yui-line); border-radius:2px; box-shadow:none; }\n.lhp-price-featured{ background:var(--yui-cream); border-color:var(--yui-accent); color:var(--yui-ink); }\n.lhp-price-featured *{ color:var(--yui-ink) !important; }\n.lhp-price-badge{ background:var(--yui-accent); color:#fff; letter-spacing:.08em; }\n.lhp-price-amount{ font-size:30px; letter-spacing:.02em; }\n.lhp-price-period{ font-size:15px; margin-left:2px; }\n.lhp-price-features li{ font-size:14px; line-height:1.9; }\n.lhp-price-btn{\n  background:var(--yui-accent); color:#fff; border-radius:2px; letter-spacing:.06em;\n  min-height:48px; display:flex; align-items:center; justify-content:center;\n}\n\n/* 写真。4:5で切り、間を詰める */\n.lhp-gallery{ gap:10px; max-width:900px; margin:0 auto; }\n.lhp-gallery-img{ aspect-ratio:4/5; object-fit:cover; border-radius:2px; }\n\n/* スタイリスト。円は小さすぎたので大きくする */\n.lhp-section [style*=\"border-radius:50%\"]{ width:148px !important; height:148px !important; margin-bottom:16px !important; }\n.lhp-section [style*=\"border-radius:50%\"] + p{ font-size:16px; letter-spacing:.04em; }\n\n/* 営業時間 */\n.lhp-hours{ max-width:420px; margin:0 auto; }\n.lhp-hours th,.lhp-hours td{ padding:12px 10px; border-bottom:1px solid var(--yui-line); }\n.lhp-hours-note{ max-width:34em; margin:1.2em auto 0; font-size:14px; color:#6b645c; }\n\n/* よくある質問 */\n.lhp-faq{ max-width:40em; margin:0 auto; }\n.lhp-faq-item{ border-bottom:1px solid var(--yui-line); }\n.lhp-faq-q{ padding:18px 4px; font-weight:500; letter-spacing:.03em; min-height:56px; }\n\n/* 予約。指で押せる大きさにする */\n#booking input,#booking select,#booking textarea{\n  min-height:52px; font-size:16px; border-radius:2px; border:1px solid var(--yui-line);\n}\n#booking button,.lhp-contact button{\n  min-height:56px; font-size:16px; border-radius:2px; letter-spacing:.08em;\n}\n\n/* 見出しだけの節は、次の節と余白が二重になる。下の余白を落として1つにまとめる */\n.lhp-section:has(> h2:only-child){ padding-bottom:0; }\n.lhp-section:has(> h2:only-child) + .lhp-section{ padding-top:clamp(20px,2.4vw,28px); }\n.lhp-section:has(> h2:only-child) h2{\n  font-size:clamp(22px,3.4vw,30px); letter-spacing:.1em; font-weight:500; color:var(--yui-ink);\n}\n.lhp-section > p + p{ margin-top:1.4em; }\n\n/* 固定CTAが出ているぶん、最後の節の下を空ける */\n@media(max-width:640px){ .lhp-contact:last-of-type{ padding-bottom:32px; } }\n"
   }
 }
