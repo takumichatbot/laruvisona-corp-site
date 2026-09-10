@@ -82,24 +82,114 @@ export interface RenderDomain {
   verificationStatus?: string;
 }
 
+/**
+ * 照会の結果。
+ *
+ *   { ok: true, domain }        … 対象が見つかった（IDあり）
+ *   { ok: true, domain: null }  … 最後まで見て、確かに存在しない
+ *   { ok: false, ... }          … 確認できなかった
+ *
+ * 「1ページ目に無かった」を「存在しない」にしてはいけない。
+ * 外部IDを保存していない解除では、これを不存在と扱うと
+ * 外部登録を残したままDBの行を消すことになる。
+ */
 export type FindResult =
   | { ok: true; domain: RenderDomain | null }
-  | { ok: false; message: string };
+  | { ok: false; reason: 'api_error' | 'malformed' | 'incomplete'; message: string };
 
-export async function findDomain(cfg: RenderConfig, host: string): Promise<FindResult> {
+interface ListPage {
+  customDomain?: RenderDomain;
+  cursor?: string;
+}
+
+/** 1ページ分の取得。形が違えば「確認できなかった」として返す */
+async function listPage(
+  cfg: RenderConfig,
+  params: Record<string, string>,
+): Promise<{ ok: true; items: ListPage[] } | { ok: false; reason: 'api_error' | 'malformed'; message: string }> {
+  const qs = new URLSearchParams(params).toString();
   let res: Response;
   try {
-    res = await call(cfg, `/services/${cfg.serviceId}/custom-domains?limit=100`);
+    res = await call(cfg, `/services/${cfg.serviceId}/custom-domains?${qs}`);
   } catch {
-    return { ok: false, message: 'Renderに接続できませんでした' };
+    return { ok: false, reason: 'api_error', message: 'Renderに接続できませんでした' };
   }
-  if (!res.ok) return { ok: false, message: `Renderエラー (${res.status})` };
-  const list = await res.json().catch(() => null) as Array<{ customDomain?: RenderDomain }> | null;
-  if (!Array.isArray(list)) return { ok: true, domain: null };
-  const found = list
-    .map(x => x.customDomain)
-    .find(d => d && d.name.toLowerCase() === host.toLowerCase());
-  return { ok: true, domain: found ?? null };
+  if (!res.ok) return { ok: false, reason: 'api_error', message: `Renderエラー (${res.status})` };
+
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    return { ok: false, reason: 'malformed', message: 'Renderの応答を解釈できませんでした' };
+  }
+  if (!Array.isArray(body)) {
+    return { ok: false, reason: 'malformed', message: 'Renderの応答の形式が想定と違います' };
+  }
+  return { ok: true, items: body as ListPage[] };
+}
+
+function pick(items: ListPage[], host: string): RenderDomain | null {
+  const want = host.toLowerCase();
+  for (const it of items) {
+    const d = it?.customDomain;
+    if (d && typeof d.name === 'string' && d.name.toLowerCase() === want) return d;
+  }
+  return null;
+}
+
+const MAX_PAGES = 40;
+const PAGE_SIZE = 100;
+
+/**
+ * ホスト名で、このサービスの登録を確認する。
+ *
+ * 以前は limit=100 の1ページだけを見て、見つからなければ null を返していた。
+ * 登録が101件以上あると2ページ目以降が見えず、「存在しない」と誤判定した。
+ *
+ * まず name フィルタで引き、それで確定できなければ cursor で最後まで辿る。
+ */
+export async function findDomain(cfg: RenderConfig, host: string): Promise<FindResult> {
+  // 1. 名前で絞って引く
+  const byName = await listPage(cfg, { name: host, limit: '20' });
+  if (!byName.ok) return byName;
+  const hit = pick(byName.items, host);
+  if (hit) {
+    if (!hit.id) {
+      // 見つかったがIDが無い。削除対象にできないので「存在しない」とは別にする。
+      return { ok: false, reason: 'incomplete', message: '登録は見つかりましたがIDを取得できませんでした' };
+    }
+    return { ok: true, domain: hit };
+  }
+
+  // 2. name フィルタが効かない場合に備えて、全ページ辿って確かめる。
+  //    「見つからなかった」を返してよいのは、最後まで見たときだけ。
+  let cursor: string | undefined;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const params: Record<string, string> = { limit: String(PAGE_SIZE) };
+    if (cursor) params.cursor = cursor;
+    const r = await listPage(cfg, params);
+    if (!r.ok) return r;
+
+    const found = pick(r.items, host);
+    if (found) {
+      if (!found.id) {
+        return { ok: false, reason: 'incomplete', message: '登録は見つかりましたがIDを取得できませんでした' };
+      }
+      return { ok: true, domain: found };
+    }
+
+    if (r.items.length < PAGE_SIZE) {
+      // 最後のページまで見て、存在しないことを確認できた
+      return { ok: true, domain: null };
+    }
+    const last = r.items[r.items.length - 1];
+    if (!last?.cursor) {
+      // まだ続きがあるはずなのに、次を辿る手がかりが無い
+      return { ok: false, reason: 'incomplete', message: 'Renderの一覧を最後まで確認できませんでした' };
+    }
+    cursor = last.cursor;
+  }
+  return { ok: false, reason: 'incomplete', message: 'Renderの一覧が想定より多く、確認を打ち切りました' };
 }
 
 /**

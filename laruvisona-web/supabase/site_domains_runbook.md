@@ -43,6 +43,9 @@
 | K | 登録開始の記録は行の同一性・世代・状態を見る |
 | L | 登録途中のままサイトごと削除されても記録が残る |
 | M | 記録できなかった外部登録を帰属付きで積める |
+| N | 解除の完了が、未回収の登録記録を消してしまわない |
+| O | キューの完了は1件ずつ、実際に処理できたものだけ |
+| P | 外部の後始末が確認できたときは積み残しを作らない |
 
 `site_domains_permission_check.sql` は権限を確認する。
 どちらも「期待どおり失敗すること」が合格条件で、
@@ -127,7 +130,7 @@ drop table public.domain_release_queue;
 | 担当 | 齋藤（外部サービスの管理権限が要るため） |
 | 頻度 | 週1回。加えて、画面で「解除待ち」が出たと連絡があったとき |
 | 手順 | 1. `select kind, site_id, host, render_domain_id, verification_token, operation_epoch, attempts, last_error from public.domain_release_queue where resolved_at is null order by requested_at;`<br>2. 各ホストについて Render の custom domains 一覧を確認する<br>3. 一覧に**そのホスト名で**存在し、当社サービスの登録であることを確認してから解除する<br>4. `update public.domain_release_queue set resolved_at = now() where id = ...;` |
-| 完了記録 | `resolved_at` を入れる。入っていないものは未完了として次回も出る |
+| 完了記録 | `select public.laruhp_domain_resolve_queue_entry('<キューのid>', '<何をしたか>');` で1件ずつ完了にする。**ホスト名でまとめて `resolved_at` を入れない**（別処理の未回収まで消える） |
 | 再確認 | 解除後に `dig` などでそのホストが当社へ向いていないことを確認する |
 
 注意: キューに古い世代のホストが残っている状態で、同じホストが別のサイトに
@@ -139,6 +142,10 @@ drop table public.domain_release_queue;
 select count(*) from public.site_domains where host = '<対象ホスト>';
 ```
 
+新しい申請があるだけでは、古い外部IDの回収を完了扱いにしない。
+キューの `render_domain_id` が示す**その外部ID自体**を Render で確認し、
+削除できた（または確実に存在しない）ことを確かめてから完了にする。
+
 行が存在する場合は、`verification_token` を突き合わせる。
 キューの `verification_token` と現在の行の値が**違えば別の申請**なので、
 解除してはいけない。その場合はキューの行に
@@ -148,7 +155,7 @@ select count(*) from public.site_domains where host = '<対象ホスト>';
 
 | kind | 意味 | やること |
 |---|---|---|
-| `release` | 解除の積み残し | 上の手順で外部から解除する |
+| `release` | 解除の積み残し（外部の状態が未確認のまま行を消した） | 上の手順で外部から解除する |
 | `orphan_registration` | 外部登録は通ったが、その記録をDBに残せなかった | 同じ手順で外部から解除する（使われていない登録なので消してよい）。`site_domains` に同じ `verification_token` の行があれば、そちらが正なので消さない |
 
 ## 外部APIの設定が失われた場合

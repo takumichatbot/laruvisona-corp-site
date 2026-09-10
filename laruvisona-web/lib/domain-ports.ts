@@ -43,13 +43,18 @@ export const renderPort: RenderPort = {
     const cfg = renderConfig();
     if (!cfg) return { ok: false as const, message: 'Renderが未設定です' };
     const r = await findDomain(cfg, host);
+    // 「確認できなかった」を「存在しない」に変換しない。
+    // 1ページ目に無かった・応答が壊れていた・IDが取れなかった、はすべて失敗。
     if (!r.ok) return { ok: false as const, message: r.message };
-    if (!r.domain) return { ok: true as const, domainId: null };
-    // 名前が完全に一致したものだけを対象にする
+    if (!r.domain) {
+      // 最後まで見て存在しないことを確認できた場合だけ、ここに来る
+      return { ok: true as const, domainId: null };
+    }
     if (r.domain.name.toLowerCase() !== host.toLowerCase()) {
       return { ok: false as const, message: '解除対象のホスト名が一致しません' };
     }
-    return { ok: true as const, domainId: r.domain.id ?? null };
+    if (!r.domain.id) return { ok: false as const, message: '解除対象のIDを取得できませんでした' };
+    return { ok: true as const, domainId: r.domain.id };
   },
 
   async unregisterById(domainId) {

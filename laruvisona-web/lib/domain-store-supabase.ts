@@ -9,13 +9,13 @@
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import type {
-  DomainStore, DomainRecord, OwnedSite, ApplyCheckInput, ApplyCheckResult,
+  DomainStore, DomainRecord, OwnedSite, ApplyCheckInput, ApplyCheckResult, QueueEntry,
 } from '@/lib/domain-service';
 import type { DomainStatus } from '@/lib/domain';
 
 const COLS = 'id, site_id, host, status, verification_token, render_domain_id, last_error, last_checked_at, operation_epoch, render_register_started_at, ownership_verified_at, external_registration_owned, release_operation_id, release_lease_until';
 
-type Rpc = { ok?: boolean; reason?: string; switched?: boolean; row?: DomainRecord };
+type Rpc = { ok?: boolean; reason?: string; switched?: boolean; row?: DomainRecord; entries?: QueueEntry[] };
 
 export async function createDomainStore(): Promise<DomainStore> {
   const user = await createClient();
@@ -116,9 +116,10 @@ export async function createDomainStore(): Promise<DomainStore> {
       return { ok: true as const, row: data.row };
     },
 
-    async finishRelease(siteId, host, fencingToken, epoch) {
+    async finishRelease(siteId, host, fencingToken, epoch, externalSettled) {
       const { data, error } = await rpc('laruhp_domain_finish_release', {
         p_site_id: siteId, p_host: host, p_fencing_token: fencingToken, p_epoch: epoch,
+        p_external_settled: externalSettled,
       });
       if (error) return { ok: false, message: error };
       if (!data?.ok) return { ok: false, message: data?.reason ?? 'unknown' };
@@ -171,10 +172,26 @@ export async function createDomainStore(): Promise<DomainStore> {
     },
 
     async enqueueOrphanRegistration(siteId, host, renderDomainId, fencingToken, epoch, message) {
-      await rpc('laruhp_domain_enqueue_orphan_registration', {
+      // 失敗を握りつぶさない。ここが積めないと、作った外部登録を追えなくなる。
+      const { data, error } = await rpc('laruhp_domain_enqueue_orphan_registration', {
         p_site_id: siteId, p_host: host, p_render_domain_id: renderDomainId,
         p_fencing_token: fencingToken, p_epoch: epoch, p_message: message,
       });
+      if (error) return { ok: false, message: error };
+      if (!data?.ok) return { ok: false, message: data?.reason ?? 'unknown' };
+      return { ok: true, id: (data as { id?: string }).id };
+    },
+
+    async pendingQueue(host) {
+      const { data } = await rpc('laruhp_domain_pending_queue', { p_host: host });
+      const entries = (data as { entries?: QueueEntry[] } | null)?.entries;
+      return Array.isArray(entries) ? entries : [];
+    },
+
+    async resolveQueueEntry(id, note) {
+      const { data, error } = await rpc('laruhp_domain_resolve_queue_entry', { p_id: id, p_note: note });
+      if (error) return { ok: false };
+      return { ok: !!data?.ok };
     },
 
     async isAgencyAdminHost(host) {

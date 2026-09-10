@@ -450,13 +450,15 @@ create or replace function public.laruhp_domain_enqueue_orphan_registration(
   p_epoch bigint,
   p_message text
 ) returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
 begin
   insert into public.domain_release_queue (
     site_id, host, render_domain_id, verification_token, operation_epoch,
     external_registration_owned, kind, last_error)
   values (p_site_id, p_host, p_render_domain_id, p_fencing_token, p_epoch, true,
-          'orphan_registration', p_message);
-  return jsonb_build_object('ok', true);
+          'orphan_registration', p_message)
+  returning id into v_id;
+  return jsonb_build_object('ok', true, 'id', v_id);
 end;
 $$;
 
@@ -465,7 +467,12 @@ create or replace function public.laruhp_domain_finish_release(
   p_site_id uuid,
   p_host text,
   p_fencing_token text,
-  p_epoch bigint
+  p_epoch bigint,
+  -- 外部側の後始末が「実際に確認できた」か。
+  -- 削除できた、または確実に存在しないと確認できた場合だけ true。
+  -- 「照会したら見つからなかった」だけでは true にしない
+  --（登録が進行中で、あとから出来上がることがある）。
+  p_external_settled boolean
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_row public.site_domains%rowtype;
 begin
@@ -477,19 +484,57 @@ begin
      or v_row.operation_epoch is distinct from p_epoch then
     return jsonb_build_object('ok', false, 'reason', 'gone');
   end if;
-  -- 解除中でない行（＝別の申請として作り直された行）は消さない
   if v_row.status <> 'release_pending' then
     return jsonb_build_object('ok', false, 'reason', 'not_releasing');
   end if;
 
-  perform set_config('laruhp.release_done', '1', true);
+  -- 外部の後始末が確認できていない行を消すときは、削除の記録を必ず残す。
+  -- （フラグを立てないので BEFORE DELETE トリガがキューへ積む）
+  if p_external_settled then
+    perform set_config('laruhp.release_done', '1', true);
+  end if;
   delete from public.site_domains where id = v_row.id;
   perform set_config('laruhp.release_done', '', true);
 
-  update public.domain_release_queue set resolved_at = now()
-   where host = p_host and resolved_at is null;
+  -- キューの完了は、ここではしない。
+  -- 以前は host 一致で一括 resolved にしていたため、
+  -- 別処理が積んだ未回収の登録（orphan_registration など）まで
+  -- 消えたことにしていた。完了は
+  -- laruhp_domain_resolve_queue_entry で1件ずつ行う。
 
-  return jsonb_build_object('ok', true);
+  return jsonb_build_object('ok', true, 'external_settled', p_external_settled);
+end;
+$$;
+
+-- キューの1件を完了にする。
+-- 実際に削除できた／確実に存在しないと確認できた外部IDだけを対象にする。
+-- ホスト名だけで一括処理しない。
+create or replace function public.laruhp_domain_resolve_queue_entry(
+  p_id uuid,
+  p_note text
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare v_n int;
+begin
+  update public.domain_release_queue
+     set resolved_at = now(),
+         last_error = coalesce(p_note, last_error),
+         attempts = attempts + 1
+   where id = p_id and resolved_at is null;
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('ok', v_n > 0);
+end;
+$$;
+
+-- そのホスト・その申請に紐づく未処理のキューを取り出す（回収処理用）。
+create or replace function public.laruhp_domain_pending_queue(
+  p_host text
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare v jsonb;
+begin
+  select coalesce(jsonb_agg(to_jsonb(q)), '[]'::jsonb) into v
+    from public.domain_release_queue q
+   where q.host = p_host and q.resolved_at is null;
+  return jsonb_build_object('ok', true, 'entries', v);
 end;
 $$;
 
@@ -536,7 +581,9 @@ begin
   foreach f in array array[
     'laruhp_domain_apply_check(uuid,text,text,bigint,text,text,text,boolean)',
     'laruhp_domain_set_primary(uuid,text,text,bigint)',
-    'laruhp_domain_finish_release(uuid,text,text,bigint)',
+    'laruhp_domain_finish_release(uuid,text,text,bigint,boolean)',
+    'laruhp_domain_resolve_queue_entry(uuid,text)',
+    'laruhp_domain_pending_queue(text)',
     'laruhp_domain_mark_release_failed(uuid,text,bigint,text)',
     'laruhp_domain_mark_register_started(uuid,text,text,bigint)',
     'laruhp_domain_begin_release(uuid,text,int)',
@@ -554,6 +601,7 @@ begin
   execute 'drop function if exists public.laruhp_domain_mark_release_failed(uuid,text,text)';
   execute 'drop function if exists public.laruhp_domain_mark_register_started(uuid,text,bigint)';
   execute 'drop function if exists public.laruhp_domain_begin_release(uuid,text)';
+  execute 'drop function if exists public.laruhp_domain_finish_release(uuid,text,text,bigint)';
 end;
 $$;
 

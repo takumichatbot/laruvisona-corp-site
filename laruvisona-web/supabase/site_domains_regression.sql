@@ -59,7 +59,7 @@ begin
 
   -- 4. 解除の後始末（新しい世代で行う）
   select operation_epoch into v_epoch from public.site_domains where host='a.example.com';
-  v_finish := public.laruhp_domain_finish_release(v_site,'a.example.com','token-a',v_epoch);
+  v_finish := public.laruhp_domain_finish_release(v_site,'a.example.com','token-a',v_epoch,true);
   perform pg_temp.expect((v_finish->>'ok')::boolean, 'A: 解除の後始末は成功する');
 
   -- 5. 対応する行が無い custom_domain が残らないこと（レビューで再現された状態）
@@ -118,7 +118,7 @@ begin
   -- 1. 解除を開始して完了させる
   perform public.laruhp_domain_begin_release(v_site,'c.example.com');
   select operation_epoch into v_epoch_old from public.site_domains where host='c.example.com';
-  perform public.laruhp_domain_finish_release(v_site,'c.example.com','token-c1',v_epoch_old);
+  perform public.laruhp_domain_finish_release(v_site,'c.example.com','token-c1',v_epoch_old,true);
   perform pg_temp.expect(not exists(select 1 from public.site_domains where host='c.example.com'), 'C: 解除で行が消える');
 
   -- 2. 同じホストを新しいトークンで登録し直し、主URLにする
@@ -174,7 +174,7 @@ begin
   insert into public.site_domains(site_id,host,verification_token,status)
   values (v_site,'e.example.com','t-e','connected');
   select operation_epoch into v_e from public.site_domains where host='e.example.com';
-  v_r := public.laruhp_domain_finish_release(v_site,'e.example.com','t-e',v_e);
+  v_r := public.laruhp_domain_finish_release(v_site,'e.example.com','t-e',v_e,true);
   perform pg_temp.expect((v_r->>'ok')::boolean is false, 'E: 解除中でない行は消せない');
   perform pg_temp.expect(v_r->>'reason'='not_releasing', 'E: 理由が返る');
   perform pg_temp.expect(exists(select 1 from public.site_domains where host='e.example.com'), 'E: 行が残る');
@@ -300,7 +300,7 @@ begin
   v_op_a := (v_row->>'release_operation_id')::uuid;
 
   -- 解除Bが完了して行が消える
-  perform public.laruhp_domain_finish_release(v_site,'j.example','t-j1',v_epoch_a);
+  perform public.laruhp_domain_finish_release(v_site,'j.example','t-j1',v_epoch_a,true);
   perform pg_temp.expect(not exists(select 1 from public.site_domains where host='j.example'),
     'J: 先行の解除で行が消える');
 
@@ -396,4 +396,108 @@ begin
 end;
 $$;
 
-select 'ALL SQL REGRESSION SCENARIOS PASSED (A-M)' as result;
+
+
+-- ════════════════════════════════════════════════════════════
+-- 追加N: 解除の完了が、未回収の登録記録を消してしまわない
+--        （監督が再現した順序：登録開始 → 解除側が「登録なし」を取得 →
+--          遅れて登録成功 → 検証の確定が拒否されキューへ → 解除完了）
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000005';
+  v_e bigint; v_q jsonb; v_fin jsonb;
+begin
+  insert into public.sites(id,user_id,name) values (v_site,'00000000-0000-0000-0000-000000000001','n');
+  insert into public.site_domains(site_id,host,verification_token,status)
+  values (v_site,'n.example','t-n','pending_ownership');
+  select operation_epoch into v_e from public.site_domains where host='n.example';
+
+  -- 1. 登録開始を記録して外部へ出る
+  perform public.laruhp_domain_mark_register_started(v_site,'n.example','t-n',v_e);
+
+  -- 2. 解除が始まる（世代が進む）
+  perform public.laruhp_domain_begin_release(v_site,'n.example');
+  select operation_epoch into v_e from public.site_domains where host='n.example';
+
+  -- 3. 遅れて登録が成功したが、検証の確定は世代違いで拒否され、キューへ積まれる
+  perform public.laruhp_domain_enqueue_orphan_registration(
+    v_site,'n.example','provider-late','t-n',1,'検証結果を保存できなかった（gone）');
+  v_q := public.laruhp_domain_pending_queue('n.example');
+  perform pg_temp.expect(jsonb_array_length(v_q->'entries') = 1, 'N: 未回収の登録が1件積まれている');
+
+  -- 4. 解除側は外部を消せていないので、後始末は「未確認」で行う
+  v_fin := public.laruhp_domain_finish_release(v_site,'n.example','t-n',v_e,false);
+  perform pg_temp.expect((v_fin->>'ok')::boolean, 'N: 行の削除自体はできる');
+
+  -- 5. 未回収の記録が消えていないこと（以前はホスト一致で全件resolvedにしていた）
+  v_q := public.laruhp_domain_pending_queue('n.example');
+  perform pg_temp.expect(jsonb_array_length(v_q->'entries') >= 1,
+    'N: 未回収の登録がキューから消えた');
+  perform pg_temp.expect(
+    exists(select 1 from public.domain_release_queue
+            where host='n.example' and kind='orphan_registration'
+              and render_domain_id='provider-late' and resolved_at is null),
+    'N: 遅れて出来た外部登録の記録が残っている');
+
+  -- 6. 外部未確認のまま行を消したことも、別途キューに残る
+  perform pg_temp.expect(
+    exists(select 1 from public.domain_release_queue
+            where host='n.example' and kind='release' and resolved_at is null),
+    'N: 外部未確認で消した記録が残っている');
+end;
+$$;
+
+-- ════════════════════════════════════════════════════════════
+-- 追加O: キューの完了は1件ずつ、実際に処理できたものだけ
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000005';
+  v_id uuid; v_r jsonb;
+begin
+  select id into v_id from public.domain_release_queue
+   where host='n.example' and kind='orphan_registration' and resolved_at is null;
+
+  v_r := public.laruhp_domain_resolve_queue_entry(v_id,'Renderから削除済み');
+  perform pg_temp.expect((v_r->>'ok')::boolean, 'O: 指定した1件を完了にできる');
+  perform pg_temp.expect(
+    (select resolved_at from public.domain_release_queue where id=v_id) is not null,
+    'O: 完了が記録される');
+
+  -- 同じ行を二重に完了にはしない
+  v_r := public.laruhp_domain_resolve_queue_entry(v_id,'再実行');
+  perform pg_temp.expect((v_r->>'ok')::boolean is false, 'O: 二重完了しない');
+
+  -- もう1件（release）は残ったまま
+  perform pg_temp.expect(
+    exists(select 1 from public.domain_release_queue
+            where host='n.example' and kind='release' and resolved_at is null),
+    'O: 別のキューは影響を受けない');
+end;
+$$;
+
+-- ════════════════════════════════════════════════════════════
+-- 追加P: 外部の後始末が確認できた場合は、削除の記録を残さない
+-- ════════════════════════════════════════════════════════════
+do $$
+declare
+  v_site uuid := '10000000-0000-0000-0000-000000000005';
+  v_e bigint; v_before int; v_after int;
+begin
+  insert into public.site_domains(site_id,host,verification_token,status,render_domain_id)
+  values (v_site,'p.example','t-p','connected','provider-p');
+  perform public.laruhp_domain_begin_release(v_site,'p.example');
+  select operation_epoch into v_e from public.site_domains where host='p.example';
+
+  select count(*) into v_before from public.domain_release_queue where host='p.example';
+  perform public.laruhp_domain_finish_release(v_site,'p.example','t-p',v_e,true);
+  select count(*) into v_after from public.domain_release_queue where host='p.example';
+
+  perform pg_temp.expect(v_after = v_before, 'P: 外部を消せたときは積み残しを作らない');
+  perform pg_temp.expect(not exists(select 1 from public.site_domains where host='p.example'),
+    'P: 行は消える');
+end;
+$$;
+
+select 'ALL SQL REGRESSION SCENARIOS PASSED (A-P)' as result;

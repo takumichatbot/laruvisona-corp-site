@@ -100,12 +100,24 @@ export interface DomainStore {
   /** 外部削除の直前に、まだこの処理が有効かを確かめて占有を延長する */
   claimRelease(siteId: string, host: string, epoch: number, operationId: string):
     Promise<{ ok: true; renderDomainId: string | null } | { ok: false; reason: 'gone' | 'stale' | 'error'; message?: string }>;
-  /** 外部登録は通ったが記録できなかった分を、帰属付きで積む */
+  /**
+   * 外部登録は通ったが記録できなかった分を、帰属付きで積む。
+   * ここが失敗すると外部登録を追えなくなるので、結果を返す。
+   */
   enqueueOrphanRegistration(
     siteId: string, host: string, renderDomainId: string,
     fencingToken: string, epoch: number, message: string,
-  ): Promise<void>;
-  finishRelease(siteId: string, host: string, fencingToken: string, epoch: number):
+  ): Promise<{ ok: boolean; id?: string; message?: string }>;
+  /** そのホストの未処理キューを取り出す */
+  pendingQueue(host: string): Promise<QueueEntry[]>;
+  /** キューの1件を完了にする。実際に処理できたものだけ */
+  resolveQueueEntry(id: string, note: string): Promise<{ ok: boolean }>;
+  /**
+   * 解除の後始末。externalSettled は「外部側を実際に消せた、または
+   * 最後まで確認して存在しないと分かった」ときだけ true。
+   * false で消した場合は、削除の記録がキューに残る。
+   */
+  finishRelease(siteId: string, host: string, fencingToken: string, epoch: number, externalSettled: boolean):
     Promise<{ ok: boolean; message?: string }>;
   markReleaseFailed(siteId: string, host: string, epoch: number, message: string): Promise<void>;
   /**
@@ -116,6 +128,15 @@ export interface DomainStore {
     Promise<{ ok: true } | { ok: false; reason: 'gone' | 'stale' | 'releasing' | 'error'; message?: string }>;
   /** そのホストが代理店の管理用ドメインとして既に使われていないか */
   isAgencyAdminHost(host: string): Promise<boolean>;
+}
+
+export interface QueueEntry {
+  id: string;
+  host: string;
+  kind: string;
+  render_domain_id: string | null;
+  verification_token: string | null;
+  operation_epoch: number | null;
 }
 
 export interface DnsPort {
@@ -322,10 +343,15 @@ export async function verifyDomain(
     // ホスト名だけでは後から他用途の登録と区別できないので、
     // 行の同一性・世代・IDを添えて回収へ回す。
     if (registeredNow) {
-      await deps.store.enqueueOrphanRegistration(
+      const queued = await deps.store.enqueueOrphanRegistration(
         args.siteId, host, registeredNow, row.verification_token, row.operation_epoch,
         `検証結果を保存できなかった（${applied.reason}）`,
       );
+      if (!queued.ok) {
+        // 積めなかった＝作った外部登録を追う手がかりが無くなる。
+        // 呼び出し元に伝えて、少なくとも記録に残す。
+        return err(500, `外部登録を作りましたが記録できませんでした。ドメイン ${host} の登録を手動で確認してください`);
+      }
     }
     // 保存できていないなら、成功として返さない。配信先も変えない。
     if (applied.reason === 'gone') {
@@ -435,6 +461,10 @@ export async function releaseDomain(
   // 所有確認も外部登録も通っていない候補は、こちらの記録に外部の登録が無い。
   // 外部には触らず、候補の取消だけにする。
   const external = ownsExternalRegistration(row);
+  /** 実際に削除できた外部ID */
+  let externalDeleted: string | null = null;
+  /** 最後まで確認して、外部に存在しないと確定できたか */
+  let externalConfirmedAbsent = false;
 
   if (external && deps.render.configured()) {
     if (!opId) {
@@ -462,6 +492,22 @@ export async function releaseDomain(
           return err(409, 'このドメインは処理中に状態が変わりました。もう一度お試しください');
         }
         targetId = pinned.renderDomainId;
+      } else if (row.render_register_started_at) {
+        // 照会では見つからなかったが、この行は「登録を呼んだ」記録を持つ。
+        // 登録が進行中で、あとから出来上がる可能性がある。
+        // 「いま無い」を「もう無い」と確定させない。
+        await deps.store.markReleaseFailed(
+          args.siteId, host, epoch,
+          '外部登録の結果が確認できません（登録が進行中の可能性）。あとで再確認してください',
+        );
+        return {
+          ok: true, host, released: false, status: 'release_pending',
+          message: '配信は停止しました。外部登録の結果が確認できないため、あとで再確認します',
+        };
+      }
+      else {
+        // 登録を呼んだ記録も無く、最後まで見て存在しないと確認できた
+        externalConfirmedAbsent = true;
       }
     }
 
@@ -474,6 +520,7 @@ export async function releaseDomain(
       }
       // 3. 固定したIDだけを消す。ホスト名から引き直さない。
       const res = await deps.render.unregisterById(targetId);
+      if (res.ok) externalDeleted = targetId;
       if (!res.ok) {
         await deps.store.markReleaseFailed(args.siteId, host, epoch, res.message);
         return {
@@ -501,7 +548,13 @@ export async function releaseDomain(
     };
   }
 
-  const fin = await deps.store.finishRelease(args.siteId, host, row.verification_token, epoch);
+  // 外部側を実際に片付けられたか。
+  //   - こちらが作った登録ではない（external=false）… 外部に何も無いので settled
+  //   - 削除できた … settled
+  //   - 最後まで見て存在しないと確認できた … settled
+  const externalSettled = !external || externalDeleted !== null || externalConfirmedAbsent;
+
+  const fin = await deps.store.finishRelease(args.siteId, host, row.verification_token, epoch, externalSettled);
   if (!fin.ok) {
     await deps.store.markReleaseFailed(args.siteId, host, epoch, fin.message || 'DB削除に失敗');
     return {
@@ -511,6 +564,18 @@ export async function releaseDomain(
       status: 'release_pending',
       message: '配信は停止しました。記録の削除に失敗したため、あとで再試行できます',
     };
+  }
+
+  // 実際に片付けられたものだけ、キューを完了にする。
+  // ホスト名で一括に完了させると、別処理が積んだ未回収の登録まで
+  // 「処理済み」になってしまう。
+  if (externalDeleted) {
+    const pending = await deps.store.pendingQueue(host);
+    for (const q of pending) {
+      if (q.render_domain_id && q.render_domain_id === externalDeleted) {
+        await deps.store.resolveQueueEntry(q.id, `解除で削除済み（${externalDeleted}）`);
+      }
+    }
   }
 
   return { ok: true, host, released: true, status: 'release_pending' };
