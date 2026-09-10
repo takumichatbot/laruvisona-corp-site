@@ -46,6 +46,22 @@ if ! up "$PORT"; then
   if [ ! -d "$ROOT/.next" ]; then
     echo "先に本番用ビルドを作ってください: npm run build" >&2; exit 2
   fi
+  # ISRの保存済みページを消す。別のデータで一度描画したページが残っていると、
+  # 中身が古いまま返って、原因の分からない失敗になる。
+  #
+  # 消すのは、この検証で使う出力先（$ROOT/.next/cache）の中の
+  # 「ページの保存分」だけ。ビルド成果物や node_modules には触らない。
+  #
+  # これは「まっさらな状態からの検証」のための初期化であって、
+  # 更新が反映されるかどうかを初期化で隠すためのものではない。
+  # 更新→再公開が効くかどうかは、キャッシュを消さずに
+  # docs/reference-sites/salon/owner-publish-check.mjs 側で確かめている。
+  # KEEP_CACHE=yes を付ければ、この初期化をせずに走らせられる。
+  if [ "${KEEP_CACHE:-no}" = "yes" ]; then
+    echo "  （保存済みページを残したまま検証します）"
+  else
+    rm -rf "$ROOT/.next/cache/fetch-cache" "$ROOT/.next/cache/incremental-cache" 2>/dev/null || true
+  fi
   # 参照先を fixture に向ける。実際のSupabaseへは出ない
   (cd "$ROOT" && \
     NEXT_PUBLIC_APP_URL="https://laruvisona.jp" \
