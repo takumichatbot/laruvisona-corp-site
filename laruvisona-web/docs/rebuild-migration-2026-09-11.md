@@ -30,11 +30,11 @@ push・本番SQL・DNS変更・デプロイは行っていない。
 ただし「列を変えない」ことと「データを書かない」ことは別。
 一括再生成は `published_html` を書く。ここが戻しの対象になる。
 
-> **注意: 本番はまだ版3で動いている。**
-> GitHub の `main` は `0d00dfe` のままで、そこでの `EXPORT_VERSION` は **3**。
-> この文書の「7 → 9」は、今回の刷新ぶんだけを見た数字だった。
-> 実際に作り直すと **3 → 9** まで一気に進む。あいだの 3 → 7 で何が変わるかは
-> `docs/ship-plan-2026-09-11.md` の B にある。
+> **注意: この文書の「7 → 9」は、今回の刷新ぶんだけの数字。**
+> GitHub `main`（`0d00dfe`）のコードの `EXPORT_VERSION` は **3**。
+> ただし「コードが3」と「全顧客の保存済みHTMLが v3」は別のことで、後者は未確認。
+> 保存済みの版は、その行を最後に公開したときのコードで決まるので混ざりうる。
+> 数え方と、3 → 7 で何が変わるかは `docs/ship-plan-2026-09-11.md`（4-2 と B）。
 
 ### 再生成で見え方が変わりうる点（7 → 9 のぶん）
 
@@ -85,6 +85,9 @@ curl -H "Authorization: Bearer $ADMIN_SECRET" \
   > backup-$(date +%Y%m%d-%H%M).json
 
 # 2. 何が対象になるかだけ見る（書かない）
+#    ※ここに来る前に、Render で**新版が Live になっている**ことを確かめること。
+#      旧版（0d00dfe）は dryRun を読まず、そのまま全件作り直してしまう。
+#      応答に "dryRun": true が入らなければ旧版なので、すぐ手を止める。
 curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" -H 'content-type: application/json' \
   -d '{"onlyOutdated":true,"dryRun":true}' \
   https://laruvisona.jp/api/admin/republish-all
