@@ -250,7 +250,15 @@ const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
     /* 高さを親に知らせる。分解は transform なので、場所の取り方は変わらない
        （どちらの状態でも同じ高さになる）。 */
     var report = function(){
-      send({ type: 'height', h: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) });
+      /* 見出しが枠のどこから始まるかも知らせる。
+         見せ方によって最初の画面の余白が変わるので（「上質」は広い）、
+         固定の値で上へずらすと、別の見せ方では見出しが枠の外へ出る。 */
+      var h1 = document.querySelector('.lhp-hero h1');
+      send({
+        type: 'height',
+        h: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+        heroTop: h1 ? Math.round(h1.getBoundingClientRect().top + window.scrollY) : null,
+      });
     };
     report();
     window.addEventListener('load', report);
@@ -300,11 +308,16 @@ const SP_H = 2950;
    最初は「完成した見出し＋料金の頭」までにして、操作をすぐ下に置く。 */
 const PC_PEEK = 980;
 const SP_PEEK = 1120;
-/* スマホの組み方は、最初の画面の上に大きな余白がある。
-   そのまま出すと、枠の上半分が空白で埋まってしまう。少し上へずらして、
-   見出しがすぐ目に入るようにする（閉じているあいだだけ）。 */
-const SP_PEEK_TOP = 150;
+/* スマホの組み方は、最初の画面の上に余白がある。そのまま出すと枠の上が
+   空白で埋まるので、上へずらして見出しからを見せる（閉じているあいだだけ）。
+   ずらす量は固定にしない。見せ方によって余白の広さが違い（「上質」は広い）、
+   固定にすると別の見せ方では見出しが枠の外へ出てしまう。
+   見出しの手前にこれだけ残す。 */
+const SP_PEEK_GAP = 24;
 const SWITCH_PX = 700;
+/* 最初に出す見せ方（上質）で、見出しが始まる位置。知らせが来るまでの見当。
+   ここがずれていると、最初の一瞬だけ枠の中身が上下する。 */
+const DEFAULT_HERO_TOP = 148;
 /* 描き終わりの知らせが来ないときでも、ここまで待ったら表に出す。
    （中で例外が起きても、選べないままにしない） */
 const SWAP_TIMEOUT = 2600;
@@ -320,6 +333,8 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
   const [reduced, setReduced] = useState(false);
   const [device, setDevice] = useState<Device>(initialDevice ?? 'pc');
   const [contentTall, setContentTall] = useState(false);
+  /** 入れ物ごとの「見出しが始まる位置」。見せ方で変わる */
+  const [heroTops, setHeroTops] = useState<[number, number]>([DEFAULT_HERO_TOP, DEFAULT_HERO_TOP]);
   /** 予約フォームまで開いた状態か。押されたときだけ開く */
   const [full, setFull] = useState(false);
   const [boxW, setBoxW] = useState(0);
@@ -355,7 +370,9 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
   const frameW = device === 'sp' ? 390 : 1440;
   const fullH = (device === 'sp' ? SP_H : PC_H) + (contentTall ? 600 : 0);
   const contentH = full ? fullH : (device === 'sp' ? SP_PEEK : PC_PEEK);
-  const peekTop = !full && device === 'sp' ? SP_PEEK_TOP : 0;
+  /* スマホは、最初の画面の上の余白を詰めて見出しから見せる。
+     詰める量は、いま出ている見せ方が知らせてきた位置から決める。 */
+  const peekTop = !full && device === 'sp' ? Math.max(0, (heroTops[active] || DEFAULT_HERO_TOP) - SP_PEEK_GAP) : 0;
   const fit = boxW > 0 ? Math.min(1, boxW / frameW) : 0;
   const scale = fit;
 
@@ -511,7 +528,7 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
     const onMessage = (e: MessageEvent) => {
       const idx = frames.current.findIndex(f => f && e.source === f.contentWindow);
       if (idx < 0) return;
-      const d = e.data as { source?: string; type?: string; h?: number; y?: number; gen?: number } | null;
+      const d = e.data as { source?: string; type?: string; h?: number; y?: number; gen?: number; heroTop?: number | null } | null;
       if (!d || d.source !== 'lhp-demo') return;
       const slot = slotsRef.current[idx as 0 | 1];
       if (!slot || d.gen !== slot.gen) return;          // 古い入れ物からの知らせは捨てる
@@ -529,7 +546,18 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
         return;
       }
       // 決めてある高さに収まらないときだけ広げる（ふだんは動かさない）
-      if (d.type === 'height' && typeof d.h === 'number') { setContentTall(d.h > (device === 'sp' ? SP_H : PC_H)); return; }
+      if (d.type === 'height' && typeof d.h === 'number') {
+        setContentTall(d.h > (device === 'sp' ? SP_H : PC_H));
+        if (typeof d.heroTop === 'number') {
+          setHeroTops(prev => {
+            if (prev[idx as 0 | 1] === d.heroTop) return prev;
+            const n: [number, number] = [prev[0], prev[1]];
+            n[idx as 0 | 1] = d.heroTop as number;
+            return n;
+          });
+        }
+        return;
+      }
       if (!isActive) return;
 
       if (d.type === 'goto' && typeof d.y === 'number') {
@@ -582,14 +610,23 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
     <div className="w-full flex flex-col" ref={outerRef}
       data-lhp-demo="" data-lhp-demo-picked={picked} data-lhp-demo-shown={shown} data-lhp-demo-busy={busy ? '1' : '0'}>
 
-      {/* ── 見せ方を選ぶ。操作はこれだけ ───────────────────────── */}
-      <div className="order-2 sm:order-1 mt-4 sm:mt-0 mb-3">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-2">
+      {/* ── 見せ方を選ぶ。操作はこれだけ ─────────────────────────
+          置き場所は**見本のすぐ上**。スマホで見本の後ろに大きな札を縦に
+          積んでいたときは、押した瞬間に見本の見出しと写真が画面の外へ出て、
+          料金欄の下だけが残っていた。値は正しく変わっていても、
+          「選ぶとその場で変わる」ところが見えない。
+          スマホは短い3択にして高さを詰め、説明は選んでいる1案だけを1行で出す。
+          画面を自動で動かして帳尻を合わせることはしない。 */}
+      <div className="order-1 mb-2 sm:mb-3">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1.5 sm:mb-2">
           <span className="text-[12px] font-bold text-slate-700">このお店の見せ方を選ぶ</span>
-          <span className="text-[11px] text-slate-500">写真も文章も料金もそのまま。見た目だけが変わります</span>
+          <span className="text-[11px] text-slate-500">
+            <span className="sm:hidden">写真も文章もそのまま</span>
+            <span className="hidden sm:inline">写真も文章も料金もそのまま。見た目だけが変わります</span>
+          </span>
         </div>
         <div ref={groupRef} role="radiogroup" aria-label="このお店の見せ方" aria-busy={busy}
-          onKeyDown={onGroupKey} className="flex flex-wrap gap-2">
+          onKeyDown={onGroupKey} className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
           {CHOICES.map(c => {
             const on = c.id === picked;
             const waiting = busy && on;
@@ -597,25 +634,32 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
               <button key={c.id} type="button" role="radio" aria-checked={on}
                 tabIndex={on ? 0 : -1}
                 onClick={() => choose(c.id)}
-                className={`text-left rounded-xl border px-3.5 py-2.5 min-h-[56px] transition-colors
+                className={`rounded-xl border px-1.5 py-2 min-h-[48px] transition-colors
+                  sm:text-left sm:px-3.5 sm:py-2.5 sm:min-h-[56px]
                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500
                   ${on ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-500'}`}>
-                <span className="flex items-center gap-2">
+                <span className="flex flex-col items-center gap-1 sm:flex-row sm:items-center sm:gap-2">
                   {/* 押す前に、色の見当がつくようにする */}
                   <span aria-hidden="true" className="inline-flex rounded-full overflow-hidden border border-black/10 shrink-0">
                     {[c.preset.design.bg, c.preset.design.surface, c.preset.design.accent].map((col, k) => (
-                      <span key={k} style={{ background: col }} className="block w-2.5 h-5" />
+                      <span key={k} style={{ background: col }} className="block w-2 h-3 sm:w-2.5 sm:h-5" />
                     ))}
                   </span>
-                  <span className="text-[13px] font-bold">{c.name}</span>
-                  {on && !waiting && <span aria-hidden="true" className="text-[12px]">✓</span>}
-                  {waiting && <span aria-hidden="true" className="text-[11px] font-normal opacity-80">作り直しています…</span>}
+                  <span className="flex items-center gap-1">
+                    <span className="text-[12px] sm:text-[13px] font-bold leading-none">{c.name}</span>
+                    {on && !waiting && <span aria-hidden="true" className="text-[11px] sm:text-[12px] leading-none">✓</span>}
+                    {waiting && <span aria-hidden="true" className="hidden sm:inline text-[11px] font-normal opacity-80">作り直しています…</span>}
+                  </span>
                 </span>
-                <span className={`block text-[11px] mt-0.5 ${on ? 'text-white/70' : 'text-slate-500'}`}>{c.detail}</span>
+                {/* 札ごとの説明はパソコンだけ。スマホは下に1行だけ出す */}
+                <span className={`hidden sm:block text-[11px] mt-0.5 ${on ? 'text-white/70' : 'text-slate-500'}`}>{c.detail}</span>
               </button>
             );
           })}
         </div>
+        <p className="sm:hidden mt-1.5 text-[11px] leading-snug text-slate-500" aria-hidden="true">
+          {busy ? `${pickedChoice.name}に切り替えています…` : `${pickedChoice.name}：${pickedChoice.detail}`}
+        </p>
         <p className="sr-only" role="status">{busy ? `${pickedChoice.name}に切り替えています` : announce}</p>
       </div>
 
@@ -623,12 +667,12 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
         /* 最初の高さは縦横比でCSSに決めさせる。JavaScript が動く前から高さが
            決まるので、読み込みの途中で下の内容が動かない。
            数値は PC_PEEK / SP_PEEK と、上下の余白ぶんに合わせてある。
-           スマホは SP_PEEK_TOP のぶん上へずらすので、その分だけ枠も低くする
+           スマホは見出しの手前まで上へずらすので、その分だけ枠も低くする
            （そろえないと、枠の下に灰色の空きが残る）。
            境目の 700px は SWITCH_PX と同じにすること。
            「予約まで試す」を押して開いたときだけ、実寸で高さを決める
            （押したあとの高さ変更なので、読んでいる途中でずれることはない）。 */
-        className={`order-1 sm:order-2 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden${full ? '' : ' aspect-[390/994] min-[700px]:aspect-[1440/1004]'}`}
+        className={`order-2 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden${full ? '' : ' aspect-[390/994] min-[700px]:aspect-[1440/1004]'}`}
         style={full ? { height: Math.round(contentH * fit) + 24 } : undefined}>
         {!near && (
           <div className="absolute inset-0 grid place-items-center text-[12px] text-slate-400">読み込んでいます…</div>

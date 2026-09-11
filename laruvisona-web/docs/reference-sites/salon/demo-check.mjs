@@ -237,16 +237,80 @@ const rootState = (page) => page.locator(ROOT).evaluate(el => ({
   const peek = await page.evaluate((sel) => Math.round(document.querySelector(sel).parentElement.getBoundingClientRect().height), STAGE);
   check('スマホの冒頭の枠がコンパクト', peek <= 1100, `${peek}px（前は約2730px）`);
 
-  // 選ぶところが、画面のどこにあるか（枠のすぐ下であること）
+  /* 選ぶところの位置。見本の**すぐ上**にあること。
+     見本の後ろに置くと、押した瞬間に見出しと写真が画面の外へ出る。 */
   const order = await page.evaluate((sel) => {
     const stage = document.querySelector(sel).parentElement;
     const group = document.querySelector('[role="radiogroup"]');
-    return { stage: Math.round(stage.getBoundingClientRect().top + window.scrollY),
-             group: Math.round(group.getBoundingClientRect().top + window.scrollY),
-             stageBottom: Math.round(stage.getBoundingClientRect().bottom + window.scrollY) };
+    const sr = stage.getBoundingClientRect(), gr = group.getBoundingClientRect();
+    return { stageTop: Math.round(sr.top + window.scrollY),
+             groupTop: Math.round(gr.top + window.scrollY),
+             groupBottom: Math.round(gr.bottom + window.scrollY),
+             groupH: Math.round(gr.height) };
   }, STAGE);
-  check('スマホでは、完成例を見てから選ぶ並びになっている', order.group > order.stage, `枠 ${order.stage}px / 選択 ${order.group}px`);
-  check('選ぶところが枠のすぐ下にある', order.group - order.stageBottom < 80, `${order.group - order.stageBottom}px`);
+  check('選ぶところが、見本より前にある', order.groupTop < order.stageTop, `選択 ${order.groupTop}px / 枠 ${order.stageTop}px`);
+  check('選ぶところが、見本のすぐ上にある', order.stageTop - order.groupBottom < 60, `${order.stageTop - order.groupBottom}px`);
+  check('選ぶところが高く積み上がっていない', order.groupH <= 90, `${order.groupH}px`);
+
+  // 説明は、選んでいる1案ぶんだけ（3案ぶんを縦に積まない）
+  const details = await page.evaluate(() => {
+    const seen = [];
+    document.querySelectorAll('[role="radiogroup"] [role="radio"] span').forEach(el => {
+      const t = (el.textContent || '').trim();
+      if (/／/.test(t) && el.getBoundingClientRect().height > 0) seen.push(t);
+    });
+    return seen;
+  });
+  check('札ごとの説明を、スマホでは積み上げていない', details.length === 0, `${details.length}件`);
+
+  /* いちばん見たいところ。指で押したとき、
+     操作と、見本の主な変化（見出し・写真）が同じ画面の中にあるか。 */
+  const radios = page.locator('[role="radiogroup"] [role="radio"]');
+  /* 利用者が、デモの頭まで指で送ってきたところ。ここが自然な位置。
+     検査のために都合よく動かさない（押したあとも動かさない）。 */
+  await page.evaluate(() => document.querySelector('[data-lhp-demo]').scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(500);
+  const tapHeight = await radios.nth(2).evaluate(el => Math.round(el.getBoundingClientRect().height));
+  check('押すところが指で届く大きさ（3択）', tapHeight >= 44, `${tapHeight}px`);
+
+  const b0 = await frameState(page);
+  const yBefore = await page.evaluate(() => Math.round(window.scrollY));
+  await radios.nth(2).tap();
+  await page.waitForTimeout(1800);
+  const yAfter = await page.evaluate(() => Math.round(window.scrollY));
+  check('押しても画面を勝手に動かしていない', Math.abs(yAfter - yBefore) <= 2, `${yBefore} → ${yAfter}`);
+
+  const seenTogether = await page.evaluate((sel) => {
+    const f = document.querySelector(sel);
+    const g = document.querySelector('[role="radiogroup"]');
+    const fr = f.getBoundingClientRect(), gr = g.getBoundingClientRect();
+    /* 枠は overflow:hidden なので、入れ物の上下にはみ出した分は見えていない。
+       「画面の中にある」は、画面と**枠の見えている範囲**の両方で見る。 */
+    const sr = f.parentElement.getBoundingClientRect();
+    const m = new DOMMatrix(getComputedStyle(f).transform);
+    return { fTop: fr.top, scale: m.a, gTop: gr.top, gBottom: gr.bottom, vh: window.innerHeight,
+             stageTop: sr.top, stageBottom: sr.bottom };
+  }, STAGE);
+  const inFrame = await page.locator(STAGE).contentFrame().locator('html').evaluate(() => {
+    const h = document.querySelector('.lhp-hero h1');
+    const img = document.querySelector('.lhp-hero-split-img img') || document.querySelector('.lhp-hero img');
+    const r = (el) => el ? { top: el.getBoundingClientRect().top, bottom: el.getBoundingClientRect().bottom } : null;
+    return { h: r(h), img: r(img) };
+  });
+  const toPage = (v) => seenTogether.fTop + v * seenTogether.scale;
+  const top = Math.max(0, seenTogether.stageTop), bottom = Math.min(seenTogether.vh, seenTogether.stageBottom);
+  const visible = (o) => !!o && toPage(o.top) >= top - 1 && toPage(o.bottom) <= bottom + 1;
+  check('押したとき、操作が画面の中にある',
+    seenTogether.gTop >= -1 && seenTogether.gBottom <= seenTogether.vh,
+    `${Math.round(seenTogether.gTop)}〜${Math.round(seenTogether.gBottom)} / 画面 ${seenTogether.vh}`);
+  check('押したとき、見本の見出しも同じ画面の中にある', visible(inFrame.h),
+    inFrame.h ? `見出し ${Math.round(toPage(inFrame.h.top))}〜${Math.round(toPage(inFrame.h.bottom))}px（見えている範囲 ${Math.round(top)}〜${Math.round(bottom)}）` : '見出しが取れない');
+  check('押したとき、見本の写真も同じ画面の中にある', visible(inFrame.img),
+    inFrame.img ? `写真 ${Math.round(toPage(inFrame.img.top))}〜${Math.round(toPage(inFrame.img.bottom))}px` : '写真が取れない');
+  const b1 = await frameState(page);
+  check('その場で見た目が変わっている', b1.accent !== b0.accent, `${b0.accent} → ${b1.accent}`);
+  check('内容は変わっていない', b1.prices === b0.prices && b1.heading === b0.heading);
+  if (args.shots) await page.screenshot({ path: `${args.shots}/demo-sp-tap.png` });
 
   const fit = await page.evaluate((sel) => {
     const f = document.querySelector(sel);
@@ -273,14 +337,6 @@ const rootState = (page) => page.locator(ROOT).evaluate(el => ({
   });
   check('指で押せる大きさになっている', small.length === 0, small.slice(0, 4).join(' / '));
 
-  // スマホでも選べる
-  const radios = page.locator('[role="radiogroup"] [role="radio"]');
-  const b0 = await frameState(page);
-  await radios.nth(2).tap();
-  await page.waitForTimeout(1800);
-  const b1 = await frameState(page);
-  check('スマホでも、選ぶと見た目が変わる', b1.accent !== b0.accent, `${b0.accent} → ${b1.accent}`);
-  check('スマホでも内容は変わらない', b1.prices === b0.prices && b1.heading === b0.heading);
   if (args.shots) await page.screenshot({ path: `${args.shots}/demo-sp.png`, fullPage: false });
   check('画面の例外が出ていない（スマホ）', errs.length === 0, errs.slice(0, 2).join(' / '));
   await ctx.close();

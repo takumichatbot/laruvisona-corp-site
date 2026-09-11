@@ -29,7 +29,7 @@ async function ctxFor(v, video) {
   const ctx = await browser.newContext({
     viewport: { width: v.width, height: v.height }, deviceScaleFactor: v.dpr, locale: 'ja-JP',
     hasTouch: v.width < 700,
-    ...(video ? { recordVideo: { dir: `${args.out}/video-${v.key}`, size: { width: v.width, height: v.height } } } : {}),
+    ...(video ? { recordVideo: { dir: `${args.out}/video-${typeof video === 'string' ? video : v.key}`, size: { width: v.width, height: v.height } } } : {}),
   });
   await ctx.route(BLOCK, r => r.abort());
   return ctx;
@@ -113,6 +113,27 @@ if (args.video === 'yes') {
     await ctx.close();
     console.log(`video-${v.key}/`);
   }
+}
+
+/* ── 4. スマホで「指で選ぶ → 見本が変わる」だけを撮る（スクロールしない） ── */
+if (args.video === 'yes') {
+  const v = VIEWS[1];
+  const ctx = await ctxFor(v, 'sp-tap');
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/laruHP`, { waitUntil: 'load' });
+  await page.waitForTimeout(2600);
+  // デモの頭まで送ったところで止める。以降は画面を動かさない
+  await page.evaluate(() => document.querySelector('[data-lhp-demo]').scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(1600);
+  const y0 = await page.evaluate(() => Math.round(window.scrollY));
+  const radios = page.locator('[role="radiogroup"] [role="radio"]');
+  for (const i of [2, 1, 0]) {
+    await radios.nth(i).tap();
+    await page.waitForTimeout(2800);
+  }
+  const y1 = await page.evaluate(() => Math.round(window.scrollY));
+  console.log(`video-sp-tap/  （スクロール ${y0} → ${y1}）`);
+  await ctx.close();
 }
 
 await browser.close();

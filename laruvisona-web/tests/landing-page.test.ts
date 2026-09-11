@@ -99,6 +99,30 @@ test('デモの選択は1種類だけ', () => {
   assert.equal((demo.match(/CHOICE_IDS = \[[^\]]*\]/)?.[0].match(/'/g) || []).length / 2, 3, '3択になっていない');
 });
 
+test('スマホでは、選ぶところが見本より前にある', () => {
+  // 見本の後ろに大きな札を縦に積むと、押した瞬間に見本の見出しと写真が
+  // 画面の外へ出る。選ぶところは見本のすぐ上に置く。
+  const group = demo.indexOf('role="radiogroup"');
+  const stage = demo.indexOf('ref={stageRef}');
+  assert.ok(group > 0 && stage > 0 && group < stage, '選ぶところが見本より後ろにある');
+  assert.equal(/order-1 sm:order-2|order-2 sm:order-1/.test(demo), false,
+    '画面の幅で並びを入れ替えている（スマホで見本が先になる）');
+});
+
+test('スマホの説明は、選んでいる1案だけ', () => {
+  // 札ごとの説明を3つ縦に積むと、それだけで冒頭が伸びる。
+  assert.match(demo, /hidden sm:block[\s\S]{0,140}\{c\.detail\}/, '札ごとの説明がスマホでも出る');
+  assert.match(demo, /sm:hidden[^>]*>\s*\{busy \? `\$\{pickedChoice\.name\}/,
+    'スマホ用の1行がない');
+  assert.match(demo, /grid-cols-3/, 'スマホで横3択になっていない');
+});
+
+test('デモは、押しても画面を勝手に動かさない', () => {
+  // 配置で見せる。スクロールで帳尻を合わせない。
+  const choose = demo.slice(demo.indexOf('const choose = useCallback'), demo.indexOf('/* 中からの知らせ'));
+  assert.equal(/scrollTo|scrollIntoView/.test(choose), false, '選んだときに画面を動かしている');
+});
+
 test('デモは、既存の設定（雰囲気のひな形）をそのまま使う', () => {
   // デモ専用の設定体系を作らない。制作画面で顧客が選べるものと同じでなければ、
   // ここで見せた見え方を顧客が再現できない。
