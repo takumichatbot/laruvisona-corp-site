@@ -75,6 +75,34 @@ test('先頭の画像は遅延読み込みにしない（LCPが遅れる）', ()
   assert.match(secondTag, /loading="lazy"/, '2枚目以降が遅延読み込みになっていない');
 });
 
+test('最初の画面に写真があるとき、下の写真を優先して読み込まない', () => {
+  // 最初の画面の写真は <picture> で出て、自分で loading と fetchpriority を書く。
+  // 以前はそれを数え落とし、「loading未指定の1枚目」＝ページのずっと下にある
+  // スタッフ写真に fetchpriority="high" を付けていた。
+  const page = {
+    id: 'home', name: 'ホーム', path: '/', seo,
+    blocks: [
+      { id: 'b1', type: 'hero', data: {
+        heading: 'h', subheading: 's', ctaText: 'c', ctaLink: '#',
+        bgImage: '/salon/hero-1600.jpg', bgImageWidth: 1600, bgImageHeight: 1195,
+      } },
+      { id: 'b2', type: 'team', data: { heading: 'スタッフ', items: [
+        { name: 'A', role: '院長', photo: 'https://example.com/a.jpg', bio: '' },
+      ] } },
+    ] as never,
+  };
+  // 最初の画面を写真つき（split）にすると、その <img> が自分で優先を書く
+  const html = exportToHTML([page], seo, { ...settings, heroLayout: 'split' } as never, 'テスト院');
+  const heroAt = html.indexOf('/salon/hero-1600.jpg');
+  const staffAt = html.indexOf('https://example.com/a.jpg');
+  assert.ok(heroAt > 0 && staffAt > heroAt, 'テスト用の画像が出力されていない');
+  const staffTag = html.slice(html.lastIndexOf('<img', staffAt), staffAt);
+  assert.ok(!/fetchpriority="high"/.test(staffTag), '下の写真が優先で読み込まれる');
+  assert.match(staffTag, /loading="lazy"/, '下の写真があとで読む指定になっていない');
+  // 最初の画面の写真のほうは、これまでどおり優先
+  assert.equal((html.match(/fetchpriority="high"/g) || []).length, 1, '優先する画像が1枚ではない');
+});
+
 
 test('ヒーローの見出しは、書いた位置で折り返せる', () => {
   // 和文の見出しは語の途中でも折り返せてしまう。実測でも

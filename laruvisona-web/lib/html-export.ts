@@ -5,7 +5,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 10;
+export const EXPORT_VERSION = 11;
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
@@ -1718,17 +1718,26 @@ window.addEventListener('popstate',function(){
 
   // Page sections
   let imgCount = 0;
-  const pagesHtml = pages.map((page, idx) => {
+  const renderedPages = pages.map((page, idx) => {
     const blocksHtml = page.blocks.map(b => renderBlock(b, { heroLayout, accentColor })).filter(Boolean).join('\n');
     return multiPage
       ? `<div id="${page.id}" class="lhp-page"${idx > 0 ? ' hidden' : ''}>${blocksHtml}</div>`
       : blocksHtml;
-  }).join('\n')
+  }).join('\n');
+
+  /* 最初の画面に写真がある場合、その <img> は自分で
+     loading="eager" fetchpriority="high" を書いている。
+     そのときは、ほかの画像を先に取りに行かせてはいけない。
+     以前はここで「loading未指定の1枚目」を無条件に優先していたため、
+     最初の画面が picture（loading を自分で書く）の作品では、
+     ページのずっと下にあるスタッフ写真が優先で読み込まれていた。 */
+  const heroTakesPriority = /<img[^>]*\bfetchpriority="high"/i.test(renderedPages);
+
+  const pagesHtml = renderedPages
     // 画像の遅延読み込み・非同期デコードで表示速度を改善（loading未指定の<img>のみ）。
-    // ただし先頭の1枚はファーストビューに出るため遅延させない。
-    // 遅延させると LCP がその分だけ遅れ、体感が明確に悪くなる。
+    // ただし、最初の画面に出る1枚だけは遅延させない（LCPがその分だけ遅れる）。
     .replace(/<img (?![^>]*\bloading=)/gi, () =>
-      ++imgCount === 1
+      (!heroTakesPriority && ++imgCount === 1)
         ? '<img fetchpriority="high" decoding="async" '
         : '<img loading="lazy" decoding="async" ')
     // ファーストビュー（最初のブロック）はスクロールアニメ対象から外して即時表示（白紙時間対策）

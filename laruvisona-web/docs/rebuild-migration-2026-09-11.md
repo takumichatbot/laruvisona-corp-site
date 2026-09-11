@@ -18,7 +18,7 @@ push・本番SQL・DNS変更・デプロイは行っていない。
 | 保存されているデータの形 | 変わらない（列の追加も削除もしない） | `blocks_json` / `seo_json` / `settings_json` の形 |
 | `sites.published_html` | 一括再生成を走らせたときに上書きされる | 走らせなければそのまま |
 | 編集画面 | 新しい制作画面 `/laruHP/studio` が増える | これまでの `/laruHP/builder` はそのまま動く |
-| 公開HTML | `EXPORT_VERSION` 7 → 10（GitHub main のコードは 3。下記） | 生成の入口（`exportToHTML`）は同じ |
+| 公開HTML | `EXPORT_VERSION` 7 → 11（GitHub main のコードは 3。下記） | 生成の入口（`exportToHTML`）は同じ |
 | 自社の2ページ | 作り直し（`/` と `/laruHP`） | メタ情報・canonical・OGPの設定はそのまま |
 
 ### データベースの列

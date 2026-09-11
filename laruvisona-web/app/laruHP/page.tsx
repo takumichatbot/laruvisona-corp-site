@@ -135,14 +135,14 @@ export default function LaruHPLandingPage() {
             <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
               <div className="max-h-[520px] overflow-y-auto">
                 <Image src="/lp/work-salon-pc.jpg" alt="美容室の見本サイト（パソコンでの表示）"
-                  width={1100} height={1833} className="w-full h-auto" />
+                  width={1100} height={4129} className="w-full h-auto" />
               </div>
               <p className="text-[11px] text-slate-500 px-4 py-2 border-t border-slate-100">パソコン</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden">
               <div className="max-h-[520px] overflow-y-auto py-5 flex justify-center">
                 <Image src="/lp/work-salon-sp.jpg" alt="美容室の見本サイト（スマホでの表示）"
-                  width={420} height={1830} className="w-[220px] h-auto rounded-[18px] border-[7px] border-slate-800 shadow-xl" />
+                  width={420} height={4433} className="w-[220px] h-auto rounded-[18px] border-[7px] border-slate-800 shadow-xl" />
               </div>
               <p className="text-[11px] text-slate-500 px-4 py-2 border-t border-slate-200 bg-white">スマホ</p>
             </div>
