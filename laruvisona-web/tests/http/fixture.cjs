@@ -76,8 +76,10 @@ SITES.push(LEGACY);
 // 受信した問い合わせ・予約。/api/contact が insert する先。
 const CONTACTS = [];
 const TABLES = { sites: SITES, news_posts: POSTS, contacts: CONTACTS, profiles: [
-  { id: '4f2a1b8c-3d5e-4a6f-8b1c-2e3d4f5a6b7c', subscription_status: 'active' },
-  { id: '7c9e6679-7425-40de-944b-e07fc1f90ae7', subscription_status: 'active' },
+  { id: '4f2a1b8c-3d5e-4a6f-8b1c-2e3d4f5a6b7c', plan: 'agency', subscription_status: 'active' },
+  // 契約中の利用者。plan が無いとサイトを1件も作れない（/api/sites が no_plan で断る）ので、
+  // 「はじめての利用者が実際に1件作る」確認のために入れてある。
+  { id: '7c9e6679-7425-40de-944b-e07fc1f90ae7', plan: 'hp-bot-seo', subscription_status: 'active' },
 ] };
 // auth.users の代わり。/api/contact は site.user_id から通知先メールを引く。
 const USERS = {
@@ -198,6 +200,20 @@ http.createServer((req, res) => {
         // 同時更新の検出はこの値で行うので、偽物でも同じように進める。
         rows.forEach(r => Object.assign(r, patch, { updated_at: touch() }));
         return out(rows, 200);
+      }
+      /* 新しいサイトを作る（POST /api/sites）。
+         はじめての利用者の通し確認で、実際に1件作るために要る。
+         PostgREST の insert と同じく、入ってきた行をそのまま足して返す。 */
+      if (t === 'sites' && req.method === 'POST') {
+        if (CONTROL.failWrites) return send(500, { message: 'fixture: 書き込みを失敗させています' });
+        const rows = (Array.isArray(patch) ? patch : [patch]).map((r, i) => ({
+          id: r.id || `new-site-${SITES.length + i + 1}-${Math.random().toString(36).slice(2, 8)}`,
+          custom_domain: null, published: false, published_html: '',
+          view_count: 0, created_at: new Date().toISOString(), updated_at: touch(),
+          ...r,
+        }));
+        SITES.push(...rows);
+        return out(rows, 201);
       }
       if (t === 'contacts' && req.method === 'POST') {
         const rows = (Array.isArray(patch) ? patch : [patch]).map((r, i) => ({

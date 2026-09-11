@@ -683,7 +683,19 @@ test('分割ヒーローは写真が主役、文字が脇（62% / 38%）', () =>
   assert.match(h, /\.lhp-hero-split \.lhp-hero-content\{flex:1 1 38%/);
   // スマホは縦に分ける。16:9だと椅子や鏡が切れる
   assert.match(h, /@media\(max-width:768px\)\{[^}]*flex-direction:column/);
-  assert.match(h, /\.lhp-hero-split-img\{width:100%;flex:none;aspect-ratio:4\/3\}/);
+  // 既定（settings.design が無い）では、これまでどおり4:3のまま
+  assert.match(h, /\.lhp-hero-split-img\{width:100%;flex:none;aspect-ratio:var\(--lhp-hero-split-ar-sp,4\/3\)\}/);
+  assert.equal(/--lhp-hero-split-ar-sp:3\/4/.test(h), false, 'design設定が無いのにスマホ比率が変わっている');
+});
+
+test('settings.design を持つサイトは、分割ヒーローの写真をスマホで縦長(3:4)にできる', () => {
+  const h = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: { heading: '結い庵', subheading: 'サブ', ctaText: 'ご予約フォームへ', ctaLink: '#booking', bgColor: '#faf7f2', textColor: '#3a2e25', bgImage: '/salon/hero.jpg' } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const, design: {} }, '結い庵',
+  );
+  assert.match(h, /@media\(max-width:768px\)\{\.lhp-hero-split-img\{--lhp-hero-split-ar-sp:3\/4\}\}/, 'design設定があるのにスマホ比率が変えられない');
 });
 
 test('写真が無いときは、これまでどおり空の枠になる', () => {
@@ -750,4 +762,45 @@ test('どの業種テンプレートも、これまでどおり組み上がる',
       assert.equal(/<picture><\/picture>/.test(html), false, `${key}/${heroLayout}: 空のpictureが出ている`);
     }
   }
+});
+
+// ── 差し色の統一（結い庵のcustomCssにあった調整を既定側へ） ──
+
+test('差し色を設定したサイトに、ハードコードされた青(#2563eb)が残っていない', () => {
+  // var(--lhp-accent, #2563eb) のように、既定値としてのフォールバックに
+  // 文字として "#2563eb" が残るのは互換性のために意図的。
+  // ここで見るのは、var() の外に「地の色として直書きされた青」が無いこと。
+  const html = render([
+    { id: 'h', type: 'hero', data: { heading: '見出し', subheading: 'サブ', ctaText: 'CTA', ctaLink: '#' } },
+    { id: 't', type: 'tabs', data: { heading: 'よくある質問', items: [{ label: 'A', body: 'ほげ' }, { label: 'B', body: 'ふが' }] } },
+    { id: 'm', type: 'team', data: { heading: 'スタッフ', items: [{ name: 'A', role: '院長', bio: '', photo: '' }] } },
+    { id: 'p', type: 'price-table', data: { heading: '料金', plans: [
+      { name: 'コース', price: '5,000', period: '円', description: '', features: ['施術込み'], highlighted: true, buttonText: '申し込む', buttonLink: '#' },
+    ] } },
+  ]);
+  assert.match(html, /--lhp-accent:#0ea5e9/, 'テスト用の差し色が反映されていない');
+  const withoutVarFallbacks = html.replace(/var\([^)]*\)/g, '');
+  assert.equal(withoutVarFallbacks.includes('#2563eb'), false,
+    'var() の既定値以外の場所に、ハードコードされた青がまだ残っている');
+});
+
+test('settings.design を持たない古いサイトは、スタッフ写真96px・分割ヒーロー4:3のまま', () => {
+  const html = render([
+    { id: 'h', type: 'hero', data: { heading: '見出し', subheading: 'サブ', ctaText: 'CTA', ctaLink: '#', bgImage: '/hero.jpg' } },
+    { id: 'm', type: 'team', data: { heading: 'スタッフ', items: [{ name: 'A', role: '院長', bio: '', photo: 'https://example.com/a.jpg' }] } },
+  ]);
+  assert.match(html, /\.lhp-team-photo\{width:96px;height:96px/, '設定を持たない古いサイトの写真サイズが変わっている');
+  assert.equal(/\.lhp-team-photo\{width:132px/.test(html), false, '設定を持たない古いサイトに拡大用CSSが出ている');
+  const split = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: { heading: '見出し', subheading: 'サブ', ctaText: 'CTA', ctaLink: '#', bgImage: '/hero.jpg' } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const }, 'テスト店',
+  );
+  assert.match(split, /aspect-ratio:var\(--lhp-hero-split-ar-sp,4\/3\)/, '設定を持たない古いサイトの分割ヒーロー比率が変わっている');
+});
+
+test('生成HTMLの版数が12になっている', () => {
+  assert.equal(EXPORT_VERSION, 12);
+  assert.match(basic, /<!--lhpv:12-->$/);
 });

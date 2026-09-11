@@ -6,6 +6,7 @@ import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
 import { exportToHTML } from '@/lib/html-export';
 import { createClient } from '@/lib/supabase/client';
 import { hasFeature } from '@/lib/plan-limits';
+import { checkPublishReadiness, blockingItems, adviceItems, type ReadyItem } from '@/lib/publish-readiness';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -1613,7 +1614,7 @@ function UrlImportModal({ onImport, onClose }: {
   );
 }
 
-function MobileOverlay() {
+function MobileOverlay({ siteId }: { siteId: string | null }) {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
   return (
@@ -1626,9 +1627,15 @@ function MobileOverlay() {
         営業時間やメニューの修正なら、こちらで完結します。
       </p>
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <Link href="/laruHP/edit" className="block bg-white text-black font-bold py-3.5 px-6 rounded-xl text-sm">
-          スマホで編集する →
-        </Link>
+        {siteId ? (
+          <Link href={`/laruHP/edit?site=${siteId}`} className="block bg-white text-black font-bold py-3.5 px-6 rounded-xl text-sm">
+            スマホで編集する →
+          </Link>
+        ) : (
+          <button disabled className="block bg-white/30 text-white/50 font-bold py-3.5 px-6 rounded-xl text-sm cursor-not-allowed" title="まだ一度も保存されていないため、このサイトは開けません">
+            スマホで編集する（保存後に利用できます）
+          </button>
+        )}
         <Link href="/laruHP/dashboard" className="block border border-white/20 text-white font-semibold py-3.5 px-6 rounded-xl text-sm">
           ダッシュボードへ
         </Link>
@@ -1957,7 +1964,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
     { id: 'keywords',      label: 'キーワードを設定',             tip: '検索キーワードを3〜5個カンマ区切りで入力',       pass: seo.keywords.length > 0 },
     { id: 'og-title',      label: 'OGタイトルを設定',            tip: 'SNSシェア時のカード表示に使われる',             pass: seo.ogTitle.length > 0 },
     { id: 'og-image',      label: 'OG画像URLを設定',             tip: '1200×630px推奨。未設定はSNSシェア時に画像なし',  pass: (seo.ogImage ?? '').length > 0 },
-    { id: 'laruseo',       label: 'LARUSEO連携を有効化',          tip: 'AI自動SEO最適化でクロール評価を継続改善',       pass: laruseo },
+    { id: 'laruseo',       label: 'LARUSEO連携を有効化',          tip: 'ブログ記事を追加すると、サイトのコンテンツが増えSEOに役立つ',       pass: laruseo },
   ] as const;
   const seoScore = seoChecks.filter(c => c.pass).length;
 
@@ -3888,8 +3895,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     {/* Benefits */}
                     <div className="mt-2.5 grid grid-cols-1 gap-1">
                       {[
-                        { icon: '✍️', text: 'SEO最適化ブログをAIが毎週自動投稿' },
-                        { icon: '🔍', text: '検索キーワードの順位をリアルタイム追跡' },
+                        { icon: '✍️', text: 'ブログ記事の下書きをAIで作成（ブログ管理画面のボタンから、その都度生成）' },
+                        { icon: '🔍', text: '検索キーワードの掲載順位を確認できます' },
                         { icon: '🎯', text: '改善提案でオーガニック集客を強化' },
                       ].map((b, i) => (
                         <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-400">
@@ -4293,7 +4300,7 @@ function BuilderContent() {
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [pendingSiteId, setPendingSiteId] = useState<string | null>(null);
-  const [publishWarnings, setPublishWarnings] = useState<string[] | null>(null);
+  const [publishWarnings, setPublishWarnings] = useState<ReadyItem[] | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [versions, setVersions] = useState<{ id: string; label: string; created_at: string }[]>([]);
@@ -5275,36 +5282,20 @@ function BuilderContent() {
     setSaving(false);
   };
 
-  // 公開前チェック: 未設定・プレースホルダのまま公開して事故になりやすいものを検知
-  const collectPublishWarnings = (): string[] => {
-    const warns: string[] = [];
-    site.pages.forEach(p => {
-      const bookingCount = p.blocks.filter(b => b.type === 'booking').length;
-      if (bookingCount > 1) {
-        warns.push(`ページ「${p.name}」に予約ブロックが${bookingCount}個あります。意図した配置でなければ1つ削除してください`);
-      }
-      p.blocks.forEach(b => {
-        if (b.type === 'stripe-buy') {
-          const d = b.data as Record<string, unknown>;
-          const pid = String(d.priceId ?? '').trim();
-          if (!/^price_[A-Za-z0-9]+$/.test(pid)) {
-            warns.push(`ページ「${p.name}」の購入ボタン: Stripe価格ID（price_...）が未設定のため、公開HPには表示されません`);
-          }
-          if (String(d.label ?? '') === '商品名' || String(d.description ?? '').includes('を入力してください')) {
-            warns.push(`ページ「${p.name}」の購入ボタン: 商品名・説明が初期文言のままです`);
-          }
-        }
-      });
-    });
-    return warns;
-  };
-
   const handlePublish = async (force?: unknown) => {
     // onClick から呼ばれると force に MouseEvent が入るため、明示的な true のみ強制公開扱い
     if (force !== true) {
-      const warns = collectPublishWarnings();
-      if (warns.length > 0) {
-        setPublishWarnings(warns);
+      // 公開前チェック: 未設定・プレースホルダのまま公開して事故になりやすいものを検知
+      // （スタジオ画面と同じ判定基準を lib/publish-readiness.ts で共有している）
+      const readiness = checkPublishReadiness({
+        name: site.siteName,
+        pages: site.pages,
+        notifyEmail: site.notifyEmail,
+      });
+      const blocking = blockingItems(readiness);
+      const advice = adviceItems(readiness);
+      if (blocking.length > 0 || advice.length > 0) {
+        setPublishWarnings([...blocking, ...advice]);
         return;
       }
     }
@@ -5469,7 +5460,11 @@ function BuilderContent() {
       setTimeout(() => setBuilderToast(''), 3000);
       return;
     }
-    if (!confirm('現在のブロックをすべて削除して AI で一括生成しますか？')) return;
+    const currentBlockCount = site.pages.find(p => p.id === currentPageId)?.blocks.length ?? 0;
+    const confirmMsg = currentBlockCount > 0
+      ? `このページの${currentBlockCount}個のブロックをすべて削除して、AIで作り直します（Ctrl+Zで戻せますが、保存・公開すると元の内容には戻れません）。続けますか？`
+      : 'AIでこのページのブロックを一括生成します。続けますか？';
+    if (!confirm(confirmMsg)) return;
     setAiGenerating(true);
     try {
       const res = await fetch('/api/ai/generate-site', {
@@ -5545,7 +5540,7 @@ function BuilderContent() {
   return (
     <div className="bg-[#030712] text-white overflow-hidden" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100vh' }}>
       {/* Mobile not supported overlay */}
-      <MobileOverlay />
+      <MobileOverlay siteId={dbSiteId} />
       {/* First-time builder tour */}
       {showBuilderTour && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -5918,10 +5913,10 @@ function BuilderContent() {
           <button
             onClick={handleAiFullSite}
             disabled={aiGenerating}
-            title="全ブロックを AI で一括生成（既存ブロックは削除されます）"
+            title="このページの既存ブロックをすべて削除して、AIで作り直します"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 disabled:opacity-50 disabled:cursor-wait"
           >
-            {aiGenerating ? '生成中...' : '✨ AI一括'}
+            {aiGenerating ? '生成中...' : '🗑️ AIで作り直す'}
           </button>
           {preview && (
             <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
@@ -6728,17 +6723,41 @@ function BuilderContent() {
         </div>
       )}
 
-      {/* Plan picker modal */}
-      {publishWarnings && (
+      {/* Publish readiness modal */}
+      {publishWarnings && (() => {
+        const blocking = publishWarnings.filter(i => i.level === 'must');
+        const advice = publishWarnings.filter(i => i.level === 'better');
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
             <h2 className="text-white font-bold text-lg mb-1">⚠️ 公開前の確認</h2>
             <p className="text-slate-400 text-sm mb-4">未設定のまま公開すると訪問者にそのまま表示されます。</p>
-            <ul className="space-y-2 mb-5 max-h-60 overflow-y-auto">
-              {publishWarnings.map((w, i) => (
-                <li key={i} className="text-amber-300 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">{w}</li>
-              ))}
-            </ul>
+            {blocking.length > 0 && (
+              <div className="mb-4">
+                <p className="text-red-300 text-xs font-bold mb-2">このまま公開すると困ること</p>
+                <ul className="space-y-2 max-h-52 overflow-y-auto">
+                  {blocking.map(item => (
+                    <li key={item.id} className="text-red-200 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                      <div className="font-bold text-red-100">{item.label}</div>
+                      <div className="text-red-200/90 text-xs mt-0.5">{item.detail}</div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {advice.length > 0 && (
+              <div className="mb-5">
+                <p className="text-amber-300 text-xs font-bold mb-2">直したほうが良いこと</p>
+                <ul className="space-y-2 max-h-40 overflow-y-auto">
+                  {advice.map(item => (
+                    <li key={item.id} className="text-amber-300 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                      <div className="font-bold text-amber-200">{item.label}</div>
+                      <div className="text-amber-300/90 text-xs mt-0.5">{item.detail}</div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => setPublishWarnings(null)}
@@ -6755,7 +6774,8 @@ function BuilderContent() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
       {showPlanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">

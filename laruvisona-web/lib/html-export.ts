@@ -5,7 +5,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 11;
+export const EXPORT_VERSION = 12;
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
@@ -255,8 +255,8 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   <div class="lhp-tabs" style="max-width:720px;margin:0 auto">
     <div role="tablist" style="display:flex;gap:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap">
       ${items.map((it, i) => `<button type="button" data-tab-btn
-        onclick="var w=this.closest('.lhp-tabs');w.querySelectorAll('[data-tab-btn]').forEach(function(b,j){b.style.borderBottomColor=j===${i}?'#2563eb':'transparent';b.style.color=j===${i}?'#2563eb':'#6b7280'});w.querySelectorAll('[data-tab-panel]').forEach(function(p,j){p.style.display=j===${i}?'block':'none'})"
-        style="padding:10px 16px;font-weight:bold;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid ${i === 0 ? '#2563eb' : 'transparent'};color:${i === 0 ? '#2563eb' : '#6b7280'}">${escapeHtml(it.label)}</button>`).join('')}
+        onclick="var w=this.closest('.lhp-tabs');w.querySelectorAll('[data-tab-btn]').forEach(function(b,j){b.style.borderBottomColor=j===${i}?'var(--lhp-accent,#2563eb)':'transparent';b.style.color=j===${i}?'var(--lhp-accent,#2563eb)':'#6b7280'});w.querySelectorAll('[data-tab-panel]').forEach(function(p,j){p.style.display=j===${i}?'block':'none'})"
+        style="padding:10px 16px;font-weight:bold;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid ${i === 0 ? 'var(--lhp-accent,#2563eb)' : 'transparent'};color:${i === 0 ? 'var(--lhp-accent,#2563eb)' : '#6b7280'}">${escapeHtml(it.label)}</button>`).join('')}
     </div>
     ${items.map((it, i) => `<div data-tab-panel style="display:${i === 0 ? 'block' : 'none'};padding:20px 4px;white-space:pre-wrap;color:#374151;line-height:1.7">${escapeHtml(it.body)}</div>`).join('')}
   </div>
@@ -268,13 +268,13 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       return `
 <section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title">${str('heading')}</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;max-width:880px;margin:0 auto">
+  <div class="lhp-team-grid">
     ${items.map(m => `
-    <div style="text-align:center">
-      <div style="width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;background:#f3f4f6">${m.photo ? `<img src="${escapeHtml(m.photo)}" alt="${escapeHtml(m.name)}" style="width:100%;height:100%;object-fit:cover" />` : ''}</div>
-      <p style="font-weight:bold;color:#1f2937;margin:0">${escapeHtml(m.name)}</p>
-      <p style="color:#2563eb;font-size:12px;margin:2px 0">${escapeHtml(m.role)}</p>
-      <p style="color:#6b7280;font-size:12px;margin:0">${escapeHtml(m.bio)}</p>
+    <div class="lhp-team-member">
+      <div class="lhp-team-photo">${m.photo ? `<img src="${escapeHtml(m.photo)}" alt="${escapeHtml(m.name)}" />` : ''}</div>
+      <p class="lhp-team-name">${escapeHtml(m.name)}</p>
+      <p class="lhp-team-role">${escapeHtml(m.role)}</p>
+      <p class="lhp-team-bio">${escapeHtml(m.bio)}</p>
     </div>`).join('')}
   </div>
 </section>`;
@@ -293,7 +293,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
           return el.src ? `<img src="${escapeHtml(el.src)}" alt="" style="${base};width:${el.w}%;height:auto;border-radius:${el.radius || 0}px;object-fit:cover" />` : '';
         }
         const href = /^(https?:\/\/|\/|#|mailto:)/i.test(el.link || '') ? (el.link as string) : '#';
-        return `<a href="${escapeHtml(href)}" style="${base};display:inline-block;background:${el.bg || '#2563eb'};color:${el.color || '#fff'};font-size:${(el.size || 16) / 10}cqw;font-weight:700;padding:.6em 1.2em;border-radius:.6em;text-decoration:none;text-align:center">${escapeHtml(el.text || '')}</a>`;
+        return `<a href="${escapeHtml(href)}" style="${base};display:inline-block;background:${el.bg || 'var(--lhp-accent,#2563eb)'};color:${el.color || 'var(--lhp-on-accent,#fff)'};font-size:${(el.size || 16) / 10}cqw;font-weight:700;padding:.6em 1.2em;border-radius:.6em;text-decoration:none;text-align:center">${escapeHtml(el.text || '')}</a>`;
       };
       return `
 <section class="lhp-section" style="padding:0">
@@ -845,26 +845,28 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       badge.textContent='残'+n;
       badge.style.cssText='margin-left:6px;font-size:.7rem;font-weight:700;padding:1px 6px;border-radius:100px;background:'+(n<=2?'#fef2f2':'#f0f9ff')+';color:'+(n<=2?'#dc2626':'#0369a1');
       b.appendChild(badge);
-      b.style.cssText='padding:8px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
+      b.className='lhp-bk-btn';
+      b.style.cssText='padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.9rem';
       b.onclick=function(){selDate(k,b);};dc.appendChild(b);
     });
     if(state.prepay&&state.prepayAmount>0){var p=$id('lhp-bk-prepay');p.textContent='※ ご予約時に予約金 ¥'+state.prepayAmount.toLocaleString()+' のお支払いが必要です';}
   }).catch(function(){show('lhp-bk-loading',false);show('lhp-bk-empty',true);});
   function selDate(k,btn){
-    Array.prototype.forEach.call($id('lhp-bk-dates').querySelectorAll('button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
-    btn.style.background='#2563eb';btn.style.color='#fff';btn.style.borderColor='#2563eb';
+    Array.prototype.forEach.call($id('lhp-bk-dates').querySelectorAll('button'),function(b){b.classList.remove('lhp-bk-sel');});
+    btn.classList.add('lhp-bk-sel');
     state.sel=null;show('lhp-bk-form',false);
     var tw=$id('lhp-bk-times');tw.innerHTML='';
     state.byDate[k].sort(function(a,b){return a.datetime.localeCompare(b.datetime);}).forEach(function(s){
       var b=document.createElement('button');b.type='button';b.textContent=timeLabel(s.datetime);
-      b.style.cssText='padding:8px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:.9rem';
+      b.className='lhp-bk-btn';
+      b.style.cssText='padding:8px;border-radius:10px;cursor:pointer;font-size:.9rem';
       b.onclick=function(){selTime(s,b);};tw.appendChild(b);
     });
     show('lhp-bk-times-wrap',true);
   }
   function selTime(s,btn){
-    Array.prototype.forEach.call($id('lhp-bk-times').querySelectorAll('button'),function(b){b.style.background='#fff';b.style.color='#111';b.style.borderColor='#d1d5db';});
-    btn.style.background='#2563eb';btn.style.color='#fff';btn.style.borderColor='#2563eb';
+    Array.prototype.forEach.call($id('lhp-bk-times').querySelectorAll('button'),function(b){b.classList.remove('lhp-bk-sel');});
+    btn.classList.add('lhp-bk-sel');
     state.sel=s;
     var cf=$id('lhp-bk-confirm');
     if(cf)cf.textContent='📅 '+dateLabel(dateKey(s.datetime))+' '+timeLabel(s.datetime)+(s.label?' — '+s.label:'')+' で予約します';
@@ -1308,7 +1310,7 @@ const STYLE_EXTRAS: Record<string, string> = {
    ここで暗くすると地色（明るい色を選んでいても）が灰色に濁る。 */
 .lhp-hero:not(.lhp-hero-split)::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.05) 100%);pointer-events:none;z-index:0}
 .lhp-hero-inner{position:relative;z-index:1}
-.lhp-hero-inner::before{content:'';display:block;width:1px;height:48px;background:rgba(255,255,255,.45);margin:0 auto 28px;opacity:0;transform:scaleY(0);transform-origin:top;transition:opacity .8s,transform .8s}
+.lhp-hero-inner::before{content:'';display:block;width:1px;height:48px;background:color-mix(in srgb, var(--lhp-d-ink, #fff) 45%, transparent);margin:0 auto 28px;opacity:0;transform:scaleY(0);transform-origin:top;transition:opacity .8s,transform .8s}
 .lhp-hero .lhp-visible .lhp-hero-inner::before,.lhp-hero .lhp-hero-inner::before{opacity:1;transform:scaleY(1)}
 .lhp-card{background:rgba(255,255,255,.65)!important;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.45)!important;transition:transform .5s cubic-bezier(.16,1,.3,1),box-shadow .5s,background .4s}
 .lhp-card:hover{transform:translateY(-6px);background:rgba(255,255,255,.9)!important;box-shadow:0 20px 56px rgba(0,0,0,.09)!important}
@@ -1371,7 +1373,7 @@ a{color:inherit;text-decoration:none}
 .lhp-nav-links{display:flex;align-items:center;gap:4px;margin-left:auto;flex-wrap:wrap}
 .lhp-nav-links .lhp-nav-link{text-decoration:none;font-size:.875rem;padding:6px 12px;border-radius:6px;opacity:.75;transition:opacity .2s,background .2s;background:none;border:none;cursor:pointer;font-family:inherit;color:inherit;font-weight:500}
 .lhp-nav-links .lhp-nav-link:hover{opacity:1;background:rgba(0,0,0,.05)}
-.lhp-nav-cta{display:inline-flex;align-items:center;text-decoration:none;font-size:.8125rem;font-weight:700;padding:7px 18px;border-radius:var(--lhp-btn-r);background:#2563eb;color:#fff;margin-left:8px;transition:opacity .2s}
+.lhp-nav-cta{display:inline-flex;align-items:center;text-decoration:none;font-size:.8125rem;font-weight:700;padding:7px 18px;border-radius:var(--lhp-btn-r);background:var(--lhp-accent,#2563eb);color:var(--lhp-on-accent,#fff);margin-left:8px;transition:opacity .2s}
 .lhp-nav-cta:hover{opacity:.88}
 .lhp-nav-toggle{display:none;background:none;border:none;cursor:pointer;font-size:1.4rem;padding:4px 8px;margin-left:auto;color:inherit;line-height:1}
 @media(max-width:640px){
@@ -1439,6 +1441,19 @@ a{color:inherit;text-decoration:none}
 .lhp-testimonial-name{font-weight:700;font-size:.875rem;color:#111}
 .lhp-testimonial-name span{color:#888;font-weight:400}
 .lhp-faq{max-width:720px;margin:32px auto 0}
+/* スタッフ紹介の丸写真。既定は96px（互換のため）。設定を持つサイトは
+   designCss() 側で少し大きくする */
+.lhp-team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:24px;max-width:880px;margin:0 auto}
+.lhp-team-member{text-align:center}
+.lhp-team-photo{width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;background:#f3f4f6}
+.lhp-team-photo img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.lhp-team-name{font-weight:bold;color:#1f2937;margin:0}
+.lhp-team-role{color:var(--lhp-accent,#2563eb);font-size:12px;margin:2px 0}
+.lhp-team-bio{color:#6b7280;font-size:12px;margin:0}
+/* 予約ブロックの日付・時間ボタン。選択状態は inline style ではなくクラスで
+   決める（customCss から上書きしやすくするため） */
+.lhp-bk-btn{background:#fff;color:#111;border:1px solid #d1d5db}
+.lhp-bk-btn.lhp-bk-sel{background:var(--lhp-accent,#2563eb);color:var(--lhp-on-accent,#fff);border-color:var(--lhp-accent,#2563eb)}
 .lhp-faq-item{border:1px solid #e5e7eb;border-radius:var(--lhp-r);margin-bottom:8px;overflow:hidden}
 .lhp-faq-q{padding:16px 20px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
 .lhp-faq-q::after{content:'+';font-size:1.25rem;color:#888}
@@ -1476,6 +1491,11 @@ details[open] .lhp-faq-q::after{content:'−'}
   .lhp-sticky-cta-off{transform:translateY(130%);opacity:0;pointer-events:none}
   .lhp-sticky-cta-btn{display:flex;align-items:center;justify-content:center;min-height:52px;width:100%;color:#fff;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:.04em}
   body:has(.lhp-sticky-cta){padding-bottom:78px}
+  /* 最後のセクション自身の下余白（既定48px/56px）と、上のbodyの78pxが
+     単純に足し算されると、最後だけ極端に空いてしまう。固定ボタンの分は
+     bodyの78pxで足りているので、最後のセクションぶんは軽くする。 */
+  body:has(.lhp-sticky-cta) .lhp-section:last-of-type,
+  body:has(.lhp-sticky-cta) .lhp-contact:last-of-type{padding-bottom:24px}
 }
 @media(max-width:640px) and (prefers-reduced-motion:reduce){ .lhp-sticky-cta{backdrop-filter:none} }
 .lhp-gallery{display:grid;gap:8px;margin-top:24px}
@@ -1507,7 +1527,7 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;max-width:900px;margin-left:auto;margin-right:auto;align-items:start}
 @media(max-width:768px){.lhp-price-grid{grid-template-columns:1fr}}
 .lhp-price-card{background:#fff;border:1px solid #e5e7eb;border-radius:var(--lhp-r);padding:28px;display:flex;flex-direction:column;position:relative}
-.lhp-price-featured{background:#2563eb;color:#fff;border-color:#2563eb;transform:scale(1.04);box-shadow:0 8px 40px rgba(37,99,235,.3)}
+.lhp-price-featured{background:var(--lhp-accent,#2563eb);color:var(--lhp-on-accent,#fff);border-color:var(--lhp-accent,#2563eb);transform:scale(1.04);box-shadow:0 8px 40px rgba(0,0,0,.3)}
 .lhp-price-badge{font-size:.7rem;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:#93c5fd;margin-bottom:8px}
 .lhp-price-name{font-size:.9rem;font-weight:700;margin-bottom:4px;color:inherit;opacity:.7}
 .lhp-price-amount{font-size:2.2rem;font-weight:900;margin-bottom:4px;line-height:1}
@@ -1515,14 +1535,14 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-price-desc{font-size:.8rem;opacity:.6;margin-bottom:20px}
 .lhp-price-features{list-style:none;margin-bottom:24px;flex:1;display:flex;flex-direction:column;gap:8px}
 .lhp-price-features li{font-size:.85rem;display:flex;align-items:center;gap:8px}
-.lhp-price-btn{display:block;text-align:center;padding:12px;border-radius:12px;font-weight:700;font-size:.9rem;text-decoration:none;background:#2563eb;color:#fff;transition:opacity .2s}
-.lhp-price-featured .lhp-price-btn{background:#fff;color:#2563eb}
+.lhp-price-btn{display:block;text-align:center;padding:12px;border-radius:12px;font-weight:700;font-size:.9rem;text-decoration:none;background:var(--lhp-accent,#2563eb);color:var(--lhp-on-accent,#fff);transition:opacity .2s}
+.lhp-price-featured .lhp-price-btn{background:#fff;color:var(--lhp-accent,#2563eb)}
 .lhp-price-btn:hover{opacity:.85}
 .lhp-news{max-width:720px;margin:32px auto 0}
 .lhp-news-item{display:flex;align-items:flex-start;gap:12px;padding:14px 12px;border-bottom:1px solid #f3f4f6;transition:background .2s;flex-wrap:wrap}
 .lhp-news-item:hover{background:#f9fafb}
 .lhp-news-date{font-size:.8rem;color:#9ca3af;white-space:nowrap;margin-top:2px;font-family:monospace;flex-shrink:0}
-.lhp-news-tag{font-size:.7rem;font-weight:700;background:#eff6ff;color:#2563eb;padding:2px 10px;border-radius:9999px;white-space:nowrap;flex-shrink:0}
+.lhp-news-tag{font-size:.7rem;font-weight:700;background:color-mix(in srgb, var(--lhp-accent,#2563eb) 10%, #fff);color:var(--lhp-accent,#2563eb);padding:2px 10px;border-radius:9999px;white-space:nowrap;flex-shrink:0}
 .lhp-news-title{font-size:.9rem;font-weight:600;color:#111;line-height:1.5;flex:1;min-width:200px}
 .lhp-form-success{text-align:center;padding:40px 24px;color:#16a34a;font-weight:700;font-size:1.1rem;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0}
 .lhp-share-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
@@ -1538,9 +1558,9 @@ details[open] .lhp-faq-q::after{content:'−'}
 .lhp-mform{max-width:560px;margin:40px auto 0}
 .lhp-mform-steps{display:flex;align-items:center;margin-bottom:32px;gap:0}
 .lhp-mform-dot{width:32px;height:32px;border-radius:50%;background:#e5e7eb;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;transition:all .3s}
-.lhp-mform-dot.active{background:#2563eb;color:#fff}
+.lhp-mform-dot.active{background:var(--lhp-accent,#2563eb);color:var(--lhp-on-accent,#fff)}
 .lhp-mform-line{flex:1;height:2px;background:#e5e7eb;transition:background .3s}
-.lhp-mform-line.active{background:#2563eb}
+.lhp-mform-line.active{background:var(--lhp-accent,#2563eb)}
 .lhp-mstep-label{font-size:.8rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:20px}
 .lhp-mform-btn{width:100%;padding:14px;border:none;border-radius:var(--lhp-btn-r);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}
 .lhp-mform-btn:hover{opacity:.85}
@@ -2055,7 +2075,9 @@ html.lhp-js [data-lhp-anim]{animation:none}
 [data-lhp-anim].lhp-visible{opacity:1;transform:none}`}
 ${headerStyle === 'solid' ? '.lhp-nav{background:#1e293b!important;border-bottom:1px solid rgba(255,255,255,0.1)!important}' : ''}
 ${headerStyle === 'colored' ? `.lhp-nav{background:var(--lhp-primary)!important}` : ''}
-${heroLayout === 'split' ? `/* 左右に分けるヒーロー。内側の幅を広げないと、写真が42%＝約300pxにしかならず、   1440pxの画面で切手のように小さく見える。写真を主役にできる幅にする。 */.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:clamp(28px,4vw,56px);max-width:1180px;width:100%;margin:0 auto}.lhp-hero-split .lhp-hero-content{flex:1 1 38%;min-width:0}.lhp-hero-split-img{flex:1 1 62%;border-radius:4px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img,.lhp-hero-split-img picture{width:100%;height:100%;display:block}.lhp-hero-split-img img{object-fit:cover;object-position:center}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column;gap:24px}/* 16:9 は横長すぎて、店内写真だと椅子や鏡が切れる。4:3 で場の様子を残す */.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:4/3}.lhp-hero-split .lhp-hero-content{width:100%}}` : ''}
+${heroLayout === 'split' ? `/* 左右に分けるヒーロー。内側の幅を広げないと、写真が42%＝約300pxにしかならず、   1440pxの画面で切手のように小さく見える。写真を主役にできる幅にする。 */.lhp-hero-split .lhp-hero-inner{display:flex;flex-direction:row;align-items:center;gap:clamp(28px,4vw,56px);max-width:1180px;width:100%;margin:0 auto}.lhp-hero-split .lhp-hero-content{flex:1 1 38%;min-width:0}.lhp-hero-split-img{flex:1 1 62%;border-radius:4px;overflow:hidden;aspect-ratio:4/3}.lhp-hero-split-img img,.lhp-hero-split-img picture{width:100%;height:100%;display:block}.lhp-hero-split-img img{object-fit:cover;object-position:center}@media(max-width:768px){.lhp-hero-split .lhp-hero-inner{flex-direction:column;gap:24px}/* 16:9 は横長すぎて、店内写真だと椅子や鏡が切れる。4:3 で場の様子を残す。
+   設定を持つサイトだけ、スマホでは縦長(3:4)に変えられるようCSS変数で受ける（既定は4:3のまま） */.lhp-hero-split-img{width:100%;flex:none;aspect-ratio:var(--lhp-hero-split-ar-sp,4/3)}.lhp-hero-split .lhp-hero-content{width:100%}}` : ''}
+${heroLayout === 'split' && settings.design ? `@media(max-width:768px){.lhp-hero-split-img{--lhp-hero-split-ar-sp:3/4}}` : ''}
 ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
 ${settings.design ? `<style>${designCss(settings.design)}</style>` : ''}

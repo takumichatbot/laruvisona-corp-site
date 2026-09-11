@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
 import { renderMarkdown, plainExcerpt } from '@/lib/markdown';
-import { canonicalBase, siteLink, siteUrl, isHostForSite } from '@/lib/public-site-url';
+import { canonicalBase, siteLink, siteUrl, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 
 // 顧客サイトの記事ページ。
 //
@@ -61,7 +61,8 @@ async function getSitePost(slug: string, postId: string) {
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string; postId: string }> },
 ): Promise<Metadata> {
-  const { slug, postId } = await params;
+  const { slug: rawSlug, postId } = await params;
+  const slug = decodeSlug(rawSlug);
   const data = await getSitePost(slug, postId);
   if (!data) return { title: '記事が見つかりません', robots: { index: false, follow: false } };
 
@@ -87,7 +88,8 @@ export async function generateMetadata(
 export default async function SitePostPage(
   { params }: { params: Promise<{ slug: string; postId: string }> },
 ) {
-  const { slug, postId } = await params;
+  const { slug: rawSlug, postId } = await params;
+  const slug = decodeSlug(rawSlug);
   const data = await getSitePost(slug, postId);
   if (!data) notFound();
 

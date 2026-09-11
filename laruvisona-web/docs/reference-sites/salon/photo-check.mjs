@@ -70,7 +70,7 @@ const scrollAll = async (page) => {
        ・最初に取りに行く /salon/ の画像が、最初の画面の写真であること */
   const attrs = await page.evaluate(() => {
     const g = [...document.querySelectorAll('.lhp-gallery-img')];
-    const t = [...document.querySelectorAll('[style*="border-radius:50%"] img')];
+    const t = [...document.querySelectorAll('.lhp-team-photo img')];
     const one = e => ({ file: (e.getAttribute('src') || '').split('/').pop(), loading: e.getAttribute('loading'), fp: e.getAttribute('fetchpriority') });
     return { gallery: g.map(one), team: t.map(one) };
   });
@@ -124,7 +124,7 @@ const scrollAll = async (page) => {
   check('4枚の色温度がそろっている', spread(temps) <= 3, `幅 ${spread(temps).toFixed(1)}（${temps.map(v => v.toFixed(0)).join(' ')}）`);
 
   // 4. スタッフ3枚。円で出て、白い縁・四隅が出ていない
-  const staff = await page.evaluate(() => [...document.querySelectorAll('[style*="border-radius:50%"]')].map(box => {
+  const staff = await page.evaluate(() => [...document.querySelectorAll('.lhp-team-photo')].map(box => {
     const img = box.querySelector('img');
     const r = box.getBoundingClientRect();
     return {
@@ -143,7 +143,7 @@ const scrollAll = async (page) => {
   // 円のすぐ内側を実画素で見る。白が出ていたら失敗
   const white = await page.evaluate(() => {
     const out = [];
-    document.querySelectorAll('[style*="border-radius:50%"]').forEach((box, k) => {
+    document.querySelectorAll('.lhp-team-photo').forEach((box, k) => {
       const img = box.querySelector('img');
       if (!img) return;
       const c = document.createElement('canvas'); c.width = 148; c.height = 148;
@@ -195,7 +195,7 @@ const scrollAll = async (page) => {
   check('スマホでもスタイルが2列で並ぶ', cols.cols === 2, `${cols.cols}列 / 幅 ${cols.w}px`);
   const fit = await page.evaluate(() => {
     const bad = [];
-    document.querySelectorAll('.lhp-gallery-img, [style*="border-radius:50%"] img').forEach(el => {
+    document.querySelectorAll('.lhp-gallery-img, .lhp-team-photo img').forEach(el => {
       const r = el.getBoundingClientRect();
       if (r.right > document.documentElement.clientWidth + 1 || r.left < -1) bad.push(el.currentSrc.split('/').pop());
     });
@@ -238,7 +238,7 @@ const scrollAll = async (page) => {
     });
     /* スタッフは、円の中の「髪（暗い画素）」の上端で見る。
        地の色との差で見ると、円の外を埋めた色との差を拾ってしまう。 */
-    document.querySelectorAll('[style*="border-radius:50%"] img').forEach(el => {
+    document.querySelectorAll('.lhp-team-photo img').forEach(el => {
       const w = 148, h = 148;
       const d = read(el, w, h);
       let y0 = h;

@@ -155,7 +155,11 @@ check('開き直しても、変えた色が残っている', persisted === '#123
 /* ── 7. 公開の準備 → 公開 ── */
 await page.locator('button:has-text("公開の準備")').first().click();
 await page.waitForTimeout(400);
-check('公開前に見るところが並ぶ', (await page.locator('text=公開の準備（').count()) > 0);
+/* 「4/7」のような割合は出さない（重さの違う項目を同じ1として数えてしまうため）。
+   代わりに、直さないと困ること／直したほうが良いこと、の2つに分けて並ぶ */
+check('公開前に見るところが、2つに分かれて並ぶ',
+  (await page.locator('aside >> text=直さないと、来た人に影響が出ること').count()) > 0
+  && (await page.locator('aside >> text=直したほうが良いこと').count()) > 0);
 if (args.shots) await page.screenshot({ path: `${args.shots}/studio-3-edit.png`, fullPage: false });
 await page.locator('aside button:has-text("公開")').last().click();
 await page.waitForTimeout(2500);

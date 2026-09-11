@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 process.env.NEXT_PUBLIC_APP_URL = 'https://laruvisona.jp';
-const { canonicalBase, siteUrl, siteLink, isHostForSite } = await import('../lib/public-site-url.ts');
+const { canonicalBase, siteUrl, siteLink, isHostForSite, decodeSlug } = await import('../lib/public-site-url.ts');
 
 const A = { slug: 'salon-a', custom_domain: 'salon-a.example' };
 const NoDomain = { slug: 'plain', custom_domain: null };
@@ -131,4 +131,37 @@ test('決済の戻り先はショップのURLをそのまま使う', () => {
   const client = read('app/hp/[slug]/shop/ShopClient.tsx');
   assert.match(client, /successUrl: `\$\{shopUrl\}\?payment=success`/);
   assert.match(client, /cancelUrl: shopUrl/);
+});
+
+
+/* ── URLのパスから受け取る slug ─────────────────────────────
+   slug は日本語を許している（店名から作るため）。この版の Next.js は
+   動的セグメントを復号せずに渡すので、そのまま問い合わせると
+   「%E3%81%…」という名前のサイトを探して 404 になる。
+   英数字だけの slug では起きないので、気づかないまま出てしまう。 */
+
+test('百分率記法で届いた slug を、保存されている値に戻す', () => {
+  assert.equal(decodeSlug('%E3%81%AE%E3%81%9E%E3%81%BF%E6%95%B4%E4%BD%93%E9%99%A2-abc123'), 'のぞみ整体院-abc123');
+  // すでに復号済みのものは、そのまま
+  assert.equal(decodeSlug('のぞみ整体院-abc123'), 'のぞみ整体院-abc123');
+  assert.equal(decodeSlug('salon-a'), 'salon-a');
+  // 壊れた入力で例外を投げない（404 ではなく 500 になってしまうため）
+  assert.equal(decodeSlug('%'), '%');
+  assert.equal(decodeSlug('%E3%81'), '%E3%81');
+  assert.equal(decodeSlug(null), '');
+});
+
+test('公開ページの各経路が、slug を復号してから引いている', () => {
+  for (const f of [
+    'app/hp/[slug]/page.tsx',
+    'app/hp/[slug]/post/[postId]/page.tsx',
+    'app/hp/[slug]/opengraph-image.tsx',
+    'app/hp/[slug]/sitemap.xml/route.ts',
+    'app/hp/[slug]/shop/page.tsx',
+    'app/hp/[slug]/robots.txt/route.ts',
+  ]) {
+    const src = read(f);
+    assert.match(src, /decodeSlug\(rawSlug\)/, `${f} が slug を復号していない`);
+    assert.equal(/const \{ slug \} = await params;/.test(src), false, `${f} に復号していない取り出しが残っている`);
+  }
 });

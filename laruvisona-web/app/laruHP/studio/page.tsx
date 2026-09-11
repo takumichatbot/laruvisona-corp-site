@@ -27,6 +27,7 @@ import {
   GOALS, INDUSTRY_CHOICES, type FieldDef, type IntakeAnswers,
 } from '@/lib/studio-schema';
 import { cleanIncomingText } from '@/lib/safe-markup';
+import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publish-readiness';
 import { withPreviewBridge } from '@/lib/preview-frame';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
 
@@ -302,9 +303,42 @@ function Field({ def, value, onChange }: {
 
 /* ── 本体 ─────────────────────────────────────────────────────────────── */
 
+/* 案内ページのデモで選んだ見せ方を、そのまま持ち越すための置き場。
+   ログインを挟んでも消えないように sessionStorage に置く。
+   個人情報は入らない（入るのは DESIGN_PRESETS の id だけ）。 */
+const MOOD_KEY = 'laruhp.studio.mood';
+/* 保存前の下書き。ログインが切れて入り直したときに、
+   答えた4問と選んだ見せ方からやり直さずに済むようにする。 */
+const DRAFT_KEY = 'laruhp.studio.draft';
+
+interface StudioDraft { intake: IntakeAnswers; site: StudioSite; step: 'intake' | 'mood' | 'edit'; at: number }
+
+function readDraft(): StudioDraft | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as StudioDraft;
+    // 1日以上前のものは、別の作業のなごりとみなして使わない
+    if (!d?.site || !d?.intake || Date.now() - (d.at ?? 0) > 86400_000) return null;
+    return d;
+  } catch { return null; }
+}
+
 function StudioInner() {
   const params = useSearchParams();
   const siteIdParam = params.get('siteId');
+  /* 案内ページのデモで選んだ見せ方（DESIGN_PRESETS の id）。
+     URL から来たときは、それを控えておく。 */
+  const moodParam = params.get('mood');
+  const [moodFromLp] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return moodParam;
+    if (moodParam) { try { window.sessionStorage.setItem(MOOD_KEY, moodParam); } catch { /* 使えなくても困らない */ } return moodParam; }
+    try { return window.sessionStorage.getItem(MOOD_KEY); } catch { return null; }
+  });
+
+  /* 保存前の下書き（あれば）。siteId 付きで開いたときは、保存済みの内容が正。 */
+  const [draft] = useState<StudioDraft | null>(() => (siteIdParam ? null : readDraft()));
 
   /* 会社トップで見せ方を選んでから来た場合、その選択を引き継ぐ。
      引き継ぐのは見せ方の名前だけ。既にあるサイトを開いたときは読まない
@@ -321,15 +355,17 @@ function StudioInner() {
   }, [siteIdParam, designParam]);
 
   const [siteId, setSiteId] = useState<string | null>(siteIdParam);
-  const [step, setStep] = useState<'intake' | 'mood' | 'edit'>(siteIdParam ? 'edit' : 'intake');
+  const [step, setStep] = useState<'intake' | 'mood' | 'edit'>(
+    siteIdParam ? 'edit' : (draft?.step ?? 'intake'),
+  );
   const [loading, setLoading] = useState(!!siteIdParam);
   const [loadError, setLoadError] = useState('');
 
-  const [intake, setIntake] = useState<IntakeAnswers>({
+  const [intake, setIntake] = useState<IntakeAnswers>(() => draft?.intake ?? {
     industry: 'beauty', name: '', area: '', audience: '', goal: 'booking', description: '',
   });
 
-  const [site, setSite] = useState<StudioSite>(() => ({
+  const [site, setSite] = useState<StudioSite>(() => draft?.site ?? ({
     name: '', pages: [], settings: {
       colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
       accentColor: '#2563eb', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
@@ -346,6 +382,11 @@ function StudioInner() {
   const [savedSincePublish, setSavedSincePublish] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishNote, setPublishNote] = useState('');
+  /* 保存できない理由のうち、利用者の側で手当てが要るもの。
+     いずれも下書きは端末に残してあるので、済ませて戻れば続きから直せる。
+       login … ログインが切れている（401）
+       plan  … 契約が無い / 件数の上限（403）*/
+  const [blocked, setBlocked] = useState<null | { kind: 'login' | 'plan'; message: string }>(null);
 
   const siteRef = useRef(site);
   useEffect(() => { siteRef.current = site; }, [site]);
@@ -364,6 +405,30 @@ function StudioInner() {
     editSeq.current += 1;
     setSaveState(prev => (prev.kind === 'saving' ? prev : { kind: 'dirty' }));
   }, [site]);
+
+  /* まだ一度も保存していないあいだ、下書きをこの端末に控える。
+     ログインが切れて入り直したときに、答えた4問と組み上がった中身が消えないようにする。
+     一度保存できたら（siteId が付いたら）サーバ側が正なので、控えは捨てる。 */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (siteId) { window.sessionStorage.removeItem(DRAFT_KEY); return; }
+      if (step === 'intake' && site.pages.length === 0 && !intake.name.trim()) return;
+      window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ intake, site, step, at: Date.now() }));
+    } catch { /* 使えなくても、保存そのものは動く */ }
+  }, [siteId, site, intake, step]);
+
+  /* 未保存のまま閉じようとしたら、ブラウザに確認させる。
+     「保存した」と誤解したまま閉じて消える、を防ぐ。 */
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStateRef.current.kind !== 'dirty') return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
 
   /* ── 読み込み ── */
   useEffect(() => {
@@ -404,6 +469,13 @@ function StudioInner() {
         setPublishedAt(s.published ? (s.updated_at as string) : null);
         setSelectedId(pages[0]?.blocks?.[0]?.id ?? null);
         hydrating.current = true;   // この差し替えは編集ではない
+        /* 中身がまだ何も無いサイト（一覧から「新しいサイト」で作った直後）は、
+           空の編集画面ではなく4つの質問から始める。答えたあとは、この
+           サイトにそのまま書き込む（新しいサイトは作らない）。 */
+        if (!pages.some(pg => (pg.blocks ?? []).length > 0)) {
+          setIntake(prev => ({ ...prev, name: s.name && s.name !== '新しいサイト' ? s.name : prev.name }));
+          setStep('intake');
+        }
       } catch (e) {
         if (alive) setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました');
       } finally {
@@ -482,8 +554,9 @@ function StudioInner() {
         });
         if (!res.ok) {
           const b = await res.json().catch(() => ({}));
+          if (res.status === 401) setBlocked({ kind: 'login', message: '' });
           throw new Error(res.status === 401
-            ? 'ログインが切れています。別のタブで入り直してから、もう一度保存してください'
+            ? 'ログインが切れています。作った中身は残してあります。入り直すと、続きから直せます'
             : (b.error as string) || `保存できませんでした (${res.status})`);
         }
       } else {
@@ -494,12 +567,19 @@ function StudioInner() {
         });
         if (!res.ok) {
           const b = await res.json().catch(() => ({}));
-          throw new Error((b.error as string) || `保存できませんでした (${res.status})`);
+          if (res.status === 401) setBlocked({ kind: 'login', message: '' });
+          if (res.status === 403 && (b.code === 'no_plan' || b.code === 'site_limit')) {
+            setBlocked({ kind: 'plan', message: (b.error as string) || '' });
+          }
+          throw new Error(res.status === 401
+            ? 'ログインするとサイトを保存できます。いま作った中身は残してあります'
+            : (b.error as string) || `保存できませんでした (${res.status})`);
         }
         const { site: created } = await res.json();
         id = created?.id ?? null;
         setSiteId(id);
       }
+      setBlocked(null);
       setSavedSincePublish(true);
       // 送っているあいだに続きを編集していたら、保存済みにはしない
       setSaveState(editSeq.current === seq ? { kind: 'clean', at: new Date() } : { kind: 'dirty' });
@@ -594,46 +674,14 @@ function StudioInner() {
     setStep('edit');
   }, [intake]);
 
-  /* ── 公開準備の確認 ── */
-  const readiness = useMemo(() => {
-    const items: Array<{ ok: boolean; label: string; detail: string }> = [];
-    const all = blocks;
-    const text = JSON.stringify(all);
-    items.push({
-      ok: !!site.name.trim(), label: '店名が入っている',
-      detail: site.name || '左上の店名を入れてください',
-    });
-    items.push({
-      ok: !!(page?.seo?.description || '').trim(), label: '検索結果に出る説明文がある',
-      detail: page?.seo?.description ? `${page.seo.description.slice(0, 40)}…` : '「サイト全体」で入れられます',
-    });
-    const heroBlock = all.find(b => b.type === 'hero');
-    items.push({
-      ok: !!(heroBlock?.data as Record<string, unknown> | undefined)?.bgImage,
-      label: '最初の画面に写真が入っている',
-      detail: (heroBlock?.data as Record<string, unknown> | undefined)?.bgImage ? '入っています' : '写真があると、来た人がすぐ雰囲気を掴めます',
-    });
-    items.push({
-      ok: !/ここに|入力してください|サンプル|見出しを入力/.test(text),
-      label: '例文のままの場所が残っていない',
-      detail: /ここに|入力してください|サンプル|見出しを入力/.test(text) ? '「入力してください」などが残っています' : '大丈夫です',
-    });
-    const hasForm = all.some(b => b.type === 'contact' || b.type === 'booking');
-    items.push({
-      ok: hasForm, label: '連絡を受け取る欄がある',
-      detail: hasForm ? '予約または問い合わせの欄があります' : '予約か問い合わせの節を足してください',
-    });
-    items.push({
-      ok: !!site.settings.notifyEmail.trim() || !hasForm,
-      label: '受け取ったお知らせの届け先が決まっている',
-      detail: site.settings.notifyEmail || 'メールの届け先を「サイト全体」で入れてください',
-    });
-    items.push({
-      ok: all.length >= 4, label: '中身がひととおり揃っている',
-      detail: `${all.length}個の節`,
-    });
-    return items;
-  }, [blocks, site.name, site.settings.notifyEmail, page?.seo?.description]);
+  /* ── 公開準備の確認 ──
+     判定は lib/publish-readiness.ts に寄せてある。編集画面（ビルダー）と
+     同じ関数を呼ぶので、どちらで開いても「準備できている」の意味が変わらない。 */
+  const readiness = useMemo<ReadyItem[]>(() => checkPublishReadiness({
+    name: site.name,
+    pages: site.pages,
+    notifyEmail: site.settings.notifyEmail,
+  }), [site.name, site.pages, site.settings.notifyEmail]);
 
   /* ── 画面 ── */
 
@@ -652,7 +700,7 @@ function StudioInner() {
   }
 
   if (step === 'intake') return <Intake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} />;
-  if (step === 'mood') return <Mood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} chosen={handoff} />;
+  if (step === 'mood') return <Mood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} fromLp={moodFromLp || handoff} />;
 
   const selected = blocks.find(b => b.id === selectedId) || null;
   const def = selected ? BLOCK_DEFS[selected.type] : null;
@@ -688,6 +736,26 @@ function StudioInner() {
             className="px-4 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-bold">公開の準備</button>
         </div>
       </header>
+
+      {blocked && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-[13px] font-bold text-amber-900">
+            {blocked.kind === 'login'
+              ? '保存するにはログインが必要です。いま作った中身は、この端末に残してあります。'
+              : (blocked.message || '保存するには契約が必要です。') + ' いま作った中身は、この端末に残してあります。'}
+          </span>
+          <a
+            href={blocked.kind === 'login'
+              ? `/laruHP/auth/login?redirectTo=${encodeURIComponent('/laruHP/studio')}`
+              : '/laruHP/plans'}
+            className="text-[13px] font-bold text-white bg-amber-700 hover:bg-amber-800 rounded-md px-3 py-1">
+            {blocked.kind === 'login' ? 'ログインして戻る' : '料金を見る'}
+          </a>
+          <span className="text-[11px] text-amber-800">
+            戻ってきたら、もう一度「保存」を押してください。続きから直せます。
+          </span>
+        </div>
+      )}
 
       <div className="flex-1 flex min-h-0">
         {/* 左: 節の一覧 */}
@@ -1021,7 +1089,7 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
 
 /* ── 公開の準備 ── */
 function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, onPublish }: {
-  items: Array<{ ok: boolean; label: string; detail: string }>;
+  items: ReadyItem[];
   siteId: string | null;
   published: boolean;
   savedSincePublish: boolean;
@@ -1030,24 +1098,38 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
   note: string;
   onPublish: () => void;
 }) {
-  const done = items.filter(i => i.ok).length;
+  /* 「直さないと困ること」と「直したほうが良いこと」を分ける。
+     数の割合（4/7）は、重さの違う項目を同じ1として数えてしまうので出さない。 */
+  const blocking = blockingItems(items);
+  const must = items.filter(i => i.level === 'must');
+  const better = items.filter(i => i.level === 'better');
+  const row = (i: ReadyItem) => (
+    <li key={i.id} className="flex gap-2">
+      <span className={`mt-0.5 ${i.ok ? 'text-emerald-600' : i.level === 'must' ? 'text-rose-500' : 'text-amber-500'}`}>
+        {i.ok ? '✓' : '!'}
+      </span>
+      <div>
+        <div className="text-[13px] font-bold text-slate-800">{i.label}</div>
+        <div className="text-[11px] text-slate-500 leading-relaxed">{i.detail}</div>
+      </div>
+    </li>
+  );
   return (
     <>
       <div className="mb-4">
-        <div className="text-sm font-bold text-slate-900">公開の準備（{done}/{items.length}）</div>
-        <div className="text-[11px] text-slate-500 mt-0.5">すべて埋まっていなくても公開できます。あとから直せます。</div>
+        <div className="text-sm font-bold text-slate-900">公開の準備</div>
+        <div className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+          {blocking.length === 0
+            ? '公開して困ることは見つかりませんでした。'
+            : `このまま公開すると困ることが ${blocking.length} 件あります。`}
+        </div>
       </div>
-      <ul className="space-y-2 mb-5">
-        {items.map(i => (
-          <li key={i.label} className="flex gap-2">
-            <span className={`mt-0.5 ${i.ok ? 'text-emerald-600' : 'text-amber-500'}`}>{i.ok ? '✓' : '!'}</span>
-            <div>
-              <div className="text-[13px] font-bold text-slate-800">{i.label}</div>
-              <div className="text-[11px] text-slate-500 leading-relaxed">{i.detail}</div>
-            </div>
-          </li>
-        ))}
-      </ul>
+
+      <div className="text-[11px] font-bold text-slate-500 mb-1.5">直さないと、来た人に影響が出ること</div>
+      <ul className="space-y-2 mb-4">{must.map(row)}</ul>
+
+      <div className="text-[11px] font-bold text-slate-500 mb-1.5">直したほうが良いこと</div>
+      <ul className="space-y-2 mb-5">{better.map(row)}</ul>
 
       <div className="border-t border-slate-200 pt-4">
         <div className="text-[12px] text-slate-600 mb-2 leading-relaxed">
@@ -1064,6 +1146,11 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
         )}
         {saveState.kind === 'failed' && (
           <div className="text-[12px] font-bold text-rose-700 mb-2">保存できていません。保存し直してから公開してください。</div>
+        )}
+        {blocking.length > 0 && (
+          <div className="text-[12px] font-bold text-rose-700 mb-2 leading-relaxed">
+            公開はできますが、上の赤い印の {blocking.length} 件は先に直すことをおすすめします。
+          </div>
         )}
         <button onClick={onPublish} disabled={!siteId || publishing || saveState.kind !== 'clean'}
           className="w-full py-2.5 rounded-lg bg-sky-600 text-white text-sm font-bold disabled:opacity-40">
@@ -1185,12 +1272,12 @@ const SAMPLE_PHOTOS = {
   heroW: 1200, heroH: 896,
 };
 
-function Mood({ intake, onBack, onPick, chosen = '' }: {
+function Mood({ intake, onBack, onPick, fromLp }: {
   intake: IntakeAnswers;
   onBack: () => void;
   onPick: (presetId: string) => void;
-  /** 会社トップで選んできた見せ方。先頭に出して、選んだままだと分かるようにする */
-  chosen?: string;
+  /** 案内ページのデモで選んだ見せ方（DESIGN_PRESETS の id）。無ければ null */
+  fromLp?: string | null;
 }) {
   const samples = useMemo(() => DESIGN_PRESETS.map(p => {
     const name = intake.name || '店名';
@@ -1232,6 +1319,15 @@ function Mood({ intake, onBack, onPick, chosen = '' }: {
     return { preset: p, html };
   }), [intake]);
 
+  /* 案内ページで選んだものがあれば、先頭に出す。
+     選び直しは妨げない（並び順を変えるだけで、5つとも出したまま）。 */
+  const ordered = useMemo(() => {
+    if (!fromLp) return samples;
+    const hit = samples.find(s => s.preset.id === fromLp);
+    if (!hit) return samples;
+    return [hit, ...samples.filter(s => s !== hit)];
+  }, [samples, fromLp]);
+
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-5">
       <div className="max-w-6xl mx-auto">
@@ -1242,6 +1338,12 @@ function Mood({ intake, onBack, onPick, chosen = '' }: {
           出来上がる見た目そのものです。文章と写真はあとから入れ替えます。あとから何度でも変えられます。
         </p>
         <p className="text-[11px] text-slate-400 mb-6">写真は見本です。お店の写真は、このあと入れ替えられます。</p>
+        {fromLp && samples.some(s => s.preset.id === fromLp) && (
+          <p className="text-[12px] text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mb-5 leading-relaxed">
+            案内の画面で選んだ「{samples.find(s => s.preset.id === fromLp)!.preset.name}」を、いちばん上に出しています。
+            ここで選び直しても構いません。
+          </p>
+        )}
 
         {chosen && (
           <p className="mb-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-[13px] text-sky-900">
@@ -1249,16 +1351,19 @@ function Mood({ intake, onBack, onPick, chosen = '' }: {
           </p>
         )}
         <div className="grid md:grid-cols-2 gap-5">
-          {[...samples].sort((a, b) => (b.preset.id === chosen ? 1 : 0) - (a.preset.id === chosen ? 1 : 0)).map(({ preset, html }) => (
+          {ordered.map(({ preset, html }) => (
             <button key={preset.id} onClick={() => onPick(preset.id)}
-              className={`text-left bg-white rounded-2xl border-2 overflow-hidden transition-colors hover:border-sky-500
-                ${preset.id === chosen ? 'border-sky-500' : 'border-slate-200'}`}>
+              className={`text-left bg-white rounded-2xl border-2 overflow-hidden transition-colors ${
+                preset.id === fromLp ? 'border-sky-500' : 'border-slate-200 hover:border-sky-500'}`}>
               <div className="pointer-events-none">
                 <ScaledFrame html={html} width={1280} height={1330} title={`${preset.name}の見本`} />
               </div>
               <div className="p-4 border-t border-slate-100">
                 <div className="flex items-baseline gap-2 mb-1">
                   <span className="text-[15px] font-bold text-slate-900">{preset.name}</span>
+                  {preset.id === fromLp && (
+                    <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 rounded px-1.5 py-0.5">案内で選んだもの</span>
+                  )}
                   <span className="inline-flex items-center gap-1.5">
                     {[preset.design.bg, preset.design.accent, preset.design.ink].map((c, k) => (
                       <span key={k} className="w-3.5 h-3.5 rounded-full border border-slate-300" style={{ background: c }} />

@@ -769,7 +769,10 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.site) {
-        router.push(`/laruHP/builder?siteId=${data.site.id}`);
+        /* 中身が空のサイトは、機能が全部並んだ編集画面ではなく
+           「4つの質問」から始める画面で開く。制作画面側は、中身が空なら
+           質問から始め、答えたあとはこのサイトにそのまま書き込む。 */
+        router.push(`/laruHP/studio?siteId=${data.site.id}`);
       } else if (data.code === 'site_limit') {
         setShowSiteLimitModal({ limit: data.limit as number, current: data.current as number });
       } else {
@@ -1593,12 +1596,17 @@ export default function DashboardPage() {
               ))}
             </div>
             <Link
-              href="/laruHP/onboarding"
+              href="/laruHP/studio"
               className="inline-flex items-center gap-2 bg-sky-600 text-white font-bold text-sm px-6 py-3.5 rounded-xl hover:bg-sky-500 hover:scale-105 transition-all shadow-sm"
             >
               <IcSparkle />
-              AIでサイトを作る（無料）
+              4つの質問から作りはじめる
             </Link>
+            <div className="mt-3">
+              <Link href="/laruHP/onboarding" className="text-[12px] text-gray-500 underline hover:text-gray-800">
+                業種や特徴を細かく入力して、AIに下書きを作らせる
+              </Link>
+            </div>
             <p className="text-gray-400 text-[11px] mt-4">✓ 初月無料 &nbsp;✓ 最低6ヶ月契約 &nbsp;✓ 公開まで最短5分</p>
           </div>
         ) : (

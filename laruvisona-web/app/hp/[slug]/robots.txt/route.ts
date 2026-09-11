@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { canonicalBase, siteUrl } from '@/lib/public-site-url';
+import { canonicalBase, siteUrl, decodeSlug } from '@/lib/public-site-url';
 
 function getAdminClient() {
   return createClient(
@@ -13,7 +13,8 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
   const supabase = getAdminClient();
 
   const { data: site } = await supabase

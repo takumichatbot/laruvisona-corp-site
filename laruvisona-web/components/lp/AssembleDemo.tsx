@@ -25,6 +25,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { exportToHTML } from '@/lib/html-export';
+import Link from 'next/link';
 import { saveDesignChoice } from '@/lib/design-handoff';
 import { DESIGN_PRESETS } from '@/lib/site-design';
 import type { Block, SEOSettings } from '@/types/laruHP';
@@ -828,7 +829,23 @@ export default function AssembleDemo(
         </p>
         {note && <p className="text-[12px] font-bold text-sky-700" role="status">{note}</p>}
       </div>
-      <p className="order-5 text-[11px] text-slate-500 mt-2 leading-relaxed">
+      {/* ここで選んだ見せ方を、そのまま制作画面へ持っていく。
+          持っていくのは DESIGN_PRESETS の id ひとつだけ。制作画面では
+          いちばん上に出るだけで、選び直しは妨げない。 */}
+      <div className="order-5 mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex-1 min-w-[220px]">
+          <p className="text-[13px] font-bold text-slate-800">この見せ方のまま、自分のお店で作れます</p>
+          <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
+            「{pickedChoice.name}」を選んだ状態で制作画面が開きます。写真と文章を入れ替えるところから始められます。
+          </p>
+        </div>
+        <Link href={`/laruHP/studio?mood=${encodeURIComponent(picked)}`}
+          className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-slate-900 text-white text-[14px] font-bold hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500">
+          この見せ方で作りはじめる
+        </Link>
+      </div>
+
+      <p className="order-6 text-[11px] text-slate-500 mt-2 leading-relaxed">
         この3つは、制作画面の「雰囲気を選び直す」と同じものです。選ぶたびに、公開ページを作るのと同じ処理で作り直しています。
         送信は見本としての受け付けで、どこへも送られません。写真は見本用の生成素材で、結い庵は架空のお店です。
       </p>

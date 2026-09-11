@@ -29,6 +29,28 @@ export function appOrigin(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp').replace(/\/$/, '');
 }
 
+/**
+ * URL のパスから受け取った slug を、保存されている値に戻す。
+ *
+ * 保存される slug は日本語を許している（例: 「のぞみ整体院-mtxas3cy」）。
+ * 一方、ブラウザは URL を百分率記法で送り、この版の Next.js は
+ * 動的セグメントを復号せずに渡してくる。そのまま問い合わせると
+ * 「%E3%81%AE…」という名前のサイトを探すことになり、公開ページが
+ * 丸ごと 404 になる（英数字だけの slug では起きないので気づきにくい）。
+ *
+ * 復号できないもの（単体の % など）はそのまま返す。
+ * すでに復号済みの値を渡しても、%（百分率記法の形）が無ければ何もしない。
+ */
+export function decodeSlug(raw: string | null | undefined): string {
+  const s = String(raw ?? '');
+  if (!s.includes('%')) return s;
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 /** Host ヘッダーからホスト名だけを取り出す */
 export function hostnameOf(rawHost: string | null | undefined): string {
   return (rawHost || '').split(',')[0].trim().split(':')[0].toLowerCase();

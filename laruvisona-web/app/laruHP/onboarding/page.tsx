@@ -124,15 +124,6 @@ const defaultForm: FormData = {
 const STEPS = ['業種選択', 'ビジネス情報', 'デザイン', 'コンテンツ', '確認・生成'];
 const STEP_TIMES = ['約30秒', '約1分', '約1分', '約2分', '約30秒'];
 
-const GENERATE_STEPS = [
-  'ビジネス情報を解析',
-  'キャッチコピー・ヒーロー見出しを生成',
-  '3つの強み・紹介文を作成',
-  'FAQ・お客様の声を生成',
-  'SEO設定を最適化',
-  'テンプレートにデータを適用',
-];
-
 const INDUSTRY_SERVICE_HINTS: Record<string, Array<{ name: string; price: string; description: string }>> = {
   restaurant:   [{ name: 'ランチセット', price: '¥1,200', description: 'サラダ・スープ付き' }, { name: 'ディナーコース', price: '¥4,800', description: '全8品・飲み物別' }, { name: 'テイクアウト弁当', price: '¥850', description: '日替わりメニュー' }],
   beauty:       [{ name: 'カット', price: '¥4,400', description: 'シャンプー・ブロー込み' }, { name: 'カラー', price: '¥8,800', description: 'リタッチ〜フルカラー' }, { name: 'パーマ', price: '¥11,000', description: 'デジタルパーマ対応' }],
@@ -507,7 +498,9 @@ function OnboardingContent() {
   const [slideDir, setSlideDir] = useState<'forward' | 'back'>('forward');
   const [form, setForm] = useState<FormData>({ ...defaultForm });
   const [generating, setGenerating] = useState(false);
-  const [completedStepCount, setCompletedStepCount] = useState(0);
+  // 'working' = 応答待ち（実測できる進捗が無いので単一状態のみ）, 'done' = 応答が返り、実際に生成された内容を表示中
+  const [generationPhase, setGenerationPhase] = useState<'working' | 'done'>('working');
+  const [generatedSummary, setGeneratedSummary] = useState<string[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isAgency, setIsAgency] = useState(false);
 
@@ -594,14 +587,6 @@ function OnboardingContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, generating, form]);
 
-  // Animate step-by-step progress during generation
-  useEffect(() => {
-    if (!generating) { setCompletedStepCount(0); return; }
-    const delays = [700, 1600, 2800, 4200, 5600, 7000];
-    const timers = delays.map((d, i) => setTimeout(() => setCompletedStepCount(i + 1), d));
-    return () => timers.forEach(clearTimeout);
-  }, [generating]);
-
   const updateForm = (key: keyof FormData, value: unknown) => {
     setForm(f => ({ ...f, [key]: value }));
   };
@@ -673,11 +658,36 @@ function OnboardingContent() {
     }
   };
 
+  // 応答から実際に生成された件数・見出しを事実として一覧化する（推測や固定値ではない）
+  const buildGeneratedSummary = (g: Record<string, unknown> | null): string[] => {
+    if (!g) return [];
+    const items: string[] = [];
+    if (typeof g.heroHeading === 'string' && g.heroHeading) {
+      items.push(`ヒーロー見出し「${g.heroHeading}」`);
+    }
+    if (Array.isArray(g.threeColItems) && g.threeColItems.length > 0) {
+      items.push(`強み ${g.threeColItems.length}件`);
+    }
+    if (typeof g.aboutText === 'string' && g.aboutText) {
+      items.push('紹介文');
+    }
+    if (Array.isArray(g.faqs) && g.faqs.length > 0) {
+      items.push(`FAQ ${g.faqs.length}件`);
+    }
+    if (Array.isArray(g.testimonials) && g.testimonials.length > 0) {
+      items.push(`お客様の声 ${g.testimonials.length}件`);
+    }
+    if (typeof g.seoTitle === 'string' && g.seoTitle) {
+      items.push('SEOタイトル・ディスクリプション');
+    }
+    return items;
+  };
+
   const handleGenerate = async () => {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 1200);
     setGenerating(true);
-    setCompletedStepCount(0);
+    setGenerationPhase('working');
 
     let aiGenerated = null;
     try {
@@ -692,12 +702,12 @@ function OnboardingContent() {
       }
     } catch {}
 
-    // Ensure at least 3 seconds of animation
-    await new Promise(r => setTimeout(r, 3000));
-
     localStorage.setItem('laruHP_data', JSON.stringify({ ...form, aiGenerated }));
     localStorage.removeItem('laruHP_onboarding_draft');
-    router.push('/laruHP/builder?from=onboarding');
+
+    // 応答が返った時点でのみ「できました」を表示する（時間経過ではなく結果に基づく）
+    setGeneratedSummary(buildGeneratedSummary(aiGenerated));
+    setGenerationPhase('done');
   };
 
   const canNext = () => {
@@ -1534,52 +1544,44 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {/* ─── Step 5: Confirm & Generate ──────────────────────── */}
         {step === 5 && (
           <div>
-            {generating ? (
-              <div className="py-16 max-w-sm mx-auto">
-                <div className="text-center mb-10">
-                  <div className="relative w-16 h-16 mx-auto mb-5">
-                    <div className="absolute inset-0 rounded-full border-2 border-sky-200" />
-                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-600 animate-spin" />
-                    <div className="absolute inset-2 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
-                    <div className="absolute inset-0 flex items-center justify-center text-xl">
-                      {selectedIndustry?.icon}
-                    </div>
+            {generating && generationPhase === 'working' ? (
+              <div className="py-16 max-w-sm mx-auto text-center">
+                <div className="relative w-16 h-16 mx-auto mb-5">
+                  <div className="absolute inset-0 rounded-full border-2 border-sky-200" />
+                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-sky-600 animate-spin" />
+                  <div className="absolute inset-2 rounded-full border-2 border-transparent border-t-sky-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+                  <div className="absolute inset-0 flex items-center justify-center text-xl">
+                    {selectedIndustry?.icon}
                   </div>
-                  <h2 className="text-2xl font-bold mb-1 text-gray-900">AIがサイトを生成中</h2>
-                  <p className="text-gray-500 text-sm">{selectedIndustry?.name}に最適化したコンテンツを作っています</p>
                 </div>
+                <h2 className="text-2xl font-bold mb-1 text-gray-900">作っています…</h2>
+                <p className="text-gray-500 text-sm">{selectedIndustry?.name}に合わせた文章をAIが考えています。30秒ほどかかることがあります。</p>
+              </div>
+            ) : generating && generationPhase === 'done' ? (
+              <div className="py-16 max-w-sm mx-auto text-center">
+                <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <h2 className="text-2xl font-bold mb-1 text-gray-900">できました</h2>
+                <p className="text-gray-500 text-sm mb-6">編集画面へ移ります。</p>
 
-                {/* Step-by-step checklist */}
-                <div className="space-y-3">
-                  {GENERATE_STEPS.map((label, i) => {
-                    const done = i < completedStepCount;
-                    const active = i === completedStepCount;
-                    return (
-                      <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-500 ${
-                        done ? 'bg-emerald-50 border border-emerald-200' :
-                        active ? 'bg-sky-50 border border-sky-200' :
-                        'bg-white border border-gray-200 opacity-40'
-                      }`}>
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                          done ? 'bg-emerald-500' : active ? 'bg-sky-200' : 'bg-gray-200'
-                        }`}>
-                          {done ? (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          ) : active ? (
-                            <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                          ) : (
-                            <div className="w-2 h-2 rounded-full bg-gray-300" />
-                          )}
-                        </div>
-                        <span className={`text-sm font-medium ${done ? 'text-emerald-700' : active ? 'text-gray-900' : 'text-gray-400'}`}>
-                          {label}
-                        </span>
-                        {done && <span className="ml-auto text-emerald-600 text-xs">完了</span>}
-                        {active && <span className="ml-auto text-sky-600 text-xs animate-pulse">処理中...</span>}
+                {generatedSummary.length > 0 && (
+                  <div className="text-left bg-white border border-gray-200 rounded-xl p-4 mb-6 space-y-1.5">
+                    {generatedSummary.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0"><path d="M2 6l3 3 5-5" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        {s}
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => router.push('/laruHP/builder?from=onboarding')}
+                  className="w-full bg-sky-600 hover:bg-sky-500 text-white py-4 rounded-2xl font-bold transition-all shadow-sm hover:shadow-md"
+                >
+                  編集画面へ進む →
+                </button>
               </div>
             ) : (
               <div>
@@ -1766,7 +1768,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
                     onClick={handleGenerate}
                     className="w-full bg-sky-600 hover:bg-sky-500 text-white py-5 rounded-2xl font-bold text-lg transition-all shadow-sm hover:shadow-md hover:scale-[1.02]"
                   >
-                    AIでサイトを生成する →
+                    AIでサイトのたたき台を作る →
                   </button>
                 </div>
                 <p className="text-center text-gray-500 text-xs mt-4">

@@ -2,7 +2,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { jsonForScript } from '@/lib/safe-markup';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
-import { canonicalBase, siteUrl, isHostForSite } from '@/lib/public-site-url';
+import { canonicalBase, siteUrl, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 import type { Metadata } from 'next';
 import ShopClient from './ShopClient';
 
@@ -20,7 +20,8 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
   const supabase = getServiceClient();
   const { data } = await supabase.from('sites')
     .select('name, slug, custom_domain').eq('slug', slug).eq('published', true).single();
@@ -48,7 +49,8 @@ interface Product {
 }
 
 export default async function PublicShopPage({ params, searchParams }: Props) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
   const { payment } = await searchParams;
   const supabase = getServiceClient();
 

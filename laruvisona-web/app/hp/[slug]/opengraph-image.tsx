@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
+import { decodeSlug } from '@/lib/public-site-url';
 
 export const alt = 'ホームページ';
 export const size = { width: 1200, height: 630 };
@@ -24,7 +25,8 @@ const GRADIENTS = [
 ];
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
   const supabase = getServiceClient();
 
   const { data } = await supabase

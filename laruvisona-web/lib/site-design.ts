@@ -156,6 +156,7 @@ export function normalizeDesign(raw: unknown): SiteDesign {
 export function designCss(raw: unknown): string {
   const d = normalizeDesign(raw);
   const pad = SPACE_PAD[d.space];
+  const teamPhotoPx = (d.space === 'roomy' || d.space === 'airy') ? 148 : 120;
   const bodyPx = (16 * d.bodyScale).toFixed(2);
   const bodyPxSp = (15.5 * d.bodyScale).toFixed(2);
   return `
@@ -180,15 +181,18 @@ export function designCss(raw: unknown): string {
 body{color:var(--lhp-d-ink);background:var(--lhp-d-bg)}
 
 /* 本文。和文は行を広めに取らないと、面として読みにくい */
-.lhp-section p,.lhp-faq-a,.lhp-price-desc,.lhp-col p,.lhp-section-sub,.lhp-hours-note{
+.lhp-section p,.lhp-faq-a,.lhp-price-desc,.lhp-col p,.lhp-section-sub,.lhp-hours-note,.lhp-price-features li,.lhp-testimonial p,.lhp-card p{
   font-size:${bodyPx}px;line-height:${d.bodyLeading};letter-spacing:${d.bodyTracking}em;
 }
 @media(max-width:640px){
-  .lhp-section p,.lhp-faq-a,.lhp-col p{font-size:${bodyPxSp}px;line-height:${Math.max(1.5, d.bodyLeading - 0.1).toFixed(2)}}
+  .lhp-section p,.lhp-faq-a,.lhp-col p,.lhp-price-features li,.lhp-testimonial p,.lhp-card p{font-size:${bodyPxSp}px;line-height:${Math.max(1.5, d.bodyLeading - 0.1).toFixed(2)}}
 }
 /* 一行が長くなりすぎないように読み幅で止める */
 .lhp-section > p,.lhp-section-sub,.lhp-hours-note{max-width:var(--lhp-d-read);margin-left:auto;margin-right:auto}
 .lhp-section > p + p{margin-top:1.4em}
+/* FAQの外枠と営業時間表も、読み幅に合わせる（html-export.ts側は720px/400px固定） */
+.lhp-faq{max-width:var(--lhp-d-read)}
+.lhp-hours{max-width:var(--lhp-d-read)}
 
 /* 見出し */
 .lhp-section-title{
@@ -206,6 +210,8 @@ ${d.titleRule === 'underline' ? `.lhp-section-title{border-bottom:1px solid var(
   font-size:clamp(${(26 * d.headingScale).toFixed(1)}px,${(3.4 * d.headingScale).toFixed(2)}vw,${(42 * d.headingScale).toFixed(1)}px);
   letter-spacing:${(d.headingTracking + 0.02).toFixed(3)}em;font-weight:${d.headingWeight};line-height:1.6;
 }
+/* 料金の金額。html-export.ts側は2.2rem固定なので、見出しの大きさに連動させる */
+.lhp-price-amount{font-size:${(2.2 * d.headingScale).toFixed(2)}rem}
 
 /* 節の間隔 */
 .lhp-section{padding-top:var(--lhp-d-pad);padding-bottom:var(--lhp-d-pad)}
@@ -228,7 +234,12 @@ ${d.titleRule === 'underline' ? `.lhp-section-title{border-bottom:1px solid var(
    既定のスタイルは濃い地を前提に白文字を当てており、そのままだと読めない */
 .lhp-price-featured{background:var(--lhp-d-surface);border-color:var(--lhp-d-accent)}
 .lhp-price-featured,.lhp-price-featured *{color:var(--lhp-d-ink)}
-.lhp-price-featured .lhp-price-btn{color:var(--lhp-d-on-accent)}
+/* 既定CSSは「おすすめの札は差し色の地」を前提に、中のボタンを白地にしている
+   （.lhp-price-featured .lhp-price-btn{background:#fff}）。
+   サイト全体の設定を使うと札の地は surface（明るい面）になるので、
+   白地のままだと白い文字が白いボタンに乗って消える。
+   札の中でも、ほかのボタンと同じ「差し色の地＋その上の文字色」にそろえる。 */
+.lhp-price-featured .lhp-price-btn{background:var(--lhp-d-accent);color:var(--lhp-d-on-accent)}
 .lhp-price-badge,.lhp-price-featured .lhp-price-badge{background:var(--lhp-d-accent);color:var(--lhp-d-on-accent);letter-spacing:.08em}
 .lhp-faq-item{border:none;border-bottom:1px solid var(--lhp-d-line);border-radius:0}
 .lhp-faq-q{min-height:56px}
@@ -237,6 +248,13 @@ ${d.titleRule === 'underline' ? `.lhp-section-title{border-bottom:1px solid var(
 
 /* 写真 */
 .lhp-gallery-img{aspect-ratio:var(--lhp-d-photo);object-fit:cover;border-radius:var(--lhp-d-r)}
+/* スタッフの丸写真。html-export.ts側の既定は96px（互換のため）。
+   設定を持つサイトはここで少し大きくする */
+/* スタッフの丸写真。既定CSSは96px固定で、参考作品は customCss で148pxへ
+   広げていた。人の顔は小さいと誰だか分からないので、余白の広さに合わせて
+   ここで決める（tight/normal は 120px、roomy/airy は 148px）。
+   設定を1つ増やすより、選んだ「余白」に従うほうが迷わない。 */
+.lhp-team-photo{width:${teamPhotoPx}px;height:${teamPhotoPx}px}
 
 /* 入力欄。指で押せる大きさにする */
 .lhp-form input,.lhp-form select,.lhp-form textarea{

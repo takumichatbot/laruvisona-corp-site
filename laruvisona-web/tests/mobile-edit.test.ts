@@ -47,8 +47,10 @@ test('タップ領域と入力サイズの土台に乗っている', () => {
   assert.match(edit, /w-11 h-11/, '並べ替えボタンが44px未満');
 });
 
-test('ビルダーのスマホ案内から編集画面へ行ける', () => {
-  assert.match(builder, /href="\/laruHP\/edit"/, 'スマホから編集画面へ辿れない');
+test('ビルダーのスマホ案内から編集画面へ行ける（同じサイトが開く）', () => {
+  // siteId を付けないと、編集画面側が「中身のあるサイト」を自動選択してしまい、
+  // いま編集していたのと違うサイトが開くことがある（app/laruHP/edit/page.tsx 参照）。
+  assert.match(builder, /href={`\/laruHP\/edit\?site=\$\{siteId\}`}/, 'スマホから同じサイトの編集画面へ辿れない');
   assert.ok(!builder.includes('このまま続ける（表示が崩れます）'),
     '案内が「崩れます」だけのまま＝代替手段を示せていない');
 });

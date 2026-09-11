@@ -2,7 +2,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { jsonForScript, safeToken } from '@/lib/safe-markup';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
-import { canonicalBase, isHostForSite } from '@/lib/public-site-url';
+import { canonicalBase, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
 
@@ -24,7 +24,8 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
   const supabase = getServiceClient();
   const { data } = await supabase
     .from('sites')
@@ -131,7 +132,8 @@ function buildJsonLd(siteName: string, baseUrl: string, seo: { description?: str
 }
 
 export default async function PublishedSitePage({ params }: Props) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
+  const slug = decodeSlug(rawSlug);
   const supabase = getServiceClient();
 
   const { data: site } = await supabase
