@@ -88,6 +88,7 @@ ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/delivery-check.mj
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/republish-safety-check.mjs --port 3300
 node docs/reference-sites/salon/demo-check.mjs --port 3300
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/hero-video-check.mjs --port 3300
+node tests/browser/brand-visual-check.mjs --port 3300
 node docs/reference-sites/salon/demo-timing-check.mjs --url http://127.0.0.1:3300/laruHP --slow yes
 # 顧客が選んだ書体（結い庵は明朝）も落として測るとき
 #   perf-check / demo-timing-check とも --font-css と --font-dir を足す
