@@ -87,6 +87,11 @@ async function open(reduced) {
     }
   }
 
+  if (poster && !video) {
+    check('静止画だけの段階では、止めるボタンを出さない',
+      (await page.locator('button[aria-label*="背景の動き"]').count()) === 0);
+  }
+
   // 素材の有無にかかわらず、場所は先に取れている（読み込みで下がずれない）
   const box = await page.locator('section .aspect-\\[4\\/3\\], section .rounded-2xl').first()
     .evaluate(el => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; })
@@ -107,6 +112,89 @@ async function open(reduced) {
   }
   check('画面の例外が出ていない（動きを減らす）', errs.length === 0, errs.slice(0, 2).join(' / '));
   await ctx.close();
+}
+
+/* ── 3. 素材の見え方（静止画が入っているときだけ） ──
+   「枠に小さな模型を置いただけ」になっていないか、
+   画像の地とページの地に段差が出ていないかを、実際の画素で見る。 */
+if (poster) {
+  for (const view of [
+    { name: 'パソコン', width: 1440, height: 900, wantRatio: 16 / 10, wantKey: 'hero-pc-' },
+    { name: 'スマホ', width: 390, height: 844, wantRatio: 4 / 3, wantKey: 'hero-sp-' },
+  ]) {
+    const ctx = await browser.newContext({ viewport: { width: view.width, height: view.height }, locale: 'ja-JP', deviceScaleFactor: 1 });
+    await ctx.route(BLOCK, r => r.abort());
+    const page = await ctx.newPage();
+    const got = [];
+    page.on('response', r => { if (/\/brand\/hero-/.test(r.url())) got.push(r.url().split('/').pop()); });
+    await page.goto(`${BASE}/`, { waitUntil: 'load' });
+    await page.waitForTimeout(1800);
+
+    const img = page.locator(`img[src="${poster}"]`).first();
+    const info = await img.evaluate(el => ({
+      current: el.currentSrc.split('/').pop(),
+      natW: el.naturalWidth, natH: el.naturalHeight,
+      boxW: Math.round(el.getBoundingClientRect().width),
+      boxH: Math.round(el.getBoundingClientRect().height),
+      fit: getComputedStyle(el).objectFit,
+    }));
+    check(`${view.name}：その画面用の切り抜きが選ばれている`, info.current.startsWith(view.wantKey), info.current);
+    check(`${view.name}：軽い形式で配っている（原画PNGではない）`, /\.(avif|webp)$/.test(info.current), info.current);
+    // 枠と画像の縦横比が同じなら、cover でも切り落としは起きない
+    const boxRatio = info.boxW / info.boxH, imgRatio = info.natW / info.natH;
+    check(`${view.name}：全面coverで重要部分を切っていない`,
+      Math.abs(boxRatio - imgRatio) < 0.02 && Math.abs(boxRatio - view.wantRatio) < 0.02,
+      `枠 ${boxRatio.toFixed(3)} / 画像 ${imgRatio.toFixed(3)}`);
+
+    // 主役の大きさ。画像の中で、明るい面（模型）が占める幅を測る
+    const subject = await img.evaluate(el => {
+      const c = document.createElement('canvas');
+      c.width = 240; c.height = Math.round(240 * el.naturalHeight / el.naturalWidth);
+      const g = c.getContext('2d');
+      g.drawImage(el, 0, 0, c.width, c.height);
+      const d = g.getImageData(0, 0, c.width, c.height).data;
+      let x0 = c.width, x1 = -1, y0 = c.height, y1 = -1;
+      for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+        const i = (y * c.width + x) * 4;
+        if ((d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000 > 140) {
+          if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+      }
+      return { w: (x1 - x0 + 1) / c.width, h: (y1 - y0 + 1) / c.height };
+    });
+    check(`${view.name}：主役が枠のなかで十分に大きい`, subject.w >= 0.78 && subject.h >= 0.7,
+      `幅 ${(subject.w * 100).toFixed(0)}% × 高さ ${(subject.h * 100).toFixed(0)}%`);
+    // 見出しと釣り合っているか（写真枠の中の小さな模型になっていないか）
+    const h1w = await page.locator('h1').first().evaluate(el => Math.round(el.getBoundingClientRect().width));
+    check(`${view.name}：見出しと釣り合う大きさで出ている`, info.boxW * subject.w >= h1w * 0.8,
+      `主役 ${Math.round(info.boxW * subject.w)}px / 見出し ${h1w}px`);
+
+    /* 画像の地とページの地の段差。
+       画像の上辺をまたぐ帯を撮り、すぐ上（ページ）とすぐ下（画像）を比べる。
+       スマホでは左右いっぱいに置くので、外側が残るのは上辺だけ。 */
+    const seam = await page.evaluate((sel) => {
+      const r = document.querySelector(sel).getBoundingClientRect();
+      return { x: Math.round(r.left + r.width / 2) - 20, y: Math.round(r.top) };
+    }, `img[src="${poster}"]`);
+    const shot = await page.screenshot({ clip: { x: Math.max(0, seam.x), y: Math.max(0, seam.y - 8), width: 40, height: 16 } });
+    const px = await page.evaluate(async (b64) => {
+      const img = new Image();
+      img.src = 'data:image/png;base64,' + b64;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      const row = (y) => { const s = [0, 0, 0]; for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4; s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; } return s.map(v => Math.round(v / c.width)); };
+      return { above: row(1), below: row(c.height - 2) };
+    }, shot.toString('base64'));
+    const diff = Math.max(...[0, 1, 2].map(i => Math.abs(px.above[i] - px.below[i])));
+    check(`${view.name}：画像の地とページの地に段差が出ていない`, diff <= 6,
+      `上 rgb(${px.above}) / 下 rgb(${px.below}) 差 ${diff}`);
+
+    check(`${view.name}：必要な枚数だけ取りに行っている`, got.length <= 2, got.join(' / '));
+    await ctx.close();
+  }
 }
 
 await browser.close();

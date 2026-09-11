@@ -7,7 +7,21 @@
 
 ---
 
-## 1. 会社トップの主役ビジュアル
+## 1. 会社トップの主役ビジュアル ＝ **2026-09-11 実施済み**
+
+Nano Banana Pro 側の原画を採用して組み込んだ。詳細は
+`docs/change-2026-09-11-demo-and-brand.md`。手順は下のとおりだが、
+**いまは原画をそのまま置くのではなく `scripts/brand-hero.mjs` を通す**。
+
+```bash
+node scripts/brand-hero.mjs --src <原画.png>   # public/brand/hero-{pc,sp}-*.{avif,webp,jpg}
+node tests/browser/brand-visual-check.mjs --port 3300
+```
+
+原画は `LARU-Brain/atelier-comparison-20260911-8e2c7e9b/` にある（リポジトリには入れない）。
+動画はまだ採用していないので `BRAND_VISUAL.video` は空のまま。
+
+### （もとの手順）
 
 | 何 | どこへ |
 |---|---|

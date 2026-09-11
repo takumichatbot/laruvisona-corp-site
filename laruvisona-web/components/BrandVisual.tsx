@@ -8,21 +8,40 @@
  * 決めごと:
  *  - 静止画が先。動画は後から重ねる。読み込みで見出しやボタンを待たせない。
  *  - 音は出さない。画面の中で再生する。止める手段を出す。
+ *    **止める操作は動画が動いているときだけ出す。静止画だけの段階では出さない。**
  *  - 端末が「動きを減らす」設定なら、動画は取りに行かない。
  *  - 素材が無いときは、この場で描く図形で成立させる。製品画面の偽物は置かない。
+ *  - パソコンとスマホで、切り抜きを別々に用意する（同じ1枚を全面coverで
+ *    引き伸ばすと、中央の抜けや浮いた板が切れる）。枠の縦横比は切り抜きと
+ *    同じにしてあるので、cover でも切り落としは起きない。
+ *  - 画像の地は、書き出しの段階でページの地色へなじませてある。
+ *    枠線も角丸も付けない（付けると、そこだけ四角い板に見える）。
+ *
+ * これは「仕組みを組み上げる」印象づくりのための抽象的な像で、
+ * 製品の画面でも、操作できる部品でもない。
  */
 import { useEffect, useRef, useState } from 'react';
+
+export interface BrandSource {
+  /** どの画面のときに使うか */
+  media: string;
+  type: string;
+  srcSet: string;
+  sizes: string;
+}
 
 export interface BrandVisualProps {
   /** 静止画（先に出る）。未納品なら空 */
   poster?: string;
+  /** 画面ごとの切り抜き。空なら poster の1枚だけを使う */
+  sources?: BrandSource[];
   /** 動画。未納品なら空 */
   video?: string;
   /** 読み上げ用の説明。装飾なら空にする */
   alt?: string;
 }
 
-export default function BrandVisual({ poster = '', video = '', alt = '' }: BrandVisualProps) {
+export default function BrandVisual({ poster = '', sources = [], video = '', alt = '' }: BrandVisualProps) {
   const [reduced, setReduced] = useState(true);
   const [paused, setPaused] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -58,7 +77,12 @@ export default function BrandVisual({ poster = '', video = '', alt = '' }: Brand
 
   return (
     <div ref={boxRef}
-      className="relative w-full aspect-[4/3] md:aspect-[16/10] rounded-2xl overflow-hidden bg-[#0b1524]">
+      /* 素材が入ったら、枠も地色も持たせない。画像の地はページの地色へ
+         なじませてあるので、四角い板として浮かせないほうが大きく見える。
+         スマホでは左右いっぱいまで使う（主役を小さくしないため）。 */
+      className={poster
+        ? 'relative -mx-5 w-[calc(100%+2.5rem)] aspect-[4/3] md:mx-0 md:w-full md:aspect-[16/10]'
+        : 'relative w-full aspect-[4/3] md:aspect-[16/10] rounded-2xl overflow-hidden bg-[#0b1524]'}>
       {/* 素材が届くまでの下地。抽象的な図形だけで、製品画面の偽物は置かない */}
       {!poster && (
         <div aria-hidden="true" className="absolute inset-0">
@@ -78,9 +102,13 @@ export default function BrandVisual({ poster = '', video = '', alt = '' }: Brand
       )}
 
       {poster && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={poster} alt={alt} className="absolute inset-0 w-full h-full object-cover"
-          width={1600} height={1000} decoding="async" fetchPriority="high" />
+        <picture>
+          {sources.map(s => (
+            <source key={`${s.media}${s.type}`} media={s.media} type={s.type} srcSet={s.srcSet} sizes={s.sizes} />
+          ))}
+          <img src={poster} alt={alt} className="absolute inset-0 w-full h-full object-cover"
+            width={1280} height={800} decoding="async" fetchPriority="high" />
+        </picture>
       )}
 
       {showVideo && (
@@ -112,9 +140,29 @@ export default function BrandVisual({ poster = '', video = '', alt = '' }: Brand
   );
 }
 
+/* 配信用の画像は scripts/brand-hero.mjs が原画から作る。
+   原画（4800×3584 PNG・約23MB）はそのまま配信しない。 */
+const PC = '(min-width: 768px)';
+const SP = '(max-width: 767.98px)';
+const PC_SIZES = '(min-width: 1024px) 560px, calc(100vw - 40px)';
+const SP_SIZES = '100vw';
+const set = (key: string, ext: string, widths: number[]) =>
+  widths.map(w => `/brand/hero-${key}-${w}.${ext} ${w}w`).join(', ');
+const PC_W = [640, 960, 1280];
+const SP_W = [420, 780, 1170];
+
 /** 素材が届いたら、ここだけ差し替える */
 export const BRAND_VISUAL = {
-  poster: '',   // 例: '/brand/hero.jpg'
-  video: '',    // 例: '/brand/hero.mp4'
-  alt: '',      // 装飾として置くなら空のまま
+  poster: '/brand/hero-pc-1280.jpg',
+  sources: [
+    // スマホを先に書く。picture は上から順に、最初に条件が合ったものを使う
+    { media: SP, type: 'image/avif', srcSet: set('sp', 'avif', SP_W), sizes: SP_SIZES },
+    { media: SP, type: 'image/webp', srcSet: set('sp', 'webp', SP_W), sizes: SP_SIZES },
+    { media: SP, type: 'image/jpeg', srcSet: set('sp', 'jpg', SP_W), sizes: SP_SIZES },
+    { media: PC, type: 'image/avif', srcSet: set('pc', 'avif', PC_W), sizes: PC_SIZES },
+    { media: PC, type: 'image/webp', srcSet: set('pc', 'webp', PC_W), sizes: PC_SIZES },
+    { media: PC, type: 'image/jpeg', srcSet: set('pc', 'jpg', PC_W), sizes: PC_SIZES },
+  ],
+  video: '',    // 動画はまだ採用していない。入れるまで停止ボタンも出ない
+  alt: '',      // 装飾として置くので空のまま（意味は見出しと本文が担う）
 };

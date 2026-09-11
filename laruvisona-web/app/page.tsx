@@ -129,7 +129,8 @@ export default function Home() {
               </a>
             </div>
           </div>
-          <BrandVisual poster={BRAND_VISUAL.poster} video={BRAND_VISUAL.video} alt={BRAND_VISUAL.alt} />
+          <BrandVisual poster={BRAND_VISUAL.poster} sources={BRAND_VISUAL.sources}
+            video={BRAND_VISUAL.video} alt={BRAND_VISUAL.alt} />
         </div>
       </section>
 
