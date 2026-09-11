@@ -269,6 +269,39 @@ test('公開HTMLの控えを取って、書き戻せる道がある', () => {
   assert.match(route, /published_html/);
 });
 
+test('全件の控えを、そのまま流し込めないようにしてある', () => {
+  // 「全件の控えを取る → 一部だけ作り直す → 控えを全件POSTする」をやると、
+  // 作り直していないサイトが、そのあと公開した内容まで巻き戻る。
+  // 1件ごとに「いま置かれているはずの中身の指紋」を要求して、その道を塞ぐ。
+  const route = readFileSync(new URL('../app/api/admin/published-html-backup/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /expected_sha256/);
+  assert.match(route, /'needs_expected'/, '指紋が無い入力を断る道が無い');
+  assert.match(route, /'conflict'/, 'そのあと公開し直された行を止める道が無い');
+  assert.match(route, /'not_found'/, '消えた行を分ける道が無い');
+});
+
+test('更新できた行を数えてから、成功と言う（控えの書き戻し）', () => {
+  // PostgREST は、条件に合う行が無くても error にならない。
+  // error だけを見ると、存在しないIDでも「戻した」と数えてしまう。
+  const route = readFileSync(new URL('../app/api/admin/published-html-backup/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /\.select\('id'\)/, '更新した行を取り直していない');
+  assert.match(route, /updated\.length !== 1/, '更新0件を見分けていない');
+});
+
+test('更新できた行を数えてから、成功と言う（作り直し）', () => {
+  const route = readFileSync(new URL('../app/api/admin/republish-all/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /\.eq\('updated_at', site\.updated_at\)/, '読んだときのままの行に限っていない');
+  assert.match(route, /\.select\('id'\)/, '更新した行を取り直していない');
+  assert.match(route, /updated\.length !== 1/, '更新0件を見分けていない');
+});
+
+test('作り直しは、その回を戻すための記録を返す', () => {
+  // 戻す範囲を「この回が書いた分」に限るために要る。
+  const route = readFileSync(new URL('../app/api/admin/republish-all/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /undo: \{/);
+  assert.match(route, /expected_sha256: sha256\(html\)/, 'この回が書いた中身の指紋を残していない');
+});
+
 test('生成HTMLを変えたら EXPORT_VERSION を上げる（既存の公開HTMLが再生成される）', () => {
   assert.ok(EXPORT_VERSION >= 3, '公開HTMLを変更したのに EXPORT_VERSION が上がっていない');
   assert.match(basic, new RegExp(`<!--lhpv:${EXPORT_VERSION}-->$`), '版数の埋め込みが末尾に無い');

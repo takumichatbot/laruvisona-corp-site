@@ -95,6 +95,12 @@ function match(row, key, spec) {
   if (op === 'eq') return String(rv) === v || (v === 'true' && rv === true) || (v === 'false' && rv === false);
   if (op === 'is') return v === 'true' ? rv === true : v === 'false' ? rv === false : rv === null;
   if (op === 'neq') return String(rv) !== v;
+  // id=in.(a,b,c)。復元の対象をまとめて読むときに使う
+  if (op === 'in') {
+    const list = v.replace(/^\(/, '').replace(/\)$/, '').split(',')
+      .map(x => x.trim().replace(/^"(.*)"$/, '$1'));
+    return list.includes(String(rv));
+  }
   return true;
 }
 

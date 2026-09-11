@@ -70,37 +70,48 @@ push・本番SQL・DNS変更・デプロイは行っていない。
 
 ### 段階3 — 顧客サイトの再生成（ここだけDBを書く）
 
-**必ず控えを取ってから。**
+**作り直しの応答を、必ずファイルに残す。** その応答が、そのまま戻すための道具になる。
 
 ```bash
-# 1. いまの公開HTMLを控える（ファイルに保存する。列は増やさない）
+# 1. いまの姿を控える（読むため。これは戻す道具ではない）
 curl -H "Authorization: Bearer $ADMIN_SECRET" \
   https://laruvisona.jp/api/admin/published-html-backup \
-  > published-html-backup-$(date +%Y%m%d-%H%M).json
+  > backup-$(date +%Y%m%d-%H%M).json
 
 # 2. 何が対象になるかだけ見る（書かない）
 curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" -H 'content-type: application/json' \
   -d '{"onlyOutdated":true,"dryRun":true}' \
   https://laruvisona.jp/api/admin/republish-all
+#    → 対象ごとに、いまの中身の指紋（current_sha256）と版の古さ（outdated）が返る
 
-# 3. まず1件だけ
+# 3. まず1件だけ。応答を必ず保存する
 curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" -H 'content-type: application/json' \
   -d '{"onlyOutdated":true,"slug":"<確かめる1件>"}' \
-  https://laruvisona.jp/api/admin/republish-all
+  https://laruvisona.jp/api/admin/republish-all \
+  > run-$(date +%Y%m%d-%H%M)-01.json
 #    → その公開URLを開いて、見え方・問い合わせ・予約を確かめる
 
-# 4. 少しずつ広げる
-curl -X POST ... -d '{"onlyOutdated":true,"limit":5}'   ...
-curl -X POST ... -d '{"onlyOutdated":true,"limit":25}'  ...
-curl -X POST ... -d '{"onlyOutdated":true}'             ...
+# 4. 少しずつ広げる。**回ごとに応答を別ファイルへ保存する**
+curl -X POST ... -d '{"onlyOutdated":true,"limit":5}'  ... > run-...-02.json
+curl -X POST ... -d '{"onlyOutdated":true,"limit":25}' ... > run-...-03.json
+curl -X POST ... -d '{"onlyOutdated":true}'            ... > run-...-04.json
 ```
+
+応答の読み方:
+
+| 欄 | 意味 |
+|---|---|
+| `updated` | 実際に書けた件数。**`error` が無いことではなく、行が1件更新できたことを数えている** |
+| `conflicts` | 読んでから書くまでに、利用者が公開し直していた件数。書いていない |
+| `failed` | 生成や書き込みで落ちた件数 |
+| `undo` | **この回が書いた分だけ**を戻すための記録。前の中身と、この回が書いた中身の指紋が対で入っている |
 
 **止める条件**（ひとつでも当てはまったら、そこで広げるのをやめて戻す）
 
 - 対象の公開URLで、再生成の前後で見え方が変わった（余白・色・写真の切れ方）
 - 問い合わせ・予約が届かなくなった
 - 画面の例外が出た、初回表示が目に見えて遅くなった
-- `failed` が1件でも返った
+- `failed` が1件でもある、または `conflicts` が想定より多い
 
 ### 段階4 — 結い庵を本番へ入れるか
 
@@ -111,19 +122,38 @@ curl -X POST ... -d '{"onlyOutdated":true}'             ...
 
 ### 表示を戻す（再生成したあと）
 
+**戻すのは「その回が書いた分」だけ。** 保存した応答をそのまま送り返す。
+
 ```bash
-# 段階3の手順1で保存した控えを、そのまま書き戻す
+# まず、いま戻すと何が起きるかを見る（書かない）
+jq '. + {dryRun:true}' run-YYYYmmdd-HHMM-01.json | curl -X POST \
+  -H "Authorization: Bearer $ADMIN_SECRET" -H 'content-type: application/json' \
+  --data-binary @- https://laruvisona.jp/api/admin/published-html-backup
+
+# 戻す
 curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" -H 'content-type: application/json' \
-  --data-binary @published-html-backup-YYYYmmdd-HHMM.json \
+  --data-binary @run-YYYYmmdd-HHMM-01.json \
   https://laruvisona.jp/api/admin/published-html-backup
 ```
 
-控えの JSON をそのまま送れる（`sites` の配列をそのまま受ける）。
-`{"sites":[...],"dryRun":true}` にすると、書かずに対象だけ返す。
+応答の `counts` に、1件ごとの結果が入る。
 
-**`EXPORT_VERSION` を 7 に戻すだけでは表示は戻らない。**
-版を戻すと「起動時に作り直さない」だけで、すでに書かれた `published_html` は
-そのまま残る。戻すのは上の書き戻しでしかできない。
+| 結果 | 意味 | どうするか |
+|---|---|---|
+| `restored` | 書く前の姿へ戻した | — |
+| `conflict` | **作り直したあとに、利用者が公開し直していた。** 戻すとその内容が消えるので書いていない | そのままでよい。利用者の新しい内容が生きている |
+| `not_found` | その行が無い（消された・idが違う） | 消えたサイトなら、そのままでよい |
+| `failed` | 書き込みに失敗した | 応答の `detail` を見る |
+| `needs_expected` | 指紋が無い入力だった | 全件の控えを流し込もうとしている。作り直しの応答を使う |
+
+**全件の控え（`backup-*.json`）をそのまま送っても戻りません。**
+1件ごとに「いま置かれているはずの中身の指紋」が要ります。
+控えを取ったあとに公開し直したサイトまで巻き戻さないための作りです。
+どうしても中身を問わず上書きしたいときだけ `{"sites":[...],"force":true}` を使います
+（標準の手順では使いません）。
+
+**`EXPORT_VERSION` を 7 に戻すだけでは表示は戻りません。**
+版を戻すと「起動時に作り直さない」だけで、すでに書かれた `published_html` は残ります。
 
 ### コードを戻す
 
