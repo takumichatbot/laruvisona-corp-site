@@ -73,6 +73,7 @@ npx next start -p 3300 &
 | `republish-safety-check.mjs` | 一括再生成を**絞れる・その回の分だけ戻せる**こと。「Aだけ作り直す→Bを新しく公開→Aだけ戻す」でBが残ること。更新0件を成功と数えないこと | 実API。`server.js` の起動条件も見る |
 | `demo-check.mjs` | 案内ページの組立デモが**幅に合い、本当に触れる**こと | 実ブラウザ。中の入力・送信・キーボードまで。送信先が呼ばれていないことも見る |
 | `demo-timing-check.mjs` | デモが**見えるまで・触れるまで**の時刻 | 実ブラウザ。入れ物の中から知らせて、親の時計で測る |
+| `hero-video-check.mjs` | 最初の画面の**動く背景**（写真が先・音なし・止められる・動きを減らす設定では読まない） | 実ブラウザ。試験用の映像をその場で配る。配信物には何も置かない |
 
 ```bash
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/publish-check.mjs --port 3300
@@ -86,7 +87,10 @@ node docs/reference-sites/salon/studio-check.mjs --port 3300
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/delivery-check.mjs --port 3300
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/republish-safety-check.mjs --port 3300
 node docs/reference-sites/salon/demo-check.mjs --port 3300
+ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/hero-video-check.mjs --port 3300
 node docs/reference-sites/salon/demo-timing-check.mjs --url http://127.0.0.1:3300/laruHP --slow yes
+# 顧客が選んだ書体（結い庵は明朝）も落として測るとき
+#   perf-check / demo-timing-check とも --font-css と --font-dir を足す
 ```
 
 ### 取得したままの状態で確かめる

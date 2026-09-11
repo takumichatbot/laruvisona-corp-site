@@ -201,8 +201,13 @@ test('動きのあるヒーローは、写真を先に出して動画をあと�
   assert.match(html, /class="lhp-hero-vbtn" data-lhp-vtoggle/);
   // 音は出さず、画面の中で再生する
   assert.match(html, /v\.muted=true; v\.defaultMuted=true; v\.loop=true; v\.playsInline=true;/);
-  // 動きを減らす設定・動きなしのときは取りに行かない
-  assert.match(html, /if\(reduce\|\|\(!mp4&&!webm\)\)return;/);
+  // 端末が「動きを減らす」設定のときは取りに行かない。
+  // 作品側の「動き」の設定（スクロール演出の強弱）とは別に扱う。
+  // 静かな作品でも、書き手が動く背景を置いたなら出す。
+  assert.match(html, /if\(reduceDevice\|\|\(!mp4&&!webm\)\)return;/);
+  assert.match(html, /var reduceDevice=!!\(window\.matchMedia&&window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\);/);
+  // 出す合図は1つに絞らない（playing が遅れる端末で、止めるボタンだけ出ないのを防ぐ）
+  assert.match(html, /v\.addEventListener\('loadeddata',show\);/);
   // 画面に入ってから読む
   assert.match(html, /new IntersectionObserver\([\s\S]{0,200}rootMargin:'200px'/);
 });
@@ -334,6 +339,27 @@ function fadeGuard(html: string): string {
   return html.slice(Math.max(0, i - 800), i);
 }
 
+test('動く背景は、作品の「動き」の設定とは別に扱う', () => {
+  // スクロールの演出を切っている作品でも、書き手が動く背景を置いたなら出す。
+  // 逆に、端末が「動きを減らす」設定のときは、どちらであっても出さない。
+  const html = exportToHTML(
+    [{ id: 'home', name: 'ホーム', path: '/', seo, blocks: [
+      { id: 'h', type: 'hero', data: {
+        heading: 'あ', subheading: '', ctaText: 'c', ctaLink: '#',
+        bgImage: '/salon/hero-1600.jpg', bgImageWidth: 1600, bgImageHeight: 1195,
+        heroVideo: '/salon/hero.mp4',
+      } },
+    ] }] as never,
+    seo, { ...settings, heroLayout: 'split' as const, animLevel: 'none' as const }, 'テスト店',
+  );
+  // 動きなしでも、動く背景の仕掛けは入る
+  assert.match(html, /data-lhp-hero-video data-src="\/salon\/hero\.mp4"/);
+  // 判定に使うのは端末の設定だけ
+  assert.match(html, /if\(reduceDevice\|\|\(!mp4&&!webm\)\)return;/);
+  // スクロールの演出のほうは、これまでどおり止まる
+  assert.match(html, /var reduce=animLevel==='none'\|\|reduceDevice;/);
+});
+
 test('動きなしを選んだら、料金の数字も動かさない', () => {
   // カウントアップは途中の数字を出す。13,200円 が一瞬 13,197円 に見えると
   // 値段を読み違える。動きなし・端末の「動きを減らす」設定では止める。
@@ -345,7 +371,7 @@ test('動きなしを選んだら、料金の数字も動かさない', () => {
     ] }] as never,
     seo, { ...settings, animLevel: 'none' as const }, 'テスト店',
   );
-  assert.match(none, /var reduce=animLevel==='none'\s*\|\|\(window\.matchMedia&&window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\)/);
+  assert.match(none, /var reduce=animLevel==='none'\|\|reduceDevice;/);
   assert.match(none, /var cio=!reduce&&new IntersectionObserver/, 'カウントアップが常に動く');
   assert.match(none, /if\(cio\)document\.querySelectorAll\('\.lhp-price-amount/);
 });

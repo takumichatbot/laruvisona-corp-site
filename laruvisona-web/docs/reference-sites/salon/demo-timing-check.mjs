@@ -15,11 +15,12 @@
 // 時刻は**親の時計**で取る（入れ物の中の performance.now() は基準が別なので混ぜない）。
 // 外から50msごとに覗く形だと、CPUを絞った条件では覗く動作そのものが重くなり、
 // 3つの時刻が同じ値に丸まってしまう。
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 const require = createRequire(process.env.PLAYWRIGHT_FROM ? process.env.PLAYWRIGHT_FROM + '/' : import.meta.url);
 const { chromium } = require('playwright');
 
-const args = { url: 'http://127.0.0.1:3300/laruHP', runs: '3', slow: 'no' };
+const args = { url: 'http://127.0.0.1:3300/laruHP', runs: '3', slow: 'no', 'font-css': '', 'font-dir': '' };
 for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i]; if (a.startsWith('--')) args[a.slice(2)] = process.argv[++i]; }
 
 const STAGE = '[title^="お店のサイトの見本"]';
@@ -36,7 +37,19 @@ for (const [label, vp, dpr] of [
   const runs = [];
   for (let i = 0; i < Number(args.runs); i++) {
     const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: dpr, locale: 'ja-JP' });
-    await ctx.route(/fonts\.googleapis\.com|fonts\.gstatic\.com|larubot\.tokyo|googletagmanager|clarity\.ms/, r => r.abort());
+    /* 顧客が選んだ書体（結い庵は明朝）を含めて測るとき。
+       この環境は外へ出られないので、手元に取ってある同じCSS・同じwoff2を返す。
+       指定しなければ、書体は落とさずに測る（比較のため両方取れる）。 */
+    if (args['font-css'] && fs.existsSync(args['font-css'])) {
+      await ctx.route(/fonts\.googleapis\.com/, r => r.fulfill({ status: 200, headers: { 'content-type': 'text/css' }, body: fs.readFileSync(args['font-css']) }));
+      await ctx.route(/fonts\.gstatic\.com/, r => {
+        const p = args['font-dir'] + '/' + r.request().url().split('/').pop();
+        return fs.existsSync(p) ? r.fulfill({ status: 200, headers: { 'content-type': 'font/woff2' }, body: fs.readFileSync(p) }) : r.fulfill({ status: 404, body: '' });
+      });
+    } else {
+      await ctx.route(/fonts\.googleapis\.com|fonts\.gstatic\.com/, r => r.abort());
+    }
+    await ctx.route(/larubot\.tokyo|googletagmanager|clarity\.ms/, r => r.abort());
     const page = await ctx.newPage();
     if (args.slow === 'yes') {
       const cdp = await ctx.newCDPSession(page);
@@ -114,7 +127,7 @@ for (const [label, vp, dpr] of [
 await browser.close();
 
 console.log(`対象: ${args.url}`);
-console.log(`条件: ${args.slow === 'yes' ? '回線・CPUの遅延あり（1.6Mbps・150ms・CPU 1/4）' : '遅延なし'} / ${args.runs}回の中央値 / 外部計測タグ遮断`);
+console.log(`条件: ${args.slow === 'yes' ? '回線・CPUの遅延あり（1.6Mbps・150ms・CPU 1/4）' : '遅延なし'} / ${args.runs}回の中央値 / 外部計測タグ遮断 / 顧客の選択書体は${args['font-css'] ? '含む' : '含まない'}`);
 console.log('');
 for (const r of out) {
   console.log(`■ ${r.label}`);

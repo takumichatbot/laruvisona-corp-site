@@ -5,7 +5,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 9;
+export const EXPORT_VERSION = 10;
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
@@ -86,8 +86,9 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       /* 動きのあるヒーロー。
          写真（poster）を先に出し、動画はあとから重ねる。読み込みで見出しや
          ボタンを待たせない。音は出さず、画面の中で再生し、止める手段を置く。
-         端末が「動きを減らす」設定のとき、または動きを「なし」にしているときは
-         そもそも取りに行かない（poster のまま）。 */
+         端末が「動きを減らす」設定のときは、そもそも取りに行かない（poster のまま）。
+         作品側の「動き」の設定（スクロール演出の強弱）とは別に扱う。
+         静かな作品でも、書き手が動く背景を置いたなら出す。 */
       const heroVideo = safeUrl(d['heroVideo'], '');
       const heroVideoWebm = safeUrl(d['heroVideoWebm'], '');
       const videoBox = heroVideo || heroVideoWebm ? `
@@ -1888,8 +1889,8 @@ window.addEventListener('popstate',function(){
      この下の演出（打ち込み・数字のカウントアップ）も止める。
      とくに料金は、途中の数字（13,200円 → 13,197円 …）が一瞬でも
      見えると値段を読み違える。 */
-  var reduce=animLevel==='none'
-    ||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var reduceDevice=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var reduce=animLevel==='none'||reduceDevice;
 
   /* ── typewriter (bold / sharp styles) ── */
   var style='${designStyle}';
@@ -1917,7 +1918,12 @@ window.addEventListener('popstate',function(){
      画面に入ってから読み、音は出さず、止める手段を出す。 */
   document.querySelectorAll('[data-lhp-hero-video]').forEach(function(box){
     var mp4=box.getAttribute('data-src'), webm=box.getAttribute('data-src-webm');
-    if(reduce||(!mp4&&!webm))return;
+    /* ここで見るのは端末の設定だけ。
+       「動き」の設定（animLevel）は、スクロールで出てくる演出のためのもの。
+       動く背景は、書き手がその欄に置き場所を入れたときだけ出る別の選択なので、
+       演出を止めている作品でも、置いたなら出す。
+       端末が「動きを減らす」設定のときは、どちらであっても取りに行かない。 */
+    if(reduceDevice||(!mp4&&!webm))return;
     var made=false;
     var build=function(){
       if(made)return; made=true;
@@ -1931,11 +1937,19 @@ window.addEventListener('popstate',function(){
       if(mp4){var s2=document.createElement('source');s2.src=mp4;s2.type='video/mp4';v.appendChild(s2);}
       box.insertBefore(v,box.firstChild);
       var btn=box.querySelector('[data-lhp-vtoggle]');
-      v.addEventListener('playing',function(){
+      /* 出す合図は1つに絞らない。端末や回線によっては playing が遅れて、
+         映像は出ているのに止めるボタンだけ出ない、ということが起きる。
+         「絵が用意できた」と分かる合図のどれかで出す。 */
+      var shown=false;
+      var show=function(){
+        if(shown)return; shown=true;
         box.classList.add('lhp-on');
         if(btn){btn.hidden=false;}
-      });
-      v.addEventListener('error',function(){ box.classList.remove('lhp-on'); if(btn)btn.hidden=true; });
+      };
+      v.addEventListener('playing',show);
+      v.addEventListener('loadeddata',show);
+      v.addEventListener('timeupdate',show);
+      v.addEventListener('error',function(){ shown=false; box.classList.remove('lhp-on'); if(btn)btn.hidden=true; });
       if(btn){
         btn.addEventListener('click',function(){
           if(v.paused){v.play();btn.textContent='停止';btn.setAttribute('aria-label','背景の動きを止める');}
