@@ -7,9 +7,11 @@
 --
 -- 見るのは「宣言が書いてあるか」でも「存在するか」でもなく、
 -- **いま実際にその内容になっているか**。
---   ・ポリシーは対象・条件まで現行定義と一致するか（USING(true) を弾く）
+--   ・ポリシーは対象ロール・条件まで現行定義と一致するか
+--     （USING(true) も TO service_role も弾く）
 --   ・トリガは発火条件（tgtype）と呼出先の関数まで一致するか
---   ・権限は列単位・TRUNCATE まで含めて見る（表単位だけでは足りない）
+--   ・権限は2つの表それぞれについて、列単位・TRUNCATE/REFERENCES/TRIGGER
+--     まで含めて見る（表単位の4権限だけでは足りない）
 --   ・必要な3ロールが存在するか（欠けていると権限の検査が素通りする）
 --   ・列は名前だけでなく型まで、制約は定義文、索引は部分索引でないかまで
 --   ・search_path は = で正確に照合（like だと public_shadow が通る）
@@ -22,6 +24,14 @@
 --   99 望ましい状態    … 98 に「移行SQLの積み残し」を足したもの
 -- 区分が「積み残し」の行は、**現行の site_domains.sql を当てただけでは false**。
 -- 検査の誤りではなく、移行SQL側にまだ revoke が無いという意味。
+--
+-- **98=true は「独自ドメインを公開してよい」という意味ではない。**
+-- 98 は「移行SQLの内容どおりか」だけを見る。公開の可否は 99 で判断する。
+-- 99=false のあいだは、権限の是正を入れるか、例外として残す判断を
+-- 明示的に記録するまで、独自ドメインの有効化を始めない。
+-- なお解除キュー（domain_release_queue）は site_domains.sql が
+-- revoke all しているので、TRUNCATE 等が残っていたら積み残しではなく
+-- 「適用の判定」側（22/23行）の不合格になる。
 --
 with obj as (
   select to_regclass('public.site_domains')         as sd,
@@ -123,28 +133,38 @@ polchk as (
         and p.polcmd = 'r'
         and p.polpermissive
         and p.polwithcheck is null
+        -- TO を省いた定義＝PUBLIC。TO service_role などに変えられたら弾く。
+        and p.polroles = '{0}'::oid[]
         and regexp_replace(pg_get_expr(p.polqual, p.polrelid), '\s+', ' ', 'g') = norm.policy_qual)             as ok
 ),
-colpriv as (
-  select
-    (select count(*) from pg_attribute a, obj
-      where a.attrelid = obj.sd and a.attnum > 0 and not a.attisdropped and obj.r_auth is not null
-        and (has_column_privilege(obj.r_auth, obj.sd, a.attnum, 'INSERT')
-          or has_column_privilege(obj.r_auth, obj.sd, a.attnum, 'UPDATE')))                                     as auth_sd,
-    (select count(*) from pg_attribute a, obj
-      where a.attrelid = obj.sd and a.attnum > 0 and not a.attisdropped and obj.r_anon is not null
-        and (has_column_privilege(obj.r_anon, obj.sd, a.attnum, 'INSERT')
-          or has_column_privilege(obj.r_anon, obj.sd, a.attnum, 'UPDATE')))                                     as anon_sd,
-    (select count(*) from pg_attribute a, obj
-      where a.attrelid = obj.q and a.attnum > 0 and not a.attisdropped
-        and (obj.r_auth is not null and (has_column_privilege(obj.r_auth, obj.q, a.attnum, 'SELECT')
-          or has_column_privilege(obj.r_auth, obj.q, a.attnum, 'INSERT')
-          or has_column_privilege(obj.r_auth, obj.q, a.attnum, 'UPDATE'))))                                    as auth_q,
-    (select count(*) from pg_attribute a, obj
-      where a.attrelid = obj.q and a.attnum > 0 and not a.attisdropped
-        and (obj.r_anon is not null and (has_column_privilege(obj.r_anon, obj.q, a.attnum, 'SELECT')
-          or has_column_privilege(obj.r_anon, obj.q, a.attnum, 'INSERT')
-          or has_column_privilege(obj.r_anon, obj.q, a.attnum, 'UPDATE'))))                                    as anon_q
+-- ── 権限は「2つの表 × 2つの利用者ロール」を同じ物差しで見る ──
+tgt(rname, roid, tname, toid) as (
+  select 'anon',          obj.r_anon, 'site_domains',         obj.sd from obj
+  union all select 'anon',          obj.r_anon, 'domain_release_queue', obj.q  from obj
+  union all select 'authenticated', obj.r_auth, 'site_domains',         obj.sd from obj
+  union all select 'authenticated', obj.r_auth, 'domain_release_queue', obj.q  from obj
+),
+tacl as (
+  select rname, tname,
+         has_table_privilege(roid, toid, 'SELECT')     as p_sel,
+         has_table_privilege(roid, toid, 'INSERT')     as p_ins,
+         has_table_privilege(roid, toid, 'UPDATE')     as p_upd,
+         has_table_privilege(roid, toid, 'DELETE')     as p_del,
+         has_table_privilege(roid, toid, 'TRUNCATE')   as p_trunc,
+         has_table_privilege(roid, toid, 'REFERENCES') as p_ref,
+         has_table_privilege(roid, toid, 'TRIGGER')    as p_trig
+  from tgt where roid is not null and toid is not null
+),
+cacl as (
+  select t.rname, t.tname,
+         count(*) filter (where has_column_privilege(t.roid, t.toid, a.attnum, 'SELECT'))     as c_sel,
+         count(*) filter (where has_column_privilege(t.roid, t.toid, a.attnum, 'INSERT'))     as c_ins,
+         count(*) filter (where has_column_privilege(t.roid, t.toid, a.attnum, 'UPDATE'))     as c_upd,
+         count(*) filter (where has_column_privilege(t.roid, t.toid, a.attnum, 'REFERENCES')) as c_ref
+  from tgt t
+  join pg_attribute a on a.attrelid = t.toid and a.attnum > 0 and not a.attisdropped
+  where t.roid is not null and t.toid is not null
+  group by 1, 2
 ),
 rows0 as (
 select * from (
@@ -196,28 +216,44 @@ select * from (
          coalesce((select relrowsecurity::text from pg_class c, obj where c.oid = obj.q), '（対象なし）'),
          (select relrowsecurity from pg_class c, obj where c.oid = obj.q)
   union all select 15, 'RLS', 'ポリシーは1本だけ', '1', (select n_pol::text from polchk), (select n_pol = 1 from polchk)
-  union all select 16, 'RLS', 'そのポリシーが現行定義と一致（USING の中身まで）', '1',
+  union all select 16, 'RLS', 'そのポリシーが現行定義と一致（対象ロール・USING の中身まで）', '1',
          (select ok::text from polchk), (select ok = 1 from polchk)
 
   union all select 17, '実効権限', 'authenticated は site_domains を書けない（表）', 'false',
-         (select (has_table_privilege(r_auth, sd, 'INSERT') or has_table_privilege(r_auth, sd, 'UPDATE') or has_table_privilege(r_auth, sd, 'DELETE'))::text from obj),
-         (select not (has_table_privilege(r_auth, sd, 'INSERT') or has_table_privilege(r_auth, sd, 'UPDATE') or has_table_privilege(r_auth, sd, 'DELETE')) from obj)
+         (select (p_ins or p_upd or p_del)::text from tacl where rname = 'authenticated' and tname = 'site_domains'),
+         exists (select 1 from tacl where rname = 'authenticated' and tname = 'site_domains' and not (p_ins or p_upd or p_del))
   union all select 18, '実効権限', 'anon は site_domains を書けない（表）', 'false',
-         (select (has_table_privilege(r_anon, sd, 'INSERT') or has_table_privilege(r_anon, sd, 'UPDATE') or has_table_privilege(r_anon, sd, 'DELETE'))::text from obj),
-         (select not (has_table_privilege(r_anon, sd, 'INSERT') or has_table_privilege(r_anon, sd, 'UPDATE') or has_table_privilege(r_anon, sd, 'DELETE')) from obj)
+         (select (p_ins or p_upd or p_del)::text from tacl where rname = 'anon' and tname = 'site_domains'),
+         exists (select 1 from tacl where rname = 'anon' and tname = 'site_domains' and not (p_ins or p_upd or p_del))
   union all select 19, '実効権限', 'authenticated に site_domains の列単位の書き込み権限が無い', '0',
-         (select auth_sd::text from colpriv), (select auth_sd = 0 from colpriv)
+         (select (c_ins + c_upd)::text from cacl where rname = 'authenticated' and tname = 'site_domains'),
+         exists (select 1 from cacl where rname = 'authenticated' and tname = 'site_domains' and c_ins + c_upd = 0)
   union all select 20, '実効権限', 'anon に site_domains の列単位の書き込み権限が無い', '0',
-         (select anon_sd::text from colpriv), (select anon_sd = 0 from colpriv)
+         (select (c_ins + c_upd)::text from cacl where rname = 'anon' and tname = 'site_domains'),
+         exists (select 1 from cacl where rname = 'anon' and tname = 'site_domains' and c_ins + c_upd = 0)
   union all select 21, '実効権限', 'authenticated は site_domains を読める', 'true',
-         (select has_table_privilege(r_auth, sd, 'SELECT')::text from obj),
-         (select has_table_privilege(r_auth, sd, 'SELECT') from obj)
-  union all select 22, '実効権限', 'authenticated は解除キューに触れない（表・列）', '0',
-         (select ((case when has_table_privilege(r_auth, q, 'SELECT') or has_table_privilege(r_auth, q, 'INSERT') or has_table_privilege(r_auth, q, 'UPDATE') or has_table_privilege(r_auth, q, 'DELETE') then 1 else 0 end) + (select auth_q from colpriv))::text from obj),
-         (select not (has_table_privilege(r_auth, q, 'SELECT') or has_table_privilege(r_auth, q, 'INSERT') or has_table_privilege(r_auth, q, 'UPDATE') or has_table_privilege(r_auth, q, 'DELETE')) and (select auth_q = 0 from colpriv) from obj)
-  union all select 23, '実効権限', 'anon は解除キューに触れない（表・列）', '0',
-         (select ((case when has_table_privilege(r_anon, q, 'SELECT') or has_table_privilege(r_anon, q, 'INSERT') or has_table_privilege(r_anon, q, 'UPDATE') or has_table_privilege(r_anon, q, 'DELETE') then 1 else 0 end) + (select anon_q from colpriv))::text from obj),
-         (select not (has_table_privilege(r_anon, q, 'SELECT') or has_table_privilege(r_anon, q, 'INSERT') or has_table_privilege(r_anon, q, 'UPDATE') or has_table_privilege(r_anon, q, 'DELETE')) and (select anon_q = 0 from colpriv) from obj)
+         (select p_sel::text from tacl where rname = 'authenticated' and tname = 'site_domains'),
+         exists (select 1 from tacl where rname = 'authenticated' and tname = 'site_domains' and p_sel)
+  union all select 22, '実効権限', 'authenticated は解除キューに一切触れない（表・列／TRUNCATE等も）', '0',
+         (select (t.p_sel::int + t.p_ins::int + t.p_upd::int + t.p_del::int
+                  + t.p_trunc::int + t.p_ref::int + t.p_trig::int
+                  + c.c_sel + c.c_ins + c.c_upd + c.c_ref)::text
+            from tacl t join cacl c using (rname, tname)
+           where t.rname = 'authenticated' and t.tname = 'domain_release_queue'),
+         exists (select 1 from tacl t join cacl c using (rname, tname)
+                  where t.rname = 'authenticated' and t.tname = 'domain_release_queue'
+                    and not (t.p_sel or t.p_ins or t.p_upd or t.p_del or t.p_trunc or t.p_ref or t.p_trig)
+                    and c.c_sel + c.c_ins + c.c_upd + c.c_ref = 0)
+  union all select 23, '実効権限', 'anon は解除キューに一切触れない（表・列／TRUNCATE等も）', '0',
+         (select (t.p_sel::int + t.p_ins::int + t.p_upd::int + t.p_del::int
+                  + t.p_trunc::int + t.p_ref::int + t.p_trig::int
+                  + c.c_sel + c.c_ins + c.c_upd + c.c_ref)::text
+            from tacl t join cacl c using (rname, tname)
+           where t.rname = 'anon' and t.tname = 'domain_release_queue'),
+         exists (select 1 from tacl t join cacl c using (rname, tname)
+                  where t.rname = 'anon' and t.tname = 'domain_release_queue'
+                    and not (t.p_sel or t.p_ins or t.p_upd or t.p_del or t.p_trunc or t.p_ref or t.p_trig)
+                    and c.c_sel + c.c_ins + c.c_upd + c.c_ref = 0)
   union all select 24, '実効権限', 'service_role は site_domains を読み書きできる', 'true',
          (select (has_table_privilege(r_svc, sd, 'SELECT') and has_table_privilege(r_svc, sd, 'INSERT') and has_table_privilege(r_svc, sd, 'UPDATE') and has_table_privilege(r_svc, sd, 'DELETE'))::text from obj),
          (select has_table_privilege(r_svc, sd, 'SELECT') and has_table_privilege(r_svc, sd, 'INSERT') and has_table_privilege(r_svc, sd, 'UPDATE') and has_table_privilege(r_svc, sd, 'DELETE') from obj)
@@ -228,12 +264,20 @@ select * from (
          (select has_schema_privilege(r_svc, 'public', 'USAGE')::text from obj),
          (select has_schema_privilege(r_svc, 'public', 'USAGE') from obj)
 
-  union all select 27, '積み残し', 'authenticated に TRUNCATE/REFERENCES/TRIGGER が残っていない', 'false',
-         (select (has_table_privilege(r_auth, sd, 'TRUNCATE') or has_table_privilege(r_auth, sd, 'REFERENCES') or has_table_privilege(r_auth, sd, 'TRIGGER'))::text from obj),
-         (select not (has_table_privilege(r_auth, sd, 'TRUNCATE') or has_table_privilege(r_auth, sd, 'REFERENCES') or has_table_privilege(r_auth, sd, 'TRIGGER')) from obj)
-  union all select 28, '積み残し', 'anon に TRUNCATE/REFERENCES/TRIGGER が残っていない', 'false',
-         (select (has_table_privilege(r_anon, sd, 'TRUNCATE') or has_table_privilege(r_anon, sd, 'REFERENCES') or has_table_privilege(r_anon, sd, 'TRIGGER'))::text from obj),
-         (select not (has_table_privilege(r_anon, sd, 'TRUNCATE') or has_table_privilege(r_anon, sd, 'REFERENCES') or has_table_privilege(r_anon, sd, 'TRIGGER')) from obj)
+  union all select 27, '積み残し', 'authenticated に site_domains の TRUNCATE/REFERENCES/TRIGGER が残っていない', 'false',
+         (select (t.p_trunc or t.p_ref or t.p_trig or c.c_ref > 0)::text
+            from tacl t join cacl c using (rname, tname)
+           where t.rname = 'authenticated' and t.tname = 'site_domains'),
+         exists (select 1 from tacl t join cacl c using (rname, tname)
+                  where t.rname = 'authenticated' and t.tname = 'site_domains'
+                    and not (t.p_trunc or t.p_ref or t.p_trig) and c.c_ref = 0)
+  union all select 28, '積み残し', 'anon に site_domains の TRUNCATE/REFERENCES/TRIGGER が残っていない', 'false',
+         (select (t.p_trunc or t.p_ref or t.p_trig or c.c_ref > 0)::text
+            from tacl t join cacl c using (rname, tname)
+           where t.rname = 'anon' and t.tname = 'site_domains'),
+         exists (select 1 from tacl t join cacl c using (rname, tname)
+                  where t.rname = 'anon' and t.tname = 'site_domains'
+                    and not (t.p_trunc or t.p_ref or t.p_trig) and c.c_ref = 0)
 
   union all select 29, '関数', '必要な11件が名前＋引数型でそろう', '0', (select missing::text from fn), (select missing = 0 from fn)
   union all select 30, '関数', '一覧に無い laruhp_domain_* が無い', '0', (select extra::text from fn), (select extra = 0 from fn)
@@ -253,7 +297,7 @@ select 98, '判定', '適用の判定（積み残しを除く）', 'true',
        (select (count(*) filter (where not ok and 区分 <> '積み残し') = 0)::text from res),
        (select count(*) filter (where not ok and 区分 <> '積み残し') = 0 from res)
 union all
-select 99, '判定', '望ましい状態（積み残しを含む）', 'true',
+select 99, '判定', '望ましい状態（積み残しを含む）／公開可否はこちらで判断', 'true',
        (select (count(*) filter (where not ok) = 0)::text from res),
        (select count(*) filter (where not ok) = 0 from res)
 order by n;
