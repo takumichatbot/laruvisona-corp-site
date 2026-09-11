@@ -223,8 +223,19 @@ type Device = 'pc' | 'sp';
    途中で文字が動く）。この見本の中身はこちらで決めているので、実測した
    高さを定数にして、最初の描画から正しい場所を取る。
    縦横比はCSSで与える（JavaScript が動く前から高さが決まる）。 */
+/* ページ全体の高さ（「予約まで試す」を開いたとき） */
 const PC_H = 2400;
 const SP_H = 2950;
+/* 最初に出す高さ。
+   いきなりページ全部を出すと、スマホでは架空サロンの料金と予約フォームが
+   延々と続いてから、ようやく操作のボタンが来る。
+   最初は「完成した見出し＋料金の頭」までにして、操作をすぐ下に置く。 */
+const PC_PEEK = 980;
+const SP_PEEK = 1120;
+/* スマホの組み方は、最初の画面の上に大きな余白がある。
+   そのまま出すと、枠の上半分が空白で埋まってしまう。少し上へずらして、
+   見出しがすぐ目に入るようにする（閉じているあいだだけ）。 */
+const SP_PEEK_TOP = 150;
 const SWITCH_PX = 700;
 
 export default function AssembleDemo({ initialDevice }: { initialDevice?: Device } = {}) {
@@ -239,6 +250,8 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
      文字が動く）。この見本の中身はこちらで決めているので、実測した高さを
      そのまま定数にしてある。少し余らせて、下が切れないようにする。 */
   const [contentTall, setContentTall] = useState(false);
+  /** 予約フォームまで開いた状態か。押されたときだけ開く */
+  const [full, setFull] = useState(false);
   const [boxW, setBoxW] = useState(0);
   const [near, setNear] = useState(false);
   const [note, setNote] = useState('');
@@ -249,7 +262,9 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
 
   const preset = DESIGN_PRESETS.find(p => p.id === presetId) || DESIGN_PRESETS[2];
   const frameW = device === 'sp' ? 390 : 1440;
-  const contentH = (device === 'sp' ? SP_H : PC_H) + (contentTall ? 600 : 0);
+  const fullH = (device === 'sp' ? SP_H : PC_H) + (contentTall ? 600 : 0);
+  const contentH = full ? fullH : (device === 'sp' ? SP_PEEK : PC_PEEK);
+  const peekTop = !full && device === 'sp' ? SP_PEEK_TOP : 0;
   const fit = boxW > 0 ? Math.min(1, boxW / frameW) : 0;
   const scale = fit;
 
@@ -308,11 +323,19 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
       if (d.type === 'ready') { post({ type: 'explode', e: assembled || reduced ? 0 : 1 }); return; }
       // 決めてある高さに収まらないときだけ広げる（ふだんは動かさない）
       if (d.type === 'height' && typeof d.h === 'number') { setContentTall(d.h > (device === 'sp' ? SP_H : PC_H)); return; }
+
       if (d.type === 'goto' && typeof d.y === 'number') {
         const stage = stageRef.current;
         if (!stage) return;
-        const top = stage.getBoundingClientRect().top + window.scrollY + d.y * scale;
-        window.scrollTo({ top: Math.max(0, top - window.innerHeight * 0.18), behavior: 'smooth' });
+        /* 閉じているあいだは、その場所がまだ見えていない。
+           先に開いてから動かす（押したのに何も起きない、をなくす）。 */
+        setFull(true);
+        const y = d.y;
+        const go = () => {
+          const top = stage.getBoundingClientRect().top + window.scrollY + y * scale;
+          window.scrollTo({ top: Math.max(0, top - window.innerHeight * 0.18), behavior: 'smooth' });
+        };
+        window.setTimeout(go, 60);
         return;
       }
       if (d.type === 'submitted') { setNote('見本として受け付けました。実際の予約は送っていません。'); return; }
@@ -365,6 +388,7 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
        操作の並びを上に積むと、肝心の画面が折り返しより下へ行ってしまう。 */
     <div className="w-full flex flex-col" ref={outerRef}>
       <div className="order-2 sm:order-1 flex flex-wrap items-center gap-2 mt-3 sm:mt-0 mb-3">
+        <span className="w-full sm:w-auto sm:mr-2 text-[11px] text-slate-400">見本：架空の美容室「結い庵」のサイト</span>
         <span className="text-[11px] font-bold text-slate-400 mr-1">雰囲気</span>
         {DESIGN_PRESETS.map(p => (
           <button key={p.id} type="button" onClick={() => setPresetId(p.id)} aria-pressed={presetId === p.id} className={pill(presetId === p.id)}>
@@ -385,19 +409,22 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
             {d === 'pc' ? 'パソコン' : 'スマホ'}
           </button>
         ))}
-        {/* 文言が変わっても場所が動かないよう、幅を決めておく */}
+        {/* 枠の上にも同じボタンがある。こちらは画面が広いときだけ出す */}
         <button type="button" onClick={() => setAssembled(v => !v)}
-          className="ml-auto w-[128px] px-2 py-1.5 min-h-[36px] rounded-full text-[12px] font-bold bg-sky-600 text-white hover:bg-sky-700">
+          className="hidden sm:inline-flex items-center justify-center ml-auto w-[128px] px-2 py-1.5 min-h-[36px] rounded-full text-[12px] font-bold bg-sky-600 text-white hover:bg-sky-700">
           {assembled ? 'もう一度ばらす' : '組み上げる'}
         </button>
       </div>
 
       <div ref={stageRef}
-        /* 縦横比はここで決める。JavaScript が動く前から高さが決まるので、
-           読み込みの途中で下の内容が動かない。
-           数値は PC_H / SP_H と、上下の余白ぶんに合わせてある。
-           境目の 700px は SWITCH_PX と同じにすること。 */
-        className="order-1 sm:order-3 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden aspect-[390/2974] min-[700px]:aspect-[1440/2424]">
+        /* 最初の高さは縦横比でCSSに決めさせる。JavaScript が動く前から高さが
+           決まるので、読み込みの途中で下の内容が動かない。
+           数値は PC_PEEK / SP_PEEK と、上下の余白ぶんに合わせてある。
+           境目の 700px は SWITCH_PX と同じにすること。
+           「予約まで試す」を押して開いたときだけ、実寸で高さを決める
+           （押したあとの高さ変更なので、読んでいる途中でずれることはない）。 */
+        className={`order-1 sm:order-3 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden${full ? '' : ' aspect-[390/1144] min-[700px]:aspect-[1440/1004]'}`}
+        style={full ? { height: Math.round(contentH * fit) + 24 } : undefined}>
         {!near && (
           <div className="absolute inset-0 grid place-items-center text-[12px] text-slate-400">読み込んでいます…</div>
         )}
@@ -412,21 +439,54 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
           style={{
             width: frameW, height: contentH,
             transform: `scale(${scale})`, transformOrigin: 'top left',
-            position: 'absolute', top: 12,
+            position: 'absolute', top: 12 - peekTop * scale,
             left: '50%', marginLeft: -(frameW * scale) / 2,
           }}
         />
+        {!full && (
+          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#eceff4] to-transparent" />
+        )}
+        {/* 枠の上に重ねる操作。画面に枠が出ているあいだ、手が届くところにある */}
+        {near && (
+          <button type="button" onClick={() => setAssembled(v => !v)}
+            className="absolute right-3 bottom-3 z-10 min-h-[40px] w-[124px] px-2 rounded-full text-[12px] font-bold bg-slate-900/85 text-white backdrop-blur hover:bg-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
+            {assembled ? 'もう一度ばらす' : '組み上げる'}
+          </button>
+        )}
       </div>
 
-      <div className="order-4 mt-3 flex flex-wrap items-start gap-x-4 gap-y-1">
+      {/* 予約まで試す。見本のサロンの予約であって、LARU HP の申し込みではない */}
+      <div className="order-4 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {!full ? (
+          <>
+            <button type="button" onClick={() => setFull(true)}
+              className="inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-slate-400 text-[13px] font-bold text-slate-800 hover:border-slate-700">
+              このお店の予約フォームまで試す
+            </button>
+            <span className="text-[12px] text-slate-500">見本のお店の予約です。LARU HP のお申し込みではありません。</span>
+          </>
+        ) : (
+          <>
+            <button type="button" onClick={() => setFull(false)}
+              className="inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-slate-300 text-[13px] font-bold text-slate-600 hover:border-slate-500">
+              最初の画面だけに戻す
+            </button>
+            <span className="text-[12px] text-slate-500">入力して送れます。見本なので、どこへも送られません。</span>
+          </>
+        )}
+      </div>
+
+      <div className="order-5 mt-3 flex flex-wrap items-start gap-x-4 gap-y-1">
         <p className="text-[12px] text-slate-600 leading-relaxed flex-1 min-w-[240px]">
-          {assembled
-            ? 'このまま触れます。「ご予約フォームへ」を押すと予約の欄まで動き、入力して送るところまで試せます。'
-            : '部品が分かれた状態です。「組み上げる」を押すと1枚のサイトになります。'}
+          {!assembled
+            ? '部品が分かれた状態です。「組み上げる」を押すと1枚のサイトになります。'
+            : full
+              ? 'このまま触れます。中のボタンや入力欄が、公開したあとと同じように動きます。'
+              : 'ここまでが最初の画面です。この下に、料金と予約が続きます。'}
         </p>
         {note && <p className="text-[12px] font-bold text-sky-700" role="status">{note}</p>}
       </div>
-      <p className="order-5 text-[11px] text-slate-500 mt-2 leading-relaxed">
+      <p className="order-6 text-[11px] text-slate-500 mt-2 leading-relaxed">
         雰囲気や書体を押すと、その場で作り直しています。送信は見本としての受け付けで、どこへも送られません。
         写真は見本用の生成素材で、結い庵は架空のお店です。
       </p>

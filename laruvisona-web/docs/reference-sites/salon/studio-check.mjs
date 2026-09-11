@@ -72,6 +72,24 @@ const sampleContent = await inPreview(() => ({
   price: !!document.querySelector('.lhp-price-card'),
 }), 'iframe');
 check('見本に写真が入っている', sampleContent.img);
+// 画面の下にある見本も、ちゃんと中身が描かれていること。
+// （提出した画像で下の案が白く写ったのは撮り方の問題で、実装ではない。
+//   ここでは5つ全部の中を、フレームの中から直接確かめる。）
+{
+  const frames = await page.locator('iframe').all();
+  const filled = [];
+  for (const f of frames) {
+    const cf = await (await f.elementHandle()).contentFrame();
+    filled.push(await cf.evaluate(() => ({
+      hero: !!document.querySelector('.lhp-hero'),
+      img: !!document.querySelector('.lhp-hero img') && document.querySelector('.lhp-hero img').naturalWidth > 0,
+      price: document.querySelectorAll('.lhp-price-card').length,
+    })));
+  }
+  check('5つの見本すべてに中身がある',
+    filled.length === 5 && filled.every(x => x.hero && x.img && x.price >= 2),
+    JSON.stringify(filled));
+}
 check('見本に料金の並びが入っている（ボタンの形と差し色が見える）', sampleContent.price);
 {
   const notes = await page.locator('button:has-text("ではじめる"), button >> nth=0').count();

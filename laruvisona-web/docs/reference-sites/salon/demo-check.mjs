@@ -3,6 +3,7 @@
 //   node docs/reference-sites/salon/demo-check.mjs --port 3300
 //
 // 見るのは次の4つ。
+//   0. 冒頭がコンパクトか（最初は最初の画面までで、予約フォームまで出さない）
 //   1. 画面の幅に合っているか（スマホで横が切れないか、読める大きさか）
 //   2. ばらける／組み上がるが、本当に画面を変えているか
 //   3. 組み上がったあと、中を本当に操作できるか
@@ -58,6 +59,20 @@ const frameState = (page) => page.locator(STAGE).contentFrame().locator('html').
   check('横に食み出していない（1440px）',
     await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
 
+  // 冒頭は「最初の画面と、組み上がるところ」まで。予約フォームまでは出さない
+  const peek = await page.evaluate((sel) => {
+    const f = document.querySelector(sel);
+    return { stage: Math.round(f.parentElement.getBoundingClientRect().height), frame: Math.round(f.getBoundingClientRect().height) };
+  }, STAGE);
+  check('冒頭の枠がコンパクト', peek.stage <= 700, `${peek.stage}px`);
+  // 枠の高さより下にあるので、閉じているあいだは目に入らない
+  const bookingTop = await page.locator(STAGE).contentFrame().locator('#lhp-form-booking')
+    .evaluate(el => Math.round(el.getBoundingClientRect().top + window.scrollY));
+  const frameShown = await page.evaluate((sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height / (new DOMMatrix(getComputedStyle(document.querySelector(sel)).transform)).a), STAGE);
+  check('冒頭では予約フォームまで出していない', bookingTop > frameShown, `予約は${bookingTop}px、見せているのは${frameShown}pxまで`);
+  check('見本のお店であることが書いてある', (await page.locator('text=架空の美容室').count()) > 0);
+  check('LARU HP の申し込みと区別している', (await page.locator('text=LARU HP のお申し込みではありません').count()) > 0);
+
   const fit = await page.evaluate((sel) => {
     const f = document.querySelector(sel);
     const stage = f.parentElement;
@@ -69,14 +84,14 @@ const frameState = (page) => page.locator(STAGE).contentFrame().locator('html').
   check('パソコンでは、パソコンの組み方で見せている', st1.width === 1440, `${st1.width}px`);
 
   // ばらける → 組み上がる
-  await page.locator('button:has-text("もう一度ばらす")').click();
+  await page.locator('button:has-text("もう一度ばらす")').first().click();
   await page.waitForTimeout(1400);
   const exploded = await frameState(page);
   check('「ばらす」で本当にばらける', exploded.e === '1', `--e=${exploded.e}`);
   check('ばらけているあいだは中を触らせない', exploded.locked === '1');
   if (args.shots) await page.screenshot({ path: `${args.shots}/demo-exploded.png` });
 
-  await page.locator('button:has-text("組み上げる")').click();
+  await page.locator('button:has-text("組み上げる")').first().click();
   await page.waitForTimeout(1400);
   const assembled = await frameState(page);
   check('「組み上げる」で組み上がる', assembled.e === '0', `--e=${assembled.e}`);
@@ -92,12 +107,28 @@ const frameState = (page) => page.locator(STAGE).contentFrame().locator('html').
   await page.locator('button:has-text("上質")').click();
   await page.waitForTimeout(1500);
 
-  // ページ内の移動（中のボタンを押す）
+  // 「予約フォームまで試す」で開く
+  const beforeOpen = await page.evaluate((sel) => Math.round(document.querySelector(sel).parentElement.getBoundingClientRect().height), STAGE);
+  await page.locator('button:has-text("このお店の予約フォームまで試す")').click();
+  await page.waitForTimeout(900);
+  const afterOpen = await page.evaluate((sel) => Math.round(document.querySelector(sel).parentElement.getBoundingClientRect().height), STAGE);
+  check('「予約フォームまで試す」で開く', afterOpen > beforeOpen * 1.5, `${beforeOpen}px → ${afterOpen}px`);
+  check('開くと予約フォームが出る', await page.locator(STAGE).contentFrame().locator('#lhp-form-booking').isVisible());
+  await page.locator('button:has-text("最初の画面だけに戻す")').click();
+  await page.waitForTimeout(700);
+  check('閉じると、また最初の画面だけになる',
+    (await page.evaluate((sel) => Math.round(document.querySelector(sel).parentElement.getBoundingClientRect().height), STAGE)) <= 700);
+
+  // ページ内の移動（中のボタンを押す）。閉じていても、押したら開いて動く。
+  // 位置をそろえてから測る（前の手順でどこまで送ったかに左右されないように）
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
   const y0 = await page.evaluate(() => window.scrollY);
   await page.locator(STAGE).contentFrame().locator('a:has-text("ご予約フォームへ")').click();
   await page.waitForTimeout(1200);
   const y1 = await page.evaluate(() => window.scrollY);
-  check('中のボタンを押すと、予約の場所まで動く', y1 > y0 + 100, `${y0} → ${y1}`);
+  check('中のボタンを押すと、開いて予約の場所まで動く', y1 > y0 + 100, `${y0} → ${y1}`);
+  check('そのとき予約フォームが出ている', await page.locator(STAGE).contentFrame().locator('#lhp-form-booking').isVisible());
 
   // 入力して送る
   const f = page.locator(STAGE).contentFrame();
@@ -137,6 +168,11 @@ const frameState = (page) => page.locator(STAGE).contentFrame().locator('html').
 
   const st = await frameState(page);
   check('スマホでは、スマホの組み方に切り替わる', st.width === 390, `${st.width}px`);
+
+  const peek = await page.evaluate((sel) => Math.round(document.querySelector(sel).parentElement.getBoundingClientRect().height), STAGE);
+  check('スマホの冒頭の枠がコンパクト', peek <= 1100, `${peek}px（前は約2730px）`);
+  check('スマホでも、操作が枠の中にある', await page.locator(`${STAGE} ~ button, .relative > button:has-text("組み上げる")`).first().isVisible().catch(() => false)
+    || (await page.locator('button:has-text("組み上げる")').first().isVisible()));
 
   const fit = await page.evaluate((sel) => {
     const f = document.querySelector(sel);

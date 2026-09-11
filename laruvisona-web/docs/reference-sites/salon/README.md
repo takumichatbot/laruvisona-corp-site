@@ -72,6 +72,7 @@ npx next start -p 3300 &
 | `studio-check.mjs` | 制作画面の通し（きく→えらぶ→編集→保存→読み直し→公開）と、保存失敗時に公開させないこと | 実ブラウザ。保存失敗は保存先を実際に失敗させる |
 | `republish-safety-check.mjs` | 一括再生成を**絞れる・その回の分だけ戻せる**こと。「Aだけ作り直す→Bを新しく公開→Aだけ戻す」でBが残ること。更新0件を成功と数えないこと | 実API。`server.js` の起動条件も見る |
 | `demo-check.mjs` | 案内ページの組立デモが**幅に合い、本当に触れる**こと | 実ブラウザ。中の入力・送信・キーボードまで。送信先が呼ばれていないことも見る |
+| `demo-timing-check.mjs` | デモが**見えるまで・触れるまで**の時刻 | 実ブラウザ。入れ物の中から知らせて、親の時計で測る |
 
 ```bash
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/publish-check.mjs --port 3300
@@ -85,6 +86,7 @@ node docs/reference-sites/salon/studio-check.mjs --port 3300
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/delivery-check.mjs --port 3300
 ADMIN_SECRET=test-admin-secret node docs/reference-sites/salon/republish-safety-check.mjs --port 3300
 node docs/reference-sites/salon/demo-check.mjs --port 3300
+node docs/reference-sites/salon/demo-timing-check.mjs --url http://127.0.0.1:3300/laruHP --slow yes
 ```
 
 ### 取得したままの状態で確かめる
