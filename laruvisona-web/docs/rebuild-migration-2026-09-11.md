@@ -184,6 +184,8 @@ git checkout main          # 作業ブランチを取り込まなければ、そ
 | 案内ページの最初の画面と、触れるデモ | `git revert 2188124` |
 | 会社トップの組み直し・雰囲気の見本 | `git revert efa342d` |
 | 初回表示（和文webフォントを外した） | `git revert 490a141` |
+| 戻す範囲の限定・更新0件の判定 | `git revert a7d22b8` |
+| 冒頭のデモをコンパクトにした | `git revert 9741d90` |
 
 （`git log --oneline main..rebuild-2026-09` で一覧が出る）
 
