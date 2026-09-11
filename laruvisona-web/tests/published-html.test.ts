@@ -103,6 +103,53 @@ test('最初の画面に写真があるとき、下の写真を優先して読�
   assert.equal((html.match(/fetchpriority="high"/g) || []).length, 1, '優先する画像が1枚ではない');
 });
 
+test('別のページのヒーローが、表示するページの優先度に混ざらない', () => {
+  /* 複数ページの作品では、2ページ目以降は hidden で出る。
+     以前は全ページを繋いだHTMLで「写真つきヒーローがあるか」を見ていたので、
+     2ページ目にヒーローがあるだけで、1ページ目の先頭画像まで遅延扱いになった。
+     判定はページごとに閉じる。 */
+  const page1 = {
+    id: 'p1', name: '1ページ目', path: '/', seo,
+    blocks: [
+      { id: 'a1', type: 'team', data: { heading: 'スタッフ', items: [
+        { name: 'A', role: '院長', photo: '/first-visible.jpg', bio: '' },
+      ] } },
+    ] as never,
+  };
+  const page2 = {
+    id: 'p2', name: '2ページ目', path: '/other', seo,
+    blocks: [
+      { id: 'b1', type: 'hero', data: {
+        heading: 'h', subheading: 's', ctaText: 'c', ctaLink: '#',
+        bgImage: '/other-hero.jpg', bgImageWidth: 1600, bgImageHeight: 1195,
+      } },
+    ] as never,
+  };
+  const html = exportToHTML([page1, page2] as never, seo, { ...settings, heroLayout: 'split' } as never, 'テスト院');
+
+  const tagFor = (src: string) => {
+    const at = html.indexOf(src);
+    assert.ok(at > 0, `${src} が出力されていない`);
+    return html.slice(html.lastIndexOf('<img', at), at);
+  };
+  const first = tagFor('/first-visible.jpg');
+  assert.match(first, /fetchpriority="high"/, '表示するページの先頭画像が優先されていない');
+  assert.ok(!/loading="lazy"/.test(first), '表示するページの先頭画像が遅延読み込みになっている');
+
+  // 隠れているページの画像に、こちらから優先を配らない
+  //（写真つきヒーローが自分で書く分はそのまま。そこは別の話として残す）
+  const hiddenTeam = exportToHTML(
+    [page1, { ...page2, blocks: [
+      { id: 'b2', type: 'team', data: { heading: 'スタッフ', items: [
+        { name: 'B', role: 'スタッフ', photo: '/hidden-first.jpg', bio: '' },
+      ] } },
+    ] as never }] as never,
+    seo, { ...settings, heroLayout: 'split' } as never, 'テスト院');
+  const hidden = hiddenTeam.slice(hiddenTeam.lastIndexOf('<img', hiddenTeam.indexOf('/hidden-first.jpg')), hiddenTeam.indexOf('/hidden-first.jpg'));
+  assert.match(hidden, /loading="lazy"/, '隠れているページの画像に優先が配られている');
+  assert.equal((hiddenTeam.match(/fetchpriority="high"/g) || []).length, 1, '優先する画像が1枚ではない');
+});
+
 
 test('ヒーローの見出しは、書いた位置で折り返せる', () => {
   // 和文の見出しは語の途中でも折り返せてしまう。実測でも

@@ -1717,29 +1717,37 @@ window.addEventListener('popstate',function(){
   const animLevel   = settings.animLevel   || 'full';
 
   // Page sections
-  let imgCount = 0;
-  const renderedPages = pages.map((page, idx) => {
-    const blocksHtml = page.blocks.map(b => renderBlock(b, { heroLayout, accentColor })).filter(Boolean).join('\n');
+  /* 画像の遅延読み込み・非同期デコード（loading未指定の <img> だけ）。
+     ただし、最初に見えるページの1枚目は遅延させない（LCPがその分だけ遅れる）。
+
+     判定は**ページごとに閉じる**。ページをまたいで見ると、
+     ・2ページ目に写真つきヒーローがあるだけで、1ページ目の先頭画像まで
+       遅延扱いになる（最初に見える画像が遅れる）
+     ・逆に、隠れているページの画像を優先してしまうこともある
+     どちらも実際に起きた。
+
+     優先を与えるのは**最初のページだけ**。2ページ目以降は
+     `hidden` で始まるので、そこへ優先を配ってはいけない。
+     また、そのページの中に既に自分で fetchpriority="high" を書いている
+     画像（写真つきヒーロー）がある場合は、ほかの画像を優先しない。 */
+  const decoratePage = (html: string, isFirstPage: boolean) => {
+    const heroTakesPriority = /<img[^>]*\bfetchpriority="high"/i.test(html);
+    let n = 0;
+    return html.replace(/<img (?![^>]*\bloading=)/gi, () =>
+      (isFirstPage && !heroTakesPriority && ++n === 1)
+        ? '<img fetchpriority="high" decoding="async" '
+        : '<img loading="lazy" decoding="async" ');
+  };
+
+  const pagesHtml = pages.map((page, idx) => {
+    const blocksHtml = decoratePage(
+      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor })).filter(Boolean).join('\n'),
+      idx === 0,
+    );
     return multiPage
       ? `<div id="${page.id}" class="lhp-page"${idx > 0 ? ' hidden' : ''}>${blocksHtml}</div>`
       : blocksHtml;
-  }).join('\n');
-
-  /* 最初の画面に写真がある場合、その <img> は自分で
-     loading="eager" fetchpriority="high" を書いている。
-     そのときは、ほかの画像を先に取りに行かせてはいけない。
-     以前はここで「loading未指定の1枚目」を無条件に優先していたため、
-     最初の画面が picture（loading を自分で書く）の作品では、
-     ページのずっと下にあるスタッフ写真が優先で読み込まれていた。 */
-  const heroTakesPriority = /<img[^>]*\bfetchpriority="high"/i.test(renderedPages);
-
-  const pagesHtml = renderedPages
-    // 画像の遅延読み込み・非同期デコードで表示速度を改善（loading未指定の<img>のみ）。
-    // ただし、最初の画面に出る1枚だけは遅延させない（LCPがその分だけ遅れる）。
-    .replace(/<img (?![^>]*\bloading=)/gi, () =>
-      (!heroTakesPriority && ++imgCount === 1)
-        ? '<img fetchpriority="high" decoding="async" '
-        : '<img loading="lazy" decoding="async" ')
+  }).join('\n')
     // ファーストビュー（最初のブロック）はスクロールアニメ対象から外して即時表示（白紙時間対策）
     .replace('data-lhp-anim', 'data-lhp-instant data-lhp-anim');
 
