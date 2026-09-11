@@ -288,7 +288,33 @@ HTMLの**指定**は、7枚すべて `loading="lazy"`、`fetchpriority` は無�
 
 ---
 
-## 8. まだやっていないこと
+
+---
+
+## 8. 追記2：確認SQLを、内容の照合まで行う形にした（Codex rev2 / 2026-09-11）
+
+rev2 で、**存在と有効フラグだけでは通ってしまう**状態を4系統再現された。
+一時PostgreSQLで再現を確認し、確認SQLを作り直した。**アプリのコードと素材は変えていない。**
+
+| 指摘 | 通ってしまっていた状態 | 直し方 |
+|---|---|---|
+| P1 ポリシー・トリガの内容 | ポリシーを `USING (true)` にして全サイト読める状態／ガードを `BEFORE UPDATE` だけにして INSERT を守らない状態 | ポリシーは `pg_get_expr(polqual)` を正規化して**定義文と一致**を見る。cmd・permissive・`with_check` も見る。トリガは **`tgtype`（発火条件）と `tgfoid`（呼出先）** まで照合し、`WHEN` が付いていないことも見る |
+| P1 権限の確認漏れ | `GRANT UPDATE(status)` の列単位権限／`TRUNCATE` が残った状態 | `has_column_privilege` で**列単位**、`TRUNCATE`/`REFERENCES`/`TRIGGER` も見る。解除キューは表・列の両方 |
+| P2 service_role 欠落が合格 | ロールを別名にすると NULL が検索から外れて合格／`service_role` の表権限を取り消しても合格 | 必要な3ロールの**存在を明示的な行**にした。`service_role` の表権限・`public` スキーマの USAGE も見る |
+| P2 型・制約・設定の照合不足 | `kind` を integer に／制約を `CHECK(true)` に／`host` の一意索引を部分索引に／`search_path` を `public_shadow` に | 列は**名前＋型**、制約は**定義文**、索引は `indisvalid`＋`indpred is null`＋`indexprs is null`＋対象列、`search_path` は `= array['search_path=public']` で**正確に**照合 |
+
+`TRUNCATE`/`REFERENCES`/`TRIGGER` は、指示どおり**検査対象から外さず不適合として報告**する形にした。
+現行の `site_domains.sql` は `insert, update, delete` しか revoke していないので、
+**正しく当てても27・28行目は false になる**。これは移行SQLの積み残しで、検査の誤りではない。
+判定行を2つに分け、`98 適用の判定`（積み残しを除く）と `99 望ましい状態`（含む）にした。
+**本番の権限は変更していない。移行SQLにも revoke を足していない**（塞ぎ方だけ文書に書いた）。
+
+回帰は `supabase/run-state-check-regression.sh`。正常・未適用・**16通りの異常**で
+期待どおりの行が落ちることを確認した（19/19 通過）。
+
+---
+
+## 9. まだやっていないこと
 
 - push・本番SQL・DNS・デプロイ・本番再生成
 - 結い庵のヒーロー動画（任意。受け口は空のまま。無くても公開準備は止まらない）
