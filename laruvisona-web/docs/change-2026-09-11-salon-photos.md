@@ -243,7 +243,52 @@ HTMLの**指定**は、7枚すべて `loading="lazy"`、`fetchpriority` は無�
 
 ---
 
-## 7. まだやっていないこと
+
+---
+
+## 7. 追記：4-3 の確認SQLを作り直した（Codex 指摘 / 2026-09-11）
+
+一時PostgreSQLでの再現に基づき、`site_domains` の確認SQLを差し替えた。
+**アプリのコードと素材は変えていない。** 直したのは確認手順と記録だけ。
+
+| 指摘 | 前のSQLで何が起きていたか | 直し方 |
+|---|---|---|
+| P1 権限・ガードが無効でも検出できない | RPCを一般ユーザーへ開放しても、RLS やトリガを無効化しても、結果が変わらなかった | `has_table_privilege` / `has_function_privilege` で**実効権限**を見る。`pg_class.relrowsecurity` と `pg_trigger.tgenabled` で**有効状態**を見る |
+| P2 旧関数・キューの欠落を見逃す | 引数の違う旧シグネチャに置き換えても「11件正常・取り残し0件」だった。解除キューの列欠落も見えなかった | 関数は**名前＋引数型**（`oidvectortypes(proargtypes)`）で照合。`domain_release_queue` の追加列5件も見る |
+| P2 表がないと途中で止まる | `::regclass` が未適用状態でエラーになった | `to_regclass` / `to_regrole` に変更。**表が無くても最後まで走り**、「対象なし」と出て総合 false |
+
+新しいSQLは `supabase/site_domains_state_check.sql`（出荷計画 4-3 と記録シート C-3 に同じものを掲載）。
+23項目＋総合の1行を返す。**判定は最終行だけ見ればよい。**
+
+一時PostgreSQLで、次の壊し方をすべて検出することを確認した:
+
+| 壊し方 | 検出した行 |
+|---|---|
+| RPC を `authenticated` へ `grant execute` | 21 `authenticated から実行できない` 0→1 |
+| `disable row level security` | 10 `RLS が有効` true→false |
+| `disable trigger guard_sites_custom_domain_trg` | 7 `ガードトリガが有効` 1→0 |
+| 関数を引数違いの旧シグネチャへ置換 | 18 `名前＋引数型でそろう` 0→1、19 `取り残し` 0→1 |
+| `domain_release_queue` の列を削除 | 4 `解除キューの追加列` 5→4 |
+| 表の権限を `authenticated` へ開放 | 13 `書けない` false→true |
+| 読み取りポリシーを削除 | 11 `ポリシーがある` true→false |
+| `security definer` を外す | 20 `definer / search_path` 0→1 |
+
+未適用の状態（`site_domains` が無い）でもエラーにならないことも確認した。
+
+### 記録の言い方も2点直した
+
+- **「本番は 0d00dfe」は確認前の想定。** `git ls-remote` で確かめたのは
+  `origin/main` の先端であって、Render が同じSHAで動いている保証はない。
+  それを確かめるのが C-1。確認前は「未確認」と書く。
+- **「足りない分だけが入る」は不正確。** `site_domains.sql` は
+  関数11本を `create or replace` で**置き換え**、旧シグネチャを `drop function` で落とし、
+  権限・ポリシー・トリガを**作り直し**、末尾で `sites.custom_domain` の行を
+  `insert ... on conflict (host) do nothing` で**取り込む**（データが増える）。
+  `if not exists` で足されるだけなのは表・列・索引。
+
+---
+
+## 8. まだやっていないこと
 
 - push・本番SQL・DNS・デプロイ・本番再生成
 - 結い庵のヒーロー動画（任意。受け口は空のまま。無くても公開準備は止まらない）
