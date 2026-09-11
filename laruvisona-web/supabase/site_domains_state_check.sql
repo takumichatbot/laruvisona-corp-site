@@ -22,16 +22,17 @@
 -- 判定は2行ある。
 --   98 適用の判定      … site_domains.sql が正しく当たっているか
 --   99 望ましい状態    … 98 に「移行SQLの積み残し」を足したもの
--- 区分が「積み残し」の行は、**現行の site_domains.sql を当てただけでは false**。
--- 検査の誤りではなく、移行SQL側にまだ revoke が無いという意味。
+-- 区分が「積み残し」の行は、移行SQLを当てただけでは false になる行。
+-- **現在この区分の行は無い**（2026-09-11 に site_domains.sql へ
+-- `revoke truncate, references, trigger` を足したため）。
+-- したがって正しく当たっていれば **98 も 99 も true** になる。
+-- 区分そのものは、将来また積み残しが出たときのために残してある。
 --
 -- **98=true は「独自ドメインを公開してよい」という意味ではない。**
--- 98 は「移行SQLの内容どおりか」だけを見る。公開の可否は 99 で判断する。
--- 99=false のあいだは、権限の是正を入れるか、例外として残す判断を
--- 明示的に記録するまで、独自ドメインの有効化を始めない。
--- なお解除キュー（domain_release_queue）は site_domains.sql が
--- revoke all しているので、TRUNCATE 等が残っていたら積み残しではなく
--- 「適用の判定」側（22/23行）の不合格になる。
+-- 98 は「移行SQLの内容どおりか」だけを見る。公開の可否は 99 で判断し、
+-- **99=false のあいだは独自ドメインの有効化を始めない**。
+-- 2つの表はどちらも、anon / authenticated に
+-- TRUNCATE / REFERENCES / TRIGGER が残っていたら不合格（27/28行・22/23行）。
 --
 with obj as (
   select to_regclass('public.site_domains')         as sd,
@@ -264,14 +265,14 @@ select * from (
          (select has_schema_privilege(r_svc, 'public', 'USAGE')::text from obj),
          (select has_schema_privilege(r_svc, 'public', 'USAGE') from obj)
 
-  union all select 27, '積み残し', 'authenticated に site_domains の TRUNCATE/REFERENCES/TRIGGER が残っていない', 'false',
+  union all select 27, '実効権限', 'authenticated に site_domains の TRUNCATE/REFERENCES/TRIGGER が無い', 'false',
          (select (t.p_trunc or t.p_ref or t.p_trig or c.c_ref > 0)::text
             from tacl t join cacl c using (rname, tname)
            where t.rname = 'authenticated' and t.tname = 'site_domains'),
          exists (select 1 from tacl t join cacl c using (rname, tname)
                   where t.rname = 'authenticated' and t.tname = 'site_domains'
                     and not (t.p_trunc or t.p_ref or t.p_trig) and c.c_ref = 0)
-  union all select 28, '積み残し', 'anon に site_domains の TRUNCATE/REFERENCES/TRIGGER が残っていない', 'false',
+  union all select 28, '実効権限', 'anon に site_domains の TRUNCATE/REFERENCES/TRIGGER が無い', 'false',
          (select (t.p_trunc or t.p_ref or t.p_trig or c.c_ref > 0)::text
             from tacl t join cacl c using (rname, tname)
            where t.rname = 'anon' and t.tname = 'site_domains'),

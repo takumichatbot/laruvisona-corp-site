@@ -6,7 +6,7 @@
 #   ./supabase/run-state-check-regression.sh
 #
 # 2段階で確かめる。
-#   検出フェーズ … 正常・未適用・22通りの異常を作り、期待どおりの行が落ちるか
+#   検出フェーズ … 正常・未適用・23通りの異常を作り、期待どおりの行が落ちるか
 #   空振りフェーズ … 同じケースから「異常を作るSQL」だけを抜き、
 #                    どのケースも検出されないこと（＝検査が空振りでないこと）
 #
@@ -66,10 +66,12 @@ ok=0; ng=0; SEQ=0; MODE=detect
 pass(){ echo "OK  $1"; ok=$((ok+1)); }
 fail(){ echo "NG  $1"; ng=$((ng+1)); }
 
-# ── 基準状態：移行SQLを当てた直後は 98=t / 99=f、落ちるのは積み残しの27,28だけ ──
-BASE_BAD="27 28 "
+# ── 基準状態：移行SQLを当てた直後は 98=t / 99=t、落ちる行は無い ──
+#    （2026-09-11 に site_domains.sql へ revoke truncate/references/trigger を足したため、
+#      「積み残し」区分の行は現在ゼロ。27/28 も当てた直後から true になる）
+BASE_BAD=""
 baseline_ok(){ # 出力
-  [ "$(row "$1" 98)" = t ] && [ "$(row "$1" 99)" = f ] && [ "$(badrows "$1")" = "$BASE_BAD" ]
+  [ "$(row "$1" 98)" = t ] && [ "$(row "$1" 99)" = t ] && [ "$(badrows "$1")" = "$BASE_BAD" ]
 }
 
 t(){ # 名前 期待行(-なら指定なし) 期待98 期待99 異常SQL...
@@ -100,7 +102,7 @@ t(){ # 名前 期待行(-なら指定なし) 期待98 期待99 異常SQL...
     fi
   else
     # 空振りフェーズ：異常SQLを抜いたら、そのケースは検出されないはず
-    if [ "$a" = t ] && [ "$b" = f ] && [ "$bad" = "$BASE_BAD" ] && [ "$e98$e99$want" != "tf-" ]; then
+    if [ "$a" = t ] && [ "$b" = t ] && [ "$bad" = "$BASE_BAD" ]; then
       pass "$name … 異常を抜くと検出されない（想定どおり）"
     else
       fail "$name … 異常を抜いても検出されてしまう（98=$a 99=$b 落ちた行: ${bad:-なし}）＝このケースは空振り"
@@ -114,7 +116,8 @@ t(){ # 名前 期待行(-なら指定なし) 期待98 期待99 異常SQL...
 
 cases(){
   RESTORE=''
-  t "残存権限を是正した隔離環境"          -  t t 'revoke truncate, references, trigger on public.site_domains from anon, authenticated'
+  t "site_domains に TRUNCATE を戻す"     27 f f 'grant truncate on public.site_domains to authenticated'
+  t "site_domains に列単位 REFERENCES"    28 f f 'grant references(host) on public.site_domains to anon'
   t "解除キューに TRUNCATE を付与"        22 f f 'grant truncate on public.domain_release_queue to authenticated'
   t "Codex再現: sd是正＋キューTRUNCATE"   22 f f 'revoke truncate, references, trigger on public.site_domains from anon, authenticated' 'grant truncate on public.domain_release_queue to authenticated'
   t "解除キューに列単位 REFERENCES"       23 f f 'grant references(host) on public.domain_release_queue to anon'
@@ -143,7 +146,7 @@ cases(){
 echo "── 検出フェーズ ──"
 mkdb base applied
 if out="$(J base)"; then
-  if baseline_ok "$out"; then pass "正常（適用済み） … 98=t 99=f 落ちた行: $(badrows "$out")（積み残しのみ）"
+  if baseline_ok "$out"; then pass "正常（適用済み） … 98=t 99=t 落ちた行なし"
   else fail "正常（適用済み） … 98=$(row "$out" 98) 99=$(row "$out" 99) 落ちた行: $(badrows "$out")"; fi
 else fail "正常（適用済み） … 確認SQLがエラー"; fi
 dropdb_ base
@@ -170,4 +173,4 @@ echo ""
 echo "検出フェーズ 通過 $DETECT_OK / 失敗 $DETECT_NG"
 echo "合計         通過 $ok / 失敗 $ng"
 [ "$ng" -eq 0 ] || exit 1
-echo "確認SQLが、正常・未適用・22通りの異常を区別し、かつ空振りでないことを確認しました"
+echo "確認SQLが、正常・未適用・23通りの異常を区別し、かつ空振りでないことを確認しました"

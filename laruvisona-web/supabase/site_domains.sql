@@ -103,6 +103,9 @@ create policy "Users read own site_domains" on public.site_domains
 
 -- ポリシーだけでなくテーブル権限でも落としておく（多層で守る）
 revoke insert, update, delete on public.site_domains from authenticated, anon;
+-- Supabase の既定付与（alter default privileges ... grant all on tables）で
+-- TRUNCATE / REFERENCES / TRIGGER も付く。TRUNCATE は行を全部消せるので必ず外す。
+revoke truncate, references, trigger on public.site_domains from authenticated, anon;
 grant select on public.site_domains to authenticated;
 
 -- ── 外部解除の積み残しを失わないためのキュー ──────────
