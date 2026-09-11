@@ -10,6 +10,7 @@
 //   1. 枠が置かれるまで（中身の作成が始まった時刻）
 //   2. 中の写真が出るまで（画像が読み終わって描かれた時刻）
 //   3. 触れるようになるまで（組み上がって、中の操作が効くようになった時刻）
+//   4. 見せ方を選んでから、画面がその見せ方に変わるまで（押した手応えの速さ）
 //
 // 測り方: 中の入れ物にも同じ計測用スクリプトを入れ、区切りごとに親へ知らせる。
 // 時刻は**親の時計**で取る（入れ物の中の performance.now() は基準が別なので混ぜない）。
@@ -110,7 +111,35 @@ for (const [label, vp, dpr] of [
     }
 
     const lcp = await page.evaluate(() => window.__lcp).catch(() => 0);
-    runs.push({ ...t, lcp });
+
+    /* 4つめ。見せ方を1つ選んでから、画面がその見せ方になるまで。
+       押した時刻と、入れ替わった時刻を、どちらも親の時計で取る。 */
+    let swap = null;
+    try {
+      const radios = page.locator('[role="radiogroup"] [role="radio"]');
+      await radios.nth(0).waitFor({ timeout: 5000 });
+      await page.waitForTimeout(400);
+      swap = await page.evaluate(async () => {
+        const root = document.querySelector('[data-lhp-demo]');
+        const btns = document.querySelectorAll('[role="radiogroup"] [role="radio"]');
+        const now = root.getAttribute('data-lhp-demo-shown');
+        const next = [...btns].find(b => b.getAttribute('aria-checked') !== 'true');
+        const t0 = performance.now();
+        next.click();
+        return await new Promise(res => {
+          const deadline = t0 + 12000;
+          const tick = () => {
+            const shown = root.getAttribute('data-lhp-demo-shown');
+            if (shown !== now && root.getAttribute('data-lhp-demo-busy') === '0') return res(performance.now() - t0);
+            if (performance.now() > deadline) return res(null);
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
+      });
+    } catch { swap = null; }
+
+    runs.push({ ...t, lcp, swap });
     await ctx.close();
   }
 
@@ -118,6 +147,7 @@ for (const [label, vp, dpr] of [
     label,
     lcp: median(runs.map(r => r.lcp)),
     mounted: median(runs.map(r => r.mounted ?? Infinity)),
+    swap: median(runs.map(r => r.swap ?? Infinity)),
     photo: median(runs.map(r => r.photo ?? Infinity)),
     interactive: median(runs.map(r => r.interactive ?? Infinity)),
     runs,
@@ -135,6 +165,9 @@ for (const r of out) {
   console.log(`  デモの枠が置かれるまで          ${fmt(r.mounted)}`);
   console.log(`  デモの写真が出るまで            ${fmt(r.photo)}`);
   console.log(`  デモが触れるようになるまで      ${fmt(r.interactive)}`);
+  console.log(`  見せ方を選んでから変わるまで    ${fmt(r.swap)}`);
   console.log('');
 }
-console.log('※ 親ページのLCPは、デモの中の写真が出た時刻ではない。上の3つは別に測っている。');
+console.log('※ 親ページのLCPは、デモの中の写真が出た時刻ではない。上の4つは別に測っている。');
+console.log('※ 「選んでから変わるまで」は、押した時刻から、画面がその見せ方になって');
+console.log('   更新中の表示が消えるまで。どちらも親の時計で取っている。');

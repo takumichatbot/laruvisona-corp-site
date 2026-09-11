@@ -115,7 +115,7 @@ export default function LaruHPLandingPage() {
             <p className="text-[13px] font-bold text-slate-700 mb-1">これが、できあがるものです</p>
             <p className="text-[12px] text-slate-500 leading-relaxed mb-3">
               画面写真ではありません。いま、この場で作っているお店のサイトです。
-              <span className="hidden sm:inline">ボタンを押すと、材料が1枚に組み上がります。</span>
+              <span className="hidden sm:inline">見せ方を選ぶと、その場で作り直して、組み上がります。</span>
             </p>
             <AssembleDemo />
           </div>

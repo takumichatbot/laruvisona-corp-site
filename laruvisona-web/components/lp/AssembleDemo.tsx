@@ -1,25 +1,29 @@
 'use client';
 /**
- * 「部品が分かれている状態 → 1枚のサイトに組み上がる」を見せる仕掛け。
+ * 「完成例を見る → 見せ方を一つ選ぶ → その選択のまま組み上がる → 予約まで試す」
+ * を、一続きで体験してもらうための仕掛け。
  *
  * 動画ではない。中に出ているのは、公開ページを作るのと同じ関数（exportToHTML）が
- * 作ったページそのもので、写真も見本の作品のものを使っている。
- * 分かれて見えているのは、そのページの「節」そのもの。
+ * 作ったページそのもの。見せ方の3択も、制作画面の「雰囲気を選び直す」と同じ
+ * DESIGN_PRESETS をそのまま使っている（デモ専用の設定体系は作らない）。
  *
- * できること:
- *   ・雰囲気と書体を選ぶと、その場で作り直す
- *   ・組み上がったあとは、中のボタン・リンク・入力欄を実際に触れる
- *     「ご予約フォームへ」を押すと、その場所まで画面が動く
- *     予約の入力もでき、送信は**その場の見本**として受け付ける（どこへも送らない）
- *   ・キーボードだけでも同じことができる
+ * 流れ:
+ *   1. 最初から**組み上がった完成例**が出ている（到達できる品質が先に分かる）
+ *   2. 見せ方を1つ選ぶ。操作はこの3択だけ
+ *   3. 写真・文章・料金はそのまま、見た目だけが入れ替わり、その場で組み上がる
+ *   4. 「予約フォームまで試す」を開くと、選んだ見せ方のままフォームを操作できる
  *
  * 決めごと:
+ *   ・選び直しのあいだも、前の画面を消さない。新しい方を裏で作り、
+ *     描き終わってから入れ替える（白い画面を挟まない）
+ *   ・連続で選び直しても、**古い方の描き終わりが最後の選択を上書きしない**。
+ *     作るたびに世代番号を振り、いま最後に押されたものだけを採用する
+ *   ・選択はこの画面の中だけの状態。顧客データの保存APIは呼ばない
  *   ・使うのはCSSの3D変形だけ。WebGLは使わない
- *   ・端末が「動きを減らす」設定なら、最初から組み上がった状態で出す
- *   ・画面の幅に合わせて作る。パソコンは1440px、スマホは390pxの組み方で見せる
+ *   ・端末が「動きを減らす」設定なら、演出を省いて完成状態を直接出す
  *   ・中身は別の入れ物（sandbox）に置く。中で何かが動いても、この画面には届かない
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { exportToHTML } from '@/lib/html-export';
 import { DESIGN_PRESETS } from '@/lib/site-design';
 import type { Block, SEOSettings } from '@/types/laruHP';
@@ -27,6 +31,37 @@ import type { Block, SEOSettings } from '@/types/laruHP';
 const SEO: SEOSettings = {
   title: '結い庵', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '',
 };
+
+/* 見せ方の3択。
+   5つ全部を並べると、どれを押せばよいのか分からなくなる。ここは
+   「選ぶと何が起きるか」を伝える場所なので、同じ写真・同じ文章でも
+   はっきり違って見える3つに絞る。最初に出すのは、見本の作品で採用した
+   「上質」（明朝・広い余白・角のない形）。 */
+const CHOICE_IDS = ['refined', 'calm', 'warm'] as const;
+
+const FONT_LABEL: Record<string, string> = {
+  mincho: '明朝', noto: 'ゴシック', rounded: '丸ゴシック',
+  zen: '太めのゴシック', biz: '読みやすいゴシック', kaisei: '明朝',
+};
+const SPACE_LABEL: Record<string, string> = {
+  tight: '余白しまり', normal: '余白ふつう', roomy: '余白ひろめ', airy: '余白たっぷり',
+};
+const SHAPE_LABEL: Record<string, string> = {
+  square: 'ボタンは角のまま', soft: 'ボタンはすこし丸い', pill: 'ボタンはまるい',
+};
+
+const CHOICES = CHOICE_IDS.map(id => {
+  const p = DESIGN_PRESETS.find(x => x.id === id) || DESIGN_PRESETS[0];
+  return {
+    id: p.id,
+    name: p.name,
+    note: p.note,
+    preset: p,
+    /** 何が変わるのかを、設定そのものから書き出す（言葉を別に持たない） */
+    detail: `${FONT_LABEL[p.fontFamily] ?? 'ゴシック'}／${SPACE_LABEL[p.design.space]}／${SHAPE_LABEL[p.design.buttonShape]}`,
+  };
+});
+const DEFAULT_CHOICE = CHOICES[0].id;
 
 /** 見せる節。実際の作品から3つ取っている */
 const DEMO_BLOCKS: Block[] = [
@@ -79,20 +114,20 @@ const OFFSETS = [
   { dx: -6.5, dy: 2.5, dz: -80, rx: 2.5, ry: -5 },
 ];
 
-const FONTS = [
-  { value: 'mincho', label: '明朝' },
-  { value: 'noto', label: 'ゴシック' },
-  { value: 'rounded', label: '丸ゴシック' },
-];
-
 /* 中の入れ物で動かすもの。
    ・組み上がる／ばらける（親から言われて動く）
    ・高さを親に知らせる（親はその高さで場所を空ける）
+   ・「描き終わった」を親に知らせる（親はそれを見てから表に出す）
    ・ページ内の移動は、親のページを動かして見せる（中は縮めて置いてあるので、
      中だけで動かしても見えない）
-   ・送信はどこへも送らない。その場で「受け付けました」を出すだけ */
+   ・送信はどこへも送らない。その場で「受け付けました」を出すだけ
+
+   知らせには必ず世代番号（GEN）を入れる。親は、いま最後に押された世代の
+   知らせだけを採る。これが無いと、続けて押したときに古い方の描き終わりが
+   あとから届いて、最後の選択を上書きしてしまう。 */
 const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
 (function(){
+  var GEN = __GEN__;
   try { void window.localStorage.length; } catch (e) {
     var mem = function(){ var m = {}; return {
       getItem: function(k){ return Object.prototype.hasOwnProperty.call(m,k) ? m[k] : null; },
@@ -112,8 +147,38 @@ const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
     });
   };
 
-  var send = function(m){ try { parent.postMessage(Object.assign({source:'lhp-demo'}, m), '*'); } catch(e){} };
+  var send = function(m){ try { parent.postMessage(Object.assign({source:'lhp-demo', gen:GEN}, m), '*'); } catch(e){} };
   var OFFSETS = __OFFSETS__;
+
+  /* 文字と写真がそろってから「描き終わった」と言う。
+     ここで待たずに入れ替えると、書体の入れ替わりが見えてしまう。
+     ただし待ちきりにはしない（外部の書体が届かない環境がある）。 */
+  var settled = false;
+  var settle = function(){
+    if (settled) return; settled = true;
+    send({ type: 'painted' });
+  };
+  var waitPaint = function(){
+    var waits = [];
+    try { if (document.fonts && document.fonts.ready) waits.push(document.fonts.ready); } catch (e) {}
+    var imgs = [].slice.call(document.images).slice(0, 3);
+    for (var i = 0; i < imgs.length; i++) {
+      (function(im){
+        if (im.complete) return;
+        waits.push(new Promise(function(r){
+          im.addEventListener('load', r); im.addEventListener('error', r);
+        }));
+      })(imgs[i]);
+    }
+    setTimeout(settle, 1100);
+    if (waits.length) {
+      Promise.all(waits).then(function(){
+        requestAnimationFrame(function(){ requestAnimationFrame(settle); });
+      });
+    } else {
+      requestAnimationFrame(function(){ requestAnimationFrame(settle); });
+    }
+  };
 
   var ready = function(){
     var st = document.createElement('style');
@@ -192,6 +257,7 @@ const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
     setTimeout(report, 600);
     setTimeout(report, 1600);
     send({ type: 'ready' });
+    waitPaint();
   };
 
   window.addEventListener('message', function(e){
@@ -210,8 +276,10 @@ const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
 })();
 </script>`;
 
-function withDemoBridge(html: string): string {
-  const bridge = DEMO_BRIDGE.replace('__OFFSETS__', JSON.stringify(OFFSETS));
+function withDemoBridge(html: string, gen: number): string {
+  const bridge = DEMO_BRIDGE
+    .replace('__OFFSETS__', JSON.stringify(OFFSETS))
+    .replace('__GEN__', String(gen));
   const i = html.indexOf('<head>');
   return i === -1 ? bridge + html : html.slice(0, i + 6) + bridge + html.slice(i + 6);
 }
@@ -237,36 +305,98 @@ const SP_PEEK = 1120;
    見出しがすぐ目に入るようにする（閉じているあいだだけ）。 */
 const SP_PEEK_TOP = 150;
 const SWITCH_PX = 700;
+/* 描き終わりの知らせが来ないときでも、ここまで待ったら表に出す。
+   （中で例外が起きても、選べないままにしない） */
+const SWAP_TIMEOUT = 2600;
+
+type Slot = { gen: number; choiceId: string; html: string } | null;
 
 export default function AssembleDemo({ initialDevice }: { initialDevice?: Device } = {}) {
-  const [presetId, setPresetId] = useState('refined');
-  const [font, setFont] = useState('mincho');
-  const [assembled, setAssembled] = useState(false);
+  /** いま画面に出ている見せ方 */
+  const [shown, setShown] = useState<string>(DEFAULT_CHOICE);
+  /** 最後に押された見せ方。押した瞬間にこちらが変わる */
+  const [picked, setPicked] = useState<string>(DEFAULT_CHOICE);
+  const [assembled, setAssembled] = useState(true);
   const [reduced, setReduced] = useState(false);
   const [device, setDevice] = useState<Device>(initialDevice ?? 'pc');
-  const [autoDevice, setAutoDevice] = useState(true);
-  /* 中身の高さは固定にする。
-     測ってから広げると、写真が届くたびに場所がずれる（読んでいる途中で
-     文字が動く）。この見本の中身はこちらで決めているので、実測した高さを
-     そのまま定数にしてある。少し余らせて、下が切れないようにする。 */
   const [contentTall, setContentTall] = useState(false);
   /** 予約フォームまで開いた状態か。押されたときだけ開く */
   const [full, setFull] = useState(false);
   const [boxW, setBoxW] = useState(0);
   const [near, setNear] = useState(false);
   const [note, setNote] = useState('');
+  const [announce, setAnnounce] = useState('');
 
-  const frameRef = useRef<HTMLIFrameElement | null>(null);
+  /* 入れ物は2つ。片方を見せているあいだに、もう片方で次の見せ方を作る。
+     作り終わってから入れ替えるので、白い画面を挟まない。 */
+  const [slots, setSlots] = useState<[Slot, Slot]>([null, null]);
+  const [active, setActive] = useState<0 | 1>(0);
+  /** 入れ替えを待っているあいだ true。押した手応えとして出す */
+  const [busy, setBusy] = useState(false);
+
+  /* いまどちらを見せているか／中身は何か。
+     押した直後の判断は、描き直しを待たずに正しくないといけないので、
+     状態と同じ値を ref にも持つ（古い値のまま入れ替えると、見せている方を
+     消してしまう）。 */
+  const activeRef = useRef<0 | 1>(0);
+  const assembledRef = useRef(true);
+  const slotsRef = useRef<[Slot, Slot]>([null, null]);
+  const frames = useRef<Array<HTMLIFrameElement | null>>([null, null]);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const outerRef = useRef<HTMLDivElement | null>(null);
+  const groupRef = useRef<HTMLDivElement | null>(null);
+  /** 世代番号。押すたびに増える。いちばん新しいものだけを採る */
+  const genRef = useRef(0);
+  const swapTimer = useRef<number | undefined>(undefined);
+  const assembleTimer = useRef<number | undefined>(undefined);
+  /** exportToHTML は安くない。見せ方ごとに1回だけ作って使い回す */
+  const htmlCache = useRef(new Map<string, string>());
 
-  const preset = DESIGN_PRESETS.find(p => p.id === presetId) || DESIGN_PRESETS[2];
   const frameW = device === 'sp' ? 390 : 1440;
   const fullH = (device === 'sp' ? SP_H : PC_H) + (contentTall ? 600 : 0);
   const contentH = full ? fullH : (device === 'sp' ? SP_PEEK : PC_PEEK);
   const peekTop = !full && device === 'sp' ? SP_PEEK_TOP : 0;
   const fit = boxW > 0 ? Math.min(1, boxW / frameW) : 0;
   const scale = fit;
+
+  const shownChoice = CHOICES.find(c => c.id === shown) || CHOICES[0];
+  const pickedChoice = CHOICES.find(c => c.id === picked) || CHOICES[0];
+
+  /** 見せ方から、公開ページと同じ作り方でHTMLを作る */
+  const buildHtml = useCallback((choiceId: string, gen: number) => {
+    let base = htmlCache.current.get(choiceId);
+    if (!base) {
+      const c = CHOICES.find(x => x.id === choiceId) || CHOICES[0];
+      base = exportToHTML(
+        [{ id: 'demo', name: 'デモ', path: '/', blocks: DEMO_BLOCKS, seo: SEO }],
+        SEO,
+        {
+          colorScheme: 'professional-blue', style: 'clean',
+          designStyle: c.preset.designStyle, fontFamily: c.preset.fontFamily,
+          accentColor: c.preset.design.accent,
+          heroLayout: 'split', headerStyle: 'solid', animLevel: 'none',
+          larubot: false, laruseo: false,
+          design: c.preset.design as unknown as Record<string, unknown>,
+        } as never,
+        '結い庵',
+      );
+      htmlCache.current.set(choiceId, base);
+    }
+    return withDemoBridge(base, gen);
+  }, []);
+
+  const post = useCallback((idx: 0 | 1, msg: Record<string, unknown>) => {
+    frames.current[idx]?.contentWindow?.postMessage({ source: 'lhp-demo-host', ...msg }, '*');
+  }, []);
+
+  /* 描き直しが終わるたび、ref を今の値にそろえる。
+     押したときの判断（どちらの入れ物を使うか・どちらを外すか）は、
+     次の描き直しを待てないので ref を見る。 */
+  useEffect(() => {
+    activeRef.current = active;
+    slotsRef.current = slots;
+    assembledRef.current = assembled;
+  }, [active, slots, assembled]);
 
   /* 幅を見る。狭いところではスマホの組み方に切り替える */
   useEffect(() => {
@@ -276,7 +406,7 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
       setBoxW(el.clientWidth);
       /* 切り替えの境目は、下の枠の縦横比を決めているCSSと同じ値にする。
          ここがずれると、読み込みの途中で高さが変わって画面がずれる。 */
-      if (autoDevice) setDevice(window.matchMedia(`(min-width: ${SWITCH_PX}px)`).matches ? 'pc' : 'sp');
+      setDevice(window.matchMedia(`(min-width: ${SWITCH_PX}px)`).matches ? 'pc' : 'sp');
     };
     apply();
     if (typeof ResizeObserver !== 'function') {
@@ -286,7 +416,7 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [autoDevice]);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -296,33 +426,111 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
     return () => mq.removeEventListener('change', apply);
   }, []);
 
-  const html = useMemo(() => withDemoBridge(exportToHTML(
-    [{ id: 'demo', name: 'デモ', path: '/', blocks: DEMO_BLOCKS, seo: SEO }],
-    SEO,
-    {
-      colorScheme: 'professional-blue', style: 'clean',
-      designStyle: preset.designStyle, fontFamily: font,
-      accentColor: preset.design.accent,
-      heroLayout: 'split', headerStyle: 'solid', animLevel: 'none',
-      larubot: false, laruseo: false,
-      design: preset.design as unknown as Record<string, unknown>,
-    } as never,
-    '結い庵',
-  )), [preset, font]);
-
-  const post = useCallback((msg: Record<string, unknown>) => {
-    frameRef.current?.contentWindow?.postMessage({ source: 'lhp-demo-host', ...msg }, '*');
+  /* 近くまで来たら最初の1枚を作る（開いた瞬間に写真を取りに行かない）。
+     最初は**組み上がった完成例**。まず到達できる品質を見てもらう。 */
+  useEffect(() => {
+    const el = stageRef.current;
+    const start = () => setNear(true);
+    if (!el || typeof IntersectionObserver !== 'function') {
+      const t = window.setTimeout(start, 200);
+      return () => window.clearTimeout(t);
+    }
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { start(); io.disconnect(); } });
+    }, { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!near || fit === 0) return;
+    /* 描画の途中で作らない。1回描き終えてから最初の1枚を用意する
+       （作る処理は軽くないので、最初の表示を遅らせないようにする） */
+    const t = window.setTimeout(() => {
+      setSlots(prev => (prev[0] || prev[1] ? prev : [{ gen: 0, choiceId: DEFAULT_CHOICE, html: buildHtml(DEFAULT_CHOICE, 0) }, null]));
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [near, fit, buildHtml]);
+
+  /** 裏で作った方を表に出す。いちばん新しい世代のときだけ */
+  const promote = useCallback((idx: 0 | 1, gen: number, choiceId: string) => {
+    if (genRef.current !== gen) return;      // もっと新しい選択がある。古い方は捨てる
+    if (activeRef.current === idx) return;   // すでに表に出ている
+    if (swapTimer.current !== undefined) { window.clearTimeout(swapTimer.current); swapTimer.current = undefined; }
+    activeRef.current = idx;
+    setActive(idx);
+    setShown(choiceId);
+    setBusy(false);
+    const name = (CHOICES.find(c => c.id === choiceId) || CHOICES[0]).name;
+    setAnnounce(`${name}に切り替えました。写真と文章と料金はそのままです。`);
+    /* 裏で作った方は、ばらけた状態で用意してある。表に出してから組み上げる。
+       「動きを減らす」設定では、そのまま組み上がった状態で出す。 */
+    if (assembleTimer.current !== undefined) window.clearTimeout(assembleTimer.current);
+    if (!reduced) {
+      setAssembled(false);
+      assembleTimer.current = window.setTimeout(() => setAssembled(true), 160);
+    } else {
+      setAssembled(true);
+    }
+    /* 使い終わった方は外す。中のボタンや入力欄が残っていると、
+       見えていないのにキーボードで入り込めてしまう。
+       ただし、外すまでのあいだに次の選択がその場所を使っていたら外さない
+       （見せている方や、用意し終えた方を消してしまう）。 */
+    const old: 0 | 1 = idx === 0 ? 1 : 0;
+    const oldGen = slotsRef.current[old]?.gen;
+    window.setTimeout(() => {
+      if (activeRef.current === old) return;
+      if (slotsRef.current[old]?.gen !== oldGen) return;
+      setSlots(prev => { const n: [Slot, Slot] = [prev[0], prev[1]]; n[old] = null; return n; });
+    }, reduced ? 0 : 320);
+  }, [reduced]);
+
+  /** 見せ方を選ぶ。ここではページの中の状態だけを変える（保存APIは呼ばない） */
+  const choose = useCallback((id: string) => {
+    if (id === picked && !busy) return;
+    const gen = ++genRef.current;
+    const target: 0 | 1 = activeRef.current === 0 ? 1 : 0;
+    setPicked(id);
+    setBusy(true);
+    setAnnounce('');
+    setSlots(prev => {
+      const next: [Slot, Slot] = [prev[0], prev[1]];
+      next[target] = { gen, choiceId: id, html: buildHtml(id, gen) };
+      return next;
+    });
+    if (swapTimer.current !== undefined) window.clearTimeout(swapTimer.current);
+    /* 知らせが来ないときの保険。押したのに何も起きない、を作らない */
+    swapTimer.current = window.setTimeout(() => {
+      if (genRef.current !== gen) return;
+      promote(target, gen, id);
+    }, SWAP_TIMEOUT);
+  }, [picked, busy, buildHtml, promote]);
 
   /* 中からの知らせ。送り主がこの入れ物であることだけを見る（生成元は無い） */
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (!frameRef.current || e.source !== frameRef.current.contentWindow) return;
-      const d = e.data as { source?: string; type?: string; h?: number; y?: number } | null;
+      const idx = frames.current.findIndex(f => f && e.source === f.contentWindow);
+      if (idx < 0) return;
+      const d = e.data as { source?: string; type?: string; h?: number; y?: number; gen?: number } | null;
       if (!d || d.source !== 'lhp-demo') return;
-      if (d.type === 'ready') { post({ type: 'explode', e: assembled || reduced ? 0 : 1 }); return; }
+      const slot = slotsRef.current[idx as 0 | 1];
+      if (!slot || d.gen !== slot.gen) return;          // 古い入れ物からの知らせは捨てる
+      const isActive = idx === activeRef.current;
+
+      if (d.type === 'ready') {
+        /* 表に出ている方は、いまの状態のまま。裏で用意している方は、
+           ばらけた状態で待たせておく（出したあとに組み上げて見せる）。 */
+        const e0 = isActive ? (assembledRef.current || reduced ? 0 : 1) : (reduced ? 0 : 1);
+        post(idx as 0 | 1, { type: 'explode', e: e0 });
+        return;
+      }
+      if (d.type === 'painted') {
+        if (!isActive) promote(idx as 0 | 1, slot.gen, slot.choiceId);
+        return;
+      }
       // 決めてある高さに収まらないときだけ広げる（ふだんは動かさない）
       if (d.type === 'height' && typeof d.h === 'number') { setContentTall(d.h > (device === 'sp' ? SP_H : PC_H)); return; }
+      if (!isActive) return;
 
       if (d.type === 'goto' && typeof d.y === 'number') {
         const stage = stageRef.current;
@@ -343,106 +551,127 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [assembled, reduced, post, scale, device]);
+  }, [reduced, post, promote, scale, device]);
 
-  useEffect(() => { post({ type: 'explode', e: assembled || reduced ? 0 : 1 }); }, [assembled, reduced, html, post]);
+  /* 表に出ている方へ、組み上がり／ばらけを伝える */
+  useEffect(() => { post(active, { type: 'explode', e: assembled || reduced ? 0 : 1 }); }, [assembled, reduced, active, slots, post]);
   useEffect(() => { if (!note) return; const t = setTimeout(() => setNote(''), 4000); return () => clearTimeout(t); }, [note]);
-
-  /* 近くまで来たら中身を作る（開いた瞬間に写真を取りに行かない） */
-  useEffect(() => {
-    const el = stageRef.current;
-    if (!el || typeof IntersectionObserver !== 'function') {
-      // 監視できない環境では、描画を先に済ませてから作る
-      const t = window.setTimeout(() => setNear(true), 200);
-      return () => window.clearTimeout(t);
-    }
-    const io = new IntersectionObserver(es => {
-      es.forEach(e => { if (e.isIntersecting) { setNear(true); io.disconnect(); } });
-    }, { rootMargin: '400px' });
-    io.observe(el);
-    return () => io.disconnect();
+  useEffect(() => () => {
+    if (swapTimer.current !== undefined) window.clearTimeout(swapTimer.current);
+    if (assembleTimer.current !== undefined) window.clearTimeout(assembleTimer.current);
   }, []);
 
-  /* 画面に入ったら、ひとりでに組み上がる。押しても組み上がる。 */
-  useEffect(() => {
-    if (reduced) return;
-    const el = stageRef.current;
-    if (!el || typeof IntersectionObserver !== 'function') return;
-    let timer: number | undefined;
-    const io = new IntersectionObserver(es => {
-      es.forEach(e => {
-        if (e.isIntersecting && e.intersectionRatio > 0.25 && timer === undefined) {
-          timer = window.setTimeout(() => setAssembled(true), 700);
-        }
-      });
-    }, { threshold: [0, 0.25, 0.6] });
-    io.observe(el);
-    return () => { io.disconnect(); if (timer !== undefined) window.clearTimeout(timer); };
-  }, [reduced]);
-
-  const pill = (on: boolean) =>
-    `px-3 py-1.5 rounded-full text-[12px] font-bold border transition-colors min-h-[36px] ${on ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`;
+  /* キーボードだけで選べるようにする。ラジオボタンと同じ動き方にそろえる */
+  const onGroupKey = (e: React.KeyboardEvent) => {
+    const i = CHOICES.findIndex(c => c.id === picked);
+    let n = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % CHOICES.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = (i - 1 + CHOICES.length) % CHOICES.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = CHOICES.length - 1;
+    if (n < 0) return;
+    e.preventDefault();
+    choose(CHOICES[n].id);
+    const el = groupRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[n];
+    el?.focus();
+  };
 
   return (
-    /* スマホでは、先に完成した姿を出してから、触るところを下に置く。
+    /* スマホでは、先に完成した姿を出してから、選ぶところを下に置く。
        操作の並びを上に積むと、肝心の画面が折り返しより下へ行ってしまう。 */
-    <div className="w-full flex flex-col" ref={outerRef}>
-      <div className="order-2 sm:order-1 flex flex-wrap items-center gap-2 mt-3 sm:mt-0 mb-3">
-        <span className="w-full sm:w-auto sm:mr-2 text-[11px] text-slate-400">見本：架空の美容室「結い庵」のサイト</span>
-        <span className="text-[11px] font-bold text-slate-400 mr-1">雰囲気</span>
-        {DESIGN_PRESETS.map(p => (
-          <button key={p.id} type="button" onClick={() => setPresetId(p.id)} aria-pressed={presetId === p.id} className={pill(presetId === p.id)}>
-            {p.name}
-          </button>
-        ))}
-      </div>
-      <div className="order-3 sm:order-2 flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-[11px] font-bold text-slate-400 mr-1">書体</span>
-        {FONTS.map(f => (
-          <button key={f.value} type="button" onClick={() => setFont(f.value)} aria-pressed={font === f.value} className={pill(font === f.value)}>
-            {f.label}
-          </button>
-        ))}
-        <span className="text-[11px] font-bold text-slate-400 ml-3 mr-1">画面</span>
-        {(['pc', 'sp'] as Device[]).map(d => (
-          <button key={d} type="button" onClick={() => { setAutoDevice(false); setDevice(d); }} aria-pressed={device === d} className={pill(device === d)}>
-            {d === 'pc' ? 'パソコン' : 'スマホ'}
-          </button>
-        ))}
-        {/* 枠の上にも同じボタンがある。こちらは画面が広いときだけ出す */}
-        <button type="button" onClick={() => setAssembled(v => !v)}
-          className="hidden sm:inline-flex items-center justify-center ml-auto w-[128px] px-2 py-1.5 min-h-[36px] rounded-full text-[12px] font-bold bg-sky-600 text-white hover:bg-sky-700">
-          {assembled ? 'もう一度ばらす' : '組み上げる'}
-        </button>
+    <div className="w-full flex flex-col" ref={outerRef}
+      data-lhp-demo="" data-lhp-demo-picked={picked} data-lhp-demo-shown={shown} data-lhp-demo-busy={busy ? '1' : '0'}>
+
+      {/* ── 見せ方を選ぶ。操作はこれだけ ───────────────────────── */}
+      <div className="order-2 sm:order-1 mt-4 sm:mt-0 mb-3">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-2">
+          <span className="text-[12px] font-bold text-slate-700">このお店の見せ方を選ぶ</span>
+          <span className="text-[11px] text-slate-500">写真も文章も料金もそのまま。見た目だけが変わります</span>
+        </div>
+        <div ref={groupRef} role="radiogroup" aria-label="このお店の見せ方" aria-busy={busy}
+          onKeyDown={onGroupKey} className="flex flex-wrap gap-2">
+          {CHOICES.map(c => {
+            const on = c.id === picked;
+            const waiting = busy && on;
+            return (
+              <button key={c.id} type="button" role="radio" aria-checked={on}
+                tabIndex={on ? 0 : -1}
+                onClick={() => choose(c.id)}
+                className={`text-left rounded-xl border px-3.5 py-2.5 min-h-[56px] transition-colors
+                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500
+                  ${on ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-500'}`}>
+                <span className="flex items-center gap-2">
+                  {/* 押す前に、色の見当がつくようにする */}
+                  <span aria-hidden="true" className="inline-flex rounded-full overflow-hidden border border-black/10 shrink-0">
+                    {[c.preset.design.bg, c.preset.design.surface, c.preset.design.accent].map((col, k) => (
+                      <span key={k} style={{ background: col }} className="block w-2.5 h-5" />
+                    ))}
+                  </span>
+                  <span className="text-[13px] font-bold">{c.name}</span>
+                  {on && !waiting && <span aria-hidden="true" className="text-[12px]">✓</span>}
+                  {waiting && <span aria-hidden="true" className="text-[11px] font-normal opacity-80">作り直しています…</span>}
+                </span>
+                <span className={`block text-[11px] mt-0.5 ${on ? 'text-white/70' : 'text-slate-500'}`}>{c.detail}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="sr-only" role="status">{busy ? `${pickedChoice.name}に切り替えています` : announce}</p>
       </div>
 
       <div ref={stageRef}
         /* 最初の高さは縦横比でCSSに決めさせる。JavaScript が動く前から高さが
            決まるので、読み込みの途中で下の内容が動かない。
            数値は PC_PEEK / SP_PEEK と、上下の余白ぶんに合わせてある。
+           スマホは SP_PEEK_TOP のぶん上へずらすので、その分だけ枠も低くする
+           （そろえないと、枠の下に灰色の空きが残る）。
            境目の 700px は SWITCH_PX と同じにすること。
            「予約まで試す」を押して開いたときだけ、実寸で高さを決める
            （押したあとの高さ変更なので、読んでいる途中でずれることはない）。 */
-        className={`order-1 sm:order-3 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden${full ? '' : ' aspect-[390/1144] min-[700px]:aspect-[1440/1004]'}`}
+        className={`order-1 sm:order-2 relative rounded-2xl border border-slate-200 bg-[#eceff4] overflow-hidden${full ? '' : ' aspect-[390/994] min-[700px]:aspect-[1440/1004]'}`}
         style={full ? { height: Math.round(contentH * fit) + 24 } : undefined}>
         {!near && (
           <div className="absolute inset-0 grid place-items-center text-[12px] text-slate-400">読み込んでいます…</div>
         )}
-        <iframe
-          ref={frameRef}
-          title="お店のサイトの見本。組み上がったあとは中を触れます"
-          sandbox="allow-scripts allow-forms"
-          /* 幅を測る前は置かない。仮の倍率で置くと、測った瞬間にずれる */
-          hidden={fit === 0}
-          srcDoc={near && fit > 0 ? html : undefined}
-          className="border-0"
-          style={{
-            width: frameW, height: contentH,
-            transform: `scale(${scale})`, transformOrigin: 'top left',
-            position: 'absolute', top: 12 - peekTop * scale,
-            left: '50%', marginLeft: -(frameW * scale) / 2,
-          }}
-        />
+        {/* 枠の中に出ているのが誰のサイトなのかを、枠から離さない。
+            LARU HP の申し込みと、見本のお店の予約が混ざらないようにする。 */}
+        {/* スマホでは枠を上へずらして見出しを見せているので、上に置くと
+            見出しに重なる。下の隅なら、どちらの画面でも文字を隠さない。 */}
+        <p className="pointer-events-none absolute left-2 bottom-3 z-20 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-600 backdrop-blur">
+          見本：架空の美容室のサイト
+        </p>
+        {([0, 1] as const).map(i => {
+          const s = slots[i];
+          const on = i === active;
+          return (
+            <iframe key={i}
+              ref={el => { frames.current[i] = el; }}
+              title={on ? 'お店のサイトの見本。組み上がったあとは中を触れます' : '次の見せ方を用意しています'}
+              aria-hidden={on ? undefined : true}
+              tabIndex={on ? undefined : -1}
+              sandbox="allow-scripts allow-forms"
+              /* 幅を測る前は置かない。仮の倍率で置くと、測った瞬間にずれる */
+              srcDoc={s && fit > 0 ? s.html : undefined}
+              className="border-0"
+              style={{
+                width: frameW, height: contentH,
+                transform: `scale(${scale})`, transformOrigin: 'top left',
+                position: 'absolute', top: 12 - peekTop * scale,
+                left: '50%', marginLeft: -(frameW * scale) / 2,
+                opacity: s && fit > 0 && on ? 1 : 0,
+                pointerEvents: on ? 'auto' : 'none',
+                zIndex: on ? 1 : 0,
+                transition: reduced ? 'none' : 'opacity .3s ease',
+              }}
+            />
+          );
+        })}
+        {busy && (
+          /* 更新中。押した手応えを、枠の側にも出す */
+          <div className="absolute inset-x-0 top-0 z-20 h-[3px] bg-sky-500/25">
+            <div className={`h-full w-1/3 bg-sky-600${reduced ? '' : ' animate-pulse'}`} />
+          </div>
+        )}
         {!full && (
           <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#eceff4] to-transparent" />
         )}
@@ -456,7 +685,7 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
       </div>
 
       {/* 予約まで試す。見本のサロンの予約であって、LARU HP の申し込みではない */}
-      <div className="order-4 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="order-3 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
         {!full ? (
           <>
             <button type="button" onClick={() => setFull(true)}
@@ -471,24 +700,24 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
               className="inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-slate-300 text-[13px] font-bold text-slate-600 hover:border-slate-500">
               最初の画面だけに戻す
             </button>
-            <span className="text-[12px] text-slate-500">入力して送れます。見本なので、どこへも送られません。</span>
+            <span className="text-[12px] text-slate-500">見本のお店の予約フォームです。入力して送れますが、どこへも送られません。</span>
           </>
         )}
       </div>
 
-      <div className="order-5 mt-3 flex flex-wrap items-start gap-x-4 gap-y-1">
+      <div className="order-4 mt-3 flex flex-wrap items-start gap-x-4 gap-y-1">
         <p className="text-[12px] text-slate-600 leading-relaxed flex-1 min-w-[240px]">
           {!assembled
             ? '部品が分かれた状態です。「組み上げる」を押すと1枚のサイトになります。'
             : full
-              ? 'このまま触れます。中のボタンや入力欄が、公開したあとと同じように動きます。'
-              : 'ここまでが最初の画面です。この下に、料金と予約が続きます。'}
+              ? `いまは「${shownChoice.name}」で出しています。このまま触れます。中のボタンや入力欄が、公開したあとと同じように動きます。`
+              : `いまは「${shownChoice.name}」で出しています。この下に、料金と予約が続きます。`}
         </p>
         {note && <p className="text-[12px] font-bold text-sky-700" role="status">{note}</p>}
       </div>
-      <p className="order-6 text-[11px] text-slate-500 mt-2 leading-relaxed">
-        雰囲気や書体を押すと、その場で作り直しています。送信は見本としての受け付けで、どこへも送られません。
-        写真は見本用の生成素材で、結い庵は架空のお店です。
+      <p className="order-5 text-[11px] text-slate-500 mt-2 leading-relaxed">
+        この3つは、制作画面の「雰囲気を選び直す」と同じものです。選ぶたびに、公開ページを作るのと同じ処理で作り直しています。
+        送信は見本としての受け付けで、どこへも送られません。写真は見本用の生成素材で、結い庵は架空のお店です。
       </p>
     </div>
   );

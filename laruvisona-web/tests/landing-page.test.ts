@@ -85,10 +85,46 @@ test('デモは、動きを減らす設定なら組み上がった状態で出�
 });
 
 test('デモのボタンは本物で、押すと作り直す', () => {
-  assert.match(demo, /onClick=\{\(\) => setPresetId\(p\.id\)\}/);
-  assert.match(demo, /onClick=\{\(\) => setFont\(f\.value\)\}/);
-  assert.match(demo, /useMemo\(\(\) => withDemoBridge\(exportToHTML\(/, '押しても作り直していない');
-  assert.match(demo, /aria-pressed=/, '押した状態が読み上げに伝わらない');
+  assert.match(demo, /onClick=\{\(\) => choose\(c\.id\)\}/);
+  assert.match(demo, /exportToHTML\(/, '押しても作り直していない');
+  assert.match(demo, /aria-checked=/, '押した状態が読み上げに伝わらない');
+});
+
+test('デモの選択は1種類だけ', () => {
+  // 雰囲気・書体・画面と3つ並べると、何を触ればよいのか分からなくなる。
+  // 選ぶのは「見せ方」だけにして、書体はその見せ方に含める。
+  assert.equal((demo.match(/role="radiogroup"/g) || []).length, 1, '選ぶ操作が2種類以上ある');
+  assert.equal(/setFont\(/.test(demo), false, '書体の選択が残っている');
+  assert.equal(/setAutoDevice\(/.test(demo), false, '画面の選択が残っている');
+  assert.equal((demo.match(/CHOICE_IDS = \[[^\]]*\]/)?.[0].match(/'/g) || []).length / 2, 3, '3択になっていない');
+});
+
+test('デモは、既存の設定（雰囲気のひな形）をそのまま使う', () => {
+  // デモ専用の設定体系を作らない。制作画面で顧客が選べるものと同じでなければ、
+  // ここで見せた見え方を顧客が再現できない。
+  assert.match(demo, /import \{ DESIGN_PRESETS \} from '@\/lib\/site-design'/);
+  assert.equal(/design: \{[^}]*ink:/.test(demo), false, 'デモの中に独自の配色を書いている');
+});
+
+test('デモの選択は、この画面の中だけで完結する', () => {
+  // 見せ方を選んだだけで顧客のデータを書きに行かない。
+  assert.equal(/fetch\(['"`]\/api/.test(demo), false, '保存APIを呼んでいる');
+  assert.equal(/settings_json_patch|\/api\/hp\//.test(demo), false, '顧客データに触れている');
+});
+
+test('続けて選び直しても、古い描き終わりが最後の選択を上書きしない', () => {
+  // 押すたびに世代番号を振り、いま最後に押されたものだけを表に出す。
+  assert.match(demo, /genRef\.current \+= 1|\+\+genRef\.current/, '世代番号を振っていない');
+  assert.match(demo, /if \(genRef\.current !== gen\) return;/, '古い世代を捨てていない');
+  assert.match(demo, /d\.gen !== slot\.gen/, '古い入れ物からの知らせを捨てていない');
+});
+
+test('入れ替えのあいだ、前の画面を消さない', () => {
+  // 作り直しのたびに白い画面を挟むと、「その場で変わる」体験にならない。
+  // 入れ物を2つ持ち、描き終わってから入れ替える。
+  assert.match(demo, /type Slot =/);
+  assert.match(demo, /\[slots, setSlots\] = useState<\[Slot, Slot\]>/);
+  assert.match(demo, /type: 'painted'/, '描き終わりを待たずに入れ替えている');
 });
 
 test('デモは3Dの見た目をCSSだけで作る', () => {
