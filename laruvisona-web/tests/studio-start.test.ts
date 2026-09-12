@@ -4,6 +4,7 @@ import { makeStarterSite, STARTER_EXAMPLES } from "../lib/studio-start";
 import { exportToHTML } from "../lib/html-export";
 import { canRecoverStudioDraft } from "../lib/studio-draft";
 import { checkPublishReadiness } from "../lib/publish-readiness";
+import { INDUSTRY_TEMPLATES } from '../lib/templates';
 const intake = {
   industry: "construction",
   name: "未来設計室",
@@ -45,6 +46,36 @@ test("sample photography is flagged by publishing readiness", () => {
     checkPublishReadiness(s).find((i) => i.id === "placeholder")!.ok,
     false,
   );
+});
+test('every industry starts without invented testimonials, prices or achievements', () => {
+  for (const industry of Object.keys(INDUSTRY_TEMPLATES)) {
+    const s = makeStarterSite({ ...intake, industry }, 'refined');
+    const blocks = s.pages[0].blocks;
+    assert.ok(!blocks.some(b => b.type === 'testimonials' || b.type === 'team'), industry);
+    const content = JSON.stringify(blocks);
+    assert.doesNotMatch(content, /500件|中間マージン|高橋様|3回の施術|10kg|送料無料|駐車場完備/, industry);
+    for (const b of blocks) {
+      if (b.type === 'services') for (const item of b.data.items as Record<string, unknown>[]) {
+        assert.equal(item.price, '', industry);
+        assert.match(String(item.title), /^【例】/, industry);
+      }
+      if (b.type === 'price-table') for (const plan of b.data.plans as Record<string, unknown>[]) {
+        assert.equal(plan.price, '料金を入力してください', industry);
+      }
+    }
+    // 写真の alt を直しただけでは、本文に残る候補名を確認済みにしない。
+    for (const b of blocks) if (b.type === 'hero') b.data.bgImageAlt = '自分の写真';
+    assert.equal(checkPublishReadiness(s).find(i => i.id === 'placeholder')!.ok, false, industry);
+    const html = exportToHTML(s.pages, s.pages[0].seo!, s.settings, s.name);
+    assert.match(html, /【例】|入力してください/, industry);
+    assert.doesNotMatch(html, /施工実績500件以上|中間マージンなし|高橋様/, industry);
+  }
+});
+test('construction buy labels and destination agree; owner-supplied facts remain intact', () => {
+  const s = makeStarterSite({ ...intake, goal: 'buy', description: '施工実績500件。料金1200円。' }, 'refined');
+  const target = s.pages[0].blocks.find(b => b.data.anchorId === 'start-products')!;
+  assert.equal(target.data.heading, '商品について');
+  assert.ok(JSON.stringify(s.pages).includes('施工実績500件。料金1200円。'));
 });
 const site = makeStarterSite(intake, "refined");
 const draft = {

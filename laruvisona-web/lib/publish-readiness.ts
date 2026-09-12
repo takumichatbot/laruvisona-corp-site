@@ -42,7 +42,7 @@ export interface ReadyInput {
 }
 
 /** 例文のまま残りやすい言い回し */
-const PLACEHOLDER = /ここに|入力してください|サンプル|見出しを入力|商品名を入力/;
+const PLACEHOLDER = /ここに|入力してください|サンプル|【例】|見出しを入力|商品名を入力/;
 
 /** 素朴なメール形式チェック。RFCの厳密な検査はしない。実APIも形式は検査していない。 */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -73,7 +73,7 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
     ok: !hasPlaceholder,
     level: 'must',
     label: '例文のままの場所が残っていない',
-    detail: hasPlaceholder ? '「入力してください」などが残っています' : '大丈夫です',
+    detail: hasPlaceholder ? '「【例】」「入力してください」などが残っています。実際の内容・料金に直すか、不要な節を削除してください。' : '大丈夫です',
   });
 
   const hasForm = blocks.some(b => b.type === 'contact' || b.type === 'booking');

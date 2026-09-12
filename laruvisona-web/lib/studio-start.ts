@@ -2,6 +2,7 @@ import { applyTemplateData, getTemplateForIndustry } from "@/lib/templates";
 import { DESIGN_PRESETS } from "@/lib/site-design";
 import { orderForGoal, type IntakeAnswers } from "@/lib/studio-schema";
 import type { Block, Page, SEOSettings } from "@/types/laruHP";
+import { starterTemplate } from '@/lib/starter-template';
 
 export const STARTER_EXAMPLES: Record<
   string,
@@ -89,6 +90,7 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
         hours: [],
       })
     : [];
+  blocks = starterTemplate(blocks, intake.description);
   if (!blocks.some((b) => b.type === "hero"))
     blocks.unshift({
       id: "start-hero",
@@ -173,7 +175,7 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
   if (["visit", "buy"].includes(intake.goal))
     destination.data = {
       ...destination.data,
-      ...(intake.goal === "visit" ? target.data : {}),
+      ...target.data,
       anchorId: link.slice(1),
     };
   const photo = exampleFor(intake.industry).photo;

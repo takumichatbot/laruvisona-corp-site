@@ -755,3 +755,31 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* 入力場所までスクロールしても、完成像への入口を見失わない。 */
+@media (max-width: 760px) {
+  .ls-start-grid { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+  .ls-start-grid .ls-live-side {
+    position: fixed; z-index: 50; inset: auto 12px max(8px, env(safe-area-inset-bottom));
+    padding: 0; background: #fff; border: 1px solid #d3dce9; border-radius: 12px;
+    box-shadow: 0 8px 32px #24354d24; overflow: hidden;
+  }
+  .ls-start-grid .ls-preview-toggle {
+    min-height: 76px; border: 0; border-radius: 0; padding: 8px 12px; justify-content: flex-start;
+    text-align: left;
+  }
+  .ls-preview-thumb {
+    display: block; flex: 0 0 52px; height: 56px; border-radius: 5px;
+    background-size: cover; background-position: center;
+  }
+  .ls-preview-toggle > span:nth-child(2) { flex: 1; min-width: 0; }
+  .ls-preview-toggle strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #233752; }
+  .ls-preview-toggle > span > span { display: block; margin-top: 4px; font-size: 11px; }
+  .ls-start-grid .ls-mobile-open .ls-live-inner {
+    display: block; margin: 0; padding: 0 12px 12px;
+    max-height: min(54dvh, 480px); overflow-y: auto; overscroll-behavior: contain;
+  }
+  .ls-start-grid .ls-live-heading, .ls-start-grid .ls-live-foot { display: none; }
+  .ls-start-grid .ls-sample-note { margin-bottom: 0; }
+  .ls-intake input, .ls-intake textarea, .ls-intake select, .ls-continue { scroll-margin-bottom: 100px; }
+}

@@ -169,7 +169,9 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
 
   const frameWidth=device==='sp'?390:1100;
   const scale=Math.min(1,size.width/frameWidth)||1;
-  return <div ref={box} className="se-frame-box"><iframe ref={ref} title="できあがりの見え方" sandbox="allow-scripts" srcDoc={srcDoc}
+  // srcDoc の再ナビゲーションは親の「戻る」履歴を増やす。新しい隔離フレームの
+  // 初期文書として置き換え、選択・スクロールは上の ready 往復で戻す。
+  return <div ref={box} className="se-frame-box"><iframe key={srcDoc} ref={ref} title="できあがりの見え方" sandbox="allow-scripts" srcDoc={srcDoc}
     style={{width:frameWidth,height:Math.max(200,size.height/scale),transform:`scale(${scale})`,transformOrigin:'top left',left:Math.max(0,(size.width-frameWidth*scale)/2)}}/></div>;
 
 }
@@ -206,11 +208,12 @@ function Field({ def, value, onChange }: {
     const arr = Array.isArray(value) ? value : [];
     if (def.ofStrings) {
       return (
-        <Row label={def.label} hint={def.hint}>
+        <fieldset className="mb-4">
+          <legend className="text-[13px] font-bold text-slate-700 mb-1.5">{def.label}</legend>
           <div className="space-y-2">
             {arr.map((v, i) => (
               <div key={i} className="flex gap-2">
-                {def.key==='images' ? <div className="min-w-0 flex-1"><ImageField label={`写真 ${i+1}`} value={v} onChange={url=>onChange(arr.map((x,j)=>j===i?url:x))}/></div> : <input className={inputCls} value={String(v ?? '')}
+                {def.key==='images' ? <div className="min-w-0 flex-1"><ImageField label={`写真 ${i+1}`} value={v} onChange={url=>onChange(arr.map((x,j)=>j===i?url:x))}/></div> : <input className={inputCls} aria-label={`${def.label} ${i+1}`} value={String(v ?? '')}
                   onChange={e => onChange(arr.map((x, j) => j === i ? e.target.value : x))} />}
                 <button type="button" disabled={uploadState.pending} className="px-2 text-slate-400 hover:text-red-600"
                   onClick={() => onChange(arr.filter((_, j) => j !== i))}>削除</button>
@@ -219,7 +222,8 @@ function Field({ def, value, onChange }: {
             <button type="button" disabled={uploadState.pending} className="text-[12px] font-bold text-sky-700 hover:underline"
               onClick={() => onChange([...arr, ''])}>＋ 追加する</button>
           </div>
-        </Row>
+          {def.hint && <p className="text-[11px] text-slate-500 mt-1">{def.hint}</p>}
+        </fieldset>
       );
     }
     return (
@@ -382,9 +386,20 @@ function StudioInner() {
   }, [siteIdParam, designParam]);
 
   const [siteId, setSiteId] = useState<string | null>(siteIdParam);
-  const [step, setStep] = useState<'intake' | 'mood' | 'edit'>(
+  // この画面で作成した直後の URL 更新では読み込み直さない。
+  // 保存中の追加編集と履歴を保ち、実際の再読み込み時には通常の所有者 API を通す。
+  const createdHere = useRef<string | null>(null);
+  const [step, restoreStep] = useState<'intake' | 'mood' | 'edit'>(
     siteIdParam ? 'edit' : 'intake',
   );
+  const setStep = useCallback((next: 'intake' | 'mood' | 'edit') => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('step') !== next) {
+      url.searchParams.set('step', next);
+      window.history.pushState(null, '', url);
+    }
+    restoreStep(next);
+  }, []);
   const [loading, setLoading] = useState(!!siteIdParam);
   const [loadError, setLoadError] = useState('');
 
@@ -404,6 +419,27 @@ function StudioInner() {
   const [comparisonBase,setComparisonBase]=useState<StudioSite|null>(null);
   const [comparison,setComparison]=useState<{beforeHtml:string;currentHtml:string;sections:ComparisonSection[];changes:string[]}|null>(null);
   const resetSite=useCallback((value:StudioSite)=>{resetHistory(value);setComparisonBase(null);setComparison(null);},[resetHistory]);
+
+  const stepContent = useRef({ hasPages: false, hasName: false });
+  useEffect(() => { stepContent.current = { hasPages: site.pages.length > 0, hasName: !!intake.name.trim() }; }, [site.pages.length, intake.name]);
+  useEffect(() => {
+    const onBack = () => {
+      const requested = new URL(window.location.href).searchParams.get('step');
+      const next = requested === 'edit' && stepContent.current.hasPages ? 'edit'
+        : requested === 'mood' && stepContent.current.hasName ? 'mood'
+        : siteIdParam && stepContent.current.hasPages ? 'edit' : 'intake';
+      restoreStep(next);
+    };
+    window.addEventListener('popstate', onBack);
+    return () => window.removeEventListener('popstate', onBack);
+  }, [siteIdParam]);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('step') !== step) {
+      url.searchParams.set('step', step);
+      window.history.replaceState(null, '', url);
+    }
+  }, [step]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deviceChoice, setDevice] = useState<'pc' | 'sp' | null>(null);
@@ -521,7 +557,7 @@ function StudioInner() {
       return;
     }
     if (!siteIdParam) {
-      resetSite(kept.site); setIntake(kept.intake); setStep(kept.step);
+      resetSite(kept.site); setIntake(kept.intake); restoreStep(kept.step);
       setRestoredDraft(true); hydrating.current = false; return;
     }
     if (kept.siteId !== siteIdParam) return;
@@ -545,7 +581,7 @@ function StudioInner() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (loading || loadError || !accountResolved || !restoreDone.current) return;
-    if (saveState.kind === 'clean' && !(step === 'intake' && intake.name.trim())) return;
+    if (saveState.kind === 'clean' && !(!siteId && intake.name.trim())) return;
     if (step === 'intake' && site.pages.length === 0 && !intake.name.trim()) return;
     const kept = writeDraft({
       account: account?.id ?? null, siteId, intake, site, step, at: Date.now(),
@@ -570,6 +606,10 @@ function StudioInner() {
   /* ── 読み込み ── */
   useEffect(() => {
     if (!siteIdParam) return;
+    if (createdHere.current === siteIdParam) {
+      createdHere.current = null;
+      return;
+    }
     let alive = true;
     (async () => {
       try {
@@ -617,7 +657,7 @@ function StudioInner() {
            サイトにそのまま書き込む（新しいサイトは作らない）。 */
         if (!pages.some(pg => (pg.blocks ?? []).length > 0)) {
           setIntake(prev => ({ ...prev, name: s.name && s.name !== '新しいサイト' ? s.name : prev.name }));
-          setStep('intake');
+          restoreStep('intake');
         }
       } catch (e) {
         if (alive) setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました');
@@ -741,7 +781,13 @@ function StudioInner() {
         }
         const { site: created } = await res.json();
         id = created?.id ?? null;
+        if (!id) throw new Error('保存先を確認できませんでした。サイト一覧を確認してください');
+        createdHere.current = id;
         setSiteId(id);
+        const url = new URL(window.location.href);
+        url.searchParams.set('siteId', id);
+        url.searchParams.set('step', 'edit');
+        window.history.replaceState(null, '', url);
       }
       setBlocked(null);
       setSavedSincePublish(true);
@@ -806,13 +852,14 @@ function StudioInner() {
 
   /* ── ヒアリングから、はじめの形を作る ── */
   const buildFromIntake = useCallback((presetId: string) => {
+    if (site.pages.length && !confirm('入力したお店の情報と選んだ見せ方から作り直します。編集した内容を置き換えてもよろしいですか？')) return;
     // 使ったら持ち越さない
     clearDesignChoice();
     const made = makeStarterSite(intake, presetId);
     resetSite(made);
     setSelectedId(made.pages[0].blocks[0]?.id ?? null);
     setStep('edit');
-  }, [intake, resetSite]);
+  }, [intake, resetSite, setStep, site.pages.length]);
 
   /* ── 公開準備の確認 ──
      判定は lib/publish-readiness.ts に寄せてある。編集画面（ビルダー）と

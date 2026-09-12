@@ -133,7 +133,7 @@ function StarterPreview({
         style={{ height: Math.round((device === "pc" ? 900 : 670) * scale) }}
       >
         <iframe
-          key={device}
+          key={device + source}
           title="作りはじめるサイトの完成イメージ"
           sandbox="allow-scripts"
           srcDoc={source}
@@ -151,7 +151,7 @@ function StarterPreview({
       </div>
       <div className="ls-preview-caption">
         <span>同じ見た目のまま、次の画面で編集できます。</span>
-        <span>写真・料金は見本です</span>
+        <span>写真・「例」の内容は差し替えてください</span>
       </div>
     </div>
   );
@@ -326,12 +326,14 @@ export function StudioIntake({
             type="button"
             className="ls-preview-toggle"
             aria-expanded={showPreview}
+            aria-controls="starter-live-preview"
             onClick={() => setShowPreview((v) => !v)}
           >
-            {showPreview ? "完成イメージを閉じる" : "いまの完成イメージを見る"}
+            <span className="ls-preview-thumb" aria-hidden="true" style={{ backgroundImage: `url(${example.photo})` }} />
+            <span><strong>{intake.name || example.name}</strong><span>{showPreview ? "完成イメージを閉じる" : "いまの完成イメージを見る"}</span></span>
             <Monitor size={16} />
           </button>
-          <div className="ls-live-inner">
+          <div className="ls-live-inner" id="starter-live-preview">
             <div className="ls-live-heading">
               <span>入力すると、ここが変わります</span>
               <span>完成イメージ</span>
@@ -346,7 +348,7 @@ export function StudioIntake({
               </p>
             </div>
             <p className="ls-sample-note">
-              仮の名前・写真・料金を含む見本です。実際のお店の情報に差し替えてから公開してください。
+              仮の名前・写真と「例」の内容は、実際のお店の情報に差し替えてから公開してください。実績や体験談は自動では作りません。
             </p>
           </div>
         </aside>

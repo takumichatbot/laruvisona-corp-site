@@ -75,6 +75,7 @@ try {
       path: out + "/" + width + "-intake.png",
       fullPage: true,
     });
+    if (width < 761) await p.getByRole('button', {name: '完成イメージを閉じる', exact: false}).click();
     await p.getByRole("button", { name: "雰囲気を選ぶ" }).click();
     await p.locator(".ls-mood-options").waitFor();
     for (const id of ["calm", "refined", "warm"]) {
