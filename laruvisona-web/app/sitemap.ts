@@ -21,6 +21,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // 会社サイト
     { url: base, lastModified: now, changeFrequency: 'monthly', priority: 1.0 },
 
+    // ロゴについて（ブランド）
+    { url: `${base}/brand`, lastModified: now, changeFrequency: 'yearly', priority: 0.5 },
+
     // 受託開発サービス
     { url: `${base}/services`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
 

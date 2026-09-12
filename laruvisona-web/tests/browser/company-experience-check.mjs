@@ -360,6 +360,34 @@ for (const w of [320, 390, 1440]) {
   await page.context().close();
 }
 
+/* ── 13. ロゴの説明は、トップではなく専用ページに置く ── */
+{
+  const top = await (await fetch(BASE + '/')).text();
+  check('トップの冒頭に、しるしの由来を置いていない', !top.includes('しるしは、そこから来ています'));
+  check('トップからロゴのページへ行ける', top.includes('href="/brand"'));
+
+  const html = await (await fetch(BASE + '/brand')).text();
+  check('/brand が配られている', html.includes('一滴が集まって'));
+  check('/brand に検索向けの見出しがある', /<title>[^<]*ロゴについて[^<]*LaruVisona/.test(html));
+  check('/brand に説明文がある', /<meta name="description" content="[^"]{40,}"/.test(html));
+  check('/brand に正規URLがある', html.includes('rel="canonical" href="https://laruvisona.jp/brand"'));
+
+  const map = await (await fetch(BASE + '/sitemap.xml')).text();
+  check('サイトマップに /brand が入っている', map.includes('https://laruvisona.jp/brand'));
+
+  const { page, errors } = await open({ width: 390, height: 844 });
+  await page.goto(BASE + '/brand', { waitUntil: 'load' });
+  await page.waitForTimeout(800);
+  check('/brand の見出しが1つだけ', (await page.locator('h1').count()) === 1);
+  check('/brand でロゴデータを配っている', (await page.locator('a[href="/images/laruvisona_mark.svg"]').count()) === 1);
+  const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check('/brand が390pxで横にはみ出さない', over <= 1, `${over}px`);
+  check('/brand に会社トップの演出を持ち込んでいない',
+    (await page.locator('#opening').count()) === 0 && (await page.locator('#page-motion').count()) === 0);
+  check('画面の例外が出ていない（ロゴのページ）', errors.length === 0, errors.slice(0, 2).join(' / '));
+  await page.context().close();
+}
+
 await browser.close();
 console.log(`\n通過 ${ok.length} / 失敗 ${ng.length}`);
 if (ng.length) { ng.forEach(n => console.log(`  - ${n}`)); process.exit(1); }

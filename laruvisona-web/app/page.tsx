@@ -248,6 +248,12 @@ export default function Home() {
                 ))}
               </tbody>
             </table>
+            <p className="mt-6">
+              <Link href="/brand"
+                className="inline-flex items-center min-h-[44px] text-[13px] font-bold text-sky-300 hover:text-sky-200">
+                ロゴについて（しるしの意味と使い方）→
+              </Link>
+            </p>
           </div>
         </section>
 
@@ -282,6 +288,7 @@ export default function Home() {
           <Image src="/images/logo_dark.png" alt="LaruVisona" width={1300} height={375}
             className="h-5 w-auto mx-auto mb-5 opacity-80" />
           <div className="flex flex-wrap gap-4 justify-center mb-4">
+            <Link href="/brand" className="hover:text-slate-300 min-h-[44px] inline-flex items-center">ロゴについて</Link>
             <Link href="/privacy" className="hover:text-slate-300 min-h-[44px] inline-flex items-center">プライバシーポリシー</Link>
             <Link href="/terms" className="hover:text-slate-300 min-h-[44px] inline-flex items-center">利用規約</Link>
             <Link href="/laruHP/tokusho" className="hover:text-slate-300 min-h-[44px] inline-flex items-center">特定商取引法に基づく表記</Link>

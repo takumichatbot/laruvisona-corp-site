@@ -53,7 +53,6 @@ export default function OpeningStage() {
   const glassLayer = useRef<SVGGElement>(null);
   const markLayer = useRef<SVGGElement>(null);
   const copy1 = useRef<HTMLDivElement>(null);
-  const copy2 = useRef<HTMLDivElement>(null);
   const copy3 = useRef<HTMLDivElement>(null);
   const { paused } = useMotion();
 
@@ -92,7 +91,6 @@ export default function OpeningStage() {
     if (markLayer.current) markLayer.current.style.opacity = '1';
     if (svgWrap.current) { svgWrap.current.style.transform = 'none'; svgWrap.current.style.opacity = '1'; }
     show(copy1.current, 1, 0);
-    show(copy2.current, 0, 0);
     show(copy3.current, 0, 0);
   }, []);
 
@@ -147,7 +145,8 @@ export default function OpeningStage() {
        退く向きは構図に合わせる（パソコンは奥へ、スマホは下へ戻す） */
     if (svgWrap.current) {
       const away = easeOut(span(p, AWAY[0], AWAY[1]));
-      const rise = narrow ? mix(6, 0, formIn) : 0;
+      // スマホは下から上がってきて、画面の真ん中に落ち着く（縦の構図）
+      const rise = narrow ? mix(20, 0, formIn) : 0;
       const scale = mix(0.9, 1, formIn) * mix(1, narrow ? 0.5 : 0.42, away);
       const dx = narrow ? 0 : away * -10;
       const dy = rise + (narrow ? away * 16 : away * -20);
@@ -155,12 +154,12 @@ export default function OpeningStage() {
       svgWrap.current.style.opacity = String(formIn * (1 - span(p, 0.82, 0.97)));
     }
 
-    /* 文字。いちどに1つだけ出す */
+    /* 文字。いちどに1つだけ出す。
+       場面2（かたち）には文字を置かない。主役は粒ひとつにする
+       （しるしの由来は /brand に分けた） */
     const o1 = 1 - span(p, WORD_OUT[0], WORD_OUT[1]);
-    const o2 = Math.min(span(p, 0.30, 0.42), 1 - span(p, 0.62, 0.72));
     const o3 = Math.min(span(p, 0.74, 0.84), 1);
     show(copy1.current, o1, (1 - o1) * -22);
-    show(copy2.current, o2, (1 - o2) * 16);
     show(copy3.current, o3, (1 - o3) * 16);
   }, [narrow, paused, still]);
 
@@ -195,8 +194,8 @@ export default function OpeningStage() {
           ref={svgWrap}
           aria-hidden="true"
           style={{ opacity: 0 }}
-          className="absolute inset-x-0 bottom-[4svh] h-[62svh] flex items-center justify-center
-            lg:inset-0 lg:h-auto lg:items-center lg:justify-end lg:pr-[7%] will-change-transform"
+          className="absolute inset-0 flex items-center justify-center
+            lg:justify-end lg:pr-[7%] will-change-transform"
         >
           <svg viewBox={MARK_VIEWBOX}
             className="h-[46svh] max-h-[390px] w-auto lg:h-[74svh] lg:max-h-[720px] overflow-visible">
@@ -272,19 +271,7 @@ export default function OpeningStage() {
             </div>
           </div>
 
-          {/* 場面2・3の一行。スマホは上（かたちは下にいる）、パソコンは左下 */}
-          <div ref={copy2} style={{ opacity: 0 }}
-            className="absolute left-5 md:left-8 top-[19svh] max-w-[19em]
-              lg:top-auto lg:bottom-[15svh] lg:max-w-[24em] will-change-[opacity,transform]">
-            <p className="text-[15px] md:text-[17px] leading-[1.9] text-slate-100/90 [word-break:auto-phrase]
-              [text-shadow:0_1px_20px_rgba(4,8,15,.95)]">
-              一滴が集まって、かたちになる。
-            </p>
-            <p className="mt-2 text-[12px] md:text-[13px] leading-[1.9] text-slate-300/70">
-              株式会社LaruVisona のしるしは、そこから来ています。
-            </p>
-          </div>
-
+          {/* 場面3の一行。スマホは上（かたちは下にいる）、パソコンは左下 */}
           <div ref={copy3} style={{ opacity: 0 }}
             className="absolute left-5 md:left-8 top-[19svh] max-w-[19em]
               lg:top-auto lg:bottom-[15svh] lg:max-w-[24em] will-change-[opacity,transform]">
