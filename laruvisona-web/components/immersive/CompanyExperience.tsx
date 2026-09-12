@@ -685,9 +685,9 @@ function Experience() {
               構想から、デザインと実装へ。
             </p>
             <h1 id="hero-title">
-              想像に、
+              創造を、
               <br />
-              <span>輪郭を。</span>
+              <span>実装する。</span>
             </h1>
             <p className="lv-hero-description">
               まだない価値を、使えるかたちに。
@@ -709,7 +709,7 @@ function Experience() {
           <div className="lv-hero-side" aria-hidden="true">
             <span>株式会社LaruVisona</span>
             <i />
-            <span>想像を、実装する。</span>
+            <span>創造を、実装する。</span>
           </div>
           <div className="lv-hero-foot">
             <span>Web制作・AI・システム開発</span>
@@ -768,7 +768,7 @@ function Experience() {
         <section className="lv-company lv-solid" id="company">
           <div>
             <Logo />
-            <p>想像を、実装する。</p>
+            <p>創造を、実装する。</p>
           </div>
           <dl>
             <div>

@@ -219,6 +219,7 @@
   text-shadow: 0 2px 40px #020c1340;
 }
 .lv-hero h1 > span {
+  font-size: 0.9em;
   background: linear-gradient(115deg, #fff 0%, #d4eef4 40%, #89c8df 100%);
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1311,6 +1312,9 @@
     line-height: 1.23;
     font-weight: 650;
     letter-spacing: -0.08em;
+  }
+  .lv-hero h1 > span {
+    font-size: 0.8em;
   }
   .lv-hero-description {
     font-size: 12px;
