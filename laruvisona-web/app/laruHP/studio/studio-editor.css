@@ -459,3 +459,18 @@
   .se-history-controls button span { font-size:21px; }
 }
 @media(prefers-reduced-motion:reduce) { .se-design-preset { transition:none; } }
+.se-compare-toggle { display:flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:0 12px; border:1px solid #cbd5ed; border-radius:7px; font-size:11px; font-weight:650; color:#3d5492; white-space:nowrap; }
+.se-compare-toggle:hover { background:#eff3ff; }
+.se-compare-toggle:disabled { opacity:.35; }
+.se-compare-toggle span { font-size:19px; }
+.se-session-bar .se-wide-toggle { margin-left:0; }
+@media(max-width:900px) {
+ .se-session-bar { flex-wrap:wrap; }
+ .se-compare-toggle { margin-left:auto; font-size:10px; padding:0 6px; min-height:36px; gap:4px; }
+ .se-session-bar .se-wide-toggle { min-height:40px; padding:0 5px; }
+}
+@media(max-width:359px) {
+ .se-session-bar .se-history-controls button { gap:3px; padding:0 4px; font-size:9px; }
+ .se-compare-toggle { font-size:9px; gap:3px; }
+ .se-session-bar .se-wide-toggle { font-size:9px; gap:2px; }
+}

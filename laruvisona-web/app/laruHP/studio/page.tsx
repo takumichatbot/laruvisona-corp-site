@@ -35,6 +35,8 @@ import { withPreviewBridge } from '@/lib/preview-frame';
 import { ImageField, FocalField, ImageUploadContext } from '@/components/studio/ImageField';
 import { editStudioBlock } from '@/lib/studio-image';
 import { STUDIO_PALETTES } from '@/lib/studio-palettes';
+import { CompareStudio, type ComparisonSection } from '@/components/studio/CompareStudio';
+import { studioChanges } from '@/lib/studio-comparison';
 import { useStudioHistory } from '@/components/studio/useStudioHistory';
 import './studio-editor.css';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
@@ -390,7 +392,7 @@ function StudioInner() {
     industry: 'beauty', name: '', area: '', audience: '', goal: 'booking', description: '',
   }));
 
-  const { site, setSite, resetSite, undo, redo, canUndo, canRedo, breakGroup } = useStudioHistory<StudioSite>(() => ({
+  const { site, setSite, resetSite: resetHistory, undo, redo, canUndo, canRedo, breakGroup } = useStudioHistory<StudioSite>(() => ({
     name: '', pages: [], settings: {
       colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
       accentColor: '#2563eb', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
@@ -398,6 +400,10 @@ function StudioInner() {
       design: { ...DEFAULT_DESIGN }, designPreset: '',
     },
   }));
+
+  const [comparisonBase,setComparisonBase]=useState<StudioSite|null>(null);
+  const [comparison,setComparison]=useState<{beforeHtml:string;currentHtml:string;sections:ComparisonSection[];changes:string[]}|null>(null);
+  const resetSite=useCallback((value:StudioSite)=>{resetHistory(value);setComparisonBase(null);setComparison(null);},[resetHistory]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deviceChoice, setDevice] = useState<'pc' | 'sp' | null>(null);
@@ -413,7 +419,7 @@ function StudioInner() {
   const undoEdit=useCallback(()=>{if(uploads||!canUndo)return;undo();setHistoryNote('変更を取り消しました。保存すると反映されます。');},[uploads,canUndo,undo]);
   const redoEdit=useCallback(()=>{if(uploads||!canRedo)return;redo();setHistoryNote('変更をやり直しました。保存すると反映されます。');},[uploads,canRedo,redo]);
   useEffect(()=>{
-    if(step!=='edit'||loading||loadError)return;
+    if(step!=='edit'||loading||loadError||comparison)return;
     const key=(e:KeyboardEvent)=>{
       if(e.key==='Escape'){setWidePreview(false);return;}
       const target=e.target as HTMLElement;
@@ -422,7 +428,7 @@ function StudioInner() {
       else if(e.key.toLowerCase()==='y'){e.preventDefault();redoEdit();}
     };
     window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
-  },[step,loading,loadError,undoEdit,redoEdit]);
+  },[step,loading,loadError,comparison,undoEdit,redoEdit]);
   const reportUpload=useCallback((active:boolean)=>setUploads(n=>Math.max(0,n+(active?1:-1))),[]);
   const settingsPane=useRef<HTMLDivElement>(null);
   useEffect(()=>{if(!fieldFocus)return; const frame=requestAnimationFrame(()=>{const el=settingsPane.current?.querySelector<HTMLElement>(`[data-field-key="${fieldFocus}"]`);if(el)settingsPane.current?.scrollTo({top:el.offsetTop-80,behavior:'instant'});});return()=>cancelAnimationFrame(frame)},[fieldFocus,focusRequest]);
@@ -672,6 +678,23 @@ function StudioInner() {
     return () => clearTimeout(t);
   }, [site, page, intake.industry, siteId]);
 
+  const keepComparison=()=>{
+    if(uploads||!accountResolved)return;
+    setComparisonBase(structuredClone(site));
+    breakGroup();
+    setHistoryNote('比較用の案を残しました。別の色や写真を試して、見比べられます。');
+  };
+  const openComparison=()=>{
+    if(!comparisonBase||uploads)return;
+    // Generate both views from exact snapshots now, not the debounced editor preview.
+    const render=(value:StudioSite)=>exportToHTML(value.pages,value.pages[0]?.seo||EMPTY_SEO,toExportSettings(value.settings) as never,value.name||'店名',{name:value.name,industry:intake.industry,siteId:siteId||'studio-preview',slug:''});
+    try {
+      const old=comparisonBase.pages[0]?.blocks||[],now=site.pages[0]?.blocks||[];
+      const sections=[...new Map([...old,...now].map(b=>[b.id,b])).values()].map(b=>({id:b.id,label:blockLabel(b),before:old.some(x=>x.id===b.id),current:now.some(x=>x.id===b.id)}));
+      setComparison({beforeHtml:render(comparisonBase),currentHtml:render(site),sections,changes:studioChanges(comparisonBase,site)});
+    } catch {setHistoryNote('比較の表示を作れませんでした。編集内容はそのまま残っています。');}
+  };
+
   /* ── 保存 ── */
   const save = useCallback(async () => {
     breakGroup();
@@ -896,6 +919,7 @@ function StudioInner() {
           <button type="button" onClick={redoEdit} disabled={!canRedo||uploads>0} title="やり直す（⌘ / Ctrl Shift Z）"><span aria-hidden="true">↷</span>やり直す</button>
         </div>
         <span className="se-history-note" role="status">{historyNote||'自由に試して、ひとつ前に戻せます'}</span>
+        <button className="se-compare-toggle" type="button" disabled={uploads>0||!accountResolved} onClick={comparisonBase?openComparison:keepComparison}>{comparisonBase?'案を見比べる':'いまの案を残す'}<span aria-hidden="true">◫</span></button>
         <button className="se-wide-toggle" type="button" aria-pressed={widePreview} onClick={()=>setWidePreview(v=>!v)}>{widePreview?'編集に戻る':'大きく見る'}<span aria-hidden="true">{widePreview?'↙':'↗'}</span></button>
       </div>
       <div className="se-workspace flex-1 flex min-h-0">
@@ -998,6 +1022,7 @@ function StudioInner() {
         <button type="button" aria-pressed={mobileTool==='settings'&&panel==='block'} onClick={()=>{setPanel('block');setMobileTool('settings')}}>選んだ場所</button>
         <button type="button" aria-pressed={mobileTool==='settings'&&panel==='design'} onClick={()=>{setPanel('design');setMobileTool('settings')}}>色・書体</button>
       </nav>
+      {comparison&&comparisonBase&&<CompareStudio {...comparison} device={device} onClose={()=>setComparison(null)} onRestore={()=>{if(uploads)return;setSite(structuredClone(comparisonBase));setComparison(null);setSelectedId(comparisonBase.pages[0]?.blocks[0]?.id??null);setHistoryNote('残した案に戻しました。取り消しで、直前の編集にも戻れます。');}} onReplace={()=>{keepComparison();setComparison(null);}}/>}
     </div></ImageUploadContext.Provider>
   );
 }
