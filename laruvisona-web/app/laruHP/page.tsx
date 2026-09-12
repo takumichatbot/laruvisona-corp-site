@@ -16,7 +16,7 @@ import {
   Plus,
 } from 'lucide-react';
 import BrandFonts from '@/components/BrandFonts';
-import AssembleDemo from '@/components/lp/AssembleDemo';
+import CreationLab from '@/components/lp/CreationLab';
 import Showcase from '@/components/lp/Showcase';
 import { PLANS, TERMS, PRIMARY_CTA, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
 import './landing.css';
@@ -185,16 +185,16 @@ export default function LaruHPLandingPage() {
               <p>
                 書体、色、余白。
                 <br />
-                小さな違いが、サイトの表情をつくります。
+                写真と言葉を、あなたの事業へ。
                 <br />
-                好きな見せ方を選んでみてください。
+                ここでつくった一案から、制作を続けられます。
               </p>
               <div className="lp-demo-note">
                 <MousePointer2 size={19} />
                 <span>
-                  見せ方を選んで、組み立てる。
+                  業種を選んで、写真と言葉を変える。
                   <br />
-                  できあがった見本は、そのまま触れます。
+                  同じ内容のまま、制作スタジオへ。
                 </span>
               </div>
               <a href="#studio" className="lp-text-link">
@@ -203,7 +203,7 @@ export default function LaruHPLandingPage() {
               </a>
             </div>
             <div className="lp-demo-surface">
-              <AssembleDemo />
+              <CreationLab />
             </div>
           </div>
         </section>

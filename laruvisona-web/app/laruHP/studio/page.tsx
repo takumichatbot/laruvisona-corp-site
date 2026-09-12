@@ -39,7 +39,11 @@ import { CompareStudio, type ComparisonSection } from '@/components/studio/Compa
 import { studioChanges } from '@/lib/studio-comparison';
 import { useStudioHistory } from '@/components/studio/useStudioHistory';
 import BlockList, { BlockIcon } from '@/components/studio/BlockList';
-import { Plus, Film } from 'lucide-react';
+import { Plus, Film, ChevronUp, ChevronDown, Check } from 'lucide-react';
+import SectionCraft from '@/components/studio/SectionCraft';
+import SectionAssistant from '@/components/studio/SectionAssistant';
+import {applySectionProposal, type SectionProposal} from '@/lib/studio-ai';
+import {readComposition,clearComposition,buildComposition} from '@/lib/studio-composition';
 import './studio-editor.css';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
 
@@ -139,6 +143,8 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({width:0,height:0});
   const selectedRef = useRef(selectedId);
+  const selectedFieldRef=useRef(selectedField);
+  useEffect(()=>{selectedFieldRef.current=selectedField},[selectedField]);
   useEffect(()=>{selectedRef.current=selectedId},[selectedId]);
   useEffect(() => { const el=box.current; if(!el)return; const ro=new ResizeObserver(([e])=>setSize({width:e.contentRect.width,height:e.contentRect.height}));ro.observe(el);return()=>ro.disconnect(); }, []);
   const onSelectRef = useRef(onSelect);
@@ -157,7 +163,7 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
       if (!ref.current || e.source !== ref.current.contentWindow) return;
       const d = e.data as { source?: string; type?: string; id?: string; kind?: string; y?: number } | null;
       if (!d || d.source !== 'lhp-studio-preview') return;
-      if (d.type === 'ready') { post({ type: 'scrollTo', y: scrollRef.current }); post({type:'select',id:selectedRef.current||'',scroll:false}); return; }
+      if (d.type === 'ready') { if(selectedRef.current)post({type:'select',id:selectedRef.current,focus:selectedFieldRef.current==='bgImage'?'image':'text',align:'start'});else post({type:'scrollTo',y:scrollRef.current}); return; }
       if (d.type === 'scroll') { scrollRef.current = Number(d.y) || 0; return; }
       if (d.type === 'select') { onSelectRef.current(String(d.id || ''),String(d.kind||'')); return; }
     };
@@ -165,7 +171,7 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
     return () => window.removeEventListener('message', onMessage);
   }, [post]);
 
-  useEffect(() => { post({ type: 'select', id: selectedId || '', focus:selectedField==='bgImage'?'image':selectedField==='heading'?'text':undefined }); }, [selectedId, selectedField, post]);
+  useEffect(() => { post({ type: 'select', id: selectedId || '', focus:selectedField==='bgImage'?'image':'text',align:'start' }); }, [selectedId, selectedField, size.height, post]);
 
   const srcDoc = useMemo(() => withPreviewBridge(html), [html]);
 
@@ -371,6 +377,7 @@ const subscribeStudioMobile = (notify:()=>void) => {const mq=window.matchMedia('
 function StudioInner() {
   const params = useSearchParams();
   const siteIdParam = params.get('siteId');
+  const creationParam = params.get('creation');
   // 下書きは初期描画では読まず、利用者の照合が済んだ後にだけ復元する。
 
   /* 案内ページなどで見せ方を選んでから来た場合、その選択を引き継ぐ。
@@ -454,6 +461,9 @@ function StudioInner() {
   const [widePreview,setWidePreview]=useState(false);
   const [historyNote,setHistoryNote]=useState('');
   const [fieldFocus,setFieldFocus]=useState('');
+  const [craftTab,setCraftTab]=useState<'content'|'appearance'|'assistant'>('content');
+  const [sheetExpanded,setSheetExpanded]=useState(false);
+  const [creationNote,setCreationNote]=useState('');
   const [focusRequest,setFocusRequest]=useState(0);
   const [uploads,setUploads]=useState(0);
   const undoEdit=useCallback(()=>{if(uploads||!canUndo)return;undo();setHistoryNote('変更を取り消しました。保存すると反映されます。');},[uploads,canUndo,undo]);
@@ -471,6 +481,7 @@ function StudioInner() {
   },[step,loading,loadError,comparison,undoEdit,redoEdit]);
   const reportUpload=useCallback((active:boolean)=>setUploads(n=>Math.max(0,n+(active?1:-1))),[]);
   const settingsPane=useRef<HTMLDivElement>(null);
+  useEffect(()=>{if(!fieldFocus)settingsPane.current?.scrollTo({top:0});},[selectedId,craftTab,fieldFocus]);
   useEffect(()=>{if(!fieldFocus)return; const frame=requestAnimationFrame(()=>{const el=settingsPane.current?.querySelector<HTMLElement>(`[data-field-key="${fieldFocus}"]`);if(el)settingsPane.current?.scrollTo({top:el.offsetTop-80,behavior:'instant'});});return()=>cancelAnimationFrame(frame)},[fieldFocus,focusRequest]);
   const [saveState, setSaveState] = useState<SaveState>({ kind: 'clean', at: null });
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
@@ -558,10 +569,13 @@ function StudioInner() {
         const foreign = JSON.parse(localStorage.getItem(draftKey(siteIdParam)) || 'null');
         if (foreign?.account && account && foreign.account !== account.id) clearDraft(siteIdParam);
       } catch { /* 壊れた控えは使わない */ }
+      const choice=!siteIdParam?readComposition(creationParam):null;
+      if(choice){const built=buildComposition(choice);resetSite(built.site);setIntake(built.intake);setSelectedId(built.site.pages[0]?.blocks[0]?.id??null);restoreStep('edit');hydrating.current=false;clearComposition();setCreationNote('案内ページでつくった内容を引き継ぎました。写真と情報を確かめて、続きを仕上げましょう。');}
       return;
     }
     if (!siteIdParam) {
       resetSite(kept.site); setIntake(kept.intake); restoreStep(kept.step);
+      if(creationParam){setCreationNote('前回の下書きを優先しました。案内ページの見本で上書きしていません。');clearComposition();}
       setRestoredDraft(true); hydrating.current = false; return;
     }
     if (kept.siteId !== siteIdParam) return;
@@ -572,7 +586,7 @@ function StudioInner() {
     setIntake(kept.intake);
     setRestoredDraft(true);
     hydrating.current = false;                      // これは「未保存の編集」として扱う
-  }, [accountResolved, loading, loadError, account, siteIdParam, resetSite]);
+  }, [accountResolved, loading, loadError, account, siteIdParam, creationParam, resetSite]);
 
   /* 保存できていない内容を、この端末に控える。
      保存済みのサイトでも控える（保存に失敗した編集こそ失いたくない）。
@@ -893,14 +907,21 @@ function StudioInner() {
     );
   }
 
-  if (step === 'intake') return <StudioIntake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} />;
-  if (step === 'mood') return <StudioMood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} fromLp={handoff} />;
+  if (step === 'intake') return <>{creationNote&&<p className="sc-creation-note" role="status">{creationNote}</p>}<StudioIntake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} /></>;
+  if (step === 'mood') return <>{creationNote&&<p className="sc-creation-note" role="status">{creationNote}</p>}<StudioMood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} fromLp={handoff} /></>;
 
+  const adoptProposal=(proposal:SectionProposal,keys:string[]):boolean=>{
+    const current=siteRef.current;const block=current.pages[0]?.blocks.find(b=>b.id===proposal.id);
+    const changed=block?applySectionProposal(block,proposal,keys):null;
+    if(!changed){setHistoryNote('提案後に文章が変わりました。新しい内容から提案を作り直してください。');return false;}
+    setSite({...current,pages:current.pages.map((p,i)=>i===0?{...p,blocks:p.blocks.map(b=>b.id===changed.id?changed:b)}:p)});
+    setHistoryNote('選んだ文章だけを採用しました。「取り消す」で戻せます。');return true;
+  };
   const selected = blocks.find(b => b.id === selectedId) || null;
   const def = selected ? BLOCK_DEFS[selected.type] : null;
 
   return (
-    <ImageUploadContext.Provider value={{pending:uploads>0,report:reportUpload}}><div className="se-editor h-screen flex flex-col bg-slate-100 text-slate-900" data-mobile-tool={mobileTool} data-wide-preview={widePreview} onBlurCapture={breakGroup}>
+    <ImageUploadContext.Provider value={{pending:uploads>0,report:reportUpload}}><div className="se-editor h-screen flex flex-col bg-slate-100 text-slate-900" data-mobile-tool={mobileTool} data-wide-preview={widePreview} data-sheet-expanded={sheetExpanded} onBlurCapture={breakGroup}>
       {/* 上の帯 */}
       <header className="se-editor-header flex items-center gap-3 px-4 h-14 bg-white border-b border-slate-200 flex-shrink-0">
         <Link href="/laruHP/dashboard" className="text-sm font-bold text-slate-500 hover:text-slate-900">← 一覧</Link>
@@ -931,6 +952,7 @@ function StudioInner() {
         </div>
       </header>
 
+      {creationNote&&<p className="sc-creation-note" role="status">{creationNote}</p>}
       {restoredDraft && !blocked && (
         <div className="bg-sky-50 border-b border-sky-200 px-4 py-2 flex flex-wrap items-center gap-x-3">
           <span className="text-[13px] font-bold text-sky-900">
@@ -977,7 +999,7 @@ function StudioInner() {
         {/* 左: 節の一覧 */}
         <aside className="se-blocks w-60 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
           <div className="se-block-heading"><span>ページの中身</span><span>{blocks.length}節</span></div><p className="se-block-hint">節を選んで編集。右のメニューで並べ替え。</p>
-          <BlockList blocks={blocks} selectedId={selectedId} onChange={updateBlocks} onSelect={id=>{setSelectedId(id);setPanel('block');setMobileTool('settings');}} />
+          <BlockList blocks={blocks} selectedId={selectedId} onChange={updateBlocks} onSelect={id=>{setCraftTab('content');setSelectedId(id);setPanel('block');setMobileTool('settings');}} />
           <AddBlock onAdd={type => {
             const id = `b-${Math.random().toString(36).slice(2, 9)}`;
             updateBlocks([...blocks, { id, type: type as Block['type'], data: defaultDataFor(type) }]);
@@ -989,11 +1011,12 @@ function StudioInner() {
 
         {/* 中央: できあがりの見え方 */}
         <main className="se-canvas flex-1 min-w-0 p-4 overflow-hidden"><div className="se-canvas-hint"><span><i/>完成像を見ながら編集</span><span>写真・文字を押すと編集できます</span></div>
-          <Preview html={previewHtml} device={device} selectedId={selectedId} selectedField={fieldFocus} onSelect={(id,kind) => {setWidePreview(false);const b=blocks.find(x=>x.id===id);if(!b)return;setSelectedId(id);setPanel('block');setMobileTool('settings');const fields=BLOCK_DEFS[b.type]?.fields||[];const f=fields.find(f=>kind==='image'?f.type==='image':kind==='button'?f.key==='ctaText':f.type==='multiline'||f.type==='text');setFieldFocus(f?.key||'');setFocusRequest(n=>n+1);}} />
+          <Preview html={previewHtml} device={device} selectedId={selectedId} selectedField={fieldFocus} onSelect={(id,kind) => {setCraftTab('content');setSheetExpanded(false);setWidePreview(false);const b=blocks.find(x=>x.id===id);if(!b)return;setSelectedId(id);setPanel('block');setMobileTool('settings');const fields=BLOCK_DEFS[b.type]?.fields||[];const f=fields.find(f=>kind==='image'?f.type==='image':kind==='button'?f.key==='ctaText':f.type==='multiline'||f.type==='text');setFieldFocus(f?.key||'');setFocusRequest(n=>n+1);}} />
         </main>
 
         {/* 右: 設定 */}
         <aside className="se-settings w-[340px] bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
+          <div className="sc-sheet-handle"><button type="button" onClick={()=>setSheetExpanded(v=>!v)} aria-label={sheetExpanded?"編集欄を小さくする":"編集欄を広げる"}>{sheetExpanded?<ChevronDown size={17}/>:<ChevronUp size={17}/>}<span>{panel==='block'&&selected?blockLabel(selected):panel==='design'?'サイト全体':'編集'}</span></button><button type="button" onClick={()=>setMobileTool('preview')}><Check size={16}/>完了</button></div>
           <div className="se-settings-tabs flex border-b border-slate-200 flex-shrink-0">
             {([['block', '選んだ場所'], ['design', 'サイト全体'], ['ready', '公開の準備']] as const).map(([k, label]) => (
               <button key={k} onClick={() => setPanel(k)}
@@ -1010,7 +1033,10 @@ function StudioInner() {
                     <div className="text-sm font-bold text-slate-900">{def.label}</div>
                     <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{def.purpose}</div>
                   </div>
-                  {def.fields.map(f => (
+                  <div className="sc-tabs" role="group" aria-label="選んだ節の編集方法">{([['content','内容'],['appearance','見せ方'],['assistant','AIに相談']] as const).map(([value,label])=><button type="button" key={value} aria-pressed={craftTab===value} onClick={()=>{setCraftTab(value);setFieldFocus('')}}>{label}</button>)}</div>
+                  {craftTab==='appearance'&&<SectionCraft block={selected} globalMotion={site.settings.animLevel} globalLayout={site.settings.heroLayout} ink={site.settings.design?.ink||'#263248'} onChange={(key,value)=>updateBlockData(selected.id,key,value)}/>}
+                  {craftTab==='assistant'&&<SectionAssistant key={selected.id} block={selected} siteId={siteId} onApply={adoptProposal}/>}
+                  {craftTab==='content'&&def.fields.map(f => (
                     <div key={`${selected.id}:${f.key}`} data-field-key={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
                       value={(selected.data as Record<string, unknown>)[f.key]}
                       onChange={v => updateBlockData(selected.id, f.key, v)} /></div>

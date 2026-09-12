@@ -5,7 +5,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
 // 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 12;
+export const EXPORT_VERSION = 13;
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
@@ -43,7 +43,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     case 'hero': {
       const abVariant = raw('abVariant');
       const abAttr = abVariant ? ` data-ab="${abVariant}"` : '';
-      const layout = ctx?.heroLayout || 'center';
+      const layout = ['split', 'center', 'left'].includes(String(d.heroLayout)) ? String(d.heroLayout) : ctx?.heroLayout || 'center';
       const heroInnerStyle = layout === 'center'
         ? 'text-align:center;align-items:center'
         : 'text-align:left;align-items:flex-start';
@@ -106,7 +106,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       // 写真の見せ場を、ブロックごとのCSS変数で渡す（PCとスマホで別）
       const posVars = (heroPos ? `--lhp-hero-pos:${heroPos};` : '') + (heroPosSp ? `--lhp-hero-pos-sp:${heroPosSp};` : '');
       return `
-<section data-lhp-anim class="lhp-hero lhp-hero-${layout}"${abAttr} style="${posVars}${bgStyle};color:${raw('textColor')}">
+<section data-lhp-anim class="lhp-hero lhp-hero-${layout}${d.heroLayout && layout !== 'split' ? ' lhp-hero-crafted' : ''}"${abAttr} style="${posVars}${bgStyle};color:${raw('textColor')}">
   <div class="lhp-hero-inner" style="${heroInnerStyle}">
     <div class="lhp-hero-content">
       <h1>${headingHtml}</h1>
@@ -688,7 +688,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       return `
 <section data-lhp-anim class="lhp-section">
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
-  <div class="lhp-gallery lhp-gallery-${cols}" id="${blockId}">
+  <div class="lhp-gallery lhp-gallery-${cols}${d.galleryLayout === 'stack' ? ' lhp-gallery-stack' : ''}" id="${blockId}">
     ${validImages.map((rawSrc, i) => { const src = escapeHtml(safeUrl(rawSrc, '')); return `<img src="${src}" alt="ギャラリー画像 ${i + 1}" class="lhp-gallery-img lhp-lb-trigger" data-lhp-lb-src="${src}" data-lhp-lb-group="${blockId}" data-lhp-lb-idx="${i}" loading="lazy" style="cursor:zoom-in" />`; }).join('')}
   </div>
 </section>`;
@@ -1393,6 +1393,12 @@ a{color:inherit;text-decoration:none}
 /* 写真の見せ場。パソコンとスマホで別に決められる */
 .lhp-hero-img{object-position:var(--lhp-hero-pos,center)}
 @media(max-width:768px){.lhp-hero-img{object-position:var(--lhp-hero-pos-sp,var(--lhp-hero-pos,center))}}
+.lhp-hero-crafted{background-position:var(--lhp-hero-pos,center)!important;isolation:isolate}
+.lhp-hero-crafted::before{content:'';position:absolute;inset:0;height:auto;background:linear-gradient(100deg,rgba(9,20,32,.72),rgba(9,20,32,.42))!important;animation:none!important;z-index:1;pointer-events:none}
+.lhp-hero-crafted>.lhp-hero-media{z-index:0}
+.lhp-hero-crafted>.lhp-hero-inner{z-index:2}
+.lhp-hero-crafted::after{z-index:1;background:var(--lhp-d-bg,#fff);pointer-events:none}
+@media(max-width:768px){.lhp-hero-crafted{background-position:var(--lhp-hero-pos-sp,var(--lhp-hero-pos,center))!important}}
 /* 動きのあるヒーロー。写真が先、動画はあとから重なる */
 .lhp-hero-split-img{position:relative}
 .lhp-hero-media{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;pointer-events:none}
@@ -1662,6 +1668,9 @@ html{scroll-behavior:smooth}
 
 /* 動きを減らす設定の人には動かさない。スクロール表示アニメは
    透明のままにならないよう、必ず見えている状態に固定する。 */
+.lhp-gallery-stack{display:block!important;max-width:760px;margin-inline:auto;padding-bottom:32px}
+.lhp-gallery-stack .lhp-gallery-img{position:sticky;top:80px;display:block;width:100%;aspect-ratio:4/3;object-fit:cover;margin-bottom:56px;box-shadow:0 14px 40px #0002}
+@media(prefers-reduced-motion:reduce){.lhp-gallery-stack .lhp-gallery-img{position:static}}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{
     animation-duration:.001ms!important;animation-iteration-count:1!important;

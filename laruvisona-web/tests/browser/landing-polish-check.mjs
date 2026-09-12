@@ -107,13 +107,13 @@ try {
       null,
       { timeout: 15000 },
     );
-    await p.getByRole('radio', { name: /やわらかい/ }).click();
+    await p.locator('.cl-moods').getByRole('button', { name: /やわらかい/ }).click();
     await p.waitForTimeout(1600);
     check(
       width + ' 実物デモの見せ方を変えられる',
       (await p
-        .getByRole('radio', { name: /やわらかい/ })
-        .getAttribute('aria-checked')) === 'true',
+        .locator('.cl-moods').getByRole('button', { name: /やわらかい/ })
+        .getAttribute('aria-pressed')) === 'true',
     );
     check(
       width + ' デモに入力できるフレームがある',

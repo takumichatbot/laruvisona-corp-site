@@ -1,0 +1,1103 @@
+{
+  "unit": 514,
+  "build": "next build completed (TypeScript included)",
+  "lint": "changed TS/TSX files: 0 errors/warnings",
+  "environment": "local production build; isolated fake PostgREST; browser fonts from local distribution; external tags blocked; AI generation responses stubbed, server API key empty",
+  "flow": [
+    {
+      "name": "390 landing no overflow",
+      "ok": true
+    },
+    {
+      "name": "390 real export has selected copy",
+      "ok": true
+    },
+    {
+      "name": "390 real export has selected photo",
+      "ok": true
+    },
+    {
+      "name": "390 depth is a real transformed page",
+      "ok": true
+    },
+    {
+      "name": "390 handoff same copy",
+      "ok": true
+    },
+    {
+      "name": "390 handoff same photo",
+      "ok": true
+    },
+    {
+      "name": "390 handoff same design",
+      "ok": true
+    },
+    {
+      "name": "390 token consumed",
+      "ok": true
+    },
+    {
+      "name": "390 editor no overflow",
+      "ok": true
+    },
+    {
+      "name": "390 tapped text opens own field",
+      "ok": true
+    },
+    {
+      "name": "390 sheet expands",
+      "ok": true,
+      "detail": {
+        "before": 269.625,
+        "after": 427.890625
+      }
+    },
+    {
+      "name": "390 section layout changed",
+      "ok": true
+    },
+    {
+      "name": "390 section spacing and motion exported",
+      "ok": true
+    },
+    {
+      "name": "390 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "390 AI proposal does not auto-apply",
+      "ok": true
+    },
+    {
+      "name": "390 only checked field applied",
+      "ok": true
+    },
+    {
+      "name": "390 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "390 stale proposal refused",
+      "ok": true
+    },
+    {
+      "name": "390 two explicit AI requests only",
+      "ok": true
+    },
+    {
+      "name": "390 real save API",
+      "ok": true
+    },
+    {
+      "name": "390 presentation persists",
+      "ok": true
+    },
+    {
+      "name": "390 mood persists",
+      "ok": true
+    },
+    {
+      "name": "390 saved copy survives reopen",
+      "ok": true
+    },
+    {
+      "name": "390 real API unavailable without provider",
+      "ok": true,
+      "detail": {
+        "status": 503
+      }
+    },
+    {
+      "name": "390 no JS exceptions",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "320 landing no overflow",
+      "ok": true
+    },
+    {
+      "name": "320 real export has selected copy",
+      "ok": true
+    },
+    {
+      "name": "320 real export has selected photo",
+      "ok": true
+    },
+    {
+      "name": "320 depth is a real transformed page",
+      "ok": true
+    },
+    {
+      "name": "320 handoff same copy",
+      "ok": true
+    },
+    {
+      "name": "320 handoff same photo",
+      "ok": true
+    },
+    {
+      "name": "320 handoff same design",
+      "ok": true
+    },
+    {
+      "name": "320 token consumed",
+      "ok": true
+    },
+    {
+      "name": "320 editor no overflow",
+      "ok": true
+    },
+    {
+      "name": "320 tapped text opens own field",
+      "ok": true
+    },
+    {
+      "name": "320 sheet expands",
+      "ok": true,
+      "detail": {
+        "before": 269.625,
+        "after": 427.890625
+      }
+    },
+    {
+      "name": "320 section layout changed",
+      "ok": true
+    },
+    {
+      "name": "320 section spacing and motion exported",
+      "ok": true
+    },
+    {
+      "name": "320 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "320 AI proposal does not auto-apply",
+      "ok": true
+    },
+    {
+      "name": "320 only checked field applied",
+      "ok": true
+    },
+    {
+      "name": "320 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "320 stale proposal refused",
+      "ok": true
+    },
+    {
+      "name": "320 two explicit AI requests only",
+      "ok": true
+    },
+    {
+      "name": "320 real save API",
+      "ok": true
+    },
+    {
+      "name": "320 presentation persists",
+      "ok": true
+    },
+    {
+      "name": "320 mood persists",
+      "ok": true
+    },
+    {
+      "name": "320 saved copy survives reopen",
+      "ok": true
+    },
+    {
+      "name": "320 real API unavailable without provider",
+      "ok": true,
+      "detail": {
+        "status": 503
+      }
+    },
+    {
+      "name": "320 no JS exceptions",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "1440 landing no overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 real export has selected copy",
+      "ok": true
+    },
+    {
+      "name": "1440 real export has selected photo",
+      "ok": true
+    },
+    {
+      "name": "1440 depth is a real transformed page",
+      "ok": true
+    },
+    {
+      "name": "1440 handoff same copy",
+      "ok": true
+    },
+    {
+      "name": "1440 handoff same photo",
+      "ok": true
+    },
+    {
+      "name": "1440 handoff same design",
+      "ok": true
+    },
+    {
+      "name": "1440 token consumed",
+      "ok": true
+    },
+    {
+      "name": "1440 editor no overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 tapped text opens own field",
+      "ok": true
+    },
+    {
+      "name": "1440 section layout changed",
+      "ok": true
+    },
+    {
+      "name": "1440 section spacing and motion exported",
+      "ok": true
+    },
+    {
+      "name": "1440 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "1440 AI proposal does not auto-apply",
+      "ok": true
+    },
+    {
+      "name": "1440 only checked field applied",
+      "ok": true
+    },
+    {
+      "name": "1440 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "1440 stale proposal refused",
+      "ok": true
+    },
+    {
+      "name": "1440 two explicit AI requests only",
+      "ok": true
+    },
+    {
+      "name": "1440 real save API",
+      "ok": true
+    },
+    {
+      "name": "1440 presentation persists",
+      "ok": true
+    },
+    {
+      "name": "1440 mood persists",
+      "ok": true
+    },
+    {
+      "name": "1440 saved copy survives reopen",
+      "ok": true
+    },
+    {
+      "name": "1440 real API unavailable without provider",
+      "ok": true,
+      "detail": {
+        "status": 503
+      }
+    },
+    {
+      "name": "1440 no JS exceptions",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "reduced motion has no depth control",
+      "ok": true
+    },
+    {
+      "name": "reduced motion completed preview visible",
+      "ok": true
+    },
+    {
+      "name": "AI API requires login",
+      "ok": true
+    }
+  ],
+  "media": [
+    {
+      "name": "AI real API other site",
+      "ok": true,
+      "detail": {
+        "status": 403
+      }
+    },
+    {
+      "name": "AI real API unknown block",
+      "ok": true,
+      "detail": {
+        "status": 400
+      }
+    },
+    {
+      "name": "AI real API invalid block",
+      "ok": true,
+      "detail": {
+        "status": 400
+      }
+    },
+    {
+      "name": "AI real API oversized prompt",
+      "ok": true,
+      "detail": {
+        "status": 400
+      }
+    },
+    {
+      "name": "AI rejected requests do not save site",
+      "ok": true
+    },
+    {
+      "name": "video loads after choosing it",
+      "ok": true
+    },
+    {
+      "name": "video is muted and inline",
+      "ok": true
+    },
+    {
+      "name": "gallery upload 1",
+      "ok": true
+    },
+    {
+      "name": "gallery upload 2",
+      "ok": true
+    },
+    {
+      "name": "gallery two actual images and stacking",
+      "ok": true
+    },
+    {
+      "name": "gallery stacking computed",
+      "ok": true
+    },
+    {
+      "name": "media saved through owner API",
+      "ok": true
+    },
+    {
+      "name": "gallery mode saved",
+      "ok": true
+    },
+    {
+      "name": "video URL saved",
+      "ok": true
+    },
+    {
+      "name": "local owner publish API",
+      "ok": true
+    },
+    {
+      "name": "published HTML version13 and media",
+      "ok": true
+    },
+    {
+      "name": "real public URL serves new gallery",
+      "ok": true
+    },
+    {
+      "name": "gallery photo actually sticks while scrolling",
+      "ok": true,
+      "detail": {
+        "pos1": 80,
+        "pos2": 80
+      }
+    },
+    {
+      "name": "reduced motion gallery is static",
+      "ok": true
+    },
+    {
+      "name": "reduced motion never fetches video",
+      "ok": true
+    },
+    {
+      "name": "existing draft preserved over incoming example",
+      "ok": true
+    },
+    {
+      "name": "handoff conflict explained",
+      "ok": true
+    },
+    {
+      "name": "existing site never adopts incoming example",
+      "ok": true
+    },
+    {
+      "name": "existing site data untouched by incoming handoff",
+      "ok": true
+    },
+    {
+      "name": "no JavaScript errors",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "landing": [
+    {
+      "name": "320 横はみ出しなし",
+      "ok": true
+    },
+    {
+      "name": "320 見出しが最初に読める",
+      "ok": true
+    },
+    {
+      "name": "320 完成例が最初の画面内にある",
+      "ok": true
+    },
+    {
+      "name": "320 主導線は52px以上",
+      "ok": true
+    },
+    {
+      "name": "320 業種選択は44px以上",
+      "ok": true
+    },
+    {
+      "name": "320 restaurant 作例切替",
+      "ok": true
+    },
+    {
+      "name": "320 restaurant 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "320 construction 作例切替",
+      "ok": true
+    },
+    {
+      "name": "320 construction 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "320 retail 作例切替",
+      "ok": true
+    },
+    {
+      "name": "320 retail 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "320 業種のキーボード操作",
+      "ok": true
+    },
+    {
+      "name": "320 実物デモの見せ方を変えられる",
+      "ok": true
+    },
+    {
+      "name": "320 デモに入力できるフレームがある",
+      "ok": true
+    },
+    {
+      "name": "320 FAQを開ける",
+      "ok": true
+    },
+    {
+      "name": "320 業種の引き継ぎ",
+      "ok": true
+    },
+    {
+      "name": "320 中身の一覧に横はみ出しなし",
+      "ok": true
+    },
+    {
+      "name": "320 一覧は絵文字を使わない",
+      "ok": true
+    },
+    {
+      "name": "320 節がSVGアイコンを持つ",
+      "ok": true
+    },
+    {
+      "name": "320 ボタンの入れ子がない",
+      "ok": true
+    },
+    {
+      "name": "320 並べ替えの操作が見える",
+      "ok": true
+    },
+    {
+      "name": "320 並べ替えは44px以上",
+      "ok": true
+    },
+    {
+      "name": "320 上へ並べ替え",
+      "ok": true
+    },
+    {
+      "name": "320 下へ並べ替え",
+      "ok": true
+    },
+    {
+      "name": "320 削除を反映",
+      "ok": true
+    },
+    {
+      "name": "320 削除を取り消せる",
+      "ok": true
+    },
+    {
+      "name": "320 追加の一覧も絵文字なし",
+      "ok": true
+    },
+    {
+      "name": "320 節追加後は編集欄へ",
+      "ok": true
+    },
+    {
+      "name": "320 写真の編集が開く",
+      "ok": true
+    },
+    {
+      "name": "320 JavaScript例外なし",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "390 横はみ出しなし",
+      "ok": true
+    },
+    {
+      "name": "390 見出しが最初に読める",
+      "ok": true
+    },
+    {
+      "name": "390 完成例が最初の画面内にある",
+      "ok": true
+    },
+    {
+      "name": "390 主導線は52px以上",
+      "ok": true
+    },
+    {
+      "name": "390 業種選択は44px以上",
+      "ok": true
+    },
+    {
+      "name": "390 restaurant 作例切替",
+      "ok": true
+    },
+    {
+      "name": "390 restaurant 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "390 construction 作例切替",
+      "ok": true
+    },
+    {
+      "name": "390 construction 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "390 retail 作例切替",
+      "ok": true
+    },
+    {
+      "name": "390 retail 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "390 業種のキーボード操作",
+      "ok": true
+    },
+    {
+      "name": "390 実物デモの見せ方を変えられる",
+      "ok": true
+    },
+    {
+      "name": "390 デモに入力できるフレームがある",
+      "ok": true
+    },
+    {
+      "name": "390 FAQを開ける",
+      "ok": true
+    },
+    {
+      "name": "390 業種の引き継ぎ",
+      "ok": true
+    },
+    {
+      "name": "390 中身の一覧に横はみ出しなし",
+      "ok": true
+    },
+    {
+      "name": "390 一覧は絵文字を使わない",
+      "ok": true
+    },
+    {
+      "name": "390 節がSVGアイコンを持つ",
+      "ok": true
+    },
+    {
+      "name": "390 ボタンの入れ子がない",
+      "ok": true
+    },
+    {
+      "name": "390 並べ替えの操作が見える",
+      "ok": true
+    },
+    {
+      "name": "390 並べ替えは44px以上",
+      "ok": true
+    },
+    {
+      "name": "390 上へ並べ替え",
+      "ok": true
+    },
+    {
+      "name": "390 下へ並べ替え",
+      "ok": true
+    },
+    {
+      "name": "390 削除を反映",
+      "ok": true
+    },
+    {
+      "name": "390 削除を取り消せる",
+      "ok": true
+    },
+    {
+      "name": "390 追加の一覧も絵文字なし",
+      "ok": true
+    },
+    {
+      "name": "390 節追加後は編集欄へ",
+      "ok": true
+    },
+    {
+      "name": "390 写真の編集が開く",
+      "ok": true
+    },
+    {
+      "name": "390 JavaScript例外なし",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "1440 横はみ出しなし",
+      "ok": true
+    },
+    {
+      "name": "1440 見出しが最初に読める",
+      "ok": true
+    },
+    {
+      "name": "1440 完成例が最初の画面内にある",
+      "ok": true
+    },
+    {
+      "name": "1440 主導線は52px以上",
+      "ok": true
+    },
+    {
+      "name": "1440 業種選択は44px以上",
+      "ok": true
+    },
+    {
+      "name": "1440 restaurant 作例切替",
+      "ok": true
+    },
+    {
+      "name": "1440 restaurant 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "1440 construction 作例切替",
+      "ok": true
+    },
+    {
+      "name": "1440 construction 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "1440 retail 作例切替",
+      "ok": true
+    },
+    {
+      "name": "1440 retail 制作先へ業種を渡す",
+      "ok": true
+    },
+    {
+      "name": "1440 業種のキーボード操作",
+      "ok": true
+    },
+    {
+      "name": "1440 実物デモの見せ方を変えられる",
+      "ok": true
+    },
+    {
+      "name": "1440 デモに入力できるフレームがある",
+      "ok": true
+    },
+    {
+      "name": "1440 FAQを開ける",
+      "ok": true
+    },
+    {
+      "name": "1440 業種の引き継ぎ",
+      "ok": true
+    },
+    {
+      "name": "1440 中身の一覧に横はみ出しなし",
+      "ok": true
+    },
+    {
+      "name": "1440 一覧は絵文字を使わない",
+      "ok": true
+    },
+    {
+      "name": "1440 節がSVGアイコンを持つ",
+      "ok": true
+    },
+    {
+      "name": "1440 ボタンの入れ子がない",
+      "ok": true
+    },
+    {
+      "name": "1440 並べ替えの操作が見える",
+      "ok": true
+    },
+    {
+      "name": "1440 並べ替えは44px以上",
+      "ok": true
+    },
+    {
+      "name": "1440 上へ並べ替え",
+      "ok": true
+    },
+    {
+      "name": "1440 下へ並べ替え",
+      "ok": true
+    },
+    {
+      "name": "1440 削除を反映",
+      "ok": true
+    },
+    {
+      "name": "1440 削除を取り消せる",
+      "ok": true
+    },
+    {
+      "name": "1440 追加の一覧も絵文字なし",
+      "ok": true
+    },
+    {
+      "name": "1440 節追加後は編集欄へ",
+      "ok": true
+    },
+    {
+      "name": "1440 写真の編集が開く",
+      "ok": true
+    },
+    {
+      "name": "1440 JavaScript例外なし",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "動きを減らす設定で作例の入場アニメーション停止",
+      "ok": true
+    }
+  ],
+  "editor": [
+    {
+      "name": "320 no outer overflow",
+      "ok": true
+    },
+    {
+      "name": "320 preview visible",
+      "ok": true
+    },
+    {
+      "name": "320 panels initially closed",
+      "ok": true
+    },
+    {
+      "name": "320 mobile preview default",
+      "ok": true
+    },
+    {
+      "name": "320 text click opens text field",
+      "ok": true
+    },
+    {
+      "name": "320 text changes actual preview",
+      "ok": true
+    },
+    {
+      "name": "320 photo click opens image field",
+      "ok": true
+    },
+    {
+      "name": "320 real upload API succeeds",
+      "ok": true,
+      "detail": {
+        "url": "http://127.0.0.1:54999/storage/v1/object/public/site-images/7c9e6679-7425-40de-944b-e07fc1f90ae7/1789246768823.webp"
+      }
+    },
+    {
+      "name": "320 uploaded WebP served",
+      "ok": true
+    },
+    {
+      "name": "320 new photo in rendered HTML",
+      "ok": true
+    },
+    {
+      "name": "320 storage failure returned",
+      "ok": true
+    },
+    {
+      "name": "320 failed upload keeps previous image",
+      "ok": true
+    },
+    {
+      "name": "320 focal position selected",
+      "ok": true
+    },
+    {
+      "name": "320 focal setting in real export",
+      "ok": true
+    },
+    {
+      "name": "320 layout remains within screen",
+      "ok": true
+    },
+    {
+      "name": "320 block list opens",
+      "ok": true
+    },
+    {
+      "name": "320 service fields editable",
+      "ok": true
+    },
+    {
+      "name": "320 keyboard selection and feature editing",
+      "ok": true
+    },
+    {
+      "name": "320 changes saved through real API",
+      "ok": true
+    },
+    {
+      "name": "320 photo and position persisted",
+      "ok": true
+    },
+    {
+      "name": "320 reopening retains edited content",
+      "ok": true
+    },
+    {
+      "name": "320 no JS errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "390 no outer overflow",
+      "ok": true
+    },
+    {
+      "name": "390 preview visible",
+      "ok": true
+    },
+    {
+      "name": "390 panels initially closed",
+      "ok": true
+    },
+    {
+      "name": "390 mobile preview default",
+      "ok": true
+    },
+    {
+      "name": "390 text click opens text field",
+      "ok": true
+    },
+    {
+      "name": "390 text changes actual preview",
+      "ok": true
+    },
+    {
+      "name": "390 photo click opens image field",
+      "ok": true
+    },
+    {
+      "name": "390 real upload API succeeds",
+      "ok": true,
+      "detail": {
+        "url": "http://127.0.0.1:54999/storage/v1/object/public/site-images/7c9e6679-7425-40de-944b-e07fc1f90ae7/1789246774256.webp"
+      }
+    },
+    {
+      "name": "390 uploaded WebP served",
+      "ok": true
+    },
+    {
+      "name": "390 new photo in rendered HTML",
+      "ok": true
+    },
+    {
+      "name": "390 storage failure returned",
+      "ok": true
+    },
+    {
+      "name": "390 failed upload keeps previous image",
+      "ok": true
+    },
+    {
+      "name": "390 focal position selected",
+      "ok": true
+    },
+    {
+      "name": "390 focal setting in real export",
+      "ok": true
+    },
+    {
+      "name": "390 layout remains within screen",
+      "ok": true
+    },
+    {
+      "name": "390 block list opens",
+      "ok": true
+    },
+    {
+      "name": "390 service fields editable",
+      "ok": true
+    },
+    {
+      "name": "390 keyboard selection and feature editing",
+      "ok": true
+    },
+    {
+      "name": "gallery structure disabled during upload",
+      "ok": true
+    },
+    {
+      "name": "gallery real upload API",
+      "ok": true
+    },
+    {
+      "name": "390 changes saved through real API",
+      "ok": true
+    },
+    {
+      "name": "390 photo and position persisted",
+      "ok": true
+    },
+    {
+      "name": "390 reopening retains edited content",
+      "ok": true
+    },
+    {
+      "name": "390 no JS errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "1440 no outer overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 preview visible",
+      "ok": true
+    },
+    {
+      "name": "1440 text click opens text field",
+      "ok": true
+    },
+    {
+      "name": "1440 text changes actual preview",
+      "ok": true
+    },
+    {
+      "name": "1440 photo click opens image field",
+      "ok": true
+    },
+    {
+      "name": "1440 real upload API succeeds",
+      "ok": true,
+      "detail": {
+        "url": "http://127.0.0.1:54999/storage/v1/object/public/site-images/7c9e6679-7425-40de-944b-e07fc1f90ae7/1789246781336.webp"
+      }
+    },
+    {
+      "name": "1440 uploaded WebP served",
+      "ok": true
+    },
+    {
+      "name": "1440 new photo in rendered HTML",
+      "ok": true
+    },
+    {
+      "name": "1440 storage failure returned",
+      "ok": true
+    },
+    {
+      "name": "1440 failed upload keeps previous image",
+      "ok": true
+    },
+    {
+      "name": "1440 focal position selected",
+      "ok": true
+    },
+    {
+      "name": "1440 focal setting in real export",
+      "ok": true
+    },
+    {
+      "name": "1440 layout remains within screen",
+      "ok": true
+    },
+    {
+      "name": "1440 service fields editable",
+      "ok": true
+    },
+    {
+      "name": "1440 keyboard selection and feature editing",
+      "ok": true
+    },
+    {
+      "name": "1440 changes saved through real API",
+      "ok": true
+    },
+    {
+      "name": "1440 photo and position persisted",
+      "ok": true
+    },
+    {
+      "name": "1440 reopening retains edited content",
+      "ok": true
+    },
+    {
+      "name": "1440 no JS errors",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "lazy": {
+    "before": 0,
+    "after": 1,
+    "meaning": "完成像は初回表示時に読み込まず、近づいたときに読み込む。速度の実測値ではない。"
+  }
+}

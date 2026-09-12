@@ -2,6 +2,7 @@ import { applyTemplateData, getTemplateForIndustry } from "@/lib/templates";
 import { DESIGN_PRESETS } from "@/lib/site-design";
 import { orderForGoal, type IntakeAnswers } from "@/lib/studio-schema";
 import type { Block, Page, SEOSettings } from "@/types/laruHP";
+import { composeIndustry } from '@/lib/studio-blueprints';
 import { starterTemplate } from '@/lib/starter-template';
 
 export const STARTER_EXAMPLES: Record<
@@ -211,7 +212,7 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
         align: "center",
       },
     });
-  blocks = orderForGoal(blocks, intake.goal);
+  blocks = composeIndustry(orderForGoal(blocks, intake.goal), intake.industry);
   const seo = {
     ...EMPTY,
     title: [intake.name, intake.area].filter(Boolean).join(" | "),

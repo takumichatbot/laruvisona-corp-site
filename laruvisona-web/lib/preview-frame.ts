@@ -72,7 +72,7 @@ const PREVIEW_BRIDGE = `<script data-lhp-studio-bridge="">
       for (var i = 0; i < prev.length; i++) prev[i].removeAttribute('data-lhp-studio-selected');
       if (!d.id) return;
       var el = document.querySelector('[data-lhp-block="' + String(d.id).replace(/["\\\\]/g, '\\\\$&') + '"]');
-      if (el) { el.setAttribute('data-lhp-studio-selected', ''); if(d.scroll !== false) { var target=d.focus==='image' ? el.querySelector('img') : d.focus==='text' ? el.querySelector('h1,h2,h3') : el; (target||el).scrollIntoView({ block: 'center', behavior: 'auto' }); } }
+      if (el) { el.setAttribute('data-lhp-studio-selected', ''); if(d.scroll !== false) { var target=d.focus==='image' ? el.querySelector('img') : d.focus==='text' ? el.querySelector('h1,h2,h3') : el; (target||el).scrollIntoView({ block: d.align === 'start' ? 'start' : 'center', behavior: 'auto' }); } }
     }
   });
 

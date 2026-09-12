@@ -67,7 +67,7 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
     detail: input.name?.trim() || '店名を入れてください',
   });
 
-  const hasPlaceholder = PLACEHOLDER.test(text);
+  const hasPlaceholder = PLACEHOLDER.test(text) || blocks.some(b => b.data?.starterExampleName && b.data.starterExampleName === input.name);
   items.push({
     id: 'placeholder',
     ok: !hasPlaceholder,
