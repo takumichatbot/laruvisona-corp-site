@@ -656,6 +656,126 @@ for (const w of [320, 390, 1440]) {
   await page.context().close();
 }
 
+/* ── 17. 止めているあいだのデモ（P2-1・P2-2の回帰） ── */
+{
+  const { page, errors } = await open({ width: 1440, height: 900 });
+  await page.bringToFront();
+  await page.locator('#live-demo').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(3000);
+
+  /** 中の入れ物を見る（srcDoc の枠） */
+  const inner = async () => {
+    for (const f of page.frames()) {
+      const has = await f.evaluate(() => !!document.querySelector('[data-lhp-block]')).catch(() => false);
+      if (has) return f;
+    }
+    return null;
+  };
+  const look = async () => {
+    const f = await inner();
+    if (!f) return null;
+    return f.evaluate(() => ({
+      e: getComputedStyle(document.documentElement).getPropertyValue('--e').trim(),
+      motion: document.documentElement.getAttribute('data-motion'),
+      bodyTransform: getComputedStyle(document.body).transform,
+      running: (document.getAnimations ? document.getAnimations() : [])
+        .filter(a => a.playState === 'running').length,
+    }));
+  };
+
+  // 1. ばらした状態にする
+  await page.locator('[data-lhp-demo] button:has-text("もう一度ばらす")').click();
+  await page.waitForTimeout(1300);
+  const apart = await look();
+  check('ばらすと、中もばらけた状態になる', apart && apart.e === '1', JSON.stringify(apart));
+
+  // 2. ページの動きを止める
+  await page.locator('#page-motion').click();
+  await page.waitForTimeout(250);
+  const justAfter = await look();
+  await page.waitForTimeout(1200);
+  const settled = await look();
+  check('止めると、中へも伝わる', settled && settled.motion === 'off', JSON.stringify(settled));
+  check('止めたら、中の形はすぐ組み上がりに戻る',
+    justAfter && (justAfter.bodyTransform === 'none' || justAfter.bodyTransform === 'matrix(1, 0, 0, 1, 0, 0)'),
+    String(justAfter && justAfter.bodyTransform));
+  check('止めたあと、中で動いているものが無い',
+    justAfter && justAfter.running === 0 && settled.running === 0,
+    `直後 ${justAfter && justAfter.running}件 / 1.2秒後 ${settled && settled.running}件`);
+  check('止めているあいだ、ばらす操作は出さない',
+    (await page.locator('[data-lhp-demo] button:has-text("ばらす")').count()) === 0
+    && (await page.locator('[data-lhp-demo] button:has-text("組み上げる")').count()) === 0);
+  check('止めている理由が書いてある',
+    (await page.locator('[data-lhp-demo]').innerText()).includes('動きを止めているあいだは'));
+
+  // 3. 止めているあいだも、見せ方は選べる
+  const before = await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoShown);
+  await page.locator('[data-lhp-demo] [role="radio"]').nth(2).click();
+  await page.waitForTimeout(2600);
+  const afterPick = await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoShown);
+  check('止めていても、見せ方は選び直せる', before !== afterPick, `${before} → ${afterPick}`);
+  const picked = await look();
+  check('選び直しても、ばらけない', picked && picked.e === '0' && picked.running === 0, JSON.stringify(picked));
+
+  // 4. 予約の入力は、停止・再開をまたいでも残る
+  await page.locator('[data-lhp-demo] button:has-text("予約フォームまで試す")').click();
+  await page.waitForTimeout(1800);
+  const f = await inner();
+  const typed = await f.evaluate(() => {
+    const el = document.querySelector('input[type="text"], input[type="email"], input:not([type]), textarea');
+    if (!el) return null;
+    el.focus();
+    el.value = 'テスト太郎';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    return el.value;
+  });
+  check('中の入力欄に書き込める', typed === 'テスト太郎', String(typed));
+  await page.locator('#page-motion').click();   // 再開
+  await page.waitForTimeout(900);
+  await page.locator('#page-motion').click();   // もう一度止める
+  await page.waitForTimeout(900);
+  const kept = await (await inner()).evaluate(() => {
+    const el = document.querySelector('input[type="text"], input[type="email"], input:not([type]), textarea');
+    return el ? el.value : null;
+  });
+  check('停止・再開をまたいでも、入力は残る', kept === 'テスト太郎', String(kept));
+
+  // 5. 再開しても、触っていない分解が始まらない
+  await page.locator('#page-motion').click();   // 再開
+  await page.waitForTimeout(1500);
+  const back = await look();
+  check('再開しても、勝手にばらけない', back && back.e === '0', JSON.stringify(back));
+  check('再開したら、ばらす操作が戻る',
+    (await page.locator('[data-lhp-demo] button:has-text("ばらす")').count()) === 1);
+  check('画面の例外が出ていない（止めているデモ）', errors.length === 0, errors.slice(0, 2).join(' / '));
+  await page.context().close();
+}
+
+/* ── 18. 端末の「動きを減らす」設定でのデモ ── */
+{
+  const { page } = await open({ width: 390, height: 844, reduced: true });
+  await page.locator('#live-demo').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(3000);
+  check('動きを減らす設定では、ばらす操作を出さない',
+    (await page.locator('[data-lhp-demo] button:has-text("ばらす")').count()) === 0
+    && (await page.locator('[data-lhp-demo] button:has-text("組み上げる")').count()) === 0);
+  check('動きを減らす設定でも、理由が書いてある',
+    (await page.locator('[data-lhp-demo]').innerText()).includes('動きを止めているあいだは'));
+  const shown0 = await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoShown);
+  await page.locator('[data-lhp-demo] [role="radio"]').nth(1).click();
+  await page.waitForTimeout(2600);
+  check('動きを減らす設定でも、見せ方は選び直せる',
+    (await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoShown)) !== shown0);
+  const f = page.frames().find(x => x.url() === 'about:srcdoc');
+  const st = f ? await f.evaluate(() => ({
+    motion: document.documentElement.getAttribute('data-motion'),
+    running: (document.getAnimations ? document.getAnimations() : []).filter(a => a.playState === 'running').length,
+  })).catch(() => null) : null;
+  check('動きを減らす設定では、中でも動いていない', st && st.motion === 'off' && st.running === 0, JSON.stringify(st));
+  if (args.shots) await page.screenshot({ path: `${args.shots}/sp-reduced-demo.png` });
+  await page.context().close();
+}
+
 await browser.close();
 console.log(`\n通過 ${ok.length} / 失敗 ${ng.length}`);
 if (ng.length) { ng.forEach(n => console.log(`  - ${n}`)); process.exit(1); }

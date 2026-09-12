@@ -199,6 +199,9 @@ const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
       ' transition:transform .9s cubic-bezier(.2,.8,.2,1),box-shadow .9s ease,border-radius .9s ease}',
       /* ばらけているあいだは触らせない（押せる場所が動いていて分かりにくい） */
       'html[data-locked="1"] [data-lhp-block]{pointer-events:none}',
+      /* 外のページが動きを止めているあいだは、この中の動きも全部止める。
+         止めた瞬間に走っている途中のものは、下の処理でその場で終わらせる。 */
+      'html[data-motion="off"] *{transition:none!important;animation:none!important;scroll-behavior:auto!important}',
       '#lhp-demo-sent{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;',
       ' background:#0f172a;color:#fff;padding:14px 22px;border-radius:999px;font-size:15px;font-weight:700;',
       ' box-shadow:0 10px 30px rgba(15,23,42,.35)}',
@@ -274,9 +277,23 @@ const DEMO_BRIDGE = `<script data-lhp-demo-bridge="">
     var d = e.data;
     if (!d || d.source !== 'lhp-demo-host') return;
     if (d.type === 'explode') {
-      document.documentElement.setAttribute('data-e', d.e ? '1' : '0');
-      document.documentElement.style.setProperty('--e', d.e ? '1' : '0');
-      document.documentElement.setAttribute('data-locked', d.e ? '1' : '0');
+      var de = document.documentElement;
+      /* 先に「止める」を反映してから形を変える。
+         順番が逆だと、止める前に始まった動きが残ってしまう。 */
+      if (d.motion) de.setAttribute('data-motion', d.motion);
+      de.setAttribute('data-e', d.e ? '1' : '0');
+      de.style.setProperty('--e', d.e ? '1' : '0');
+      de.setAttribute('data-locked', d.e ? '1' : '0');
+      if (d.motion === 'off') {
+        /* すでに走っているものを、その場で終わらせる。
+           入れ物は作り直さないので、入力した内容は消えない。 */
+        try {
+          var running = document.getAnimations ? document.getAnimations() : [];
+          for (var i = 0; i < running.length; i++) {
+            try { running[i].finish(); } catch (e1) { try { running[i].cancel(); } catch (e2) {} }
+          }
+        } catch (e0) {}
+      }
     }
   });
 
@@ -417,6 +434,16 @@ export default function AssembleDemo(
   /* 動かさないときは、途中でばらけた状態を見せない（組み上がったものとして扱う） */
   const shownAssembled = assembled || motionOff;
 
+  /* 止めた瞬間に、中の状態も組み上がりへそろえる。
+     そろえておかないと、止めているあいだの見た目は完成でも中身はばらけたままで、
+     再開したときに、触っていないのに分解が始まってしまう。
+     （描き直しの途中で直す書き方。効果の中で状態を変えると余分な描き直しを呼ぶ） */
+  const [wasMotionOff, setWasMotionOff] = useState(false);
+  if (motionOff !== wasMotionOff) {
+    setWasMotionOff(motionOff);
+    if (motionOff && !assembled) setAssembled(true);
+  }
+
   const post = useCallback((idx: 0 | 1, msg: Record<string, unknown>) => {
     frames.current[idx]?.contentWindow?.postMessage({ source: 'lhp-demo-host', ...msg }, '*');
   }, []);
@@ -554,7 +581,7 @@ export default function AssembleDemo(
         /* 表に出ている方は、いまの状態のまま。裏で用意している方は、
            ばらけた状態で待たせておく（出したあとに組み上げて見せる）。 */
         const e0 = isActive ? (assembledRef.current || motionOff ? 0 : 1) : (motionOff ? 0 : 1);
-        post(idx as 0 | 1, { type: 'explode', e: e0 });
+        post(idx as 0 | 1, { type: 'explode', e: e0, motion: motionOff ? 'off' : 'on' });
         return;
       }
       if (d.type === 'painted') {
@@ -598,7 +625,9 @@ export default function AssembleDemo(
   }, [motionOff, post, promote, scale, device]);
 
   /* 表に出ている方へ、組み上がり／ばらけを伝える */
-  useEffect(() => { post(active, { type: 'explode', e: assembled || motionOff ? 0 : 1 }); }, [assembled, motionOff, active, slots, post]);
+  useEffect(() => {
+    post(active, { type: 'explode', e: assembled || motionOff ? 0 : 1, motion: motionOff ? 'off' : 'on' });
+  }, [assembled, motionOff, active, slots, post]);
   useEffect(() => { if (!note) return; const t = setTimeout(() => setNote(''), 4000); return () => clearTimeout(t); }, [note]);
   useEffect(() => () => {
     if (swapTimer.current !== undefined) window.clearTimeout(swapTimer.current);
@@ -736,9 +765,11 @@ export default function AssembleDemo(
         {!full && (
           <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#eceff4] to-transparent" />
         )}
-        {/* 枠の上に重ねる操作。画面に枠が出ているあいだ、手が届くところにある */}
-        {near && (
-          <button type="button" onClick={() => setAssembled(v => !v)}
+        {/* 枠の上に重ねる操作。画面に枠が出ているあいだ、手が届くところにある。
+            動きを止めているあいだは出さない。押しても何も起きない操作を置くと、
+            効かなかったはずの操作が再開後に効いてしまう。 */}
+        {near && !motionOff && (
+          <button type="button" onClick={() => { if (motionOff) return; setAssembled(v => !v); }}
             className="absolute right-3 bottom-3 z-10 min-h-[40px] w-[124px] px-2 rounded-full text-[12px] font-bold bg-slate-900/85 text-white backdrop-blur hover:bg-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
             {shownAssembled ? 'もう一度ばらす' : '組み上げる'}
           </button>
@@ -787,7 +818,9 @@ export default function AssembleDemo(
 
       <div className="order-4 mt-3 flex flex-wrap items-start gap-x-4 gap-y-1">
         <p className="text-[12px] text-slate-600 leading-relaxed flex-1 min-w-[240px]">
-          {!shownAssembled
+          {motionOff
+            ? '動きを止めているあいだは、ばらす操作を使えません。見せ方の選び直しと、中の入力はそのまま使えます。'
+            : !shownAssembled
             ? '部品が分かれた状態です。「組み上げる」を押すと1枚のサイトになります。'
             : full
               ? `いまは「${shownChoice.name}」で出しています。このまま触れます。中のボタンや入力欄が、公開したあとと同じように動きます。`
