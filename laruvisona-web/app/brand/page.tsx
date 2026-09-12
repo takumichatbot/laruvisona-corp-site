@@ -18,7 +18,7 @@ import { MARK, MARK_VIEWBOX, BRAND_GRADIENT } from '@/components/company/mark';
 export const metadata: Metadata = {
   title: 'ロゴについて | 株式会社LaruVisona',
   description:
-    '株式会社LaruVisonaのロゴの意味と、かたち・配色・使い方。粒が集まってひとつのしるしになるまで。ロゴデータの配布と、使うときの決めごとをまとめています。',
+    '株式会社LaruVisonaのロゴのかたち・配色・使い方。粒の並びと色の決まり、ロゴデータの配布、使うときの決めごとと、わたしたちがこの形に重ねている意味をまとめています。',
   alternates: { canonical: 'https://laruvisona.jp/brand' },
   openGraph: {
     title: 'ロゴについて | 株式会社LaruVisona',
@@ -96,13 +96,18 @@ export default function BrandPage() {
             </p>
             <h1 className="text-[clamp(28px,7vw,34px)] md:text-[clamp(34px,3.2vw,44px)] font-bold
               leading-[1.42] tracking-[-0.015em] mb-6">
-              一滴が集まって、
+              粒が集まって、
               <br />
               かたちになる。
             </h1>
             <p className="text-[15px] md:text-[17px] leading-[2] text-slate-300 max-w-[26em] [word-break:auto-phrase]">
-              株式会社LaruVisona のしるしは、ばらばらの粒がひとつの形に収まるところを写したものです。
-              小さな思いつきが、集まって、使えるものになる。わたしたちの仕事の順番を、そのまま形にしています。
+              株式会社LaruVisona のしるしは、{MARK.length}個の粒でできています。
+              積み上がった粒と、そこから立ち上がっていく粒。
+              わたしたちはこの形に、<strong className="font-bold text-slate-100">小さなものを集めて、使えるものにしていく</strong>
+              という仕事のしかたを重ねています。
+            </p>
+            <p className="mt-5 text-[13px] leading-[1.95] text-slate-400 max-w-[26em] [word-break:auto-phrase]">
+              これは、わたしたちがこの形をどう受け取っているかという話です。
             </p>
           </div>
 
@@ -129,27 +134,30 @@ export default function BrandPage() {
       <section className="px-5 md:px-8 py-14 md:py-20 border-t border-white/10 bg-[#070e18]">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-[20px] md:text-[26px] font-bold mb-3">かたち</h2>
-          <p className="text-[15px] leading-[2] text-slate-300 max-w-[28em] mb-10 [word-break:auto-phrase]">
+          <p className="text-[15px] leading-[2] text-slate-300 max-w-[28em] mb-4 [word-break:auto-phrase]">
             粒は全部で{MARK.length}個。{COLUMN}つが縦に並び、その足元に{BASE_ROW}つ。
             そこから{TRAIL}つが、小さくなりながら右上へ立ち上がります。
+          </p>
+          <p className="text-[13px] leading-[1.95] text-slate-400 max-w-[28em] mb-10 [word-break:auto-phrase]">
+            以下は、この並びにわたしたちが重ねている読み方です。
           </p>
           <dl className="grid sm:grid-cols-3 gap-8">
             <div>
               <dt className="text-[12px] font-bold text-sky-300/80 mb-2">縦の並び</dt>
               <dd className="text-[14px] leading-[1.95] text-slate-300">
-                同じ大きさの粒が{COLUMN}つ。積み上げてきたものを表します。
+                同じ大きさの粒が{COLUMN}つ。ここまで積み上げてきたものと読んでいます。
               </dd>
             </div>
             <div>
               <dt className="text-[12px] font-bold text-sky-300/80 mb-2">足元の並び</dt>
               <dd className="text-[14px] leading-[1.95] text-slate-300">
-                横に{BASE_ROW}つ。支える土台にあたるところです。
+                横に{BASE_ROW}つ。全体を支える土台と読んでいます。
               </dd>
             </div>
             <div>
               <dt className="text-[12px] font-bold text-sky-300/80 mb-2">立ち上がる粒</dt>
               <dd className="text-[14px] leading-[1.95] text-slate-300">
-                {TRAIL}つが小さくなりながら上へ。これから作るものを表します。
+                {TRAIL}つが小さくなりながら上へ。これから作るものと読んでいます。
               </dd>
             </div>
           </dl>

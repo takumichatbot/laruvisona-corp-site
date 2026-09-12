@@ -49,8 +49,15 @@ async function open({ width = 1440, height = 900, reduced = false, js = true } =
 const travel = p => p.evaluate(() => document.getElementById('opening').offsetHeight - window.innerHeight);
 const go = async (p, ratio) => {
   const t = await travel(p);
-  await p.evaluate(y => window.scrollTo(0, y), Math.round(t * ratio));
-  await p.waitForTimeout(900);
+  const target = Math.round(t * ratio);
+  // なめらかスクロールが入っているので、着いてから測る
+  for (let i = 0; i < 24; i++) {
+    await p.evaluate(y => window.scrollTo(0, y), target);
+    await p.waitForTimeout(160);
+    const now = await p.evaluate(() => window.scrollY);
+    if (Math.abs(now - target) <= 2) break;
+  }
+  await p.waitForTimeout(400);
 };
 
 /* ── 1. 配られたHTMLだけで読める ── */
@@ -125,8 +132,8 @@ const go = async (p, ratio) => {
 /* ── 6. 実物：公開と同じ処理で作ったサイトが出て、見せ方を変えられる ── */
 {
   const { page, errors } = await open();
-  await page.locator('#live').scrollIntoViewIfNeeded();
-  await page.waitForTimeout(2500);
+  await page.locator('#live-demo').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(3000);
   const demo = page.locator('[data-lhp-demo]');
   check('実物の枠がある', (await demo.count()) === 1);
   const frame = page.frameLocator('[data-lhp-demo] iframe').first();
@@ -169,34 +176,81 @@ const go = async (p, ratio) => {
   await page.context().close();
 }
 
-/* ── 8. 止められる ── */
+/* ── 8. 読んでいる途中で止める（場面もページの高さも失わない） ── */
 {
   const { page } = await open();
+  await go(page, 0.5);
+  const before = await page.evaluate(() => ({
+    docH: document.body.scrollHeight,
+    y: window.scrollY,
+    h1: Math.round(document.querySelector('h1').getBoundingClientRect().top),
+    live: Math.round(document.getElementById('live').getBoundingClientRect().top),
+    act: document.querySelector('#opening [data-act]').dataset.act,
+    mark: [...document.querySelectorAll('#opening svg circle[fill="url(#lv-brand)"]')]
+      .map(c => Math.round(+c.getAttribute('cx'))),
+  }));
   await page.locator('#page-motion').click();
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(900);
+  const after = await page.evaluate(() => ({
+    docH: document.body.scrollHeight,
+    y: window.scrollY,
+    h1: Math.round(document.querySelector('h1').getBoundingClientRect().top),
+    live: Math.round(document.getElementById('live').getBoundingClientRect().top),
+    act: document.querySelector('#opening [data-act]').dataset.act,
+    mark: [...document.querySelectorAll('#opening svg circle[fill="url(#lv-brand)"]')]
+      .map(c => Math.round(+c.getAttribute('cx'))),
+  }));
   check('止めると「動きを再開」に変わる', (await page.locator('#page-motion').innerText()).includes('再開'));
-  const settled = await page.evaluate(() => {
-    const c = [...document.querySelectorAll('#opening svg circle[fill="url(#lv-brand)"]')];
-    return c.map(x => [+x.getAttribute('cx'), +x.getAttribute('cy')]);
-  });
-  const worst = Math.max(...settled.map((g, i) => Math.max(Math.abs(g[0] - MARK[i][0]), Math.abs(g[1] - MARK[i][1]))));
-  check('止めたら、完成した配置で置かれる', worst < 0.01, `最大ずれ ${worst}`);
-  check('止めても本文は読める', await page.locator('h1').first().isVisible());
+  check('止めてもページの高さが変わらない', before.docH === after.docH, `${before.docH} → ${after.docH}`);
+  check('止めても見出しの位置が変わらない', Math.abs(before.h1 - after.h1) <= 2, `${before.h1} → ${after.h1}`);
+  check('止めても次の区画の位置が変わらない', Math.abs(before.live - after.live) <= 2, `${before.live} → ${after.live}`);
+  check('止めてもいまの場面のまま', before.act === after.act, `${before.act} → ${after.act}`);
+  check('止めても粒はいまの位置のまま',
+    JSON.stringify(before.mark) === JSON.stringify(after.mark));
+  check('止めても本文は読める', await page.locator('#opening').isVisible());
+
+  // 再開すると、また進む
+  await page.locator('#page-motion').click();
+  await page.waitForTimeout(400);
+  check('押し直すと「動きを止める」に戻る', (await page.locator('#page-motion').innerText()).includes('止める'));
+  await go(page, 0.75);
+  const moved = await page.evaluate(() => document.querySelector('#opening [data-act]').dataset.act);
+  check('再開すると、続きから進む', moved === '3', String(moved));
   await page.context().close();
 }
 
-/* ── 9. 「動きを減らす」端末 ── */
+/* ── 9. 端末の「動きを減らす」設定（初期から静止。再開は出さない） ── */
 {
   const { page } = await open({ reduced: true });
   await page.waitForTimeout(900);
-  check('最初から止まっている', (await page.locator('#page-motion').innerText()).includes('再開'));
+  check('再開できないので、再開ボタンを出さない', (await page.locator('#page-motion').count()) === 0);
+  check('止めている理由を出す', (await page.locator('#page-motion-note').innerText()).includes('端末の設定'));
   check('冒頭が1画面に収まる（長い空きを作らない）',
     (await page.evaluate(() => document.getElementById('opening').offsetHeight <= window.innerHeight + 2)));
-  await page.locator('#live').scrollIntoViewIfNeeded();
+  check('最初から完成した姿で出る',
+    (await page.evaluate(() => document.querySelector('#opening [data-act]').dataset.act)) === 'still');
+  await page.locator('#live-demo').scrollIntoViewIfNeeded();
   await page.waitForTimeout(2500);
   check('実物はそのまま触れる', (await page.locator('[data-lhp-demo] [role="radio"]').count()) === 3);
+  check('実物も動かさない設定になっている',
+    (await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoMotion)) === 'off');
   if (args.shots) await page.screenshot({ path: `${args.shots}/pc-reduced.png` });
   await page.context().close();
+
+  // 320px の静止版で、ロゴと冒頭のボタンが重ならない
+  const { page: p320 } = await open({ width: 320, height: 720, reduced: true });
+  await p320.waitForTimeout(900);
+  const clash = await p320.evaluate(() => {
+    const svg = document.querySelector('#opening svg');
+    const marks = [...svg.querySelectorAll('circle[fill="url(#lv-brand)"]')]
+      .map(c => c.getBoundingClientRect()).filter(r => r.width > 0);
+    const btns = [...document.querySelectorAll('#opening a')].map(a => a.getBoundingClientRect());
+    const hit = (a, b) => !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+    return btns.some(b => marks.some(m => hit(m, b)));
+  });
+  check('320pxの静止版で、ロゴがボタンに重ならない', !clash);
+  if (args.shots) await p320.screenshot({ path: `${args.shots}/sp320-reduced.png` });
+  await p320.context().close();
 }
 
 /* ── 10. 幅：320 / 390 / 1440 ── */
@@ -215,7 +269,8 @@ for (const w of [320, 390, 1440]) {
   if (w !== 1440) {
     // 止めるボタンと、下の申込・相談の導線が重ならない
     const overlap = await page.evaluate(() => {
-      const b = document.getElementById('page-motion').getBoundingClientRect();
+      const el = document.getElementById('page-motion') || document.getElementById('page-motion-note');
+      const b = el.getBoundingClientRect();
       return [...document.querySelectorAll('a')].some(a => {
         const r = a.getBoundingClientRect();
         if (r.width === 0 || r.bottom < 0 || r.top > innerHeight) return false;
@@ -229,9 +284,9 @@ for (const w of [320, 390, 1440]) {
   await page.context().close();
 }
 
-/* ── 11. 問い合わせとチャット（既存のLARUbot連携を壊していないか） ── */
+/* ── 11. 問い合わせとチャット（既存のLARUbot連携を壊していないか） ──
+   通常・停止・再開を分けて見る。状態を確かめてから操作する */
 {
-  // 埋め込みの確認。larubot.tokyo へは出さずに、注入されるところまでを見る
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ja-JP' });
   const asked = [];
   await ctx.route(BLOCK, r => r.abort());
@@ -242,6 +297,7 @@ for (const w of [320, 390, 1440]) {
   page.on('pageerror', e => errors.push(String(e).slice(0, 200)));
   await page.goto(BASE + '/', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
+
   const tag = await page.evaluate(() => {
     const s = document.getElementById('larubot-embed-script');
     return s ? { src: s.getAttribute('src'), id: s.getAttribute('data-public-id'), defer: s.defer } : null;
@@ -252,29 +308,25 @@ for (const w of [320, 390, 1440]) {
     !!tag && tag.src.includes('larubot.tokyo/static/embed.js') && !!tag.id);
   check('演出の終わりを待って止まっていない（6秒の保険に頼らない）', asked.length > 0, `${asked.length}件`);
 
-  // チャットが出る右下を、こちらの要素で塞いでいないか
+  // 右下（チャットの出る場所）を、こちらの要素で塞いでいないか
   const corner = await page.evaluate(() => {
     const pts = [[innerWidth - 34, innerHeight - 34], [innerWidth - 60, innerHeight - 60]];
     return pts.map(([x, y]) => {
       const el = document.elementFromPoint(x, y);
-      if (!el) return '';
-      const fixed = el.closest('#page-motion') ? 'page-motion' : '';
-      return fixed;
+      return el && el.closest('#page-motion, #page-motion-note') ? '停止ボタン' : '';
     }).filter(Boolean);
   });
   check('チャットの出る右下を、停止ボタンで塞いでいない', corner.length === 0, corner.join(','));
 
-  // 相談の導線・停止ボタン・チャットの三つが重ならないか（右下に実物大の代役を置いて測る）
   const overlap = await page.evaluate(() => {
     const fake = document.createElement('div');
-    fake.id = 'fake-chat';
     Object.assign(fake.style, {
       position: 'fixed', right: '16px', bottom: '16px', width: '64px', height: '64px', zIndex: '2147483000',
     });
     document.body.appendChild(fake);
     const hit = (a, b) => !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
     const chat = fake.getBoundingClientRect();
-    const motion = document.getElementById('page-motion').getBoundingClientRect();
+    const motion = (document.getElementById('page-motion') || document.getElementById('page-motion-note')).getBoundingClientRect();
     const ctas = [...document.querySelectorAll('a')].filter(a => {
       const r = a.getBoundingClientRect();
       return r.width > 0 && r.top < innerHeight && r.bottom > 0;
@@ -291,48 +343,78 @@ for (const w of [320, 390, 1440]) {
   check('チャットと画面内の導線が重ならない', !overlap.chatVsCta);
   check('停止ボタンと画面内の導線が重ならない', !overlap.motionVsCta);
 
-  // 演出を止めても、問い合わせとチャットは使える
+  /* 右下に、実物と同じ置き方の代役を出して操作する。
+     本物のウィジェットはこの環境から読めないので、置き方だけを同じにする */
+  const putFake = () => page.evaluate(() => {
+    document.getElementById('fake-chat')?.remove();
+    const host = document.createElement('div');
+    host.id = 'fake-chat';
+    host.innerHTML = '<button id="fake-launcher" style="width:60px;height:60px;border-radius:30px;background:#0EA5E9"></button>'
+      + '<div id="fake-panel" hidden style="width:320px;height:420px;background:#fff">'
+      + '<input id="fake-input" style="width:280px;height:40px">'
+      + '<button id="fake-close">閉じる</button></div>';
+    Object.assign(host.style, { position: 'fixed', right: '16px', bottom: '16px', zIndex: '2147483000' });
+    document.body.appendChild(host);
+    host.querySelector('#fake-launcher').addEventListener('click', () => { host.querySelector('#fake-panel').hidden = false; });
+    host.querySelector('#fake-close').addEventListener('click', () => { host.querySelector('#fake-panel').hidden = true; });
+  });
+
+  /** その場でチャットを開いて入力して閉じられるか */
+  const tryChat = async (label) => {
+    await putFake();
+    const reach = await page.evaluate(() => {
+      const r = document.getElementById('fake-launcher').getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return top?.id || top?.tagName || '';
+    });
+    check(`${label}：チャットの起動ボタンに手が届く`, reach === 'fake-launcher', reach);
+    const y0 = await page.evaluate(() => window.scrollY);
+    await page.locator('#fake-launcher').click();
+    await page.waitForTimeout(250);
+    check(`${label}：チャットが開く`, await page.locator('#fake-panel').isVisible());
+    await page.locator('#fake-input').fill('テスト入力');
+    check(`${label}：チャットに入力できる`, (await page.locator('#fake-input').inputValue()) === 'テスト入力');
+    await page.locator('#fake-close').click();
+    await page.waitForTimeout(200);
+    check(`${label}：チャットが閉じる`, !(await page.locator('#fake-panel').isVisible()));
+    check(`${label}：チャットを触っても画面が飛ばない`,
+      Math.abs((await page.evaluate(() => window.scrollY)) - y0) < 2);
+    await page.evaluate(() => document.getElementById('fake-chat')?.remove());
+  };
+
+  // (1) 通常。演出が動いている場面まで進めてから
+  await go(page, 0.45);
+  const act1 = await page.evaluate(() => ({
+    act: document.querySelector('#opening [data-act]').dataset.act,
+    pressed: document.getElementById('page-motion').getAttribute('aria-pressed'),
+  }));
+  check('通常：演出が動いている場面にいる', act1.act === '2' && act1.pressed === 'false', JSON.stringify(act1));
+  await tryChat('通常');
+
+  // (2) 停止
   await page.locator('#page-motion').click();
   await page.waitForTimeout(600);
-  check('止めても相談への導線が押せる', await page.evaluate(() => {
+  const act2 = await page.evaluate(() => ({
+    act: document.querySelector('#opening [data-act]').dataset.act,
+    pressed: document.getElementById('page-motion').getAttribute('aria-pressed'),
+  }));
+  check('停止：止まっていて、場面はそのまま', act2.pressed === 'true' && act2.act === act1.act, JSON.stringify(act2));
+  await tryChat('停止');
+  check('停止：相談への導線が押せる', await page.evaluate(() => {
     const a = [...document.querySelectorAll('a')].find(x => x.getAttribute('href') === '#contact');
     if (!a) return false;
     const r = a.getBoundingClientRect();
     const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return !!top && (a === top || a.contains(top));
   }));
-  check('止めてもチャットの読み込みは残る', await page.evaluate(() => !!document.getElementById('larubot-embed-script')));
-  // 演出が動いている最中でも、右下の重ね置き（チャット相当）を開いて入力できるか。
-  // 本物のウィジェットはこの環境から読めないので、同じ置き方の代役で確かめる
-  await page.evaluate(() => { window.scrollTo(0, (document.getElementById('opening').offsetHeight - innerHeight) * 0.45); });
-  await page.waitForTimeout(900);
-  await page.evaluate(() => {
-    const host = document.createElement('div');
-    host.id = 'fake-chat';
-    host.innerHTML = '<button id="fake-launcher" style="width:60px;height:60px;border-radius:30px;background:#0EA5E9"></button>'
-      + '<div id="fake-panel" hidden style="width:320px;height:420px;background:#fff">'
-      + '<input id="fake-input" style="width:280px;height:40px"></div>';
-    Object.assign(host.style, { position: 'fixed', right: '16px', bottom: '16px', zIndex: '2147483000' });
-    document.body.appendChild(host);
-    host.querySelector('#fake-launcher').addEventListener('click', () => {
-      host.querySelector('#fake-panel').hidden = false;
-    });
-  });
-  const hitLauncher = await page.evaluate(() => {
-    const r = document.getElementById('fake-launcher').getBoundingClientRect();
-    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return top?.id || top?.tagName || '';
-  });
-  check('演出中でも、チャットの起動ボタンに手が届く', hitLauncher === 'fake-launcher', hitLauncher);
-  await page.locator('#fake-launcher').click();
-  await page.waitForTimeout(300);
-  check('演出中でも、チャットが開く', await page.locator('#fake-panel').isVisible());
-  await page.locator('#fake-input').fill('テスト入力');
-  check('演出中でも、チャットに入力できる', (await page.locator('#fake-input').inputValue()) === 'テスト入力');
-  const stayed = await page.evaluate(() => window.scrollY);
-  await page.waitForTimeout(700);
-  check('チャットを触っても画面が飛ばない', Math.abs((await page.evaluate(() => window.scrollY)) - stayed) < 2);
-  await page.evaluate(() => document.getElementById('fake-chat').remove());
+  check('停止：チャットの読み込みは残る', await page.evaluate(() => !!document.getElementById('larubot-embed-script')));
+
+  // (3) 再開
+  await page.locator('#page-motion').click();
+  await page.waitForTimeout(600);
+  const act3 = await page.evaluate(() => document.getElementById('page-motion').getAttribute('aria-pressed'));
+  check('再開：動く状態に戻っている', act3 === 'false', String(act3));
+  await tryChat('再開');
 
   check('画面の例外が出ていない（チャット）', errors.length === 0, errors.slice(0, 2).join(' / '));
   await ctx.close();
@@ -364,10 +446,14 @@ for (const w of [320, 390, 1440]) {
 {
   const top = await (await fetch(BASE + '/')).text();
   check('トップの冒頭に、しるしの由来を置いていない', !top.includes('しるしは、そこから来ています'));
+
   check('トップからロゴのページへ行ける', top.includes('href="/brand"'));
 
   const html = await (await fetch(BASE + '/brand')).text();
-  check('/brand が配られている', html.includes('一滴が集まって'));
+  check('/brand が配られている', html.includes('粒が集まって'));
+  check('/brand は由来として断定していない',
+    !html.includes('そこから来ています') && !html.includes('写したものです')
+    && html.includes('重ねています') && html.includes('受け取っている'));
   check('/brand に検索向けの見出しがある', /<title>[^<]*ロゴについて[^<]*LaruVisona/.test(html));
   check('/brand に説明文がある', /<meta name="description" content="[^"]{40,}"/.test(html));
   check('/brand に正規URLがある', html.includes('rel="canonical" href="https://laruvisona.jp/brand"'));
@@ -385,6 +471,188 @@ for (const w of [320, 390, 1440]) {
   check('/brand に会社トップの演出を持ち込んでいない',
     (await page.locator('#opening').count()) === 0 && (await page.locator('#page-motion').count()) === 0);
   check('画面の例外が出ていない（ロゴのページ）', errors.length === 0, errors.slice(0, 2).join(' / '));
+  await page.context().close();
+}
+
+/* ── 14. 独立レビューで挙がった点（R1・R2・R3・R5・D1・D2） ── */
+{
+  const { page, errors } = await open({ width: 1440, height: 900 });
+  await page.bringToFront();
+
+  /* R1: ヘッダーの行き先が実在し、押すとその区画へ着く */
+  const navs = await page.evaluate(() =>
+    [...document.querySelectorAll('header nav a')].map(a => ({
+      text: a.textContent.trim(), href: a.getAttribute('href'),
+      exists: !!document.querySelector(a.getAttribute('href')),
+    })));
+  check('ヘッダーの行き先がすべて実在する', navs.every(n => n.exists),
+    navs.filter(n => !n.exists).map(n => `${n.text}→${n.href}`).join(','));
+  await page.locator('header nav a:has-text("事業・サービス")').click();
+  await page.waitForTimeout(1400);
+  const arrived = await page.evaluate(() => {
+    const r = document.getElementById('purpose').getBoundingClientRect();
+    const h = document.querySelector('header').getBoundingClientRect().height;
+    return { top: Math.round(r.top), h: Math.round(h) };
+  });
+  check('「事業・サービス」を押すと、その区画に着く',
+    arrived.top >= arrived.h - 4 && arrived.top < 160, `top=${arrived.top} / header=${arrived.h}`);
+
+  /* R2: ヘッダーの「相談する」が背景に埋もれていない */
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(700);
+  const contrast = await page.evaluate(() => {
+    const a = [...document.querySelectorAll('header nav a')].find(x => x.textContent.includes('相談'));
+    const lum = (c) => {
+      const [r, g, b] = c.match(/\d+/g).map(Number).slice(0, 3).map(v => {
+        const x = v / 255;
+        return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const fg = getComputedStyle(a).color;
+    // ヘッダーは透ける。後ろの地の色（冒頭の一番暗いところ）と比べる
+    const bg = 'rgb(4, 8, 15)';
+    const l1 = lum(fg), l2 = lum(bg);
+    const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    return { fg, ratio: Math.round(ratio * 10) / 10 };
+  });
+  check('ヘッダーの「相談する」が読める明るさ', contrast.ratio >= 4.5, `${contrast.fg} / 比 ${contrast.ratio}`);
+  // フォーカス表示はキーボードで確かめる（プログラムのfocusだと出ない指定がある）
+  await page.evaluate(() => {
+    const a = [...document.querySelectorAll('header nav a')].find(x => x.textContent.includes('会社について'));
+    a.focus();
+  });
+  await page.keyboard.press('Tab');
+  const focusRing = await page.evaluate(() => {
+    const a = document.activeElement;
+    const st = getComputedStyle(a);
+    return {
+      on: (a.textContent || '').includes('相談'),
+      ring: st.outlineStyle !== 'none' && parseFloat(st.outlineWidth) > 0,
+      color: st.outlineColor,
+    };
+  });
+  check('ヘッダーの「相談する」にフォーカス表示がある', focusRing.on && focusRing.ring,
+    JSON.stringify(focusRing));
+
+  /* R3: 消したコピーが、Tabキーの順路に残っていない */
+  await go(page, 0.5);
+  const tabbed = await page.evaluate(() => {
+    const hiddenLinks = [...document.querySelectorAll('#opening a')]
+      .filter(a => a.closest('[aria-hidden="true"]'));
+    return {
+      hidden: hiddenLinks.length,
+      // inert の中は、ブラウザが順路から外す
+      inert: hiddenLinks.every(a => !!a.closest('[inert]')),
+    };
+  });
+  check('消したコピーは操作の順路から外れている', tabbed.hidden === 0 || tabbed.inert,
+    `隠れたリンク ${tabbed.hidden}`);
+  await page.locator('header nav a:has-text("相談する")').focus();
+  const seq = [];
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Tab');
+    seq.push(await page.evaluate(() => {
+      const a = document.activeElement;
+      return (a?.textContent || a?.tagName || '').trim().slice(0, 12)
+        + (a?.closest('[aria-hidden="true"]') ? '（消えている）' : '');
+    }));
+  }
+  check('Tabで、消えたコピーへ入らない', !seq.some(x => x.includes('消えている')), seq.join(' → '));
+  await page.keyboard.press('Shift+Tab');
+  const back = await page.evaluate(() => (document.activeElement?.textContent || '').trim().slice(0, 12)
+    + (document.activeElement?.closest('[aria-hidden="true"]') ? '（消えている）' : ''));
+  check('Shift+Tabでも、消えたコピーへ入らない', !back.includes('消えている'), back);
+  // 表示に戻れば、また操作できる
+  await go(page, 0);
+  const restored = await page.evaluate(() => {
+    const a = [...document.querySelectorAll('#opening a')].find(x => x.textContent.includes('実物を見る'));
+    return { inert: !!a.closest('[inert]'), tabbable: a.tabIndex >= 0 };
+  });
+  check('戻ってきたら、また操作できる', !restored.inert && restored.tabbable, JSON.stringify(restored));
+
+  /* D1: 背景のロゴ形状は、手前の粒が主役になる前に退いている */
+  await go(page, 0.32);
+  // 進みきってから測る（なめらかスクロールで着くのが遅れることがある）
+  let art = { p: 0, opacity: 1, transform: 'none' };
+  for (let i = 0; i < 12; i++) {
+    art = await page.evaluate(() => {
+      const o = document.getElementById('opening');
+      const a = document.querySelector('#opening [aria-hidden="true"] img')?.closest('div');
+      const st = getComputedStyle(a);
+      return {
+        p: +(-o.getBoundingClientRect().top / (o.offsetHeight - window.innerHeight)).toFixed(3),
+        opacity: Math.round(parseFloat(st.opacity) * 100) / 100,
+        transform: st.transform,
+      };
+    });
+    if (art.p >= 0.3 && art.opacity <= 0.12) break;
+    // 画面が前面でないとフレームが間引かれることがある。読み直しを促す
+    await page.evaluate(() => window.dispatchEvent(new Event('scroll')));
+    await page.waitForTimeout(250);
+  }
+  check('粒が出そろう頃には、背景の写真は退いている', art.p >= 0.3 && art.opacity <= 0.12,
+    `進み ${art.p} / 不透明度 ${art.opacity}`);
+  check('背景は暗くするだけでなく、外へ動かしている', art.transform !== 'none');
+
+  check('画面の例外が出ていない（指摘まわり・PC）', errors.length === 0, errors.slice(0, 2).join(' / '));
+  await page.context().close();
+}
+
+/* ── 15. スマホで「実物を見る」を押したら、実物が見える（D2） ── */
+{
+  const { page } = await open({ width: 390, height: 844 });
+  await page.locator('#opening a:has-text("実物を見る")').click();
+  await page.waitForTimeout(2600);
+  const seen = await page.evaluate(() => {
+    const head = document.querySelector('header').getBoundingClientRect().height;
+    const box = document.getElementById('live-demo').getBoundingClientRect();
+    const radios = document.querySelectorAll('[data-lhp-demo] [role="radio"]');
+    const first = radios[0]?.getBoundingClientRect();
+    const frame = document.querySelector('[data-lhp-demo] iframe')?.getBoundingClientRect();
+    return {
+      demoTop: Math.round(box.top), head: Math.round(head),
+      radioTop: first ? Math.round(first.top) : null,
+      radioIn: !!first && first.top >= head - 2 && first.bottom <= innerHeight,
+      frameIn: !!frame && frame.top < innerHeight && frame.bottom > head,
+    };
+  });
+  check('押した先で、実物の枠が画面に入っている', seen.demoTop < 844 && seen.demoTop >= seen.head - 8,
+    `枠の上端 ${seen.demoTop}px / ヘッダー ${seen.head}px`);
+  check('見せ方を選ぶところが画面に入っている', seen.radioIn, `上端 ${seen.radioTop}px`);
+  check('作った例が画面に入っている', seen.frameIn);
+  if (args.shots) await page.screenshot({ path: `${args.shots}/sp-after-cta.png` });
+  await page.context().close();
+}
+
+/* ── 16. 止めているあいだ、実物のデモも動かない（R5） ── */
+{
+  const { page } = await open({ width: 1440, height: 900 });
+  await page.locator('#live-demo').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(2600);
+  check('通常は、デモも動く設定になっている',
+    (await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoMotion)) === 'on');
+  await page.locator('#page-motion').click();
+  await page.waitForTimeout(500);
+  check('止めると、デモにも伝わる',
+    (await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoMotion)) === 'off');
+
+  // 止めているあいだに見せ方を変えても、分解・組立をしない
+  const states = [];
+  const watch = setInterval(async () => {}, 0); clearInterval(watch);
+  await page.locator('[data-lhp-demo] [role="radio"]').nth(1).click();
+  for (let i = 0; i < 14; i++) {
+    states.push(await page.evaluate(() => {
+      const b = [...document.querySelectorAll('[data-lhp-demo] button')]
+        .find(x => x.textContent.includes('ばらす') || x.textContent.includes('組み上げる'));
+      return b ? b.textContent.trim() : '';
+    }));
+    await page.waitForTimeout(180);
+  }
+  check('止めているあいだは、ばらさずに切り替わる',
+    !states.some(x => x.includes('組み上げる')), [...new Set(states)].join(' / '));
+  check('選び直しはできる',
+    (await page.evaluate(() => document.querySelector('[data-lhp-demo]').dataset.lhpDemoShown)) !== 'refined');
   await page.context().close();
 }
 

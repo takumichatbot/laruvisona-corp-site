@@ -11,7 +11,7 @@ import { MARK, MARK_VIEWBOX, BRAND_GRADIENT } from './mark';
 export default function ClosingMark() {
   const box = useRef<HTMLDivElement>(null);
   const circles = useRef<Array<SVGCircleElement | null>>([]);
-  const { paused } = useMotion();
+  const { paused, still } = useMotion();
 
   const apply = useCallback((p: number) => {
     const t = easeOut(span(p, 0, 0.9));
@@ -29,7 +29,7 @@ export default function ClosingMark() {
     }
   }, []);
 
-  useStageProgress(box, apply, { paused, pausedProgress: 1 });
+  useStageProgress(box, apply, { paused, applyOnPause: still ? 1 : null });
 
   return (
     <div ref={box} className="relative h-[34svh] min-h-[210px] flex items-center justify-center" aria-hidden="true">

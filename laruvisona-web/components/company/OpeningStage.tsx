@@ -54,7 +54,7 @@ export default function OpeningStage() {
   const markLayer = useRef<SVGGElement>(null);
   const copy1 = useRef<HTMLDivElement>(null);
   const copy3 = useRef<HTMLDivElement>(null);
-  const { paused } = useMotion();
+  const { paused, still: showStill } = useMotion();
 
   /* スマホとパソコンで構図が違う。縮小版にしないので、退き方も変える */
   const [narrow, setNarrow] = useState(false);
@@ -66,13 +66,25 @@ export default function OpeningStage() {
     return () => mq.removeEventListener('change', on);
   }, []);
 
-  /** 文字の出し入れ。読みにくくしないので、透明度と少しの移動だけ */
+  /**
+   * 文字の出し入れ。読みにくくしないので、透明度と少しの移動だけ。
+   *
+   * 消えている間は inert を付けて、**Tabキーの順路からも外す**。
+   * opacity と aria-hidden だけだと、見えていないリンクへフォーカスが入り、
+   * いまどこを操作しているのか分からなくなる。
+   * その中にフォーカスが残っていたら外す（消える場所に留めない）。
+   */
   const show = (e: HTMLDivElement | null, o: number, dy: number) => {
     if (!e) return;
+    const hidden = o < 0.05;
     e.style.opacity = String(o);
     e.style.transform = o >= 1 ? 'none' : `translate3d(0,${dy}px,0)`;
     e.style.pointerEvents = o > 0.6 ? 'auto' : 'none';
-    e.setAttribute('aria-hidden', o < 0.05 ? 'true' : 'false');
+    e.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+    if (hidden && !e.inert && e.contains(document.activeElement)) {
+      (document.activeElement as HTMLElement | null)?.blur();
+    }
+    e.inert = hidden;
   };
 
   /** 止めているときの姿。完成した配置と、見出しをそのまま出す */
@@ -80,7 +92,7 @@ export default function OpeningStage() {
     const el = stage.current;
     if (!el) return;
     el.dataset.act = 'still';
-    if (art.current) { art.current.style.transform = 'scale(1.06)'; art.current.style.opacity = '0.42'; }
+    if (art.current) { art.current.style.transform = 'scale(1.06)'; art.current.style.opacity = '0.38'; }
     for (let i = 0; i < MARK.length; i++) {
       const [x, y, r] = MARK[i];
       drops.current[i]?.setAttribute('transform', `translate(${x} ${y}) scale(${r})`);
@@ -89,22 +101,33 @@ export default function OpeningStage() {
     }
     if (glassLayer.current) glassLayer.current.style.opacity = '0';
     if (markLayer.current) markLayer.current.style.opacity = '1';
-    if (svgWrap.current) { svgWrap.current.style.transform = 'none'; svgWrap.current.style.opacity = '1'; }
+    /* 静止版だけの配置。狭い画面ではロゴを右下へ寄せて小さくし、
+       冒頭のボタンと重ならないようにする */
+    if (svgWrap.current) {
+      svgWrap.current.style.transform = narrow ? 'translate3d(24%, 26%, 0) scale(0.46)' : 'none';
+      svgWrap.current.style.opacity = '1';
+    }
     show(copy1.current, 1, 0);
     show(copy3.current, 0, 0);
-  }, []);
+  }, [narrow]);
 
   const apply = useCallback((p: number) => {
     const el = stage.current;
     if (!el) return;
-    if (paused) { still(); return; }
+    if (showStill) { still(); return; }
     el.dataset.act = p < FORM_IN[0] ? '1' : p < AWAY[0] ? '2' : '3';
 
-    /* 背景は空気。手前の主役より先に出ない。ゆっくり寄って、静かに引く */
+    /* 背景は空気。手前の主役より先に出ない。
+       この写真にも粒の並び（ロゴのかたち）が写っているので、**手前の粒が主役になる前に**
+       画面の外へ退かせる。暗くするだけでは輪郭が残り、同じ形が二重に読めてしまう。
+       退き終わりを FORM_IN の終わりに合わせている。 */
     if (art.current) {
+      const leave = easeOut(span(p, WORD_OUT[0], FORM_IN[1]));
       const a = easeOut(span(p, 0, 0.8));
-      art.current.style.transform = `scale(${mix(1.04, 1.13, a)}) translate3d(0,${mix(0, -2, a)}%,0)`;
-      art.current.style.opacity = String(mix(0.95, 0.12, easeOut(span(p, 0.18, 0.76))));
+      art.current.style.transform =
+        `scale(${mix(1.04, 1.34, Math.max(a, leave))}) translate3d(${leave * 32}%, ${mix(0, -2, a) - leave * 6}%, 0)`;
+      // 退き切ったら消す。うっすら残すと、同じ粒の並びが二重に読めてしまう
+      art.current.style.opacity = String(mix(0.95, 0, leave));
     }
 
     /* 1 → 2 の受け渡し。見出しが引いてから、一滴が出る */
@@ -161,18 +184,22 @@ export default function OpeningStage() {
     const o3 = Math.min(span(p, 0.74, 0.84), 1);
     show(copy1.current, o1, (1 - o1) * -22);
     show(copy3.current, o3, (1 - o3) * 16);
-  }, [narrow, paused, still]);
+  }, [narrow, showStill, still]);
 
-  useStageProgress(section, apply, { paused, pausedProgress: 1 });
-  useEffect(() => { if (paused) still(); }, [paused, still]);
+  /* 端末の設定で止めているときだけ、完成した姿を出す。
+     読んでいる途中の手動停止では、いまの姿のまま凍らせる（場面を失わない）。 */
+  useStageProgress(section, apply, { paused, applyOnPause: showStill ? 1 : null });
+  useEffect(() => { if (showStill) still(); }, [showStill, still]);
 
   return (
     <section
       ref={section}
       id="opening"
       aria-label="株式会社LaruVisona"
-      className="relative z-0 h-[320svh] data-[still=yes]:h-[100svh]"
-      data-still={paused ? 'yes' : 'no'}
+      /* 高さは CSS（prefers-reduced-motion）で切り替える。
+         手動停止で高さを変えないため、ここでは状態に応じて変えない */
+      className="relative z-0 h-[320svh]"
+      data-still={showStill ? 'yes' : 'no'}
     >
       <div ref={stage} data-act="1" className="sticky top-0 h-[100svh] overflow-hidden bg-[#04080f]">
         {/* 背景の生成画像。ブランドの空気であって、説明を覆うものではない */}
@@ -257,7 +284,8 @@ export default function OpeningStage() {
               AI・ウェブ・システムを、構想から実装まで。
             </p>
             <div className="mt-7 md:mt-9 flex flex-wrap gap-3">
-              <a href="#live"
+              {/* 押した人は「実物」を見たい。説明の手前ではなく、触れる枠へ着地させる */}
+              <a href="#live-demo"
                 className="inline-flex items-center justify-center min-h-[52px] px-7 rounded-xl bg-white text-[#04101c] font-bold
                   hover:bg-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
                 実物を見る

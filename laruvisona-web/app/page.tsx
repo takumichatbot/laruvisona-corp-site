@@ -17,7 +17,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect } from 'react';
 import BrandFonts from '@/components/BrandFonts';
-import AssembleDemo from '@/components/lp/AssembleDemo';
+import LiveDemo from '@/components/company/LiveDemo';
 import { MotionProvider } from '@/components/company/motion';
 import SiteHeader from '@/components/company/SiteHeader';
 import OpeningStage from '@/components/company/OpeningStage';
@@ -105,7 +105,7 @@ export default function Home() {
             冒頭の迫力のあとに、読むための場面をひとつ置く。 */}
         <section
           id="live"
-          className="relative z-10 -mt-[100svh] pt-[56svh] pb-[16svh] md:pb-[20svh]
+          className="relative z-10 -mt-[100svh] pt-[56svh] pb-[16svh] md:pb-[20svh] scroll-mt-[64px] md:scroll-mt-[72px]
             bg-[linear-gradient(180deg,transparent_0%,rgba(4,8,15,.55)_16%,#04080f_36%,#04080f_100%)]"
         >
           <div className="max-w-6xl mx-auto px-5 md:px-8">
@@ -123,13 +123,15 @@ export default function Home() {
 
         {/* 触る場面。ここからは柔らかな白。水も光も持ち込まない（操作画面を覆わない） */}
         <section
-          id="live-demo"
           className="relative z-10 text-slate-900
             bg-[linear-gradient(180deg,#04080f_0%,#0b1727_14%,#c9d2dd_46%,#eef1f5_62%,#f4f6f8_100%)]"
         >
           <div className="max-w-6xl mx-auto px-5 md:px-8 pt-[22svh] pb-16 md:pb-24">
-            <div className="rounded-3xl border border-slate-200 bg-white p-3 md:p-6 shadow-[0_40px_120px_-45px_rgba(2,10,24,.55)]">
-              <AssembleDemo startCta />
+            {/* 「実物を見る」の着地点は、説明の手前ではなく**触れる枠そのもの**。
+                固定ヘッダーぶんだけ上に余白を取って、選ぶところから画面に入るようにする */}
+            <div id="live-demo" className="scroll-mt-[72px] md:scroll-mt-[88px]
+              rounded-3xl border border-slate-200 bg-white p-3 md:p-6 shadow-[0_40px_120px_-45px_rgba(2,10,24,.55)]">
+              <LiveDemo />
             </div>
             <p className="mt-4 text-[12px] leading-[1.9] text-slate-500 [word-break:auto-phrase]">
               見本のお店（結い庵）は架空です。写真は見本用の生成素材で、送信はどこへも届きません。
@@ -149,7 +151,7 @@ export default function Home() {
         </section>
 
         {/* ③ 目的から ─ 静かに読む区画 */}
-        <section id="purpose" className="relative z-10 bg-[#f4f6f8] text-slate-900 px-5 md:px-8 py-16 md:py-24">
+        <section id="purpose" className="relative z-10 bg-[#f4f6f8] text-slate-900 px-5 md:px-8 py-16 md:py-24 scroll-mt-[64px] md:scroll-mt-[72px]">
           <div className="max-w-5xl mx-auto">
             <p className="text-[11px] font-bold tracking-[0.2em] text-sky-700 mb-3">02 / できること</p>
             <h2 className="text-[clamp(24px,6.2vw,30px)] md:text-[clamp(30px,3vw,38px)] font-bold leading-[1.45] tracking-[-0.015em] mb-3">
@@ -181,7 +183,7 @@ export default function Home() {
         </section>
 
         {/* ④ 支える仕組み ─ ふたたび暗い空間へ。ここが二度目の見せ場 */}
-        <section id="architecture" className="relative z-10 bg-[#04080f] overflow-hidden">
+        <section id="architecture" className="relative z-10 bg-[#04080f] overflow-hidden scroll-mt-[64px] md:scroll-mt-[72px]">
           <div className="relative">
             <div aria-hidden="true" className="absolute inset-0">
               <Image
@@ -235,7 +237,7 @@ export default function Home() {
         </section>
 
         {/* ⑤ 会社のこと */}
-        <section id="company" className="relative z-10 bg-[#070e18] px-5 md:px-8 py-14 md:py-20">
+        <section id="company" className="relative z-10 bg-[#070e18] px-5 md:px-8 py-14 md:py-20 scroll-mt-[64px] md:scroll-mt-[72px]">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-[20px] md:text-[26px] font-bold mb-8">会社のこと</h2>
             <table className="w-full text-left">
@@ -258,7 +260,7 @@ export default function Home() {
         </section>
 
         {/* 相談 */}
-        <section id="contact" className="relative z-10 bg-[#04080f] px-5 md:px-8 py-20 md:py-28 border-t border-white/10">
+        <section id="contact" className="relative z-10 bg-[#04080f] px-5 md:px-8 py-20 md:py-28 border-t border-white/10 scroll-mt-[64px] md:scroll-mt-[72px]">
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-[11px] font-bold tracking-[0.2em] text-sky-300 mb-4">04 / ご相談</p>
             <h2 className="text-[clamp(26px,6.6vw,32px)] md:text-[clamp(32px,3.2vw,42px)] font-bold leading-[1.45] tracking-[-0.015em] mb-5">

@@ -326,7 +326,12 @@ const SWAP_TIMEOUT = 2600;
 type Slot = { gen: number; choiceId: string; html: string } | null;
 
 export default function AssembleDemo(
-  { initialDevice, startCta = false }: { initialDevice?: Device; startCta?: boolean } = {},
+  { initialDevice, startCta = false, motionPaused = false }:
+  { initialDevice?: Device; startCta?: boolean;
+    /** 置いているページ全体が動きを止めているか。止めているあいだは
+     *  分解・組立をせず、選んだ見せ方へそのまま切り替える。
+     *  渡さなければ今までどおり、端末の設定だけを見る（他ページの既定）。 */
+    motionPaused?: boolean } = {},
 ) {
   /** いま画面に出ている見せ方 */
   const [shown, setShown] = useState<string>(DEFAULT_CHOICE);
@@ -365,6 +370,8 @@ export default function AssembleDemo(
   const groupRef = useRef<HTMLDivElement | null>(null);
   /** 世代番号。押すたびに増える。いちばん新しいものだけを採る */
   const genRef = useRef(0);
+  /** いまの「動かさない」状態。押した直後の判断に使うので ref でも持つ */
+  const motionOffRef = useRef(false);
   const swapTimer = useRef<number | undefined>(undefined);
   const assembleTimer = useRef<number | undefined>(undefined);
   /** exportToHTML は安くない。見せ方ごとに1回だけ作って使い回す */
@@ -405,6 +412,11 @@ export default function AssembleDemo(
     return withDemoBridge(base, gen);
   }, []);
 
+  /** 端末の設定か、置いているページの停止。どちらかが立っていれば動かさない */
+  const motionOff = reduced || motionPaused;
+  /* 動かさないときは、途中でばらけた状態を見せない（組み上がったものとして扱う） */
+  const shownAssembled = assembled || motionOff;
+
   const post = useCallback((idx: 0 | 1, msg: Record<string, unknown>) => {
     frames.current[idx]?.contentWindow?.postMessage({ source: 'lhp-demo-host', ...msg }, '*');
   }, []);
@@ -416,7 +428,8 @@ export default function AssembleDemo(
     activeRef.current = active;
     slotsRef.current = slots;
     assembledRef.current = assembled;
-  }, [active, slots, assembled]);
+    motionOffRef.current = motionOff;
+  }, [active, slots, assembled, motionOff]);
 
   /* 幅を見る。狭いところではスマホの組み方に切り替える */
   useEffect(() => {
@@ -486,7 +499,7 @@ export default function AssembleDemo(
     /* 裏で作った方は、ばらけた状態で用意してある。表に出してから組み上げる。
        「動きを減らす」設定では、そのまま組み上がった状態で出す。 */
     if (assembleTimer.current !== undefined) window.clearTimeout(assembleTimer.current);
-    if (!reduced) {
+    if (!motionOffRef.current) {
       setAssembled(false);
       assembleTimer.current = window.setTimeout(() => setAssembled(true), 160);
     } else {
@@ -502,8 +515,8 @@ export default function AssembleDemo(
       if (activeRef.current === old) return;
       if (slotsRef.current[old]?.gen !== oldGen) return;
       setSlots(prev => { const n: [Slot, Slot] = [prev[0], prev[1]]; n[old] = null; return n; });
-    }, reduced ? 0 : 320);
-  }, [reduced]);
+    }, motionOffRef.current ? 0 : 320);
+  }, []);
 
   /** 見せ方を選ぶ。ここではページの中の状態だけを変える（保存APIは呼ばない） */
   const choose = useCallback((id: string) => {
@@ -540,7 +553,7 @@ export default function AssembleDemo(
       if (d.type === 'ready') {
         /* 表に出ている方は、いまの状態のまま。裏で用意している方は、
            ばらけた状態で待たせておく（出したあとに組み上げて見せる）。 */
-        const e0 = isActive ? (assembledRef.current || reduced ? 0 : 1) : (reduced ? 0 : 1);
+        const e0 = isActive ? (assembledRef.current || motionOff ? 0 : 1) : (motionOff ? 0 : 1);
         post(idx as 0 | 1, { type: 'explode', e: e0 });
         return;
       }
@@ -582,10 +595,10 @@ export default function AssembleDemo(
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [reduced, post, promote, scale, device]);
+  }, [motionOff, post, promote, scale, device]);
 
   /* 表に出ている方へ、組み上がり／ばらけを伝える */
-  useEffect(() => { post(active, { type: 'explode', e: assembled || reduced ? 0 : 1 }); }, [assembled, reduced, active, slots, post]);
+  useEffect(() => { post(active, { type: 'explode', e: assembled || motionOff ? 0 : 1 }); }, [assembled, motionOff, active, slots, post]);
   useEffect(() => { if (!note) return; const t = setTimeout(() => setNote(''), 4000); return () => clearTimeout(t); }, [note]);
   useEffect(() => () => {
     if (swapTimer.current !== undefined) window.clearTimeout(swapTimer.current);
@@ -611,7 +624,8 @@ export default function AssembleDemo(
     /* スマホでは、先に完成した姿を出してから、選ぶところを下に置く。
        操作の並びを上に積むと、肝心の画面が折り返しより下へ行ってしまう。 */
     <div className="w-full flex flex-col" ref={outerRef}
-      data-lhp-demo="" data-lhp-demo-picked={picked} data-lhp-demo-shown={shown} data-lhp-demo-busy={busy ? '1' : '0'}>
+      data-lhp-demo="" data-lhp-demo-picked={picked} data-lhp-demo-shown={shown} data-lhp-demo-busy={busy ? '1' : '0'}
+      data-lhp-demo-motion={motionOff ? 'off' : 'on'}>
 
       {/* ── 見せ方を選ぶ。操作はこれだけ ─────────────────────────
           置き場所は**見本のすぐ上**。スマホで見本の後ろに大きな札を縦に
@@ -708,7 +722,7 @@ export default function AssembleDemo(
                 opacity: s && fit > 0 && on ? 1 : 0,
                 pointerEvents: on ? 'auto' : 'none',
                 zIndex: on ? 1 : 0,
-                transition: reduced ? 'none' : 'opacity .3s ease',
+                transition: motionOff ? 'none' : 'opacity .3s ease',
               }}
             />
           );
@@ -716,7 +730,7 @@ export default function AssembleDemo(
         {busy && (
           /* 更新中。押した手応えを、枠の側にも出す */
           <div className="absolute inset-x-0 top-0 z-20 h-[3px] bg-sky-500/25">
-            <div className={`h-full w-1/3 bg-sky-600${reduced ? '' : ' animate-pulse'}`} />
+            <div className={`h-full w-1/3 bg-sky-600${motionOff ? '' : ' animate-pulse'}`} />
           </div>
         )}
         {!full && (
@@ -726,7 +740,7 @@ export default function AssembleDemo(
         {near && (
           <button type="button" onClick={() => setAssembled(v => !v)}
             className="absolute right-3 bottom-3 z-10 min-h-[40px] w-[124px] px-2 rounded-full text-[12px] font-bold bg-slate-900/85 text-white backdrop-blur hover:bg-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400">
-            {assembled ? 'もう一度ばらす' : '組み上げる'}
+            {shownAssembled ? 'もう一度ばらす' : '組み上げる'}
           </button>
         )}
       </div>
@@ -773,7 +787,7 @@ export default function AssembleDemo(
 
       <div className="order-4 mt-3 flex flex-wrap items-start gap-x-4 gap-y-1">
         <p className="text-[12px] text-slate-600 leading-relaxed flex-1 min-w-[240px]">
-          {!assembled
+          {!shownAssembled
             ? '部品が分かれた状態です。「組み上げる」を押すと1枚のサイトになります。'
             : full
               ? `いまは「${shownChoice.name}」で出しています。このまま触れます。中のボタンや入力欄が、公開したあとと同じように動きます。`
