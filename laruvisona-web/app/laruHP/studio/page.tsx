@@ -18,13 +18,15 @@ import { useSearchParams } from 'next/navigation';
 import { readDesignChoice, saveDesignChoice, clearDesignChoice } from '@/lib/design-handoff';
 import Link from 'next/link';
 import { exportToHTML } from '@/lib/html-export';
-import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
+import { canRecoverStudioDraft } from '@/lib/studio-draft';
+import { makeStarterSite } from '@/lib/studio-start';
+import { StudioIntake, StudioMood } from '@/components/studio/StudioStart';
 import {
   DESIGN_PRESETS, DEFAULT_DESIGN, normalizeDesign, type SiteDesign,
 } from '@/lib/site-design';
 import {
-  BLOCK_DEFS, blockIcon, blockLabel, blockSummary, orderForGoal,
-  GOALS, INDUSTRY_CHOICES, type FieldDef, type IntakeAnswers,
+  BLOCK_DEFS, blockIcon, blockLabel, blockSummary,
+  type FieldDef, type IntakeAnswers,
 } from '@/lib/studio-schema';
 import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
 import { cleanIncomingText } from '@/lib/safe-markup';
@@ -304,11 +306,6 @@ function Field({ def, value, onChange }: {
 
 /* ── 本体 ─────────────────────────────────────────────────────────────── */
 
-/* 案内ページのデモで選んだ見せ方を、そのまま持ち越すための置き場。
-   ログインを挟んでも消えないように sessionStorage に置く。
-   個人情報は入らない（入るのは DESIGN_PRESETS の id だけ）。 */
-const MOOD_KEY = 'laruhp.studio.mood';
-
 /* 保存できていない内容の控え。
  *
  * ログインが切れた・契約が要ると言われた・回線が切れた――そのどれでも、
@@ -326,7 +323,6 @@ const MOOD_KEY = 'laruhp.studio.mood';
  *   ・保存できたら消す（ただし保存中に足した編集が残っているときは消さない）
  */
 const DRAFT_PREFIX = 'laruhp.studio.draft:';
-const DRAFT_MAX_AGE_MS = 86400_000;
 
 interface StudioDraft {
   /** どのアカウントのものか。分からないときは null（その場合は誰でも使える＝未ログインで作りかけたもの） */
@@ -347,11 +343,7 @@ function readDraft(siteId: string | null, account: string | null): StudioDraft |
     const raw = window.localStorage.getItem(draftKey(siteId));
     if (!raw) return null;
     const d = JSON.parse(raw) as StudioDraft;
-    if (!d?.site || !d?.intake) return null;
-    if (Date.now() - (d.at ?? 0) > DRAFT_MAX_AGE_MS) return null;
-    /* 別のアカウントの控えは使わない。
-       控えにアカウントが書いていない（ログイン前に作った）ものは、そのまま使う。 */
-    if (d.account && account && d.account !== account) return null;
+    if (!canRecoverStudioDraft(d, siteId, account)) return null;
     return d;
   } catch { return null; }
 }
@@ -373,24 +365,12 @@ function clearDraft(siteId: string | null): void {
 function StudioInner() {
   const params = useSearchParams();
   const siteIdParam = params.get('siteId');
-  /* 案内ページのデモで選んだ見せ方（DESIGN_PRESETS の id）。
-     URL から来たときは、それを控えておく。 */
-  const moodParam = params.get('mood');
-  const [moodFromLp] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return moodParam;
-    if (moodParam) { try { window.sessionStorage.setItem(MOOD_KEY, moodParam); } catch { /* 使えなくても困らない */ } return moodParam; }
-    try { return window.sessionStorage.getItem(MOOD_KEY); } catch { return null; }
-  });
+  // 下書きは初期描画では読まず、利用者の照合が済んだ後にだけ復元する。
 
-  /* この端末に残っている、保存できていない控え。
-     siteId 付きで開いたときも引く（保存に失敗した既存サイトの編集がここにある）。
-     アカウントの照合は、利用者が分かってから下の useEffect で行う。 */
-  const [draft] = useState<StudioDraft | null>(() => readDraft(siteIdParam, null));
-
-  /* 会社トップで見せ方を選んでから来た場合、その選択を引き継ぐ。
+  /* 案内ページなどで見せ方を選んでから来た場合、その選択を引き継ぐ。
      引き継ぐのは見せ方の名前だけ。既にあるサイトを開いたときは読まない
      （別のサイト・別のアカウントの設定が混ざらないようにするため）。 */
-  const designParam = params.get('design') || '';
+  const designParam = params.get('mood') || params.get('design') || '';
   const [handoff, setHandoff] = useState('');
   useEffect(() => {
     if (siteIdParam) return;
@@ -403,16 +383,16 @@ function StudioInner() {
 
   const [siteId, setSiteId] = useState<string | null>(siteIdParam);
   const [step, setStep] = useState<'intake' | 'mood' | 'edit'>(
-    siteIdParam ? 'edit' : (draft?.step ?? 'intake'),
+    siteIdParam ? 'edit' : 'intake',
   );
   const [loading, setLoading] = useState(!!siteIdParam);
   const [loadError, setLoadError] = useState('');
 
-  const [intake, setIntake] = useState<IntakeAnswers>(() => draft?.intake ?? {
+  const [intake, setIntake] = useState<IntakeAnswers>(() => ({
     industry: 'beauty', name: '', area: '', audience: '', goal: 'booking', description: '',
-  });
+  }));
 
-  const [site, setSite] = useState<StudioSite>(() => draft?.site ?? ({
+  const [site, setSite] = useState<StudioSite>(() => ({
     name: '', pages: [], settings: {
       colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
       accentColor: '#2563eb', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
@@ -439,7 +419,7 @@ function StudioInner() {
   const [restoredDraft, setRestoredDraft] = useState(false);
 
   /* 保存できない理由のうち、利用者の側で手当てが要るもの。
-     いずれも下書きは端末に残してあるので、済ませて戻れば続きから直せる。
+     端末への保存結果は draftKept を見て案内する。
        login … ログインが切れている（401）
        plan  … 契約が無い / 件数の上限（403）*/
   const [blocked, setBlocked] = useState<null | { kind: 'login' | 'plan'; message: string }>(null);
@@ -501,16 +481,21 @@ function StudioInner() {
        ・中身が空の控えで、保存済みの中身を上書きしない
      戻したものは「未保存」のままにする（勝手に保存はしない）。 */
   useEffect(() => {
-    if (!accountResolved || loading || restoreDone.current) return;
+    if (!accountResolved || loading || loadError || restoreDone.current) return;
     restoreDone.current = true;
     const kept = readDraft(siteIdParam, account?.id ?? null);
     if (!kept) {
       // 別アカウントのものが残っていれば、ここで消す
-      const foreign = readDraft(siteIdParam, null);
-      if (foreign?.account && account && foreign.account !== account.id) clearDraft(siteIdParam);
+      try {
+        const foreign = JSON.parse(localStorage.getItem(draftKey(siteIdParam)) || 'null');
+        if (foreign?.account && account && foreign.account !== account.id) clearDraft(siteIdParam);
+      } catch { /* 壊れた控えは使わない */ }
       return;
     }
-    if (!siteIdParam) return;                       // 新規は最初から state に入っている
+    if (!siteIdParam) {
+      setSite(kept.site); setIntake(kept.intake); setStep(kept.step);
+      setRestoredDraft(true); hydrating.current = false; return;
+    }
     if (kept.siteId !== siteIdParam) return;
     if (kept.at <= serverSavedAt.current) return;
     const keptHasContent = kept.site?.pages?.some(pg => (pg.blocks ?? []).length > 0);
@@ -519,7 +504,7 @@ function StudioInner() {
     setIntake(kept.intake);
     setRestoredDraft(true);
     hydrating.current = false;                      // これは「未保存の編集」として扱う
-  }, [accountResolved, loading, account, siteIdParam]);
+  }, [accountResolved, loading, loadError, account, siteIdParam]);
 
   /* 保存できていない内容を、この端末に控える。
      保存済みのサイトでも控える（保存に失敗した編集こそ失いたくない）。
@@ -531,14 +516,14 @@ function StudioInner() {
      それを戻して**保存済みの中身を空で上書きする**。 */
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (loading) return;                                   // 読み込み中の空っぽを控えない
-    if (saveState.kind === 'clean') return;                // 保存済みと同じなら控えは要らない
+    if (loading || loadError || !accountResolved || !restoreDone.current) return;
+    if (saveState.kind === 'clean' && !(step === 'intake' && intake.name.trim())) return;
     if (step === 'intake' && site.pages.length === 0 && !intake.name.trim()) return;
     const kept = writeDraft({
       account: account?.id ?? null, siteId, intake, site, step, at: Date.now(),
     });
     setDraftKept(kept);
-  }, [siteId, site, intake, step, account, saveState.kind, loading]);
+  }, [siteId, site, intake, step, account, accountResolved, saveState.kind, loading, loadError]);
 
   /* 保存できていないまま閉じようとしたら、ブラウザに確認させる。
      未保存（dirty）だけでなく、保存中（saving）と保存失敗（failed）も止める。
@@ -689,7 +674,7 @@ function StudioInner() {
           const b = await res.json().catch(() => ({}));
           if (res.status === 401) setBlocked({ kind: 'login', message: '' });
           throw new Error(res.status === 401
-            ? 'ログインが切れています。作った中身は残してあります。入り直すと、続きから直せます'
+            ? 'ログインが切れています。下の案内で下書きの保存状態を確認してください'
             : (b.error as string) || `保存できませんでした (${res.status})`);
         }
       } else {
@@ -705,7 +690,7 @@ function StudioInner() {
             setBlocked({ kind: 'plan', message: (b.error as string) || '' });
           }
           throw new Error(res.status === 401
-            ? 'ログインするとサイトを保存できます。いま作った中身は残してあります'
+            ? 'ログインするとサイトを保存できます。下の案内で下書きの保存状態を確認してください'
             : (b.error as string) || `保存できませんでした (${res.status})`);
         }
         const { site: created } = await res.json();
@@ -777,42 +762,9 @@ function StudioInner() {
   const buildFromIntake = useCallback((presetId: string) => {
     // 使ったら持ち越さない
     clearDesignChoice();
-    const preset = DESIGN_PRESETS.find(p => p.id === presetId) || DESIGN_PRESETS[0];
-    const template = getTemplateForIndustry(intake.industry);
-    let made: Block[] = template
-      ? applyTemplateData(template, {
-        name: intake.name || '店名', address: intake.area,
-        description: intake.description, catchphrase: '', phone: '',
-        services: [], hours: [],
-      })
-      : [];
-    if (!made.length) {
-      made = [
-        { id: 'b-hero', type: 'hero', data: { heading: intake.name || '店名', subheading: intake.area, ctaText: 'お問い合わせ', ctaLink: '#contact' } },
-        { id: 'b-text', type: 'paragraph', data: { text: intake.description, align: 'left' } },
-        { id: 'b-contact', type: 'contact', data: { heading: 'お問い合わせ', subtext: '', fields: ['name', 'email', 'phone', 'message'], buttonText: '送信する' } },
-      ];
-    }
-    made = orderForGoal(made, intake.goal);
-    const seo: SEOSettings = {
-      ...EMPTY_SEO,
-      title: `${intake.name || '店名'}${intake.area ? ` | ${intake.area}` : ''}`,
-      description: intake.description.slice(0, 110),
-    };
-    setSite({
-      name: intake.name || '無題のサイト',
-      pages: [{ id: 'page-main', name: 'トップページ', path: '/', blocks: made, seo }],
-      settings: {
-        colorScheme: 'professional-blue',
-        designStyle: preset.designStyle,
-        fontFamily: preset.fontFamily,
-        accentColor: preset.design.accent,
-        heroLayout: 'split', headerStyle: 'solid', animLevel: 'subtle',
-        larubot: false, laruseo: false, notifyEmail: '', customCss: '',
-        design: { ...preset.design }, designPreset: preset.id,
-      },
-    });
-    setSelectedId(made[0]?.id ?? null);
+    const made = makeStarterSite(intake, presetId);
+    setSite(made);
+    setSelectedId(made.pages[0].blocks[0]?.id ?? null);
     setStep('edit');
   }, [intake]);
 
@@ -844,8 +796,8 @@ function StudioInner() {
     );
   }
 
-  if (step === 'intake') return <Intake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} />;
-  if (step === 'mood') return <Mood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} fromLp={moodFromLp || handoff} />;
+  if (step === 'intake') return <StudioIntake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} />;
+  if (step === 'mood') return <StudioMood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} fromLp={handoff} />;
 
   const selected = blocks.find(b => b.id === selectedId) || null;
   const def = selected ? BLOCK_DEFS[selected.type] : null;
@@ -1325,234 +1277,6 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
     </>
   );
 }
-
-/* ── ステップ1: きく ── */
-function Intake({ intake, setIntake, onNext }: {
-  intake: IntakeAnswers;
-  setIntake: React.Dispatch<React.SetStateAction<IntakeAnswers>>;
-  onNext: () => void;
-}) {
-  const ready = intake.name.trim().length > 0;
-  return (
-    <div className="min-h-screen bg-slate-50 py-12 px-5">
-      <div className="max-w-xl mx-auto">
-        <div className="text-[11px] font-bold text-sky-700 mb-2">1 / 3　きく</div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">お店のことを、少しだけ教えてください</h1>
-        <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-          この4つだけで、たたき台を作ります。あとから全部直せます。
-        </p>
-
-        <Row label="何のお店ですか">
-          <select className={inputCls} value={intake.industry}
-            onChange={e => setIntake(v => ({ ...v, industry: e.target.value }))}>
-            {INDUSTRY_CHOICES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-        </Row>
-        <Row label="店名・屋号">
-          <input className={inputCls} value={intake.name} placeholder="結い庵"
-            onChange={e => setIntake(v => ({ ...v, name: cleanIncomingText(e.target.value, 120) }))} />
-        </Row>
-        <Row label="どこにありますか" hint="市区町村や、最寄り駅まででかまいません">
-          <input className={inputCls} value={intake.area} placeholder="東京都国立市"
-            onChange={e => setIntake(v => ({ ...v, area: cleanIncomingText(e.target.value, 120) }))} />
-        </Row>
-        <Row label="どんな人に来てほしいですか" hint="サイトの言葉づかいを決めるのに使います">
-          <input className={inputCls} value={intake.audience} placeholder="髪のくせで朝に困っている人"
-            onChange={e => setIntake(v => ({ ...v, audience: cleanIncomingText(e.target.value, 200) }))} />
-        </Row>
-
-        <div className="mb-5">
-          <div className="text-[13px] font-bold text-slate-700 mb-2">来た人に、まずしてほしいことは</div>
-          <div className="grid sm:grid-cols-2 gap-2">
-            {GOALS.map(g => (
-              <button key={g.value} type="button" onClick={() => setIntake(v => ({ ...v, goal: g.value }))}
-                className={`text-left px-3 py-2.5 rounded-xl border-2 ${intake.goal === g.value ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
-                <div className="text-[13px] font-bold text-slate-800">{g.label}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">{g.note}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Row label="お店のことを、ひとことで" hint="うまく書けなくて大丈夫です。あとで直せます">
-          <textarea className={`${inputCls} min-h-[90px]`} value={intake.description}
-            placeholder="朝、自分で乾かしてまとまる髪を目指す、予約制の美容室です。"
-            onChange={e => setIntake(v => ({ ...v, description: cleanIncomingText(e.target.value, 600) }))} />
-        </Row>
-
-        <button onClick={onNext} disabled={!ready}
-          className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold disabled:opacity-30">
-          雰囲気を選ぶ →
-        </button>
-        {!ready && <p className="text-[11px] text-slate-400 mt-2 text-center">店名だけ入れてください</p>}
-      </div>
-    </div>
-  );
-}
-
-/* ── ステップ2: えらぶ ──
-   見本は静止画ではなく、実際の公開用HTMLをその場で作って表示している。
-   選んだあとに「思っていたのと違う」が起きないようにするため。 */
-/** 入れ物の幅に合わせて縮める枠。見本ごとに幅が違っても切れない */
-function ScaledFrame({ html, width, height, title }: { html: string; width: number; height: number; title: string }) {
-  const boxRef = useRef<HTMLDivElement | null>(null);
-  const [w, setW] = useState(0);
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return;
-    const apply = () => setW(el.clientWidth);
-    apply();
-    if (typeof ResizeObserver !== 'function') {
-      window.addEventListener('resize', apply);
-      return () => window.removeEventListener('resize', apply);
-    }
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const scale = w > 0 ? w / width : 0.35;
-  return (
-    <div ref={boxRef} className="relative w-full overflow-hidden bg-white" style={{ height: Math.round(height * scale) }}>
-      <iframe title={title} sandbox="allow-scripts" srcDoc={withPreviewBridge(html)}
-        className="absolute top-0 left-0 border-0"
-        style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left' }} />
-    </div>
-  );
-}
-
-/* 見本に使う写真。
-   雰囲気の違いは「色と余白と形」で出る。写真が無いと、どれも白い紙に
-   文字が載っただけの絵になり、見分けがつかない。実際に配信している
-   写真を入れて、切り取り方（写真の比率）の違いまで見えるようにする。
-   写真は見本で、その店のものではない。画面にもそう書く。 */
-const SAMPLE_PHOTOS = {
-  hero: '/salon/hero-1200.jpg',
-  heroW: 1200, heroH: 896,
-};
-
-function Mood({ intake, onBack, onPick, fromLp }: {
-  intake: IntakeAnswers;
-  onBack: () => void;
-  onPick: (presetId: string) => void;
-  /** 案内ページのデモで選んだ見せ方（DESIGN_PRESETS の id）。無ければ null */
-  fromLp?: string | null;
-}) {
-  const samples = useMemo(() => DESIGN_PRESETS.map(p => {
-    const name = intake.name || '店名';
-    const seo = { ...EMPTY_SEO, title: name };
-    const blocks: Block[] = [
-      {
-        id: 's-hero', type: 'hero',
-        data: {
-          heading: name,
-          subheading: intake.area ? `${intake.area}の${INDUSTRY_WORD[intake.industry] || 'お店'}` : 'まちの名前',
-          ctaText: 'ご予約へ', ctaLink: '#',
-          bgColor: p.design.bg, textColor: p.design.ink,
-          bgImage: SAMPLE_PHOTOS.hero, bgImageWidth: SAMPLE_PHOTOS.heroW, bgImageHeight: SAMPLE_PHOTOS.heroH,
-          bgImageAlt: '',
-        },
-      },
-      { id: 's-lead', type: 'heading', data: { text: '当店について', subtext: '', align: 'center' } },
-      {
-        id: 's-price', type: 'price-table',
-        data: {
-          heading: 'メニューと料金', subtext: '表示は税込です',
-          plans: [
-            { name: '基本のメニュー', price: '6,600', period: '円', description: 'ご相談を含みます', features: ['ていねいに伺います'], highlighted: false, buttonText: '予約する', buttonLink: '#' },
-            { name: 'おすすめ', price: '13,200', period: '円〜', description: '状態に合わせて調整します', features: ['ご相談だけでも大丈夫です'], highlighted: true, buttonText: '予約する', buttonLink: '#' },
-          ],
-        },
-      },
-    ];
-    const html = exportToHTML(
-      [{ id: 'p', name: 'p', path: '/', blocks, seo }],
-      seo,
-      {
-        colorScheme: 'professional-blue', style: 'clean', designStyle: p.designStyle, fontFamily: p.fontFamily,
-        accentColor: p.design.accent, heroLayout: 'split', headerStyle: 'solid', animLevel: 'none',
-        larubot: false, laruseo: false, design: p.design as unknown as Record<string, unknown>,
-      } as never,
-      name,
-    );
-    return { preset: p, html };
-  }), [intake]);
-
-  /* 案内ページで選んだものがあれば、先頭に出す。
-     選び直しは妨げない（並び順を変えるだけで、5つとも出したまま）。 */
-  const ordered = useMemo(() => {
-    if (!fromLp) return samples;
-    const hit = samples.find(s => s.preset.id === fromLp);
-    if (!hit) return samples;
-    return [hit, ...samples.filter(s => s !== hit)];
-  }, [samples, fromLp]);
-
-  return (
-    <div className="min-h-screen bg-slate-50 py-10 px-5">
-      <div className="max-w-6xl mx-auto">
-        <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-900 mb-4">← 戻る</button>
-        <div className="text-[11px] font-bold text-sky-700 mb-2">2 / 3　えらぶ</div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">どの雰囲気が近いですか</h1>
-        <p className="text-sm text-slate-500 mb-1">
-          出来上がる見た目そのものです。文章と写真はあとから入れ替えます。あとから何度でも変えられます。
-        </p>
-        <p className="text-[11px] text-slate-400 mb-6">写真は見本です。お店の写真は、このあと入れ替えられます。</p>
-        {fromLp && samples.some(s => s.preset.id === fromLp) && (
-          <p className="text-[12px] text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mb-5 leading-relaxed">
-            案内の画面で選んだ「{samples.find(s => s.preset.id === fromLp)!.preset.name}」を、いちばん上に出しています。
-            ここで選び直しても構いません。
-          </p>
-        )}
-
-        {chosen && (
-          <p className="mb-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-[13px] text-sky-900">
-            会社トップで選んだ「{DESIGN_PRESETS.find(p => p.id === chosen)?.name}」を先頭に出しています。ここで選び直せます。
-          </p>
-        )}
-        <div className="grid md:grid-cols-2 gap-5">
-          {ordered.map(({ preset, html }) => (
-            <button key={preset.id} onClick={() => onPick(preset.id)}
-              className={`text-left bg-white rounded-2xl border-2 overflow-hidden transition-colors ${
-                preset.id === fromLp ? 'border-sky-500' : 'border-slate-200 hover:border-sky-500'}`}>
-              <div className="pointer-events-none">
-                <ScaledFrame html={html} width={1280} height={1330} title={`${preset.name}の見本`} />
-              </div>
-              <div className="p-4 border-t border-slate-100">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-[15px] font-bold text-slate-900">{preset.name}</span>
-                  {preset.id === fromLp && (
-                    <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 rounded px-1.5 py-0.5">案内で選んだもの</span>
-                  )}
-                  <span className="inline-flex items-center gap-1.5">
-                    {[preset.design.bg, preset.design.accent, preset.design.ink].map((c, k) => (
-                      <span key={k} className="w-3.5 h-3.5 rounded-full border border-slate-300" style={{ background: c }} />
-                    ))}
-                  </span>
-                </div>
-                <div className="text-[12px] text-slate-500 leading-relaxed">{preset.note}</div>
-                <div className="text-[11px] text-slate-400 mt-1.5">
-                  {DESCRIBE.space[preset.design.space]}・{DESCRIBE.shape[preset.design.buttonShape]}・{DESCRIBE.photo[preset.design.photoRatio]}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** 見本の下に出す、違いの言葉。数字ではなく、選ぶ理由になる言い方にする */
-const DESCRIBE = {
-  space: { tight: '余白はつめ', normal: '余白はふつう', roomy: '余白はひろめ', airy: '余白はとてもひろい' } as Record<string, string>,
-  shape: { square: '角のままのボタン', soft: 'すこし丸いボタン', pill: 'まるいボタン' } as Record<string, string>,
-  photo: { '1:1': '写真は正方形', '4:5': '写真はたて長', '3:4': '写真はたて長', '4:3': '写真はよこ長', '16:9': '写真はよこ長' } as Record<string, string>,
-};
-
-/** 業種を、見本の説明に出す言葉にする */
-const INDUSTRY_WORD: Record<string, string> = {
-  beauty: '美容室', restaurant: '飲食店', clinic: 'クリニック', school: '教室',
-  retail: 'お店', service: 'サービス', other: 'お店',
-};
 
 export default function StudioPage() {
   return (

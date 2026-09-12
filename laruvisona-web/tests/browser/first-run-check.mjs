@@ -72,6 +72,7 @@ check('案内から制作画面へ、やり直さずに入れる', page.url().in
 await page.locator('select').first().selectOption('clinic');
 await page.locator('input').nth(0).fill('のぞみ整体院');
 await page.locator('input').nth(1).fill('千葉県船橋市');
+await page.locator('.ls-more summary').click();
 await page.locator('input').nth(2).fill('デスクワークで肩と腰がつらい人');
 await page.locator('button:has-text("相談してほしい")').click();
 await page.locator('textarea').fill('体の使い方から見直して、痛みが戻りにくい状態を目指す整体院です。');
@@ -79,14 +80,15 @@ if (args.shots) await page.screenshot({ path: `${args.shots}/02-intake.png` });
 await page.locator('button:has-text("雰囲気を選ぶ")').first().click();
 
 /* ── 4. えらぶ：案内で選んだものが先頭に出ている ── */
-await page.waitForSelector('text=どの雰囲気が近いですか', { timeout: 20000 });
+await page.waitForSelector('.ls-mood-options', { timeout: 20000 });
 check('案内で選んだ見せ方が、先頭に印つきで出る',
   (await page.locator('text=案内の画面で選んだ').count()) > 0
   && (await page.locator('text=案内で選んだもの').count()) > 0);
-const firstCard = page.locator('.grid > button').first();
+const firstCard = page.locator('.ls-mood-options > button').first();
 check('先頭が、案内で選んだもの', (await firstCard.locator('text=やわらかい').count()) > 0);
 if (args.shots) await page.screenshot({ path: `${args.shots}/03-mood.png` });
 await firstCard.click();
+await page.getByRole('button', {name:'この見せ方で編集する'}).click();
 
 /* ── 5. ととのえる ── */
 await page.waitForSelector('button:has-text("公開の準備")', { timeout: 20000 });

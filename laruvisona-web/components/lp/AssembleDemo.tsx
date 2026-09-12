@@ -23,6 +23,7 @@
  *   ・端末が「動きを減らす」設定なら、演出を省いて完成状態を直接出す
  *   ・中身は別の入れ物（sandbox）に置く。中で何かが動いても、この画面には届かない
  */
+import { useHydrated } from '@/lib/use-hydrated';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { exportToHTML } from '@/lib/html-export';
 import Link from 'next/link';
@@ -351,6 +352,7 @@ export default function AssembleDemo(
      *  渡さなければ今までどおり、端末の設定だけを見る（他ページの既定）。 */
     motionPaused?: boolean } = {},
 ) {
+  const hydrated = useHydrated();
   /** いま画面に出ている見せ方 */
   const [shown, setShown] = useState<string>(DEFAULT_CHOICE);
   /** 最後に押された見せ方。押した瞬間にこちらが変わる */
@@ -678,7 +680,7 @@ export default function AssembleDemo(
             const on = c.id === picked;
             const waiting = busy && on;
             return (
-              <button key={c.id} type="button" role="radio" aria-checked={on}
+              <button key={c.id} disabled={!hydrated} type="button" role="radio" aria-checked={on}
                 tabIndex={on ? 0 : -1}
                 onClick={() => choose(c.id)}
                 className={`rounded-xl border px-1.5 py-2 min-h-[48px] transition-colors
@@ -832,7 +834,7 @@ export default function AssembleDemo(
       {/* ここで選んだ見せ方を、そのまま制作画面へ持っていく。
           持っていくのは DESIGN_PRESETS の id ひとつだけ。制作画面では
           いちばん上に出るだけで、選び直しは妨げない。 */}
-      <div className="order-5 mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+      {!startCta && <div className="order-5 mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex-1 min-w-[220px]">
           <p className="text-[13px] font-bold text-slate-800">この見せ方のまま、自分のお店で作れます</p>
           <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
@@ -843,7 +845,7 @@ export default function AssembleDemo(
           className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-slate-900 text-white text-[14px] font-bold hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500">
           この見せ方で作りはじめる
         </Link>
-      </div>
+      </div>}
 
       <p className="order-6 text-[11px] text-slate-500 mt-2 leading-relaxed">
         この3つは、制作画面の「雰囲気を選び直す」と同じものです。選ぶたびに、公開ページを作るのと同じ処理で作り直しています。

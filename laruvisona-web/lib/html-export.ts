@@ -1238,6 +1238,11 @@ function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: stri
 
   if (classes) inner = `<div class="${classes}">${inner}</div>`;
 
+  // 新規スタジオが作る商品・アクセスの行き先。未設定の既存サイトには足さない。
+  if (typeof d['anchorId'] === 'string' && /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(d['anchorId'])) {
+    inner = `<div id="${escapeHtml(d['anchorId'])}">${inner}</div>`;
+  }
+
   // どこがどのブロックかを、出来上がったHTMLの側にも残す。
   // 編集画面のプレビューは、この公開用HTMLをそのまま表示して、押された場所から
   // ブロックを引き当てる。プレビュー専用の描画を別に持つと、編集画面と公開後で
