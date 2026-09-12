@@ -32,10 +32,20 @@ export interface ReadyInput {
   name: string;
   pages: Page[];
   notifyEmail?: string | null;
+  /**
+   * ログイン中の利用者のメールアドレス（分かる画面だけ渡す）。
+   * 実APIは専用の届け先（notifyEmail）が空のとき、これへ送る
+   * （app/api/contact/route.ts 187行目、app/api/stripe/webhook/route.ts 126行目）。
+   * 渡されない画面では「所有者のメールは確認できない」ものとして扱う。
+   */
+  ownerEmail?: string | null;
 }
 
 /** 例文のまま残りやすい言い回し */
 const PLACEHOLDER = /ここに|入力してください|サンプル|見出しを入力|商品名を入力/;
+
+/** 素朴なメール形式チェック。RFCの厳密な検査はしない。実APIも形式は検査していない。 */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function d(block: { data?: unknown }): Record<string, unknown> {
   return (block.data ?? {}) as Record<string, unknown>;
@@ -68,15 +78,57 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
 
   const hasForm = blocks.some(b => b.type === 'contact' || b.type === 'booking');
   const notify = (input.notifyEmail ?? '').trim();
-  items.push({
-    id: 'notify',
-    ok: !hasForm || !!notify,
-    level: 'must',
-    label: '受け取ったお知らせの届け先が決まっている',
-    detail: !hasForm
-      ? '連絡を受け取る欄がないので、届け先は要りません'
-      : notify || 'メールの届け先を入れてください。入れないと、届いた内容を受け取れません',
-  });
+  const ownerGiven = input.ownerEmail !== undefined && input.ownerEmail !== null;
+  const owner = (input.ownerEmail ?? '').trim();
+
+  if (!hasForm) {
+    items.push({
+      id: 'notify',
+      ok: true,
+      level: 'must',
+      label: '受け取ったお知らせの届け先が決まっている（送信は試していません）',
+      detail: '連絡を受け取る欄がないので、届け先は要りません',
+    });
+  } else if (notify) {
+    // 専用の届け先が入力されている場合、形式だけ確認する（実際に送れるかは別）
+    items.push({
+      id: 'notify',
+      ok: EMAIL_SHAPE.test(notify),
+      level: 'must',
+      label: '受け取ったお知らせの届け先が決まっている（送信は試していません）',
+      detail: EMAIL_SHAPE.test(notify)
+        ? `${notify} へ届きます（メールアドレスの形は確認済み。実際に届くかまでは確認していません）`
+        : `「${notify}」はメールアドレスの形になっていません`,
+    });
+  } else if (ownerGiven && owner && EMAIL_SHAPE.test(owner)) {
+    // 専用の届け先が空でも、実APIは所有者のメールへ送る
+    // （app/api/contact/route.ts:187, app/api/stripe/webhook/route.ts:126）
+    items.push({
+      id: 'notify',
+      ok: true,
+      level: 'must',
+      label: '受け取ったお知らせの届け先が決まっている（送信は試していません）',
+      detail: `専用の届け先は未指定。アカウントのメール（${owner}）へ届きます（実際に届くかまでは確認していません）`,
+    });
+  } else if (ownerGiven) {
+    // 所有者のメールを確認できたが、空または形式が不正 → 実APIも送り先が無く400になる
+    items.push({
+      id: 'notify',
+      ok: false,
+      level: 'must',
+      label: '受け取ったお知らせの届け先が決まっている（送信は試していません）',
+      detail: '届け先が決まっていません。専用の届け先か、アカウントのメールのどちらかを、正しいメール形式で用意してください',
+    });
+  } else {
+    // この画面ではアカウントのメールを確認できない。実APIは所有者メールへ送るはずだが、断言はしない
+    items.push({
+      id: 'notify',
+      ok: true,
+      level: 'must',
+      label: '受け取ったお知らせの届け先が決まっている（送信は試していません）',
+      detail: '専用の届け先は未指定。アカウントのメールが使われます（この画面ではアカウントのメールを確認できません）',
+    });
+  }
 
   // 購入ボタンは、価格IDが無いと公開ページに出ない（黙って消える）
   const badBuy: string[] = [];

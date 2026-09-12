@@ -26,6 +26,7 @@ import {
   BLOCK_DEFS, blockIcon, blockLabel, blockSummary, orderForGoal,
   GOALS, INDUSTRY_CHOICES, type FieldDef, type IntakeAnswers,
 } from '@/lib/studio-schema';
+import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
 import { cleanIncomingText } from '@/lib/safe-markup';
 import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publish-readiness';
 import { withPreviewBridge } from '@/lib/preview-frame';
@@ -307,22 +308,66 @@ function Field({ def, value, onChange }: {
    ログインを挟んでも消えないように sessionStorage に置く。
    個人情報は入らない（入るのは DESIGN_PRESETS の id だけ）。 */
 const MOOD_KEY = 'laruhp.studio.mood';
-/* 保存前の下書き。ログインが切れて入り直したときに、
-   答えた4問と選んだ見せ方からやり直さずに済むようにする。 */
-const DRAFT_KEY = 'laruhp.studio.draft';
 
-interface StudioDraft { intake: IntakeAnswers; site: StudioSite; step: 'intake' | 'mood' | 'edit'; at: number }
+/* 保存できていない内容の控え。
+ *
+ * ログインが切れた・契約が要ると言われた・回線が切れた――そのどれでも、
+ * 打った内容が消えないようにする。前の版は次の3つで失敗していた:
+ *   ・保存済みサイト（siteId あり）では控えを消していた。いちばん失いたくない
+ *     「保存に失敗した既存サイトの編集」がまさに消えていた
+ *   ・戻り先に siteId が無く、入り直すと4つの質問からやり直しになっていた
+ *   ・保存に成功したときに、その保存に含まれていない**あとの編集**まで捨てていた
+ *
+ * 置き場は localStorage。別のタブで入り直す人がいるので、タブ内だけの
+ * sessionStorage では足りない。代わりに次を守る:
+ *   ・鍵にサイトIDを入れ、中に「どのアカウントのものか」を書く
+ *   ・別のアカウントで開いたら使わない（他人の下書きを見せない）
+ *   ・1日で捨てる
+ *   ・保存できたら消す（ただし保存中に足した編集が残っているときは消さない）
+ */
+const DRAFT_PREFIX = 'laruhp.studio.draft:';
+const DRAFT_MAX_AGE_MS = 86400_000;
 
-function readDraft(): StudioDraft | null {
+interface StudioDraft {
+  /** どのアカウントのものか。分からないときは null（その場合は誰でも使える＝未ログインで作りかけたもの） */
+  account: string | null;
+  /** どのサイトのものか。まだ保存していないものは null */
+  siteId: string | null;
+  intake: IntakeAnswers;
+  site: StudioSite;
+  step: 'intake' | 'mood' | 'edit';
+  at: number;
+}
+
+const draftKey = (siteId: string | null) => `${DRAFT_PREFIX}${siteId || 'new'}`;
+
+function readDraft(siteId: string | null, account: string | null): StudioDraft | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    const raw = window.localStorage.getItem(draftKey(siteId));
     if (!raw) return null;
     const d = JSON.parse(raw) as StudioDraft;
-    // 1日以上前のものは、別の作業のなごりとみなして使わない
-    if (!d?.site || !d?.intake || Date.now() - (d.at ?? 0) > 86400_000) return null;
+    if (!d?.site || !d?.intake) return null;
+    if (Date.now() - (d.at ?? 0) > DRAFT_MAX_AGE_MS) return null;
+    /* 別のアカウントの控えは使わない。
+       控えにアカウントが書いていない（ログイン前に作った）ものは、そのまま使う。 */
+    if (d.account && account && d.account !== account) return null;
     return d;
   } catch { return null; }
+}
+
+/** 控えを書く。書けたかどうかを返す（書けていないのに「残した」と言わないため） */
+function writeDraft(d: StudioDraft): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    window.localStorage.setItem(draftKey(d.siteId), JSON.stringify(d));
+    return true;
+  } catch { return false; }
+}
+
+function clearDraft(siteId: string | null): void {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.removeItem(draftKey(siteId)); } catch { /* 消せなくても困らない */ }
 }
 
 function StudioInner() {
@@ -337,8 +382,10 @@ function StudioInner() {
     try { return window.sessionStorage.getItem(MOOD_KEY); } catch { return null; }
   });
 
-  /* 保存前の下書き（あれば）。siteId 付きで開いたときは、保存済みの内容が正。 */
-  const [draft] = useState<StudioDraft | null>(() => (siteIdParam ? null : readDraft()));
+  /* この端末に残っている、保存できていない控え。
+     siteId 付きで開いたときも引く（保存に失敗した既存サイトの編集がここにある）。
+     アカウントの照合は、利用者が分かってから下の useEffect で行う。 */
+  const [draft] = useState<StudioDraft | null>(() => readDraft(siteIdParam, null));
 
   /* 会社トップで見せ方を選んでから来た場合、その選択を引き継ぐ。
      引き継ぐのは見せ方の名前だけ。既にあるサイトを開いたときは読まない
@@ -382,6 +429,15 @@ function StudioInner() {
   const [savedSincePublish, setSavedSincePublish] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishNote, setPublishNote] = useState('');
+  /** ログイン中の利用者。控えの持ち主の照合と、通知先の案内に使う */
+  const [account, setAccount] = useState<{ id: string; email: string | null } | null>(null);
+  /** 利用者が誰か（または分からないこと）が決まったか。控えを戻す前に必ず待つ */
+  const [accountResolved, setAccountResolved] = useState(false);
+  /** 控えをこの端末に書けているか。書けていないのに「残した」と言わない */
+  const [draftKept, setDraftKept] = useState(false);
+  /** 読み込み後に、保存できていなかった編集を戻したとき */
+  const [restoredDraft, setRestoredDraft] = useState(false);
+
   /* 保存できない理由のうち、利用者の側で手当てが要るもの。
      いずれも下書きは端末に残してあるので、済ませて戻れば続きから直せる。
        login … ログインが切れている（401）
@@ -396,6 +452,11 @@ function StudioInner() {
   useEffect(() => { saveStateRef.current = saveState; }, [saveState]);
   const publishingRef = useRef(false);
   const editSeq = useRef(0);
+  /** サーバが最後に保存した時刻。これより後の控えだけを戻す */
+  const serverSavedAt = useRef(0);
+  const serverHadContent = useRef(false);
+  /** 控えを戻す処理を1回だけにする */
+  const restoreDone = useRef(false);
   // 読み込みで入れ替えた分は「編集」ではない。
   // ここを時間差（setTimeout）で打ち消すと、順番によって未保存のまま残る。
   const hydrating = useRef(true);
@@ -406,23 +467,86 @@ function StudioInner() {
     setSaveState(prev => (prev.kind === 'saving' ? prev : { kind: 'dirty' }));
   }, [site]);
 
-  /* まだ一度も保存していないあいだ、下書きをこの端末に控える。
-     ログインが切れて入り直したときに、答えた4問と組み上がった中身が消えないようにする。
-     一度保存できたら（siteId が付いたら）サーバ側が正なので、控えは捨てる。 */
+  /* ログイン中の利用者を1度だけ調べる。
+     控えの持ち主の照合（別アカウントの下書きを見せない）と、
+     通知先の案内（専用の届け先が空のとき、どこへ届くか）に使う。
+     取れなくても画面は動く。 */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        /* この端末に残っている手形（cookie）から読む。
+           控えの持ち主を見分けるのが目的なので、サーバへ問い合わせる必要はない。
+           手形が無効でも「誰の控えか」の照合はできる。 */
+        const sb = createBrowserSupabase();
+        const { data: sess } = await sb.auth.getSession();
+        let u = sess?.session?.user ?? null;
+        if (!u) {
+          const { data } = await sb.auth.getUser();
+          u = data?.user ?? null;
+        }
+        if (!alive) return;
+        setAccount(u ? { id: u.id, email: u.email ?? null } : null);
+      } catch { /* 分からないままにする */ } finally {
+        if (alive) setAccountResolved(true);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  /* 保存できないまま残っていた編集を戻す。
+     利用者が誰か決まってから、1回だけ行う。
+       ・別のアカウントの控えは使わない（消す）
+       ・サーバの保存より前の控えは使わない
+       ・中身が空の控えで、保存済みの中身を上書きしない
+     戻したものは「未保存」のままにする（勝手に保存はしない）。 */
+  useEffect(() => {
+    if (!accountResolved || loading || restoreDone.current) return;
+    restoreDone.current = true;
+    const kept = readDraft(siteIdParam, account?.id ?? null);
+    if (!kept) {
+      // 別アカウントのものが残っていれば、ここで消す
+      const foreign = readDraft(siteIdParam, null);
+      if (foreign?.account && account && foreign.account !== account.id) clearDraft(siteIdParam);
+      return;
+    }
+    if (!siteIdParam) return;                       // 新規は最初から state に入っている
+    if (kept.siteId !== siteIdParam) return;
+    if (kept.at <= serverSavedAt.current) return;
+    const keptHasContent = kept.site?.pages?.some(pg => (pg.blocks ?? []).length > 0);
+    if (!keptHasContent && serverHadContent.current) return;
+    setSite(kept.site);
+    setIntake(kept.intake);
+    setRestoredDraft(true);
+    hydrating.current = false;                      // これは「未保存の編集」として扱う
+  }, [accountResolved, loading, account, siteIdParam]);
+
+  /* 保存できていない内容を、この端末に控える。
+     保存済みのサイトでも控える（保存に失敗した編集こそ失いたくない）。
+     保存できたときだけ、下の save() が消す。
+
+     控えるのは「保存できていない状態のとき」だけ。
+     読み込みの途中や、保存済みでそのままのときに書くと、
+     まだ中身が入っていない画面の姿を控えてしまい、次に開いたときに
+     それを戻して**保存済みの中身を空で上書きする**。 */
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      if (siteId) { window.sessionStorage.removeItem(DRAFT_KEY); return; }
-      if (step === 'intake' && site.pages.length === 0 && !intake.name.trim()) return;
-      window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ intake, site, step, at: Date.now() }));
-    } catch { /* 使えなくても、保存そのものは動く */ }
-  }, [siteId, site, intake, step]);
+    if (loading) return;                                   // 読み込み中の空っぽを控えない
+    if (saveState.kind === 'clean') return;                // 保存済みと同じなら控えは要らない
+    if (step === 'intake' && site.pages.length === 0 && !intake.name.trim()) return;
+    const kept = writeDraft({
+      account: account?.id ?? null, siteId, intake, site, step, at: Date.now(),
+    });
+    setDraftKept(kept);
+  }, [siteId, site, intake, step, account, saveState.kind, loading]);
 
-  /* 未保存のまま閉じようとしたら、ブラウザに確認させる。
-     「保存した」と誤解したまま閉じて消える、を防ぐ。 */
+  /* 保存できていないまま閉じようとしたら、ブラウザに確認させる。
+     未保存（dirty）だけでなく、保存中（saving）と保存失敗（failed）も止める。
+     失敗したまま閉じるのが、いちばん失いやすい。 */
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (saveStateRef.current.kind !== 'dirty') return;
+      const k = saveStateRef.current.kind;
+      if (k !== 'dirty' && k !== 'saving' && k !== 'failed') return;
       e.preventDefault();
       e.returnValue = '';
     };
@@ -469,6 +593,12 @@ function StudioInner() {
         setPublishedAt(s.published ? (s.updated_at as string) : null);
         setSelectedId(pages[0]?.blocks?.[0]?.id ?? null);
         hydrating.current = true;   // この差し替えは編集ではない
+
+        /* 控えを戻すのは、利用者が誰か分かってから（下の useEffect）。
+           誰のものか確かめる前に画面へ出すと、別のアカウントの下書きを
+           見せてしまう。ここでは、サーバがいつ保存したかだけ控える。 */
+        serverSavedAt.current = Date.parse(String(s.updated_at ?? '')) || 0;
+        serverHadContent.current = pages.some(pg => (pg.blocks ?? []).length > 0);
         /* 中身がまだ何も無いサイト（一覧から「新しいサイト」で作った直後）は、
            空の編集画面ではなく4つの質問から始める。答えたあとは、この
            サイトにそのまま書き込む（新しいサイトは作らない）。 */
@@ -539,6 +669,9 @@ function StudioInner() {
   const save = useCallback(async () => {
     const s = siteRef.current;
     const seq = editSeq.current;
+    /* 新規のときの控えは 'new' の鍵で置いてある。保存できたら、
+       新しいサイトIDの鍵とあわせて、そちらも消す。 */
+    const wasNew = !siteId;
     setSaveState({ kind: 'saving' });
     const payload = {
       name: s.name || '無題のサイト',
@@ -581,8 +714,17 @@ function StudioInner() {
       }
       setBlocked(null);
       setSavedSincePublish(true);
-      // 送っているあいだに続きを編集していたら、保存済みにはしない
-      setSaveState(editSeq.current === seq ? { kind: 'clean', at: new Date() } : { kind: 'dirty' });
+      setRestoredDraft(false);
+      /* 送っているあいだに続きを編集していたら、保存済みにはしない。
+         控えも消さない（この保存に入っていない編集が、そこにしか無いため）。
+         消すのは「送った内容がそのまま最新」のときだけ。 */
+      if (editSeq.current === seq) {
+        clearDraft(id);
+        if (wasNew) clearDraft(null);
+        setSaveState({ kind: 'clean', at: new Date() });
+      } else {
+        setSaveState({ kind: 'dirty' });
+      }
     } catch (e) {
       setSaveState({ kind: 'failed', message: e instanceof Error ? e.message : '保存できませんでした' });
     }
@@ -681,7 +823,10 @@ function StudioInner() {
     name: site.name,
     pages: site.pages,
     notifyEmail: site.settings.notifyEmail,
-  }), [site.name, site.pages, site.settings.notifyEmail]);
+    /* 専用の届け先が空のとき、実APIはこのアカウントのメールへ送る。
+       分かっている画面なので、どこへ届くかまで出す。 */
+    ownerEmail: account?.email ?? undefined,
+  }), [site.name, site.pages, site.settings.notifyEmail, account?.email]);
 
   /* ── 画面 ── */
 
@@ -737,22 +882,35 @@ function StudioInner() {
         </div>
       </header>
 
+      {restoredDraft && !blocked && (
+        <div className="bg-sky-50 border-b border-sky-200 px-4 py-2 flex flex-wrap items-center gap-x-3">
+          <span className="text-[13px] font-bold text-sky-900">
+            前回、保存できていなかった編集をこの端末から戻しました。
+          </span>
+          <span className="text-[11px] text-sky-800">まだ保存していません。内容を確かめて「保存」を押してください。</span>
+        </div>
+      )}
+
       {blocked && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-[13px] font-bold text-amber-900">
-            {blocked.kind === 'login'
-              ? '保存するにはログインが必要です。いま作った中身は、この端末に残してあります。'
-              : (blocked.message || '保存するには契約が必要です。') + ' いま作った中身は、この端末に残してあります。'}
+            {blocked.kind === 'login' ? '保存するにはログインが必要です。' : (blocked.message || '保存するには契約が必要です。')}
+            {draftKept
+              ? ' 打った内容は、この端末に残してあります。'
+              : ' この端末に控えを残せませんでした。この画面を閉じると消えます。'}
           </span>
           <a
             href={blocked.kind === 'login'
-              ? `/laruHP/auth/login?redirectTo=${encodeURIComponent('/laruHP/studio')}`
+              ? `/laruHP/auth/login?redirectTo=${encodeURIComponent(
+                  siteId ? `/laruHP/studio?siteId=${siteId}` : '/laruHP/studio')}`
               : '/laruHP/plans'}
             className="text-[13px] font-bold text-white bg-amber-700 hover:bg-amber-800 rounded-md px-3 py-1">
             {blocked.kind === 'login' ? 'ログインして戻る' : '料金を見る'}
           </a>
           <span className="text-[11px] text-amber-800">
-            戻ってきたら、もう一度「保存」を押してください。続きから直せます。
+            {draftKept
+              ? '戻ってきたら、もう一度「保存」を押してください。同じサイトの続きから直せます。'
+              : 'この画面を開いたまま、別のタブで手当てしてから、もう一度「保存」を押してください。'}
           </span>
         </div>
       )}

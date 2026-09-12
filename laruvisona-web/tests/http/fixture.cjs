@@ -110,7 +110,7 @@ function match(row, key, spec) {
    「保存できなかったとき」「保存の途中で別の画面が更新したとき」を
    本物の失敗として起こすために使う。応答の差し替えではなく、
    ここが実際に失敗を返すので、アプリ側の経路はそのまま通る。 */
-const CONTROL = { failWrites: false, beforeUpdate: null };
+const CONTROL = { failWrites: false, failAuth: false, slowWriteMs: 0, beforeUpdate: null };
 
 /** 更新のたびに進む時刻。同じミリ秒で2回呼ばれても必ず進む */
 let lastTouch = 0;
@@ -136,6 +136,12 @@ http.createServer((req, res) => {
         let next = {};
         try { next = JSON.parse(body || '{}'); } catch { /* noop */ }
         if ('failWrites' in next) CONTROL.failWrites = !!next.failWrites;
+        /* ログインが切れた状態を作る。/auth/v1/user が401を返すので、
+           アプリ側の requireUser() が落ち、APIが401を返す。
+           画面の「保存できなかったときの戻り方」を、実際の経路で確かめるため。 */
+        if ('failAuth' in next) CONTROL.failAuth = !!next.failAuth;
+        /* 保存をわざと遅くする。送っている最中に続きを打つ状況を作るため。 */
+        if ('slowWriteMs' in next) CONTROL.slowWriteMs = Number(next.slowWriteMs) || 0;
         if ('beforeUpdate' in next) CONTROL.beforeUpdate = next.beforeUpdate;
       }
       send(200, CONTROL);
@@ -155,6 +161,7 @@ http.createServer((req, res) => {
       return u ? send(200, u) : send(404, { message: 'User not found' });
     }
     if (url.pathname.endsWith('/user')) {
+      if (CONTROL.failAuth) return send(401, { message: 'fixture: ログインが切れた状態にしています' });
       if (!known) return send(401, { message: 'invalid claim: missing sub claim' });
       return send(200, { id: '7c9e6679-7425-40de-944b-e07fc1f90ae7', email: 'owner@example.com', aud: 'authenticated', role: 'authenticated' });
     }
@@ -179,6 +186,13 @@ http.createServer((req, res) => {
       };
       if (t === 'sites' && req.method === 'PATCH') {
         if (CONTROL.failWrites) return send(500, { message: 'fixture: 書き込みを失敗させています' });
+        if (CONTROL.slowWriteMs > 0) {
+          const ms = CONTROL.slowWriteMs;
+          CONTROL.slowWriteMs = 0;          // 1回だけ遅くする
+          return setTimeout(() => applySitePatch(), ms);
+        }
+        return applySitePatch();
+        function applySitePatch() {
         /* 読み取りと書き込みのあいだに、別の画面が更新した状況を作る。
            一度だけ効く。合成の元が古くなるので、上書きが起きるなら露見する。 */
         if (CONTROL.beforeUpdate) {
@@ -200,6 +214,7 @@ http.createServer((req, res) => {
         // 同時更新の検出はこの値で行うので、偽物でも同じように進める。
         rows.forEach(r => Object.assign(r, patch, { updated_at: touch() }));
         return out(rows, 200);
+        }
       }
       /* 新しいサイトを作る（POST /api/sites）。
          はじめての利用者の通し確認で、実際に1件作るために要る。
