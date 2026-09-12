@@ -34,6 +34,8 @@ import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publ
 import { withPreviewBridge } from '@/lib/preview-frame';
 import { ImageField, FocalField, ImageUploadContext } from '@/components/studio/ImageField';
 import { editStudioBlock } from '@/lib/studio-image';
+import { STUDIO_PALETTES } from '@/lib/studio-palettes';
+import { useStudioHistory } from '@/components/studio/useStudioHistory';
 import './studio-editor.css';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
 
@@ -388,7 +390,7 @@ function StudioInner() {
     industry: 'beauty', name: '', area: '', audience: '', goal: 'booking', description: '',
   }));
 
-  const [site, setSite] = useState<StudioSite>(() => ({
+  const { site, setSite, resetSite, undo, redo, canUndo, canRedo, breakGroup } = useStudioHistory<StudioSite>(() => ({
     name: '', pages: [], settings: {
       colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
       accentColor: '#2563eb', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
@@ -403,9 +405,24 @@ function StudioInner() {
   const device=deviceChoice??(mobile?'sp':'pc');
   const [panel, setPanel] = useState<'block' | 'design' | 'ready'>('block');
   const [mobileTool,setMobileTool]=useState<'preview'|'blocks'|'settings'>('preview');
+  const [widePreview,setWidePreview]=useState(false);
+  const [historyNote,setHistoryNote]=useState('');
   const [fieldFocus,setFieldFocus]=useState('');
   const [focusRequest,setFocusRequest]=useState(0);
   const [uploads,setUploads]=useState(0);
+  const undoEdit=useCallback(()=>{if(uploads||!canUndo)return;undo();setHistoryNote('変更を取り消しました。保存すると反映されます。');},[uploads,canUndo,undo]);
+  const redoEdit=useCallback(()=>{if(uploads||!canRedo)return;redo();setHistoryNote('変更をやり直しました。保存すると反映されます。');},[uploads,canRedo,redo]);
+  useEffect(()=>{
+    if(step!=='edit'||loading||loadError)return;
+    const key=(e:KeyboardEvent)=>{
+      if(e.key==='Escape'){setWidePreview(false);return;}
+      const target=e.target as HTMLElement;
+      if(target.closest('input,textarea,select,[contenteditable]')||!(e.metaKey||e.ctrlKey)||e.altKey)return;
+      if(e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)redoEdit();else undoEdit();}
+      else if(e.key.toLowerCase()==='y'){e.preventDefault();redoEdit();}
+    };
+    window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
+  },[step,loading,loadError,undoEdit,redoEdit]);
   const reportUpload=useCallback((active:boolean)=>setUploads(n=>Math.max(0,n+(active?1:-1))),[]);
   const settingsPane=useRef<HTMLDivElement>(null);
   useEffect(()=>{if(!fieldFocus)return; const frame=requestAnimationFrame(()=>{const el=settingsPane.current?.querySelector<HTMLElement>(`[data-field-key="${fieldFocus}"]`);if(el)settingsPane.current?.scrollTo({top:el.offsetTop-80,behavior:'instant'});});return()=>cancelAnimationFrame(frame)},[fieldFocus,focusRequest]);
@@ -498,18 +515,18 @@ function StudioInner() {
       return;
     }
     if (!siteIdParam) {
-      setSite(kept.site); setIntake(kept.intake); setStep(kept.step);
+      resetSite(kept.site); setIntake(kept.intake); setStep(kept.step);
       setRestoredDraft(true); hydrating.current = false; return;
     }
     if (kept.siteId !== siteIdParam) return;
     if (kept.at <= serverSavedAt.current) return;
     const keptHasContent = kept.site?.pages?.some(pg => (pg.blocks ?? []).length > 0);
     if (!keptHasContent && serverHadContent.current) return;
-    setSite(kept.site);
+    resetSite(kept.site);
     setIntake(kept.intake);
     setRestoredDraft(true);
     hydrating.current = false;                      // これは「未保存の編集」として扱う
-  }, [accountResolved, loading, loadError, account, siteIdParam]);
+  }, [accountResolved, loading, loadError, account, siteIdParam, resetSite]);
 
   /* 保存できていない内容を、この端末に控える。
      保存済みのサイトでも控える（保存に失敗した編集こそ失いたくない）。
@@ -560,7 +577,7 @@ function StudioInner() {
           ? raw.pages
           : [{ id: 'page-main', name: 'トップページ', path: '/', blocks: Array.isArray(raw) ? raw : [], seo: { ...EMPTY_SEO, ...(s.seo_json || {}) } }];
         const st = (s.settings_json || {}) as Record<string, unknown>;
-        setSite({
+        resetSite({
           name: s.name || '',
           pages,
           settings: {
@@ -603,14 +620,14 @@ function StudioInner() {
       }
     })();
     return () => { alive = false; };
-  }, [siteIdParam]);
+  }, [siteIdParam, resetSite]);
 
   const page = site.pages[0];
   const blocks = useMemo(() => page?.blocks ?? [], [page]);
 
   const updateBlocks = useCallback((next: Block[]) => {
     setSite(prev => ({ ...prev, pages: prev.pages.map((p, i) => i === 0 ? { ...p, blocks: next } : p) }));
-  }, []);
+  }, [setSite]);
 
   const updateBlockData = useCallback((id: string, key: string, value: unknown) => {
     setSite(prev => ({
@@ -618,14 +635,14 @@ function StudioInner() {
       pages: prev.pages.map((p, i) => i === 0
         ? { ...p, blocks: p.blocks.map(b => b.id === id ? editStudioBlock(b, key, value) : b) }
         : p),
-    }));
-  }, []);
+    }), typeof value==='string'||typeof value==='number'?`${id}:${key}`:undefined);
+  }, [setSite]);
 
   const setDesign = useCallback((patch: Partial<SiteDesign>) => {
     setSite(prev => prev.settings.design
       ? { ...prev, settings: { ...prev.settings, design: { ...prev.settings.design, ...patch } } }
-      : prev);   // 使いはじめる前は、触っても何も入れない
-  }, []);
+      : prev, `design:${Object.keys(patch).join(',')}`);   // 使いはじめる前は、触っても何も入れない
+  }, [setSite]);
 
   /** 「サイト全体の設定」を使いはじめる。ここで初めて design が入る */
   const adoptDesign = useCallback((base: SiteDesign, presetId = '') => {
@@ -633,7 +650,7 @@ function StudioInner() {
       ...prev,
       settings: { ...prev.settings, design: { ...base }, accentColor: base.accent, designPreset: presetId },
     }));
-  }, []);
+  }, [setSite]);
 
   /* ── プレビューのHTML ── */
   const [previewHtml, setPreviewHtml] = useState('');
@@ -657,6 +674,7 @@ function StudioInner() {
 
   /* ── 保存 ── */
   const save = useCallback(async () => {
+    breakGroup();
     const s = siteRef.current;
     const seq = editSeq.current;
     /* 新規のときの控えは 'new' の鍵で置いてある。保存できたら、
@@ -718,7 +736,7 @@ function StudioInner() {
     } catch (e) {
       setSaveState({ kind: 'failed', message: e instanceof Error ? e.message : '保存できませんでした' });
     }
-  }, [siteId, intake.industry]);
+  }, [siteId, intake.industry, breakGroup]);
 
   // 保存されている内容を、サーバから取り直す。
   // 別の画面や別の端末で直したあと、こちらの画面を最新にそろえるため。
@@ -768,10 +786,10 @@ function StudioInner() {
     // 使ったら持ち越さない
     clearDesignChoice();
     const made = makeStarterSite(intake, presetId);
-    setSite(made);
+    resetSite(made);
     setSelectedId(made.pages[0].blocks[0]?.id ?? null);
     setStep('edit');
-  }, [intake]);
+  }, [intake, resetSite]);
 
   /* ── 公開準備の確認 ──
      判定は lib/publish-readiness.ts に寄せてある。編集画面（ビルダー）と
@@ -808,14 +826,14 @@ function StudioInner() {
   const def = selected ? BLOCK_DEFS[selected.type] : null;
 
   return (
-    <ImageUploadContext.Provider value={{pending:uploads>0,report:reportUpload}}><div className="se-editor h-screen flex flex-col bg-slate-100 text-slate-900" data-mobile-tool={mobileTool}>
+    <ImageUploadContext.Provider value={{pending:uploads>0,report:reportUpload}}><div className="se-editor h-screen flex flex-col bg-slate-100 text-slate-900" data-mobile-tool={mobileTool} data-wide-preview={widePreview} onBlurCapture={breakGroup}>
       {/* 上の帯 */}
       <header className="se-editor-header flex items-center gap-3 px-4 h-14 bg-white border-b border-slate-200 flex-shrink-0">
         <Link href="/laruHP/dashboard" className="text-sm font-bold text-slate-500 hover:text-slate-900">← 一覧</Link>
         <input
           className="font-bold text-slate-900 border border-transparent hover:border-slate-300 focus:border-sky-400 rounded px-2 py-1 text-sm w-56 focus:outline-none"
           value={site.name} placeholder="店名"
-          onChange={e => setSite(prev => ({ ...prev, name: cleanIncomingText(e.target.value, 120) }))}
+          onChange={e => setSite(prev => ({ ...prev, name: cleanIncomingText(e.target.value, 120) }), 'site-name')}
         />
         <div className="se-devices flex bg-slate-100 rounded-lg p-0.5 ml-2">
           {(['pc', 'sp'] as const).map(k => (
@@ -872,6 +890,14 @@ function StudioInner() {
         </div>
       )}
 
+      <div className="se-session-bar">
+        <div className="se-history-controls" aria-label="編集履歴">
+          <button type="button" onClick={undoEdit} disabled={!canUndo||uploads>0} title="取り消す（⌘ / Ctrl Z）"><span aria-hidden="true">↶</span>取り消す</button>
+          <button type="button" onClick={redoEdit} disabled={!canRedo||uploads>0} title="やり直す（⌘ / Ctrl Shift Z）"><span aria-hidden="true">↷</span>やり直す</button>
+        </div>
+        <span className="se-history-note" role="status">{historyNote||'自由に試して、ひとつ前に戻せます'}</span>
+        <button className="se-wide-toggle" type="button" aria-pressed={widePreview} onClick={()=>setWidePreview(v=>!v)}>{widePreview?'編集に戻る':'大きく見る'}<span aria-hidden="true">{widePreview?'↙':'↗'}</span></button>
+      </div>
       <div className="se-workspace flex-1 flex min-h-0">
         {/* 左: 節の一覧 */}
         <aside className="se-blocks w-60 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
@@ -902,7 +928,7 @@ function StudioInner() {
 
         {/* 中央: できあがりの見え方 */}
         <main className="se-canvas flex-1 min-w-0 p-4 overflow-hidden"><div className="se-canvas-hint"><span><i/>完成像を見ながら編集</span><span>写真・文字を押すと編集できます</span></div>
-          <Preview html={previewHtml} device={device} selectedId={selectedId} selectedField={fieldFocus} onSelect={(id,kind) => {const b=blocks.find(x=>x.id===id);if(!b)return;setSelectedId(id);setPanel('block');setMobileTool('settings');const fields=BLOCK_DEFS[b.type]?.fields||[];const f=fields.find(f=>kind==='image'?f.type==='image':kind==='button'?f.key==='ctaText':f.type==='multiline'||f.type==='text');setFieldFocus(f?.key||'');setFocusRequest(n=>n+1);}} />
+          <Preview html={previewHtml} device={device} selectedId={selectedId} selectedField={fieldFocus} onSelect={(id,kind) => {setWidePreview(false);const b=blocks.find(x=>x.id===id);if(!b)return;setSelectedId(id);setPanel('block');setMobileTool('settings');const fields=BLOCK_DEFS[b.type]?.fields||[];const f=fields.find(f=>kind==='image'?f.type==='image':kind==='button'?f.key==='ctaText':f.type==='multiline'||f.type==='text');setFieldFocus(f?.key||'');setFocusRequest(n=>n+1);}} />
         </main>
 
         {/* 右: 設定 */}
@@ -1142,7 +1168,7 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
             写真の切り取り方が下の設定で置き換わります。見え方が変わるので、
             変えたくなければ、このままで大丈夫です。
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="se-design-presets">
             {DESIGN_PRESETS.map(p => (
               <button key={p.id} type="button"
                 onClick={() => adoptDesign(p.design, p.id)}
@@ -1156,20 +1182,28 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
 
       {d && (
         <Row label="雰囲気を選び直す" hint="いまの文章と写真はそのまま、見た目だけ入れ替わります">
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="se-design-presets">
             {DESIGN_PRESETS.map(p => (
               <button key={p.id} type="button"
                 onClick={() => setSite(prev => ({
                   ...prev,
                   settings: { ...prev.settings, design: { ...p.design }, designStyle: p.designStyle, fontFamily: p.fontFamily, accentColor: p.design.accent, designPreset: p.id },
                 }))}
-                className={`text-left px-2 py-1.5 rounded-lg border text-[12px] font-bold ${site.settings.designPreset === p.id ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}>
-                {p.name}
+                aria-pressed={site.settings.designPreset === p.id}
+                className="se-design-preset">
+                <span className="se-preset-art" aria-hidden="true" style={{background:p.design.bg,color:p.design.ink}}><span style={{fontFamily:p.fontFamily==='mincho'?'serif':'sans-serif'}}>あ</span><i style={{background:p.design.accent,borderRadius:p.design.radius}}/><em style={{background:p.design.ink}}/></span>
+                <span>{p.name}<b aria-hidden="true">{site.settings.designPreset===p.id?'✓':'↗'}</b></span>
               </button>
             ))}
           </div>
         </Row>
       )}
+
+      {d && <Row label="色の組み合わせ" hint="写真・文章・書体はそのまま。色だけ試せます。">
+        <div className="se-palettes">{STUDIO_PALETTES.map(p=><button type="button" key={p.name} aria-label={p.name} aria-pressed={d.bg===p.bg&&d.ink===p.ink&&d.accent===p.accent&&d.surface===p.surface&&d.line===p.line&&d.onAccent===p.onAccent} onClick={()=>setSite(prev=>({...prev,settings:{...prev.settings,accentColor:p.accent,design:prev.settings.design?{...prev.settings.design,bg:p.bg,ink:p.ink,surface:p.surface,accent:p.accent,line:p.line,onAccent:p.onAccent}:null}}))}>
+          <span aria-hidden="true">{[p.bg,p.surface,p.accent,p.ink].map(color=><i key={color} style={{background:color}}/>)}</span><b>{p.name}</b>
+        </button>)}</div>
+      </Row>}
 
       <Row label="書体">
         <select className={inputCls} value={site.settings.fontFamily}
