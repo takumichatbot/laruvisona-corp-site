@@ -92,7 +92,7 @@ export default function PurposePicker() {
               <div className="grid md:grid-cols-[3rem_minmax(0,17rem)_minmax(0,1fr)] gap-x-6 gap-y-1.5 items-baseline">
                 <span className="text-[13px] font-bold text-sky-700 tabular-nums">0{i + 1}</span>
                 <span className="text-[15px] font-bold text-slate-900">{p.label}</span>
-                <p className="text-[14px] leading-[1.95] text-slate-600">{p.lead}</p>
+                <p className="text-[14px] leading-[1.95] text-slate-600 max-w-[26em] [word-break:auto-phrase]">{p.lead}</p>
               </div>
               <div
                 id={`${base}-${p.id}`}
@@ -101,7 +101,7 @@ export default function PurposePicker() {
               >
                 <p className="text-[12px] font-bold tracking-widest text-sky-700 mb-2">{p.answer}</p>
                 {p.body.map(t => (
-                  <p key={t} className="text-[14px] leading-[2] text-slate-700 mb-3 max-w-[44em]">{t}</p>
+                  <p key={t} className="text-[14px] leading-[2] text-slate-700 mb-3 max-w-[28em] [word-break:auto-phrase]">{t}</p>
                 ))}
                 <div className="flex flex-wrap items-center gap-3 mt-4">
                   {p.link.external ? (

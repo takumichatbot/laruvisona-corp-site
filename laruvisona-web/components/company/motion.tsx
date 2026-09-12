@@ -60,7 +60,12 @@ export function MotionProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** 画面の隅に置く停止ボタン。小さい画面では申込・相談の導線と重ならない位置にする */
+/**
+ * 画面の隅に置く停止ボタン。
+ *
+ * 置き場所は**左下**。右下は LARUbot のチャットが出る場所なので空けておく。
+ * （スマホでチャット・停止ボタン・相談の導線が重ならないこと）
+ */
 function MotionButton() {
   const { paused, toggle, reduced } = useMotion();
   return (
@@ -69,7 +74,7 @@ function MotionButton() {
       id="page-motion"
       onClick={toggle}
       aria-pressed={paused}
-      className="fixed z-50 right-3 bottom-3 md:right-5 md:bottom-5 min-h-[40px] px-3.5
+      className="fixed z-50 left-3 bottom-3 md:left-5 md:bottom-5 min-h-[40px] px-3.5
         rounded-full border border-white/20 bg-[#040a14]/85 backdrop-blur
         text-[11px] md:text-[12px] font-bold text-white/75 hover:text-white hover:border-white/45
         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"

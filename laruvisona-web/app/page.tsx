@@ -15,6 +15,7 @@
  */
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import BrandFonts from '@/components/BrandFonts';
 import AssembleDemo from '@/components/lp/AssembleDemo';
 import { MotionProvider } from '@/components/company/motion';
@@ -79,6 +80,18 @@ const COMPANY: Array<[string, React.ReactNode]> = [
 ];
 
 export default function Home() {
+  /* 会社トップには、画面を止める導入演出（components/Intro）を置いていない。
+     LARUbot のチャットは「導入演出が終わってから出す」作りなので、
+     このページでは最初の描画が落ち着いた時点で終わりを知らせる。
+     知らせないと、保険の待ち時間（6秒）ぶんチャットが出てこない。 */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { sessionStorage.setItem('lv_intro_seen', '1'); } catch { /* 端末が許さないときは無視 */ }
+      window.dispatchEvent(new Event('lv:intro-done'));
+    }, 400);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <MotionProvider>
       <BrandFonts />
@@ -88,32 +101,49 @@ export default function Home() {
         {/* ① 冒頭 ─ 一滴から、正式ロゴの粒へ。そして透明な面がひらく */}
         <OpeningStage />
 
-        {/* ② 実物 ─ 開いた面の向こう。ここから柔らかな白へ切り替える。
-            出ているのは映像ではなく、公開ページを作るのと同じ処理の結果。 */}
+        {/* ② 実物へ ─ ロゴが退いたあとの静かな画面に、この一行だけが残る。
+            冒頭の迫力のあとに、読むための場面をひとつ置く。 */}
         <section
           id="live"
-          className="relative z-10 -mt-[100svh] pt-[46svh] pb-16 md:pb-24
-            bg-[linear-gradient(180deg,transparent_0%,rgba(4,8,15,.5)_16%,#0a1626_30%,#e9edf2_52%,#f4f6f8_100%)]"
+          className="relative z-10 -mt-[100svh] pt-[56svh] pb-[16svh] md:pb-[20svh]
+            bg-[linear-gradient(180deg,transparent_0%,rgba(4,8,15,.55)_16%,#04080f_36%,#04080f_100%)]"
         >
           <div className="max-w-6xl mx-auto px-5 md:px-8">
-            <div className="max-w-[46rem] mb-8 md:mb-10">
-              <p className="text-[11px] font-bold tracking-[0.2em] text-sky-300 mb-3">01 / 実物</p>
-              <h2 className="text-[26px] md:text-[38px] font-bold leading-[1.45] text-white mb-4">
-                <span className="block whitespace-nowrap">これは、映像では</span>
-                <span className="block whitespace-nowrap md:inline">ありません。</span>
-              </h2>
-              <p className="text-[14px] md:text-[16px] leading-[2] text-slate-300">
-                下に出ているのは、お客さまのページを公開するのと同じ処理で、いま作ったサイトです。
-                見せ方を選ぶと、写真も文章も料金もそのままで、見た目だけが作り直されます。
-              </p>
-            </div>
+            <p className="text-[10px] md:text-[11px] font-bold tracking-[0.22em] text-sky-300/80 mb-5">01 / 実物</p>
+            <h2 className="text-[clamp(26px,6.6vw,34px)] md:text-[clamp(34px,3.2vw,44px)] font-bold
+              leading-[1.42] tracking-[-0.015em] text-white mb-6 max-w-[14em] [word-break:auto-phrase]">
+              ここから先は、映像ではありません。
+            </h2>
+            <p className="text-[15px] md:text-[17px] leading-[2] text-slate-300 max-w-[26em] [word-break:auto-phrase]">
+              下に出てくるのは、お客さまのページを公開するのと同じ処理で、いま作ったサイトです。
+              見せ方を選ぶと、写真も文章も料金もそのままで、見た目だけが作り直されます。
+            </p>
+          </div>
+        </section>
 
-            <div className="rounded-3xl border border-white/10 bg-white/95 p-3 md:p-6 shadow-[0_40px_120px_-40px_rgba(2,10,24,.9)]">
+        {/* 触る場面。ここからは柔らかな白。水も光も持ち込まない（操作画面を覆わない） */}
+        <section
+          id="live-demo"
+          className="relative z-10 text-slate-900
+            bg-[linear-gradient(180deg,#04080f_0%,#0b1727_14%,#c9d2dd_46%,#eef1f5_62%,#f4f6f8_100%)]"
+        >
+          <div className="max-w-6xl mx-auto px-5 md:px-8 pt-[22svh] pb-16 md:pb-24">
+            <div className="rounded-3xl border border-slate-200 bg-white p-3 md:p-6 shadow-[0_40px_120px_-45px_rgba(2,10,24,.55)]">
               <AssembleDemo startCta />
             </div>
-
-            <p className="mt-4 text-[12px] text-slate-500">
+            <p className="mt-4 text-[12px] leading-[1.9] text-slate-500 [word-break:auto-phrase]">
               見本のお店（結い庵）は架空です。写真は見本用の生成素材で、送信はどこへも届きません。
+            </p>
+          </div>
+        </section>
+
+        {/* 迫力のある場面のあとに、静かに読む一行を置く。
+            実物（触る）から、できること（読む）へ渡すところ */}
+        <section aria-hidden="false" className="relative z-10 bg-[#f4f6f8] text-slate-900">
+          <div className="max-w-5xl mx-auto px-5 md:px-8 py-20 md:py-32">
+            <p className="text-[clamp(19px,4.8vw,22px)] md:text-[clamp(22px,2.2vw,28px)]
+              leading-[1.85] font-bold tracking-[-0.01em] text-slate-800 max-w-[18em] [word-break:auto-phrase]">
+              同じ作り方で、お店のサイトも、問い合わせの受け口も、その先の仕組みも。
             </p>
           </div>
         </section>
@@ -122,10 +152,10 @@ export default function Home() {
         <section id="purpose" className="relative z-10 bg-[#f4f6f8] text-slate-900 px-5 md:px-8 py-16 md:py-24">
           <div className="max-w-5xl mx-auto">
             <p className="text-[11px] font-bold tracking-[0.2em] text-sky-700 mb-3">02 / できること</p>
-            <h2 className="text-[24px] md:text-[34px] font-bold leading-[1.45] mb-3">
+            <h2 className="text-[clamp(24px,6.2vw,30px)] md:text-[clamp(30px,3vw,38px)] font-bold leading-[1.45] tracking-[-0.015em] mb-3">
               どこから始めますか。
             </h2>
-            <p className="text-[14px] md:text-[15px] leading-[2] text-slate-600 mb-10 max-w-[42em]">
+            <p className="text-[15px] md:text-[16px] leading-[2] text-slate-600 mb-10 max-w-[28em] [word-break:auto-phrase]">
               小さな会社とお店のために、ホームページと問い合わせ対応の仕組みを作っています。
               合うものが無いときは、受託開発でつくります。
             </p>
@@ -143,7 +173,7 @@ export default function Home() {
                   <div className="text-[12px] font-bold text-sky-700">{s.n}</div>
                   <div className="text-[15px] font-bold mt-1">{s.title}</div>
                   <div className="text-[11px] text-slate-500 mt-1 mb-2">{s.span}</div>
-                  <p className="text-[13px] leading-[1.9] text-slate-600">{s.body}</p>
+                  <p className="text-[13px] leading-[1.95] text-slate-600 [word-break:auto-phrase]">{s.body}</p>
                 </li>
               ))}
             </ol>
@@ -162,12 +192,12 @@ export default function Home() {
             </div>
             <div className="relative max-w-5xl mx-auto px-5 md:px-8 py-20 md:py-32">
               <p className="text-[11px] font-bold tracking-[0.2em] text-sky-300 mb-3">03 / 支える仕組み</p>
-              <h2 className="text-[26px] md:text-[38px] font-bold leading-[1.45] mb-5 max-w-[20em]">
+              <h2 className="text-[clamp(26px,6.6vw,32px)] md:text-[clamp(32px,3.2vw,42px)] font-bold leading-[1.42] tracking-[-0.015em] mb-5 max-w-[14em]">
                 表に見えるものの、
                 <br />
                 その奥まで作ります。
               </h2>
-              <p className="text-[14px] md:text-[16px] leading-[2] text-slate-300 max-w-[40em] mb-12">
+              <p className="text-[15px] md:text-[17px] leading-[2] text-slate-300 max-w-[27em] mb-12 [word-break:auto-phrase]">
                 画面の見た目だけでは、公開したあとの毎日は回りません。
                 作る・のこす・ひらく・つづける。この4つを一つの流れとして設計しています。
               </p>
@@ -178,7 +208,7 @@ export default function Home() {
                       <span className="text-[12px] font-bold text-sky-300 tabular-nums">{s.n}</span>
                       <h3 className="text-[17px] md:text-[19px] font-bold">{s.title}</h3>
                     </div>
-                    <p className="text-[13px] md:text-[14px] leading-[2] text-slate-300">{s.body}</p>
+                    <p className="text-[13px] md:text-[14px] leading-[2] text-slate-300 max-w-[26em] [word-break:auto-phrase]">{s.body}</p>
                   </li>
                 ))}
               </ol>
@@ -197,7 +227,7 @@ export default function Home() {
               {REASONS.map(r => (
                 <div key={r.title}>
                   <h3 className="text-[16px] font-bold mb-2 leading-[1.6]">{r.title}</h3>
-                  <p className="text-[13px] leading-[2] text-slate-400">{r.body}</p>
+                  <p className="text-[13px] leading-[2] text-slate-400 [word-break:auto-phrase]">{r.body}</p>
                 </div>
               ))}
             </div>
@@ -225,10 +255,10 @@ export default function Home() {
         <section id="contact" className="relative z-10 bg-[#04080f] px-5 md:px-8 py-20 md:py-28 border-t border-white/10">
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-[11px] font-bold tracking-[0.2em] text-sky-300 mb-4">04 / ご相談</p>
-            <h2 className="text-[26px] md:text-[36px] font-bold leading-[1.5] mb-5">
+            <h2 className="text-[clamp(26px,6.6vw,32px)] md:text-[clamp(32px,3.2vw,42px)] font-bold leading-[1.45] tracking-[-0.015em] mb-5">
               まだ、形になっていない話から。
             </h2>
-            <p className="text-[14px] leading-[2] text-slate-300 mb-9">
+            <p className="text-[15px] leading-[2] text-slate-300 mb-9 max-w-[26em] mx-auto [word-break:auto-phrase]">
               何を作るかが決まっていなくても構いません。
               伺ったうえで、そもそも作らないほうがよければ、そう申し上げます。
             </p>
