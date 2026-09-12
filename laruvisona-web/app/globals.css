@@ -169,3 +169,11 @@ h2.font-en {
   word-break: auto-phrase;
   line-break: strict;
 }
+
+/* 会社トップ：演出を止めているとき（端末の「動きを減らす」を含む）は、
+   冒頭を1画面にたたんで、実物の区画を重ねずに続けて出す。
+   （動かさないのに長い空きだけが残るのを避ける） */
+html[data-motion='paused'] #live {
+  margin-top: 0;
+  padding-top: 4rem;
+}

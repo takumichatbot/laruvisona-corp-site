@@ -15,6 +15,7 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { readDesignChoice, saveDesignChoice, clearDesignChoice } from '@/lib/design-handoff';
 import Link from 'next/link';
 import { exportToHTML } from '@/lib/html-export';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
@@ -305,6 +306,20 @@ function StudioInner() {
   const params = useSearchParams();
   const siteIdParam = params.get('siteId');
 
+  /* 会社トップで見せ方を選んでから来た場合、その選択を引き継ぐ。
+     引き継ぐのは見せ方の名前だけ。既にあるサイトを開いたときは読まない
+     （別のサイト・別のアカウントの設定が混ざらないようにするため）。 */
+  const designParam = params.get('design') || '';
+  const [handoff, setHandoff] = useState('');
+  useEffect(() => {
+    if (siteIdParam) return;
+    const fromUrl = DESIGN_PRESETS.some(p => p.id === designParam) ? designParam : '';
+    // ログインを挟むとURLの印は消える。端末に置き直してから読む
+    if (fromUrl) saveDesignChoice(fromUrl);
+    const kept = readDesignChoice();
+    setHandoff(DESIGN_PRESETS.some(p => p.id === kept) ? kept : '');
+  }, [siteIdParam, designParam]);
+
   const [siteId, setSiteId] = useState<string | null>(siteIdParam);
   const [step, setStep] = useState<'intake' | 'mood' | 'edit'>(siteIdParam ? 'edit' : 'intake');
   const [loading, setLoading] = useState(!!siteIdParam);
@@ -538,6 +553,8 @@ function StudioInner() {
 
   /* ── ヒアリングから、はじめの形を作る ── */
   const buildFromIntake = useCallback((presetId: string) => {
+    // 使ったら持ち越さない
+    clearDesignChoice();
     const preset = DESIGN_PRESETS.find(p => p.id === presetId) || DESIGN_PRESETS[0];
     const template = getTemplateForIndustry(intake.industry);
     let made: Block[] = template
@@ -635,7 +652,7 @@ function StudioInner() {
   }
 
   if (step === 'intake') return <Intake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} />;
-  if (step === 'mood') return <Mood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} />;
+  if (step === 'mood') return <Mood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} chosen={handoff} />;
 
   const selected = blocks.find(b => b.id === selectedId) || null;
   const def = selected ? BLOCK_DEFS[selected.type] : null;
@@ -1168,10 +1185,12 @@ const SAMPLE_PHOTOS = {
   heroW: 1200, heroH: 896,
 };
 
-function Mood({ intake, onBack, onPick }: {
+function Mood({ intake, onBack, onPick, chosen = '' }: {
   intake: IntakeAnswers;
   onBack: () => void;
   onPick: (presetId: string) => void;
+  /** 会社トップで選んできた見せ方。先頭に出して、選んだままだと分かるようにする */
+  chosen?: string;
 }) {
   const samples = useMemo(() => DESIGN_PRESETS.map(p => {
     const name = intake.name || '店名';
@@ -1224,10 +1243,16 @@ function Mood({ intake, onBack, onPick }: {
         </p>
         <p className="text-[11px] text-slate-400 mb-6">写真は見本です。お店の写真は、このあと入れ替えられます。</p>
 
+        {chosen && (
+          <p className="mb-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-[13px] text-sky-900">
+            会社トップで選んだ「{DESIGN_PRESETS.find(p => p.id === chosen)?.name}」を先頭に出しています。ここで選び直せます。
+          </p>
+        )}
         <div className="grid md:grid-cols-2 gap-5">
-          {samples.map(({ preset, html }) => (
+          {[...samples].sort((a, b) => (b.preset.id === chosen ? 1 : 0) - (a.preset.id === chosen ? 1 : 0)).map(({ preset, html }) => (
             <button key={preset.id} onClick={() => onPick(preset.id)}
-              className="text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-sky-500 overflow-hidden transition-colors">
+              className={`text-left bg-white rounded-2xl border-2 overflow-hidden transition-colors hover:border-sky-500
+                ${preset.id === chosen ? 'border-sky-500' : 'border-slate-200'}`}>
               <div className="pointer-events-none">
                 <ScaledFrame html={html} width={1280} height={1330} title={`${preset.name}の見本`} />
               </div>

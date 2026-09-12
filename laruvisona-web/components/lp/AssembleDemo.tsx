@@ -25,6 +25,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { exportToHTML } from '@/lib/html-export';
+import { saveDesignChoice } from '@/lib/design-handoff';
 import { DESIGN_PRESETS } from '@/lib/site-design';
 import type { Block, SEOSettings } from '@/types/laruHP';
 
@@ -324,7 +325,9 @@ const SWAP_TIMEOUT = 2600;
 
 type Slot = { gen: number; choiceId: string; html: string } | null;
 
-export default function AssembleDemo({ initialDevice }: { initialDevice?: Device } = {}) {
+export default function AssembleDemo(
+  { initialDevice, startCta = false }: { initialDevice?: Device; startCta?: boolean } = {},
+) {
   /** いま画面に出ている見せ方 */
   const [shown, setShown] = useState<string>(DEFAULT_CHOICE);
   /** 最後に押された見せ方。押した瞬間にこちらが変わる */
@@ -727,6 +730,25 @@ export default function AssembleDemo({ initialDevice }: { initialDevice?: Device
           </button>
         )}
       </div>
+
+      {/* 選んだ見せ方のまま、制作画面へ渡す。
+          持っていくのは見せ方の名前だけ（lib/design-handoff.ts）。
+          ログインを挟んでも消えないが、新しく作りはじめるときにしか使わない。 */}
+      {startCta && (
+        <div className="order-3 mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <a
+            href={`/laruHP/studio?design=${encodeURIComponent(picked)}`}
+            onClick={() => saveDesignChoice(picked)}
+            className="inline-flex items-center justify-center min-h-[52px] px-6 rounded-xl bg-slate-900 text-white text-[14px] font-bold
+              hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+          >
+            この見せ方で作りはじめる
+          </a>
+          <span className="text-[12px] text-slate-600">
+            「{shownChoice.name}」のまま制作画面へ進みます。4つの質問に答えると、たたき台ができます。
+          </span>
+        </div>
+      )}
 
       {/* 予約まで試す。見本のサロンの予約であって、LARU HP の申し込みではない */}
       <div className="order-3 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
