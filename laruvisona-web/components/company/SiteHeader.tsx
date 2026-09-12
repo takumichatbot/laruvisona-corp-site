@@ -22,7 +22,9 @@ export default function SiteHeader() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-40 transition-colors duration-300
-        ${solid ? 'bg-[#04080f]/85 backdrop-blur border-b border-white/10' : 'bg-transparent'}`}
+        ${solid
+          ? 'bg-[#04080f]/85 backdrop-blur border-b border-white/10'
+          : 'bg-[linear-gradient(180deg,rgba(4,8,15,.72),rgba(4,8,15,0))]'}`}
     >
       <div className="max-w-6xl mx-auto px-5 md:px-8 h-14 md:h-16 flex items-center justify-between gap-4">
         <Link href="/" aria-label="株式会社LaruVisona トップ" className="flex items-center shrink-0">
