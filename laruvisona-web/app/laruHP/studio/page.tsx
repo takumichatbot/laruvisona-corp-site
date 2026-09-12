@@ -19,13 +19,13 @@ import { readDesignChoice, saveDesignChoice, clearDesignChoice } from '@/lib/des
 import Link from 'next/link';
 import { exportToHTML } from '@/lib/html-export';
 import { canRecoverStudioDraft } from '@/lib/studio-draft';
-import { makeStarterSite } from '@/lib/studio-start';
+import { makeStarterSite, exampleFor } from '@/lib/studio-start';
 import { StudioIntake, StudioMood } from '@/components/studio/StudioStart';
 import {
   DESIGN_PRESETS, DEFAULT_DESIGN, normalizeDesign, type SiteDesign,
 } from '@/lib/site-design';
 import {
-  BLOCK_DEFS, blockIcon, blockLabel, blockSummary,
+  BLOCK_DEFS, INDUSTRY_CHOICES, blockLabel,
   type FieldDef, type IntakeAnswers,
 } from '@/lib/studio-schema';
 import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
@@ -38,6 +38,8 @@ import { STUDIO_PALETTES } from '@/lib/studio-palettes';
 import { CompareStudio, type ComparisonSection } from '@/components/studio/CompareStudio';
 import { studioChanges } from '@/lib/studio-comparison';
 import { useStudioHistory } from '@/components/studio/useStudioHistory';
+import BlockList, { BlockIcon } from '@/components/studio/BlockList';
+import { Plus, Film } from 'lucide-react';
 import './studio-editor.css';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
 
@@ -403,9 +405,11 @@ function StudioInner() {
   const [loading, setLoading] = useState(!!siteIdParam);
   const [loadError, setLoadError] = useState('');
 
-  const [intake, setIntake] = useState<IntakeAnswers>(() => ({
-    industry: 'beauty', name: '', area: '', audience: '', goal: 'booking', description: '',
-  }));
+  const [intake, setIntake] = useState<IntakeAnswers>(() => {
+    const requested = !siteIdParam ? params.get('industry') : null;
+    const industry = INDUSTRY_CHOICES.some(c => c.value === requested) ? requested! : 'beauty';
+    return {industry, name: '', area: '', audience: '', goal: exampleFor(industry).goal, description: ''};
+  });
 
   const { site, setSite, resetSite: resetHistory, undo, redo, canUndo, canRedo, breakGroup } = useStudioHistory<StudioSite>(() => ({
     name: '', pages: [], settings: {
@@ -972,28 +976,14 @@ function StudioInner() {
       <div className="se-workspace flex-1 flex min-h-0">
         {/* 左: 節の一覧 */}
         <aside className="se-blocks w-60 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
-          <div className="px-3 py-2 text-[11px] font-bold text-slate-400">ページの中身</div>
-          {blocks.map((b, i) => (
-            <div key={b.id}
-              className={`group px-3 py-2 border-l-4 cursor-pointer ${selectedId === b.id ? 'border-sky-500 bg-sky-50' : 'border-transparent hover:bg-slate-50'}`}
-              role="button" tabIndex={0} onKeyDown={e=>{if(e.target!==e.currentTarget)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelectedId(b.id);setPanel('block');setMobileTool('settings');}}} onClick={() => { setSelectedId(b.id); setPanel('block'); setMobileTool('settings'); }}>
-              <div className="flex items-center gap-2">
-                <span>{blockIcon(b)}</span>
-                <span className="text-[13px] font-bold text-slate-800 flex-1 truncate">{blockLabel(b)}</span>
-                <span className="opacity-0 group-hover:opacity-100 flex gap-1 text-[10px] text-slate-400">
-                  {i > 0 && <button onClick={e => { e.stopPropagation(); const a = [...blocks]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; updateBlocks(a); }}>▲</button>}
-                  {i < blocks.length - 1 && <button onClick={e => { e.stopPropagation(); const a = [...blocks]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; updateBlocks(a); }}>▼</button>}
-                  <button onClick={e => { e.stopPropagation(); if (confirm(`「${blockLabel(b)}」を消しますか`)) updateBlocks(blocks.filter(x => x.id !== b.id)); }}>✕</button>
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-400 truncate pl-6">{blockSummary(b)}</div>
-            </div>
-          ))}
+          <div className="se-block-heading"><span>ページの中身</span><span>{blocks.length}節</span></div><p className="se-block-hint">節を選んで編集。右のメニューで並べ替え。</p>
+          <BlockList blocks={blocks} selectedId={selectedId} onChange={updateBlocks} onSelect={id=>{setSelectedId(id);setPanel('block');setMobileTool('settings');}} />
           <AddBlock onAdd={type => {
             const id = `b-${Math.random().toString(36).slice(2, 9)}`;
             updateBlocks([...blocks, { id, type: type as Block['type'], data: defaultDataFor(type) }]);
             setSelectedId(id);
             setPanel('block');
+            setMobileTool('settings');
           }} />
         </aside>
 
@@ -1021,7 +1011,7 @@ function StudioInner() {
                     <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{def.purpose}</div>
                   </div>
                   {def.fields.map(f => (
-                    <div key={`${selected.id}:${f.key}`} data-field-key={f.key} className={fieldFocus===f.key?'se-focused-field':''}><Field def={f}
+                    <div key={`${selected.id}:${f.key}`} data-field-key={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
                       value={(selected.data as Record<string, unknown>)[f.key]}
                       onChange={v => updateBlockData(selected.id, f.key, v)} /></div>
                   ))}
@@ -1089,16 +1079,13 @@ function AddBlock({ onAdd }: { onAdd: (type: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="p-3">
-      <button onClick={() => setOpen(v => !v)}
-        className="w-full py-2 rounded-lg border border-dashed border-slate-300 text-[12px] font-bold text-slate-500 hover:border-sky-400 hover:text-sky-700">
-        ＋ 節を足す
-      </button>
+      <button type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} className="se-add-block"><Plus size={17}/>節を足す</button>
       {open && (
         <div className="mt-2 space-y-1">
           {Object.entries(BLOCK_DEFS).map(([type, d]) => (
             <button key={type} onClick={() => { onAdd(type); setOpen(false); }}
-              className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-100">
-              <span className="text-[13px] font-bold text-slate-700">{d.icon} {d.label}</span>
+              className="se-add-option">
+              <span className="se-add-option-title"><BlockIcon type={type}/>{d.label}</span>
               <span className="block text-[10px] text-slate-400 leading-tight">{d.purpose}</span>
             </button>
           ))}

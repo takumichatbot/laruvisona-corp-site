@@ -38,8 +38,8 @@ test('公開サイトのプレビューやLPのモックには適用しない', 
 });
 
 test('案内ページの主要導線が指で押せる大きさにある', () => {
-  // 作りはじめる / できあがりを見る / 各プラン / 相談する
-  const sized = lp.match(/min-h-\[52px\]/g) || [];
-  assert.ok(sized.length >= 5, `44pxに満たない導線がある（52px指定は${sized.length}個）`);
-  assert.equal(/min-h-\[3[0-9]px\]/.test(lp), false, '40px未満の導線が混ざっている');
+  const landingCss = readFileSync(new URL('../app/laruHP/landing.css', import.meta.url), 'utf8');
+  assert.match(landingCss, /\.lp-button\s*\{[^}]*min-height:\s*56px/);
+  assert.match(landingCss, /\.lp-button-small\s*\{[^}]*min-height:\s*44px/);
+  // 実際の幅と高さは landing-polish-check の320/390/1440pxで確認。
 });

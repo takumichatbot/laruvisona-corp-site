@@ -32,8 +32,6 @@ export interface FieldDef {
 export interface BlockDef {
   /** 画面に出す名前 */
   label: string;
-  /** 一覧で出す絵文字 */
-  icon: string;
   /** 何のための節かを一言で */
   purpose: string;
   fields: FieldDef[];
@@ -46,7 +44,7 @@ const ALIGN: FieldDef = {
 
 export const BLOCK_DEFS: Record<string, BlockDef> = {
   hero: {
-    label: '最初の画面', icon: '🏞', purpose: '来た人が最初に見る場所。何の店かと、次にしてほしいことを置く',
+    label: '最初の画面', purpose: '来た人が最初に見る場所。何の店かと、次にしてほしいことを置く',
     fields: [
       { key: 'heading', label: '主なコピー', type: 'multiline', hint: '改行した位置で折り返します' },
       { key: 'subheading', label: '店名・ひとこと', type: 'text' },
@@ -79,7 +77,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   heading: {
-    label: '見出し', icon: '📛', purpose: '話題の区切り',
+    label: '見出し', purpose: '話題の区切り',
     fields: [
       { key: 'text', label: '見出し', type: 'text' },
       { key: 'subtext', label: '補足', type: 'text' },
@@ -87,14 +85,14 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   paragraph: {
-    label: '文章', icon: '📝', purpose: '考えていること、店の成り立ち',
+    label: '文章', purpose: '考えていること、店の成り立ち',
     fields: [
       { key: 'text', label: '本文', type: 'multiline', hint: '空の行を入れると段落が変わります' },
       ALIGN,
     ],
   },
   image: {
-    label: '写真', icon: '🖼', purpose: '1枚の写真',
+    label: '写真', purpose: '1枚の写真',
     fields: [
       { key: 'src', label: '写真', type: 'image' },
       { key: 'alt', label: '写真の説明', type: 'text' },
@@ -102,7 +100,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   gallery: {
-    label: '写真をならべる', icon: '🖼', purpose: '仕上がり・商品・店内',
+    label: '写真をならべる', purpose: '仕上がり・商品・店内',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       { key: 'images', label: '写真', type: 'list', ofStrings: true, itemDefault: {} },
@@ -113,7 +111,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   'price-table': {
-    label: 'メニューと料金', icon: '💴', purpose: 'いくらで何をしてもらえるか',
+    label: 'メニューと料金', purpose: 'いくらで何をしてもらえるか',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       { key: 'subtext', label: '補足', type: 'text', placeholder: '表示は税込です' },
@@ -132,7 +130,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   team: {
-    label: '担当する人', icon: '🧑', purpose: '誰に見てもらえるかが分かると、予約の不安が減る',
+    label: '担当する人', purpose: '誰に見てもらえるかが分かると、予約の不安が減る',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       {
@@ -148,7 +146,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   faq: {
-    label: 'よくある質問', icon: '❓', purpose: '問い合わせの手前で答えておく',
+    label: 'よくある質問', purpose: '問い合わせの手前で答えておく',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       {
@@ -162,7 +160,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   hours: {
-    label: '営業時間', icon: '🕘', purpose: 'いつ行けるか',
+    label: '営業時間', purpose: 'いつ行けるか',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       {
@@ -178,7 +176,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   booking: {
-    label: '予約', icon: '📅', purpose: '来てほしい日時を受け取る',
+    label: '予約', purpose: '来てほしい日時を受け取る',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       { key: 'subtext', label: '案内文', type: 'multiline' },
@@ -192,7 +190,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   services: {
-    label: '商品・サービス', icon: '▤', purpose: '提供する内容と料金を伝える',
+    label: '商品・サービス', purpose: '提供する内容と料金を伝える',
     fields: [
       {key:'heading',label:'見出し',type:'text'}, {key:'subtext',label:'補足',type:'text'},
       {key:'columns',label:'横に並べる数',type:'select',options:[{value:'2',label:'2列'},{value:'3',label:'3列'}]},
@@ -203,7 +201,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ]
   },
   testimonials: {
-    label:'お客様の声',icon:'✎',purpose:'掲載許可を得た、実際のお客様の声を紹介する。見本はそのまま公開しない',
+    label:'お客様の声',purpose:'掲載許可を得た、実際のお客様の声を紹介する。見本はそのまま公開しない',
     fields:[{key:'heading',label:'見出し',type:'text'},
       {key:'items',label:'お客様の声',type:'list',itemDefault:{name:'',age:'',text:'',rating:0},item:[
         {key:'name',label:'お名前・イニシャル',type:'text'},{key:'age',label:'年代などの補足',type:'text'},
@@ -213,14 +211,14 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ]
   },
   'three-col': {
-    label:'3つの特徴',icon:'▥',purpose:'大切な特徴を3つに分けて伝える',
+    label:'3つの特徴',purpose:'大切な特徴を3つに分けて伝える',
     fields:[1,2,3].flatMap(n=>[
       {key:`col${n}Title`,label:`特徴${n}の見出し`,type:'text' as const},
       {key:`col${n}Text`,label:`特徴${n}の説明`,type:'multiline' as const}
     ])
   },
   contact: {
-    label: 'お問い合わせ', icon: '✉️', purpose: '予約以外の相談を受け取る',
+    label: 'お問い合わせ', purpose: '予約以外の相談を受け取る',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       { key: 'subtext', label: '案内文', type: 'multiline' },
@@ -230,7 +228,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   'two-col': {
-    label: '2つ並べる', icon: '🔲', purpose: 'アクセスと連絡先など、対になる情報',
+    label: '2つ並べる', purpose: 'アクセスと連絡先など、対になる情報',
     fields: [
       { key: 'col1Title', label: '左の見出し', type: 'text' },
       { key: 'col1Text', label: '左の本文', type: 'multiline' },
@@ -239,7 +237,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   map: {
-    label: '地図', icon: '🗺', purpose: '場所',
+    label: '地図', purpose: '場所',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       { key: 'embedUrl', label: '地図の埋め込みURL', type: 'text', hint: 'Googleマップの「共有」→「地図を埋め込む」で出るURL' },
@@ -247,7 +245,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   cta: {
-    label: 'ひと押し', icon: '👉', purpose: '最後にもう一度、行き先を示す',
+    label: 'ひと押し', purpose: '最後にもう一度、行き先を示す',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       { key: 'subtext', label: '補足', type: 'text' },
@@ -257,7 +255,7 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
     ],
   },
   tabs: {
-    label: '折りたたみ', icon: '🗂', purpose: '長い一覧を分けて見せる',
+    label: '折りたたみ', purpose: '長い一覧を分けて見せる',
     fields: [
       { key: 'heading', label: '見出し', type: 'text' },
       {
@@ -279,9 +277,6 @@ export function blockLabel(block: Block): string {
   return block.type;
 }
 
-export function blockIcon(block: Block): string {
-  return BLOCK_DEFS[block.type]?.icon ?? '⬜';
-}
 
 /** 一覧に出す1行の要約。中身の最初の文字を使う */
 export function blockSummary(block: Block): string {

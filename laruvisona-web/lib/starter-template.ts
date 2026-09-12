@@ -14,7 +14,7 @@ export function starterTemplate(blocks: Block[], description: string): Block[] {
       case 'paragraph': d.text = description || '紹介文を入力してください'; break;
       case 'services':
         d.items = examples(d.items).map(item => ({
-          icon: item.icon, title: `【例】${String(item.title || 'サービス')}`,
+          icon: '', title: `【例】${String(item.title || 'サービス')}`,
           description: '実際に提供する内容を入力してください', price: '',
         }));
         break;
@@ -28,6 +28,7 @@ export function starterTemplate(blocks: Block[], description: string): Block[] {
         break;
       case 'three-col':
         for (const n of [1, 2, 3]) {
+          d[`col${n}Icon`] = '';
           d[`col${n}Title`] = '特徴を入力してください';
           d[`col${n}Text`] = '実際の取り組みを入力してください';
         }

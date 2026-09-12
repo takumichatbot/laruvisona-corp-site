@@ -133,3 +133,17 @@ test("draft must match site and time and have editable contents", () => {
     false,
   );
 });
+
+test('新しいサイトの特徴・サービスに既定の絵文字を持ち込まない', () => {
+  for (const industry of ['beauty', 'restaurant', 'construction', 'retail']) {
+    const site = makeStarterSite({ ...intake, industry }, 'refined');
+    for (const block of site.pages[0].blocks) {
+      if (block.type === 'services') {
+        for (const item of block.data.items as { icon?: string }[]) assert.equal(item.icon, '');
+      }
+      if (block.type === 'three-col') {
+        for (const n of [1, 2, 3]) assert.equal(block.data[`col${n}Icon`], '');
+      }
+    }
+  }
+});

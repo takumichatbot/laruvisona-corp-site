@@ -1,289 +1,447 @@
-'use client';
-/**
- * LARU HP の案内ページ。
- *
- * 主役は「写真・文章・料金・予約が組み上がって、1枚のサイトになる」ところ。
- * そのため、作れるもの（実際の作品）と、実際に動く制作画面を先に見せる。
- *
- * 守っていること:
- *  - 画面写真は、隔離環境で実際に動かして撮ったもの。作り絵ではない。
- *  - 組み上がるデモは、公開ページと同じ仕組みが出力した本物のHTML。
- *  - ボタン・文字・リンクはすべて本物のHTML。動画の中に描いた絵ではない。
- *  - 料金と無料期間は、決済で使っている定義から持ってくる。
- *  - 未実装の機能、架空の利用者数、作った口コミは載せない。
- */
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Layers3,
+  MousePointer2,
+  Image as ImageIcon,
+  RotateCcw,
+  Smartphone,
+  Globe2,
+  MessageSquare,
+  Search,
+  Plus,
+} from 'lucide-react';
 import BrandFonts from '@/components/BrandFonts';
 import AssembleDemo from '@/components/lp/AssembleDemo';
+import Showcase from '@/components/lp/Showcase';
 import { PLANS, TERMS, PRIMARY_CTA, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
+import './landing.css';
 
-const STEPS = [
-  {
-    n: '1', title: 'きく', lead: '4つの質問に答える',
-    body: '何のお店か、どこにあるか、どんな人に来てほしいか、来た人にまずしてほしいこと。答えると、その業種に合った並びでたたき台ができます。',
-    shot: '/lp/studio-intake.jpg', alt: '4つの質問だけが並んだ、はじめの画面',
+export const metadata: Metadata = {
+  title: 'LARU HP｜らしさまで、伝わるホームページ。',
+  description:
+    '写真と言葉を選んで、完成を見ながら整える。お店にも、会社にも。自分で作り、育てるホームページ作成サービス LARU HP。',
+  openGraph: {
+    title: 'LARU HP｜らしさまで、伝わるホームページ。',
+    description:
+      '写真と言葉を選んで、完成を見ながら整える。お店にも、会社にも。',
+    url: 'https://laruvisona.jp/laruHP',
+    images: [{ url: '/laruHP/opengraph-image', width: 1200, height: 630 }],
   },
-  {
-    n: '2', title: 'えらぶ', lead: '雰囲気を選ぶ',
-    body: '見本は静止画ではなく、実際に出来上がる見た目そのものです。選んだあとで「思っていたのと違う」が起きません。何度でも変えられます。',
-    shot: '/lp/studio-mood.jpg', alt: '雰囲気の見本が5つ並んだ画面',
+  twitter: {
+    title: 'LARU HP｜らしさまで、伝わるホームページ。',
+    description: '完成を見ながら、自分らしいホームページを。',
   },
-  {
-    n: '3', title: 'ととのえる', lead: '本物を見ながら直す',
-    body: '真ん中に出ているのは、公開したときとまったく同じ画面です。直したい場所を押すと、その場所の設定だけが右に出ます。CSSは書きません。',
-    shot: '/lp/studio-edit.jpg', alt: '中央に大きなプレビュー、右に設定が並ぶ制作画面',
-  },
-];
-
-const AFTER = [
-  { title: '自分で直せる', body: '文章も写真も料金も、同じ画面から直して公開し直せます。直すたびに業者へ頼む必要はありません。' },
-  { title: '予約と問い合わせを受け取る', body: '予約フォームと問い合わせフォームが最初から入っています。届いた内容はメールで受け取れます。' },
-  { title: 'スマホで見たときも崩れない', body: 'パソコンとスマホを切り替えて確かめられます。スマホでは画面の下に予約ボタンを出せます。' },
-  { title: '独自ドメインをつなげる', body: 'お持ちのドメインを設定できます。SSL証明書とサーバー費用は月額に含まれます。' },
-  { title: '検索に出る形にしておく', body: '説明文・構造化データ・サイトマップを自動で用意します。' },
-  { title: 'お知らせを載せる', body: '休業やキャンペーンのお知らせを、サイトに出せます。' },
-];
-
-// よくある質問は、契約や料金にかかわるものを一次情報から読む。
-// 作り方についての質問だけ、この画面の説明として足す。
+};
 const HOW_FAQ = [
   {
-    q: 'ホームページを作ったことがなくても大丈夫ですか',
-    a: '4つの質問に答えるところから始まります。CSSやHTMLは書きません。色や余白は用意した選択肢から選ぶ形で、選んだ結果はその場で画面に出ます。',
+    q: '初めてでも作れますか？',
+    a: '店名と業種、サイトで叶えたいことを入れるところから始めます。写真や文章は完成イメージを見ながら編集できます。HTMLやCSSの知識は必要ありません。',
   },
   {
-    q: '作ったあと、自分で直せますか',
-    a: '直せます。制作画面をもう一度開いて、直したい場所を押して、保存して公開し直すだけです。回数の制限はありません。',
+    q: 'あとから、写真や文章を変えられますか？',
+    a: '制作スタジオで編集し、保存して公開し直せます。変更を取り消したり、残した案と見比べたりしながら整えられます。',
   },
   {
-    q: '写真がありません',
-    a: '写真が無い場所は、あとから差し替えられる形にしておけます。差し替えても余白や切り取りが崩れないように作ってあります。',
+    q: 'スマホだけでも編集できますか？',
+    a: 'スマホ用の制作画面で、節の選択、写真の差し替え、文章や配色の編集、保存・公開を行えます。完成像と編集欄を切り替えて使います。',
   },
 ];
-const FAQ = [...HOW_FAQ, ...FACT_FAQ.slice(0, 5)];
+const features = [
+  {
+    icon: ImageIcon,
+    title: '写真が主役になる。',
+    body: '写真を入れて、いちばん見せたい位置へ。スマホとパソコン、それぞれの切り抜きまで整えられます。',
+  },
+  {
+    icon: RotateCcw,
+    title: '迷える。だから、試せる。',
+    body: '色も書体も、思い切って。変更を取り消したり、残した案と並べて選んだりできます。',
+  },
+  {
+    icon: Smartphone,
+    title: 'スマホでも、手の中で。',
+    body: '写真を変える。お知らせを直す。出先でも完成像を確かめて、そのまま保存・公開できます。',
+  },
+];
 
 export default function LaruHPLandingPage() {
   return (
-    <main className="bg-white text-slate-900">
-      {/* ブランドを見せる画面なので、ここだけブランド書体を読む */}
+    <div className="lhp-landing">
       <BrandFonts />
-      {/* ── 最初の画面：言葉と、実物を並べる ─────────────────────
-          主役は「材料が1枚のサイトになる」ところ。だから、説明の隣に
-          その場で動く実物を置く。スマホでは、短い言葉と入口を先に出してから
-          実物を続ける（完成形が早く目に入るように）。 */}
-      <section className="px-5 pt-10 pb-8 md:pt-16 md:pb-14">
-        <div className="max-w-[1400px] mx-auto md:grid md:grid-cols-[minmax(300px,32%)_1fr] md:gap-10">
-          <div className="md:sticky md:top-10 md:self-start">
-            <p className="text-[12px] font-bold tracking-widest text-sky-700 mb-3">LARU HP</p>
-            <h1 className="text-[25px] leading-[1.4] md:text-[40px] md:leading-[1.35] font-bold tracking-[0.01em] mb-4">
-              <span className="hidden md:inline">写真と、文章と、料金と、予約。<br /></span>
-              ばらばらの材料が、
-              <br className="hidden md:block" />
-              1枚のサイトになる。
-            </h1>
-            <p className="text-[14px] md:text-[15px] leading-[1.9] md:leading-[1.95] text-slate-600 max-w-[30em] mb-5 md:mb-6">
-              <span className="md:hidden">写真・文章・料金・予約。</span>
-              小さなお店のためのホームページです。4つの質問に答えると、たたき台ができます。
-              <span className="hidden md:inline">出来上がった画面を見ながら直して、そのまま公開できます。</span>
+      <a className="lp-skip" href="#lp-main">
+        本文へ移動
+      </a>
+      <header className="lp-header">
+        <Link
+          className="lp-wordmark"
+          href="/laruHP"
+          aria-label="LARU HP ホーム"
+        >
+          LARU<span>HP</span>
+          <i aria-hidden="true" />
+        </Link>
+        <nav aria-label="ページの案内">
+          <a href="#works">作れるサイト</a>
+          <a href="#experience">作り心地</a>
+          <a href="#price">料金</a>
+        </nav>
+        <div className="lp-header-actions">
+          <Link className="lp-login" href="/laruHP/auth/login">
+            ログイン
+          </Link>
+          <Link className="lp-button lp-button-small" href="/laruHP/studio">
+            作りはじめる
+            <ArrowUpRight size={15} />
+          </Link>
+        </div>
+      </header>
+      <main id="lp-main">
+        <section className="lp-hero">
+          <div className="lp-hero-copy">
+            <p className="lp-eyebrow">
+              <span />
+              お店にも、会社にも。自分でつくるホームページ。
             </p>
-            <div className="flex flex-wrap gap-3 items-center mb-5">
-              <Link href="/laruHP/studio"
-                className="inline-flex items-center justify-center min-h-[52px] px-7 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800">
-                作りはじめる
+            <h1>
+              らしさまで、
+              <br />
+              <span>伝わるホームページ。</span>
+            </h1>
+            <p className="lp-hero-lead">
+              写真と言葉を選んで、完成を見ながら整える。
+              <br />
+              大切にしていることが、ちゃんと届く一枚へ。
+            </p>
+            <div className="lp-hero-actions">
+              <Link href="/laruHP/studio" className="lp-button">
+                自分のサイトをつくる
+                <ArrowUpRight size={20} />
               </Link>
-              <a href="#price"
-                className="inline-flex items-center justify-center min-h-[52px] px-6 rounded-xl border border-slate-300 font-bold hover:border-slate-500">
-                料金を見る
+              <a href="#experience" className="lp-text-link">
+                作り心地を試す
+                <ArrowRight size={18} />
               </a>
             </div>
-            <p className="text-[12px] text-slate-500 mb-6">{TERMS.firstMonthFree}・{TERMS.taxNote}</p>
-            <ul className="hidden md:block border-t border-slate-200 pt-5 space-y-2.5">
-              {[
-                'CSSもHTMLも書きません',
-                '公開したあとも、同じ画面から自分で直せます',
-                '予約と問い合わせのフォームが最初から入っています',
-              ].map(t => (
-                <li key={t} className="text-[13px] text-slate-600 leading-relaxed flex gap-2">
-                  <span className="text-sky-600 font-bold">・</span>{t}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-8 md:mt-0">
-            <p className="text-[13px] font-bold text-slate-700 mb-1">これが、できあがるものです</p>
-            <p className="text-[12px] text-slate-500 leading-relaxed mb-3">
-              画面写真ではありません。いま、この場で作っているお店のサイトです。
-              <span className="hidden sm:inline">見せ方を選ぶと、その場で作り直して、組み上がります。</span>
+            <p className="lp-price-hint">
+              月額 <b>{PLANS[0].monthly.toLocaleString('ja-JP')}</b>{' '}
+              円〜（税別）
+              <span>初月無料・最低利用期間{TERMS.minimumMonths}ヶ月</span>
             </p>
-            <AssembleDemo />
           </div>
-        </div>
-      </section>
+          <Showcase />
+        </section>
 
-      {/* ── 見本の全体 ───────────────────────────────────────────
-          上のデモは3つの節を取り出したもの。ページ全体はこちらで見せる。 */}
-      <section id="work" className="px-5 py-14 md:py-20 bg-slate-50 border-y border-slate-200">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-[22px] md:text-[28px] font-bold mb-2">この見本の、ページ全体</h2>
-          <p className="text-[14px] text-slate-600 leading-[1.9] max-w-[34em] mb-6">
-            上のデモは、この見本から3つの節を取り出したものです。
-            公開すると、こうなります。実際に公開されるページをそのまま撮っています。
+        <section className="lp-introduction lp-container">
+          <p className="lp-section-label">
+            <span>01</span>つくることを、もっと自由に。
           </p>
-          <div className="grid md:grid-cols-[1fr_300px] gap-6 items-start">
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-              <div className="max-h-[520px] overflow-y-auto">
-                <Image src="/lp/work-salon-pc.jpg" alt="美容室の見本サイト（パソコンでの表示）"
-                  width={1100} height={4129} className="w-full h-auto" />
+          <div className="lp-introduction-grid">
+            <h2>
+              いいホームページは、
+              <br />
+              つくる時間も、<em>心地いい。</em>
+            </h2>
+            <p>
+              最初から、全部決まっていなくて大丈夫。
+              <br />
+              言葉にして、選んで、少しずつ自分らしく。
+              <br />
+              LARU HPは、完成を眺めながら
+              <br className="lp-desktop-break" />
+              手を動かせる制作スタジオです。
+            </p>
+          </div>
+          <div className="lp-process-line">
+            <span>
+              <b>01</b>お店のことを入れる
+            </span>
+            <ArrowRight size={20} />
+            <span>
+              <b>02</b>見せ方を選ぶ
+            </span>
+            <ArrowRight size={20} />
+            <span>
+              <b>03</b>整えて、公開する
+            </span>
+          </div>
+        </section>
+
+        <section className="lp-experience" id="experience">
+          <div className="lp-container lp-experience-grid">
+            <div className="lp-experience-copy">
+              <p className="lp-section-label">
+                <span>02</span>まずは、触れてみて。
+              </p>
+              <h2>
+                ひとつ選ぶ。
+                <br />
+                空気が、<em>変わる。</em>
+              </h2>
+              <p>
+                書体、色、余白。
+                <br />
+                小さな違いが、サイトの表情をつくります。
+                <br />
+                好きな見せ方を選んでみてください。
+              </p>
+              <div className="lp-demo-note">
+                <MousePointer2 size={19} />
+                <span>
+                  見せ方を選んで、組み立てる。
+                  <br />
+                  できあがった見本は、そのまま触れます。
+                </span>
               </div>
-              <p className="text-[11px] text-slate-500 px-4 py-2 border-t border-slate-100">パソコン</p>
+              <a href="#studio" className="lp-text-link">
+                制作スタジオも見てみる
+                <ArrowRight size={17} />
+              </a>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden">
-              <div className="max-h-[520px] overflow-y-auto py-5 flex justify-center">
-                <Image src="/lp/work-salon-sp.jpg" alt="美容室の見本サイト（スマホでの表示）"
-                  width={420} height={4433} className="w-[220px] h-auto rounded-[18px] border-[7px] border-slate-800 shadow-xl" />
-              </div>
-              <p className="text-[11px] text-slate-500 px-4 py-2 border-t border-slate-200 bg-white">スマホ</p>
+            <div className="lp-demo-surface">
+              <AssembleDemo />
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 mt-3">
-            見本の「結い庵」は架空のお店です。写真は生成した素材で、実在の店舗・施術実績ではありません。
-          </p>
-        </div>
-      </section>
+        </section>
 
-      {/* ── 制作の流れ ─────────────────────────────────────────── */}
-      <section className="px-5 py-14 md:py-20 bg-slate-50 border-y border-slate-200">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-[22px] md:text-[28px] font-bold mb-2">作るときの3つの画面</h2>
-          <p className="text-[14px] text-slate-600 leading-[1.9] max-w-[34em] mb-8">
-            下の画面写真は、実際に動かして撮ったものです。
-          </p>
-          <div className="space-y-10 md:space-y-14">
-            {STEPS.map(s => (
-              <div key={s.n} className="grid md:grid-cols-2 gap-6 md:gap-10 items-center">
-                <div className={s.n === '2' ? 'md:order-2' : ''}>
-                  <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-[28px] font-bold text-sky-600 leading-none">{s.n}</span>
-                    <span className="text-[20px] font-bold">{s.title}</span>
-                    <span className="text-[13px] text-slate-500">{s.lead}</span>
-                  </div>
-                  <p className="text-[14px] leading-[1.95] text-slate-600 max-w-[30em]">{s.body}</p>
-                </div>
-                <div className={s.n === '2' ? 'md:order-1' : ''}>
-                  <Image src={s.shot} alt={s.alt} width={1200} height={780}
-                    className="w-full h-auto rounded-xl border border-slate-200 shadow-sm bg-white" />
-                </div>
-              </div>
+        <section id="studio" className="lp-studio-section lp-container">
+          <div className="lp-section-heading">
+            <div>
+              <p className="lp-section-label">
+                <span>03</span>思いどおりに、近づける。
+              </p>
+              <h2>
+                完成を見ながら。
+                <br />
+                <em>直したい、その場所から。</em>
+              </h2>
+            </div>
+            <p>
+              写真を押したら、写真の編集へ。
+              <br />
+              文章を押したら、言葉の編集へ。
+              <br />
+              操作のたびに、あなたのサイトになっていく。
+            </p>
+          </div>
+          <div className="lp-studio-display">
+            <div className="lp-studio-top">
+              <span>
+                <Layers3 size={16} />
+                制作スタジオ
+              </span>
+              <span>
+                <i />
+                完成像を見ながら編集
+              </span>
+            </div>
+            <Image
+              src="/lp/studio-live.webp"
+              width={1200}
+              height={780}
+              alt="完成像と設定を並べて編集する、LARU HPの制作スタジオ"
+              sizes="(max-width: 760px) 94vw, 1120px"
+            />
+          </div>
+          <div className="lp-features">
+            {features.map(({ icon: Icon, title, body }) => (
+              <article key={title}>
+                <Icon size={25} strokeWidth={1.5} />
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+          <Link className="lp-text-link" href="/laruHP/studio">
+            あなたのお店で試してみる
+            <ArrowUpRight size={18} />
+          </Link>
+        </section>
 
-      {/* ── 公開後にできること ─────────────────────────────────── */}
-      <section className="px-5 py-14 md:py-20">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-[22px] md:text-[28px] font-bold mb-2">公開したあと、できること</h2>
-          <p className="text-[14px] text-slate-600 leading-[1.9] max-w-[34em] mb-8">
-            いま動いている機能だけを書いています。
-          </p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {AFTER.map(a => (
-              <div key={a.title} className="border border-slate-200 rounded-xl p-5">
-                <div className="font-bold mb-2">{a.title}</div>
-                <p className="text-[13px] leading-[1.9] text-slate-600">{a.body}</p>
-              </div>
-            ))}
+        <section className="lp-after">
+          <div className="lp-container">
+            <p className="lp-section-label">
+              <span>04</span>公開してからも、育てていく。
+            </p>
+            <div className="lp-section-heading">
+              <h2>
+                きれいで終わらない。
+                <br />
+                お店の、<em>頼れる入口に。</em>
+              </h2>
+              <p>
+                知ってもらう。相談してもらう。足を運んでもらう。
+                <br />
+                その先の行動につながる機能も、一緒に。
+              </p>
+            </div>
+            <div className="lp-after-grid">
+              <article>
+                <MessageSquare size={24} />
+                <h3>予約・問い合わせ</h3>
+                <p>
+                  希望日時や相談をフォームで受け付け。確認して折り返す、お店との接点をつくれます。
+                </p>
+                <span>予約確定型ではなく、希望受付のフォームです</span>
+              </article>
+              <article>
+                <Globe2 size={24} />
+                <h3>あなたのアドレスで</h3>
+                <p>
+                  サーバーとSSLは月額に含まれます。独自ドメインの接続にも対応しています。
+                </p>
+                <span>ドメイン取得費は別途必要です</span>
+              </article>
+              <article>
+                <Search size={24} />
+                <h3>見つけてもらう準備</h3>
+                <p>
+                  検索結果の説明文やサイトマップを用意。必要に応じて、AIチャットやブログも組み合わせられます。
+                </p>
+                <span>AIチャット・ブログは対応プランで利用できます</span>
+              </article>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── 料金 ───────────────────────────────────────────────── */}
-      <section id="price" className="px-5 py-14 md:py-20 bg-slate-50 border-y border-slate-200">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-[22px] md:text-[28px] font-bold mb-2">料金</h2>
-          <p className="text-[14px] text-slate-600 leading-[1.9] mb-8">
-            {TERMS.firstMonthFree}。{TERMS.taxNote}。
-          </p>
-          <div className="grid md:grid-cols-3 gap-4">
-            {PLANS.map(p => (
-              <div key={p.id}
-                className={`rounded-2xl border p-6 bg-white ${p.highlight ? 'border-sky-500 shadow-[0_10px_40px_rgba(2,132,199,.12)]' : 'border-slate-200'}`}>
-                {p.badge && (
-                  <span className="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 mb-3">{p.badge}</span>
-                )}
-                <div className="font-bold text-[17px]">{p.name}</div>
-                <div className="text-[12px] text-slate-500 mb-3">{p.lead}</div>
-                <div className="mb-1">
-                  <span className="text-[30px] font-bold">{p.monthly.toLocaleString('ja-JP')}</span>
-                  <span className="text-[13px] text-slate-500"> 円 / 月（税別）</span>
+        <section id="price" className="lp-pricing lp-container">
+          <div className="lp-section-heading">
+            <div>
+              <p className="lp-section-label">
+                <span>05</span>必要なものから、はじめよう。
+              </p>
+              <h2>
+                あなたに合った
+                <br />
+                <em>ひとつのプランを。</em>
+              </h2>
+            </div>
+            <p>
+              {TERMS.firstMonthFree}。<br />
+              {TERMS.taxNote}。
+            </p>
+          </div>
+          <div className="lp-plan-grid">
+            {PLANS.map((p) => (
+              <article
+                key={p.id}
+                className={`lp-plan ${p.highlight ? 'lp-plan-featured' : ''}`}
+              >
+                <div className="lp-plan-heading">
+                  <h3>{p.name}</h3>
+                  {p.badge && <span>{p.badge}</span>}
                 </div>
-                <div className="text-[12px] text-slate-500 mb-4">年払いなら月 {p.annualPerMonth.toLocaleString('ja-JP')} 円</div>
-                <ul className="space-y-1.5">
-                  {p.includes.map(f => (
-                    <li key={f} className="text-[13px] text-slate-700 flex gap-2">
-                      <span className="text-sky-600">✓</span>{f}
-                    </li>
-                  ))}
-                  {p.excludes.map(f => (
-                    <li key={f} className="text-[13px] text-slate-400 flex gap-2">
-                      <span>−</span>{f}
+                <p className="lp-plan-lead">{p.lead}</p>
+                <div className="lp-plan-price">
+                  <strong>{p.monthly.toLocaleString('ja-JP')}</strong>
+                  <span>円 / 月（税別）</span>
+                </div>
+                <p className="lp-plan-annual">
+                  年払いなら月 {p.annualPerMonth.toLocaleString('ja-JP')} 円換算
+                </p>
+                <Link
+                  className={`lp-button ${p.highlight ? '' : 'lp-button-outline'}`}
+                  href={PRIMARY_CTA.href}
+                >
+                  {PRIMARY_CTA.label}
+                  <ArrowUpRight size={17} />
+                </Link>
+                <ul>
+                  {p.includes.map((f) => (
+                    <li key={f}>
+                      <Check size={15} />
+                      {f}
                     </li>
                   ))}
                 </ul>
-                <Link href={PRIMARY_CTA.href}
-                  className={`mt-5 flex items-center justify-center min-h-[52px] rounded-xl font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${p.highlight ? 'bg-sky-600 text-white hover:bg-sky-700' : 'border border-slate-300 hover:border-slate-500'}`}>
-                  {PRIMARY_CTA.label}
-                </Link>
-              </div>
+              </article>
             ))}
           </div>
-          <p className="text-[12px] text-slate-500 mt-5 leading-[1.9]">
-            {TERMS.cancelNote}。{TERMS.cancel}。{TERMS.annualNote}。<br />{TERMS.domainNote}。{TERMS.payment}。
-          </p>
-        </div>
-      </section>
+          <div className="lp-contract">
+            <p>
+              {TERMS.cancelNote}。{TERMS.cancel}。
+            </p>
+            <p>
+              {TERMS.annualNote}。{TERMS.domainNote}。{TERMS.payment}。
+            </p>
+            <Link href="/laruHP/plans">
+              プランの詳しい内容を見る
+              <ArrowUpRight size={14} />
+            </Link>
+          </div>
+        </section>
 
-      {/* ── よくある質問 ───────────────────────────────────────── */}
-      <section className="px-5 py-14 md:py-20">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-[22px] md:text-[28px] font-bold mb-6">よくある質問</h2>
-          <div className="divide-y divide-slate-200 border-y border-slate-200">
-            {FAQ.map(f => (
-              <details key={f.q} className="py-4 group">
-                <summary className="font-bold cursor-pointer list-none flex justify-between gap-4 min-h-[52px] items-center">
+        <section className="lp-faq lp-container">
+          <div>
+            <p className="lp-section-label">
+              <span>06</span>気になることを、先に。
+            </p>
+            <h2>よくある質問</h2>
+            <p>
+              迷ったら、お気軽に。
+              <br />
+              <Link href="/contact" className="lp-text-link">
+                相談する
+                <ArrowUpRight size={16} />
+              </Link>
+            </p>
+          </div>
+          <div>
+            {[...HOW_FAQ, ...FACT_FAQ.slice(0, 3)].map((f) => (
+              <details key={f.q}>
+                <summary>
                   {f.q}
-                  <span className="text-slate-400 group-open:rotate-180 transition-transform">▾</span>
+                  <Plus size={20} />
                 </summary>
-                <p className="text-[14px] leading-[1.95] text-slate-600 mt-3">{f.a}</p>
+                <p>{f.a}</p>
               </details>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── はじめる ───────────────────────────────────────────── */}
-      <section className="px-5 py-16 md:py-24 bg-slate-900 text-white">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-[24px] md:text-[32px] font-bold leading-[1.5] mb-4">
-            まずは、4つの質問から。
+        <section className="lp-final">
+          <div className="lp-final-lines" aria-hidden="true" />
+          <p className="lp-section-label">あなたらしい一枚は、ここから。</p>
+          <h2>
+            次は、
+            <br className="lp-mobile-break" />
+            あなたのサイトを。
           </h2>
-          <p className="text-[14px] leading-[1.95] text-slate-300 mb-8">
-            答えるとたたき台ができます。気に入らなければ、そこでやめても構いません。
+          <p>
+            まだ、言葉になりきっていなくても。
+            <br />
+            作りながら、見つけていきましょう。
           </p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link href="/laruHP/studio"
-              className="inline-flex items-center justify-center min-h-[52px] px-8 rounded-xl bg-white text-slate-900 font-bold hover:bg-slate-100">
-              作りはじめる
-            </Link>
-            <Link href="/contact"
-              className="inline-flex items-center justify-center min-h-[52px] px-8 rounded-xl border border-white/40 font-bold hover:border-white">
-              相談する
-            </Link>
-          </div>
+          <Link className="lp-button" href="/laruHP/studio">
+            自分のサイトをつくる
+            <ArrowUpRight size={20} />
+          </Link>
+          <span className="lp-final-note">
+            試作はログイン前から。保存・公開にはご契約が必要です。
+          </span>
+        </section>
+      </main>
+      <footer className="lp-footer lp-container">
+        <div>
+          <Link className="lp-wordmark" href="/laruHP">
+            LARU<span>HP</span>
+            <i aria-hidden="true" />
+          </Link>
+          <p>らしさまで、伝わるホームページ。</p>
         </div>
-      </section>
-    </main>
+        <nav aria-label="フッター">
+          <Link href="/">運営会社</Link>
+          <Link href="/contact">お問い合わせ</Link>
+          <Link href="/laruHP/terms">利用規約</Link>
+          <Link href="/laruHP/privacy">プライバシー</Link>
+          <Link href="/laruHP/tokusho">特定商取引法</Link>
+        </nav>
+        <small>© LaruVisona Inc.</small>
+      </footer>
+    </div>
   );
 }

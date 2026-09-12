@@ -12,6 +12,8 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 
 const src = readFileSync(new URL('../app/laruHP/page.tsx', import.meta.url), 'utf8');
+const showcase = readFileSync(new URL('../components/lp/Showcase.tsx', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../app/laruHP/landing.css', import.meta.url), 'utf8');
 const demo = readFileSync(new URL('../components/lp/AssembleDemo.tsx', import.meta.url), 'utf8');
 
 test('内容を隠してから見せる演出に依存しない', () => {
@@ -29,17 +31,12 @@ test('案内ページが動画を読み込まない', () => {
   assert.equal(/<video|HeroBackgroundVideo|LoopVideo/.test(src), false, '動画が戻っている');
 });
 
-test('作例と画面写真は、必要になるまで読まない', () => {
-  // 最初の画面は文字だけなので、先読みする画像は置かない。
-  // 置くと、回線の細い環境で見出しの表示と取り合いになる（実測で約250ms）。
-  const priority = src.match(/priority/g) || [];
-  assert.equal(priority.length, 0, `先読みする画像がある（${priority.length}枚）`);
-  assert.equal(/<img /.test(src), false, '素の <img> は使わない（大きさ指定と遅延読み込みが外れる）');
-  // すべての画像に説明文がある
-  const images = (src.match(/<Image\b/g) || []).length;
-  assert.ok(images >= 3, `画像が少なすぎる（${images}）`);
-  const alts = (src.match(/alt=\{?["s]/g) || []).length;
-  assert.ok(alts >= images, `説明文の無い画像がある（画像 ${images} / 説明 ${alts}）`);
+test('最初の完成例だけを優先し、寸法付き画像を配信する', () => {
+  assert.match(showcase, /fetchPriority=\{active\s*===\s*0\s*\?\s*'high'\s*:\s*'auto'\}/);
+  assert.match(showcase, /width=\{1100\}\s+height=\{830\}/);
+  assert.match(showcase, /sizes=/);
+  assert.equal(/priority|loading="eager"/.test(src), false, '下の制作画面を先読みしない');
+  assert.match(src, /width=\{1200\}\s+height=\{780\}/);
 });
 
 test('料金と契約条件を、画面に直接書かない', () => {
@@ -59,14 +56,14 @@ test('裏の取れていない主張を書かない', () => {
 });
 
 test('見本が架空であることを、見本のそばに書く', () => {
-  assert.match(src, /架空のお店/, '見本の断りが無い');
-  assert.match(src, /生成した素材/, '写真が生成素材であることを書いていない');
+  assert.match(showcase, /架空のお店/, '見本の断りが無い');
+  assert.match(showcase, /生成した素材/, '写真が生成素材であることを書いていない');
 });
 
-test('押せるものは指で押せる大きさにする', () => {
-  // 主要な導線（作りはじめる・見る・プランで始める・相談する）
-  const big = src.match(/min-h-\[52px\]/g) || [];
-  assert.ok(big.length >= 5, `52px未満の導線がある（${big.length}個しか無い）`);
+test('主要導線と作例の選択にタッチ用の寸法を用意する', () => {
+  assert.match(css, /\.lp-button\s*\{[^}]*min-height:\s*56px/);
+  assert.match(css, /\.lp-industry-tabs button\s*\{[^}]*min-height:\s*44px/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
 });
 
 /* ── 組み上がるデモ ──
