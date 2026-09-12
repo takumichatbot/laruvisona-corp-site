@@ -110,7 +110,8 @@ function match(row, key, spec) {
    「保存できなかったとき」「保存の途中で別の画面が更新したとき」を
    本物の失敗として起こすために使う。応答の差し替えではなく、
    ここが実際に失敗を返すので、アプリ側の経路はそのまま通る。 */
-const CONTROL = { failWrites: false, failAuth: false, slowWriteMs: 0, beforeUpdate: null };
+const IMAGE_OBJECTS = new Map();
+const CONTROL = { slowStorageMs: 0, failStorage: false, failWrites: false, failAuth: false, slowWriteMs: 0, beforeUpdate: null };
 
 /** 更新のたびに進む時刻。同じミリ秒で2回呼ばれても必ず進む */
 let lastTouch = 0;
@@ -128,6 +129,16 @@ http.createServer((req, res) => {
     res.end(JSON.stringify(body));
   };
 
+  // 画像アップロードの検査用。実APIの認証・形式確認・sharp変換を通した結果だけをメモリへ置く。
+  if (url.pathname.startsWith('/storage/v1/object/')) {
+    const key = url.pathname.replace('/storage/v1/object/public/', '').replace('/storage/v1/object/', '');
+    if (req.method === 'POST') {
+      if (CONTROL.failStorage) { send(500, {error:'fixture_storage_failed',message:'写真を保存できませんでした'}); return; }
+      const chunks=[];req.on('data',c=>chunks.push(c));req.on('end',()=>{const finish=()=>{IMAGE_OBJECTS.set(key,Buffer.concat(chunks));send(200,{Key:key,Id:key});};if(CONTROL.slowStorageMs)setTimeout(finish,CONTROL.slowStorageMs);else finish();});return;
+    }
+    const image=IMAGE_OBJECTS.get(key);if(!image){send(404,{error:'not_found'});return;}
+    res.writeHead(200,{'content-type':'image/webp','access-control-allow-origin':'*'});res.end(image);return;
+  }
   if (url.pathname === '/__control') {
     let body = '';
     req.on('data', c => body += c);
@@ -135,6 +146,8 @@ http.createServer((req, res) => {
       if (req.method === 'POST') {
         let next = {};
         try { next = JSON.parse(body || '{}'); } catch { /* noop */ }
+        if ('slowStorageMs' in next) CONTROL.slowStorageMs = Math.max(0,Number(next.slowStorageMs)||0);
+        if ('failStorage' in next) CONTROL.failStorage = !!next.failStorage;
         if ('failWrites' in next) CONTROL.failWrites = !!next.failWrites;
         /* ログインが切れた状態を作る。/auth/v1/user が401を返すので、
            アプリ側の requireUser() が落ち、APIが401を返す。

@@ -13,7 +13,7 @@
  *  - 保存できなかったときに「保存済み」と出さない。
  *  - 既存のサイトをそのまま開ける。従来の編集画面にもいつでも戻れる。
  */
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import { useState, useContext, useEffect, useCallback, useMemo, useRef, useSyncExternalStore, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { readDesignChoice, saveDesignChoice, clearDesignChoice } from '@/lib/design-handoff';
 import Link from 'next/link';
@@ -32,6 +32,9 @@ import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
 import { cleanIncomingText } from '@/lib/safe-markup';
 import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publish-readiness';
 import { withPreviewBridge } from '@/lib/preview-frame';
+import { ImageField, FocalField, ImageUploadContext } from '@/components/studio/ImageField';
+import { editStudioBlock } from '@/lib/studio-image';
+import './studio-editor.css';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
 
 /* ─────────────────────────────────────────────────────────────────────── */
@@ -118,14 +121,20 @@ function toExportSettings(s: StudioSettings) {
    代わりに、節を選ぶ／位置を戻すといったやり取りは postMessage で行う。
    受け取る側は必ず送信元（window オブジェクトそのもの）を確認する。 */
 
-function Preview({ html, device, selectedId, onSelect }: {
+function Preview({ html, device, selectedId, selectedField, onSelect }: {
   html: string;
   device: 'pc' | 'sp';
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedField: string;
+  onSelect: (id: string, kind?: string) => void;
 }) {
   const ref = useRef<HTMLIFrameElement | null>(null);
   const scrollRef = useRef(0);
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({width:0,height:0});
+  const selectedRef = useRef(selectedId);
+  useEffect(()=>{selectedRef.current=selectedId},[selectedId]);
+  useEffect(() => { const el=box.current; if(!el)return; const ro=new ResizeObserver(([e])=>setSize({width:e.contentRect.width,height:e.contentRect.height}));ro.observe(el);return()=>ro.disconnect(); }, []);
   const onSelectRef = useRef(onSelect);
   useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
@@ -140,31 +149,25 @@ function Preview({ html, device, selectedId, onSelect }: {
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!ref.current || e.source !== ref.current.contentWindow) return;
-      const d = e.data as { source?: string; type?: string; id?: string; y?: number } | null;
+      const d = e.data as { source?: string; type?: string; id?: string; kind?: string; y?: number } | null;
       if (!d || d.source !== 'lhp-studio-preview') return;
-      if (d.type === 'ready') { post({ type: 'scrollTo', y: scrollRef.current }); return; }
+      if (d.type === 'ready') { post({ type: 'scrollTo', y: scrollRef.current }); post({type:'select',id:selectedRef.current||'',scroll:false}); return; }
       if (d.type === 'scroll') { scrollRef.current = Number(d.y) || 0; return; }
-      if (d.type === 'select') { onSelectRef.current(String(d.id || '')); return; }
+      if (d.type === 'select') { onSelectRef.current(String(d.id || ''),String(d.kind||'')); return; }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [post]);
 
-  useEffect(() => { post({ type: 'select', id: selectedId || '' }); }, [selectedId, html, post]);
+  useEffect(() => { post({ type: 'select', id: selectedId || '', focus:selectedField==='bgImage'?'image':selectedField==='heading'?'text':undefined }); }, [selectedId, selectedField, post]);
 
   const srcDoc = useMemo(() => withPreviewBridge(html), [html]);
 
-  return (
-    <div className={`mx-auto h-full ${device === 'sp' ? 'w-[390px]' : 'w-full max-w-[1440px]'}`}>
-      <iframe
-        ref={ref}
-        title="できあがりの見え方"
-        sandbox="allow-scripts"
-        srcDoc={srcDoc}
-        className={`w-full h-full bg-white ${device === 'sp' ? 'rounded-[28px] border-[10px] border-slate-800 shadow-2xl' : 'rounded-lg border border-slate-300 shadow-sm'}`}
-      />
-    </div>
-  );
+  const frameWidth=device==='sp'?390:1100;
+  const scale=Math.min(1,size.width/frameWidth)||1;
+  return <div ref={box} className="se-frame-box"><iframe ref={ref} title="できあがりの見え方" sandbox="allow-scripts" srcDoc={srcDoc}
+    style={{width:frameWidth,height:Math.max(200,size.height/scale),transform:`scale(${scale})`,transformOrigin:'top left',left:Math.max(0,(size.width-frameWidth*scale)/2)}}/></div>;
+
 }
 
 /* ── 入力の部品 ───────────────────────────────────────────────────────── */
@@ -186,6 +189,7 @@ function Field({ def, value, onChange }: {
   value: unknown;
   onChange: (next: unknown) => void;
 }) {
+  const uploadState=useContext(ImageUploadContext);
   if (def.type === 'toggle') {
     return (
       <label className="flex items-center gap-2 mb-4 cursor-pointer">
@@ -202,13 +206,13 @@ function Field({ def, value, onChange }: {
           <div className="space-y-2">
             {arr.map((v, i) => (
               <div key={i} className="flex gap-2">
-                <input className={inputCls} value={String(v ?? '')}
-                  onChange={e => onChange(arr.map((x, j) => j === i ? e.target.value : x))} />
-                <button type="button" className="px-2 text-slate-400 hover:text-red-600"
+                {def.key==='images' ? <div className="min-w-0 flex-1"><ImageField label={`写真 ${i+1}`} value={v} onChange={url=>onChange(arr.map((x,j)=>j===i?url:x))}/></div> : <input className={inputCls} value={String(v ?? '')}
+                  onChange={e => onChange(arr.map((x, j) => j === i ? e.target.value : x))} />}
+                <button type="button" disabled={uploadState.pending} className="px-2 text-slate-400 hover:text-red-600"
                   onClick={() => onChange(arr.filter((_, j) => j !== i))}>削除</button>
               </div>
             ))}
-            <button type="button" className="text-[12px] font-bold text-sky-700 hover:underline"
+            <button type="button" disabled={uploadState.pending} className="text-[12px] font-bold text-sky-700 hover:underline"
               onClick={() => onChange([...arr, ''])}>＋ 追加する</button>
           </div>
         </Row>
@@ -223,11 +227,11 @@ function Field({ def, value, onChange }: {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[11px] font-bold text-slate-500">{i + 1}件目</span>
                 <div className="flex gap-2 text-[11px]">
-                  {i > 0 && <button type="button" className="text-slate-500 hover:text-slate-900"
+                  {i > 0 && <button type="button" disabled={uploadState.pending} className="text-slate-500 hover:text-slate-900"
                     onClick={() => { const a = [...arr]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; onChange(a); }}>上へ</button>}
-                  {i < arr.length - 1 && <button type="button" className="text-slate-500 hover:text-slate-900"
+                  {i < arr.length - 1 && <button type="button" disabled={uploadState.pending} className="text-slate-500 hover:text-slate-900"
                     onClick={() => { const a = [...arr]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; onChange(a); }}>下へ</button>}
-                  <button type="button" className="text-red-600 hover:underline"
+                  <button type="button" disabled={uploadState.pending} className="text-red-600 hover:underline"
                     onClick={() => onChange(arr.filter((_, j) => j !== i))}>削除</button>
                 </div>
               </div>
@@ -238,7 +242,7 @@ function Field({ def, value, onChange }: {
               ))}
             </div>
           ))}
-          <button type="button" className="text-[12px] font-bold text-sky-700 hover:underline"
+          <button type="button" disabled={uploadState.pending} className="text-[12px] font-bold text-sky-700 hover:underline"
             onClick={() => onChange([...arr, { ...(def.itemDefault || {}) }])}>＋ 追加する</button>
         </div>
       </div>
@@ -256,6 +260,7 @@ function Field({ def, value, onChange }: {
       </Row>
     );
   }
+  if (def.key === 'bgImagePosition' || def.key === 'bgImagePositionSp') return <FocalField label={def.label} value={value} onChange={onChange}/>;
   if (def.type === 'select') {
     return (
       <Row label={def.label} hint={def.hint}>
@@ -282,20 +287,8 @@ function Field({ def, value, onChange }: {
       </Row>
     );
   }
-  if (def.type === 'image') {
-    return (
-      <Row label={def.label} hint={def.hint || '写真のURL、または /salon/hero-1600.jpg のような置き場所'}>
-        <div className="flex gap-2 items-start">
-          {String(value || '') && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={String(value)} alt="" className="w-14 h-14 rounded object-cover border border-slate-200 bg-slate-100" />
-          )}
-          <input className={inputCls} value={String(value ?? '')} placeholder="https://…"
-            onChange={e => onChange(e.target.value.trim())} />
-        </div>
-      </Row>
-    );
-  }
+  if (def.type === 'image') return <ImageField label={def.label} value={value} onChange={onChange}/>;
+
   return (
     <Row label={def.label} hint={def.hint}>
       <input className={inputCls} value={String(value ?? '')} placeholder={def.placeholder}
@@ -362,6 +355,9 @@ function clearDraft(siteId: string | null): void {
   try { window.localStorage.removeItem(draftKey(siteId)); } catch { /* 消せなくても困らない */ }
 }
 
+const studioMobile = () => window.matchMedia('(max-width:900px)').matches;
+const studioServerMobile = () => false;
+const subscribeStudioMobile = (notify:()=>void) => {const mq=window.matchMedia('(max-width:900px)');mq.addEventListener('change',notify);return()=>mq.removeEventListener('change',notify)};
 function StudioInner() {
   const params = useSearchParams();
   const siteIdParam = params.get('siteId');
@@ -402,8 +398,17 @@ function StudioInner() {
   }));
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [device, setDevice] = useState<'pc' | 'sp'>('pc');
+  const [deviceChoice, setDevice] = useState<'pc' | 'sp' | null>(null);
+  const mobile=useSyncExternalStore(subscribeStudioMobile,studioMobile,studioServerMobile);
+  const device=deviceChoice??(mobile?'sp':'pc');
   const [panel, setPanel] = useState<'block' | 'design' | 'ready'>('block');
+  const [mobileTool,setMobileTool]=useState<'preview'|'blocks'|'settings'>('preview');
+  const [fieldFocus,setFieldFocus]=useState('');
+  const [focusRequest,setFocusRequest]=useState(0);
+  const [uploads,setUploads]=useState(0);
+  const reportUpload=useCallback((active:boolean)=>setUploads(n=>Math.max(0,n+(active?1:-1))),[]);
+  const settingsPane=useRef<HTMLDivElement>(null);
+  useEffect(()=>{if(!fieldFocus)return; const frame=requestAnimationFrame(()=>{const el=settingsPane.current?.querySelector<HTMLElement>(`[data-field-key="${fieldFocus}"]`);if(el)settingsPane.current?.scrollTo({top:el.offsetTop-80,behavior:'instant'});});return()=>cancelAnimationFrame(frame)},[fieldFocus,focusRequest]);
   const [saveState, setSaveState] = useState<SaveState>({ kind: 'clean', at: null });
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [savedSincePublish, setSavedSincePublish] = useState(false);
@@ -611,7 +616,7 @@ function StudioInner() {
     setSite(prev => ({
       ...prev,
       pages: prev.pages.map((p, i) => i === 0
-        ? { ...p, blocks: p.blocks.map(b => b.id === id ? { ...b, data: { ...b.data, [key]: value } } : b) }
+        ? { ...p, blocks: p.blocks.map(b => b.id === id ? editStudioBlock(b, key, value) : b) }
         : p),
     }));
   }, []);
@@ -803,16 +808,16 @@ function StudioInner() {
   const def = selected ? BLOCK_DEFS[selected.type] : null;
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 text-slate-900">
+    <ImageUploadContext.Provider value={{pending:uploads>0,report:reportUpload}}><div className="se-editor h-screen flex flex-col bg-slate-100 text-slate-900" data-mobile-tool={mobileTool}>
       {/* 上の帯 */}
-      <header className="flex items-center gap-3 px-4 h-14 bg-white border-b border-slate-200 flex-shrink-0">
+      <header className="se-editor-header flex items-center gap-3 px-4 h-14 bg-white border-b border-slate-200 flex-shrink-0">
         <Link href="/laruHP/dashboard" className="text-sm font-bold text-slate-500 hover:text-slate-900">← 一覧</Link>
         <input
           className="font-bold text-slate-900 border border-transparent hover:border-slate-300 focus:border-sky-400 rounded px-2 py-1 text-sm w-56 focus:outline-none"
           value={site.name} placeholder="店名"
           onChange={e => setSite(prev => ({ ...prev, name: cleanIncomingText(e.target.value, 120) }))}
         />
-        <div className="flex bg-slate-100 rounded-lg p-0.5 ml-2">
+        <div className="se-devices flex bg-slate-100 rounded-lg p-0.5 ml-2">
           {(['pc', 'sp'] as const).map(k => (
             <button key={k} onClick={() => setDevice(k)}
               className={`px-3 py-1 rounded-md text-xs font-bold ${device === k ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>
@@ -821,7 +826,7 @@ function StudioInner() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="se-header-actions ml-auto flex items-center gap-3">
           <SaveBadge state={saveState} />
           <button onClick={reload} disabled={!siteId || saveState.kind === 'saving'}
             className="text-xs font-bold text-slate-500 hover:text-slate-900 disabled:opacity-30">読み直す</button>
@@ -829,7 +834,7 @@ function StudioInner() {
             className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-bold disabled:opacity-50">
             {saveState.kind === 'saving' ? '保存中…' : '保存'}
           </button>
-          <button onClick={() => setPanel('ready')}
+          <button onClick={() => {setPanel('ready');setMobileTool('settings');}}
             className="px-4 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-bold">公開の準備</button>
         </div>
       </header>
@@ -867,14 +872,14 @@ function StudioInner() {
         </div>
       )}
 
-      <div className="flex-1 flex min-h-0">
+      <div className="se-workspace flex-1 flex min-h-0">
         {/* 左: 節の一覧 */}
-        <aside className="w-60 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
+        <aside className="se-blocks w-60 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
           <div className="px-3 py-2 text-[11px] font-bold text-slate-400">ページの中身</div>
           {blocks.map((b, i) => (
             <div key={b.id}
               className={`group px-3 py-2 border-l-4 cursor-pointer ${selectedId === b.id ? 'border-sky-500 bg-sky-50' : 'border-transparent hover:bg-slate-50'}`}
-              onClick={() => { setSelectedId(b.id); setPanel('block'); }}>
+              role="button" tabIndex={0} onKeyDown={e=>{if(e.target!==e.currentTarget)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelectedId(b.id);setPanel('block');setMobileTool('settings');}}} onClick={() => { setSelectedId(b.id); setPanel('block'); setMobileTool('settings'); }}>
               <div className="flex items-center gap-2">
                 <span>{blockIcon(b)}</span>
                 <span className="text-[13px] font-bold text-slate-800 flex-1 truncate">{blockLabel(b)}</span>
@@ -896,13 +901,13 @@ function StudioInner() {
         </aside>
 
         {/* 中央: できあがりの見え方 */}
-        <main className="flex-1 min-w-0 p-4 overflow-hidden">
-          <Preview html={previewHtml} device={device} selectedId={selectedId} onSelect={id => { setSelectedId(id); setPanel('block'); }} />
+        <main className="se-canvas flex-1 min-w-0 p-4 overflow-hidden"><div className="se-canvas-hint"><span><i/>完成像を見ながら編集</span><span>写真・文字を押すと編集できます</span></div>
+          <Preview html={previewHtml} device={device} selectedId={selectedId} selectedField={fieldFocus} onSelect={(id,kind) => {const b=blocks.find(x=>x.id===id);if(!b)return;setSelectedId(id);setPanel('block');setMobileTool('settings');const fields=BLOCK_DEFS[b.type]?.fields||[];const f=fields.find(f=>kind==='image'?f.type==='image':kind==='button'?f.key==='ctaText':f.type==='multiline'||f.type==='text');setFieldFocus(f?.key||'');setFocusRequest(n=>n+1);}} />
         </main>
 
         {/* 右: 設定 */}
-        <aside className="w-[340px] bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
-          <div className="flex border-b border-slate-200 flex-shrink-0">
+        <aside className="se-settings w-[340px] bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
+          <div className="se-settings-tabs flex border-b border-slate-200 flex-shrink-0">
             {([['block', '選んだ場所'], ['design', 'サイト全体'], ['ready', '公開の準備']] as const).map(([k, label]) => (
               <button key={k} onClick={() => setPanel(k)}
                 className={`flex-1 py-2.5 text-[12px] font-bold ${panel === k ? 'text-sky-700 border-b-2 border-sky-600' : 'text-slate-400'}`}>
@@ -910,7 +915,7 @@ function StudioInner() {
               </button>
             ))}
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div ref={settingsPane} className="se-settings-body flex-1 overflow-y-auto p-4">
             {panel === 'block' && (
               selected && def ? (
                 <>
@@ -919,9 +924,9 @@ function StudioInner() {
                     <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{def.purpose}</div>
                   </div>
                   {def.fields.map(f => (
-                    <Field key={f.key} def={f}
+                    <div key={`${selected.id}:${f.key}`} data-field-key={f.key} className={fieldFocus===f.key?'se-focused-field':''}><Field def={f}
                       value={(selected.data as Record<string, unknown>)[f.key]}
-                      onChange={v => updateBlockData(selected.id, f.key, v)} />
+                      onChange={v => updateBlockData(selected.id, f.key, v)} /></div>
                   ))}
                 </>
               ) : selected ? (
@@ -961,7 +966,13 @@ function StudioInner() {
           </div>
         </aside>
       </div>
-    </div>
+      <nav className="se-mobile-tools" aria-label="編集の操作">
+        <button type="button" aria-pressed={mobileTool==='preview'} onClick={()=>setMobileTool('preview')}>完成像</button>
+        <button type="button" aria-pressed={mobileTool==='blocks'} onClick={()=>setMobileTool('blocks')}>ページの中身</button>
+        <button type="button" aria-pressed={mobileTool==='settings'&&panel==='block'} onClick={()=>{setPanel('block');setMobileTool('settings')}}>選んだ場所</button>
+        <button type="button" aria-pressed={mobileTool==='settings'&&panel==='design'} onClick={()=>{setPanel('design');setMobileTool('settings')}}>色・書体</button>
+      </nav>
+    </div></ImageUploadContext.Provider>
   );
 }
 
@@ -1016,6 +1027,9 @@ function defaultDataFor(type: string): Record<string, unknown> {
     map: { heading: '地図', embedUrl: '', height: 320 },
     cta: { heading: '', subtext: '', buttonText: '', buttonLink: '#contact', bgColor: '#111827' },
     tabs: { heading: '', items: [] },
+    services: {heading:'商品・サービス',items:[]},
+    testimonials: {heading:'お客様の声',items:[]},
+    'three-col': {col1Title:'',col1Text:'',col2Title:'',col2Text:'',col3Title:'',col3Text:''},
   };
   return base[type] ?? {};
 }

@@ -1,0 +1,426 @@
+.se-editor {
+  height: 100dvh !important;
+  overflow: hidden;
+  background: #f3f5fa !important;
+}
+.se-editor * {
+  box-sizing: border-box;
+}
+.se-editor
+  :where(button, a, input, textarea, select, [role="button"]):focus-visible {
+  outline: 3px solid #536fff;
+  outline-offset: 2px;
+}
+.se-editor-header {
+  height: 66px !important;
+  padding: 0 20px !important;
+  gap: 12px !important;
+  z-index: 4;
+}
+.se-editor-header > input {
+  min-width: 80px;
+  max-width: 230px;
+  flex: 1;
+}
+.se-editor-header > a {
+  white-space: nowrap;
+}
+.se-header-actions {
+  min-width: 0;
+}
+.se-header-actions > span {
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.se-blocks {
+  width: 210px !important;
+  padding-top: 10px;
+}
+.se-blocks > [role="button"] {
+  margin: 2px 6px;
+  border-radius: 7px;
+}
+.se-blocks .group:hover {
+  background: #f4f6fc;
+}
+.se-settings {
+  width: 320px !important;
+}
+.se-settings-body {
+  position: relative;
+  padding: 20px !important;
+  overscroll-behavior: contain;
+}
+.se-settings-tabs button {
+  min-height: 49px;
+}
+.se-canvas {
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px 20px !important;
+  background: #edf0f6;
+}
+.se-canvas-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 46px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #7b879b;
+}
+.se-canvas-hint > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #4d5a72;
+  font-weight: 600;
+}
+.se-canvas-hint i {
+  width: 5px;
+  height: 5px;
+  background: #37a582;
+  border-radius: 50%;
+}
+.se-frame-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  filter: drop-shadow(0 6px 18px #24385715);
+}
+.se-frame-box iframe {
+  position: absolute;
+  top: 0;
+  border: 0;
+  background: #fff;
+  border-radius: 10px;
+}
+.se-focused-field {
+  border-left: 3px solid #536fff;
+  padding-left: 12px;
+  margin-left: -15px;
+}
+.se-image-field {
+  margin-bottom: 24px;
+}
+.se-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #334155;
+}
+.se-image-pick {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 166px;
+  border: 1px solid #dce2ed;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f2f5fa;
+  color: #708098;
+}
+.se-image-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.se-image-pick > span {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px;
+  background: #18243bd9;
+  color: white;
+  font-size: 11px;
+  font-weight: 650;
+}
+.se-image-pick:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.se-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.se-image-note {
+  font-size: 10px;
+  color: #7d8797;
+  line-height: 1.8;
+  margin: 8px 0;
+}
+.se-image-field summary {
+  font-size: 11px;
+  color: #6d7d94;
+  cursor: pointer;
+  min-height: 30px;
+  padding-top: 7px;
+}
+.se-image-url {
+  display: block;
+  font-size: 11px;
+  color: #65718a;
+  margin-top: 7px;
+}
+.se-image-url input {
+  display: block;
+  width: 100%;
+  border: 1px solid #dce2ed;
+  border-radius: 6px;
+  padding: 9px;
+  margin-top: 5px;
+  color: #1e293b;
+  background: white;
+}
+.se-image-error {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #b42332;
+}
+.se-image-done {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #227756;
+  line-height: 1.6;
+}
+.se-focal {
+  border: 0;
+  padding: 0;
+  margin: 0 0 22px;
+  min-width: 0;
+}
+.se-focal legend {
+  font-size: 12px;
+  font-weight: 650;
+  color: #475569;
+  margin-bottom: 9px;
+}
+.se-focal-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.se-focal-row > [role="group"] {
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid #dce2ed;
+  border-radius: 8px;
+  background: #f6f8fc;
+}
+.se-focal-row button[aria-pressed] {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  border: 0;
+  background: #e8edf6;
+  border-radius: 3px;
+}
+.se-focal-row button[aria-pressed] span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8b9bb4;
+}
+.se-focal-row button[aria-pressed="true"] {
+  background: #4059e7;
+}
+.se-focal-row button[aria-pressed="true"] span {
+  background: white;
+}
+.se-focal-row p {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #78859c;
+}
+.se-focal-row p button {
+  display: block;
+  color: #536cb5;
+  text-decoration: underline;
+  margin-top: 7px;
+}
+.se-mobile-tools {
+  display: none;
+}
+.se-spin {
+  animation: se-spin 1s linear infinite;
+}
+@keyframes se-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 1199px) and (min-width: 901px) {
+  .se-blocks {
+    width: 170px !important;
+  }
+  .se-settings {
+    width: 280px !important;
+  }
+  .se-header-actions > span {
+    display: none;
+  }
+  .se-canvas-hint > span:last-child {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .se-editor-header {
+    height: auto !important;
+    min-height: 103px;
+    flex-wrap: wrap;
+    padding: 10px 14px !important;
+    gap: 9px !important;
+  }
+  .se-editor-header > a {
+    font-size: 11px;
+  }
+  .se-editor-header > input {
+    max-width: none;
+    width: 150px;
+    font-size: 16px !important;
+  }
+  .se-devices {
+    margin-left: auto !important;
+  }
+  .se-devices button {
+    font-size: 10px !important;
+    padding: 5px 7px !important;
+  }
+  .se-header-actions {
+    width: 100%;
+    gap: 8px !important;
+    border-top: 1px solid #edf0f5;
+    padding-top: 9px;
+  }
+  .se-header-actions > span {
+    font-size: 10px;
+    max-width: none;
+    flex: 1;
+  }
+  .se-header-actions > button:nth-of-type(1) {
+    display: none;
+  }
+  .se-header-actions > button {
+    font-size: 11px;
+    padding: 7px 13px;
+    min-height: 33px;
+    white-space: nowrap;
+  }
+  .se-workspace {
+    position: relative;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .se-canvas {
+    order: 0;
+    min-height: 0;
+    padding: 0 12px 12px !important;
+  }
+  .se-canvas-hint {
+    height: 33px;
+    font-size: 9px;
+  }
+  .se-canvas-hint > span:last-child {
+    font-size: 8px;
+  }
+  .se-blocks,
+  .se-settings {
+    display: none !important;
+  }
+  .se-editor[data-mobile-tool="settings"] .se-settings,
+  .se-editor[data-mobile-tool="blocks"] .se-blocks {
+    display: flex !important;
+    order: 1;
+    width: 100% !important;
+    height: 46%;
+    flex-shrink: 0;
+    border: 0;
+    border-top: 1px solid #d9e0ed;
+    box-shadow: 0 -6px 25px #3045670c;
+  }
+  .se-editor[data-mobile-tool="blocks"] .se-blocks {
+    display: block !important;
+    padding: 10px 15px;
+  }
+  .se-settings-body {
+    padding: 14px 20px !important;
+  }
+  .se-settings-body input:not([type="color"]):not([type="checkbox"]),
+  .se-settings-body textarea,
+  .se-settings-body select {
+    font-size: 16px;
+  }
+  .se-settings-tabs button {
+    min-height: 42px;
+  }
+  .se-mobile-tools {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    background: #fff;
+    border-top: 1px solid #dce3ee;
+    padding: 7px 9px max(8px, env(safe-area-inset-bottom));
+    z-index: 5;
+    flex-shrink: 0;
+  }
+  .se-mobile-tools button {
+    min-height: 43px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 10px;
+    font-weight: 650;
+    color: #7c879a;
+  }
+  .se-mobile-tools button[aria-pressed="true"] {
+    background: #edf0ff;
+    color: #3451d4;
+  }
+  .se-focal-row button[aria-pressed] {
+    width: 35px;
+    height: 32px;
+  }
+  .se-focal-row > [role="group"] {
+    grid-template-columns: repeat(3, 35px);
+  }
+  .se-editor .se-blocks .group > div > span:last-child {
+    opacity: 1;
+  }
+  .se-editor .se-blocks .group > div > span:last-child button {
+    min-width: 28px;
+    min-height: 30px;
+    font-size: 12px;
+  }
+  .se-image-pick {
+    height: 185px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .se-editor * {
+    scroll-behavior: auto !important;
+  }
+  .se-spin {
+    animation: none;
+  }
+}

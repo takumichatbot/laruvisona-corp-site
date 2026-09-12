@@ -191,6 +191,34 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
       { key: 'buttonColor', label: 'ボタンの色', type: 'color' },
     ],
   },
+  services: {
+    label: '商品・サービス', icon: '▤', purpose: '提供する内容と料金を伝える',
+    fields: [
+      {key:'heading',label:'見出し',type:'text'}, {key:'subtext',label:'補足',type:'text'},
+      {key:'columns',label:'横に並べる数',type:'select',options:[{value:'2',label:'2列'},{value:'3',label:'3列'}]},
+      {key:'items',label:'商品・サービスの一覧',type:'list',itemDefault:{icon:'',title:'商品名を入力してください',description:'',price:''},item:[
+        {key:'icon',label:'アイコン（文字）',type:'text'},{key:'title',label:'名前',type:'text'},
+        {key:'description',label:'説明',type:'multiline'},{key:'price',label:'料金',type:'text'}
+      ]}
+    ]
+  },
+  testimonials: {
+    label:'お客様の声',icon:'✎',purpose:'掲載許可を得た、実際のお客様の声を紹介する。見本はそのまま公開しない',
+    fields:[{key:'heading',label:'見出し',type:'text'},
+      {key:'items',label:'お客様の声',type:'list',itemDefault:{name:'',age:'',text:'',rating:0},item:[
+        {key:'name',label:'お名前・イニシャル',type:'text'},{key:'age',label:'年代などの補足',type:'text'},
+        {key:'text',label:'いただいた声',type:'multiline'},
+        {key:'rating',label:'実際の評価',type:'select',options:[{value:'0',label:'星を出さない'},...['1','2','3','4','5'].map(value=>({value,label:value+'点'}))]}
+      ]}
+    ]
+  },
+  'three-col': {
+    label:'3つの特徴',icon:'▥',purpose:'大切な特徴を3つに分けて伝える',
+    fields:[1,2,3].flatMap(n=>[
+      {key:`col${n}Title`,label:`特徴${n}の見出し`,type:'text' as const},
+      {key:`col${n}Text`,label:`特徴${n}の説明`,type:'multiline' as const}
+    ])
+  },
   contact: {
     label: 'お問い合わせ', icon: '✉️', purpose: '予約以外の相談を受け取る',
     fields: [
