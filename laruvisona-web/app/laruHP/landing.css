@@ -557,6 +557,15 @@
   color: #8492ad;
   margin-top: 18px;
 }
+.lp-after-grid article .lp-card-link {
+  display: inline-flex;
+  margin-top: 14px;
+  color: #b8eaff;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
 .lp-pricing {
   padding-block: 110px 80px;
 }

@@ -295,9 +295,9 @@ export default function LaruHPLandingPage() {
                 <MessageSquare size={24} />
                 <h3>予約・問い合わせ</h3>
                 <p>
-                  希望日時や相談をフォームで受け付け。確認して折り返す、お店との接点をつくれます。
+                  希望受付のフォームと、営業時間・担当者・設備の空きを合わせた予約を用意できます。
                 </p>
-                <span>予約確定型ではなく、希望受付のフォームです</span>
+                <span>事前決済は実取引の確認後に順次提供します</span>
               </article>
               <article>
                 <Globe2 size={24} />
@@ -305,7 +305,8 @@ export default function LaruHPLandingPage() {
                 <p>
                   サーバーとSSLは月額に含まれます。独自ドメインの接続にも対応しています。
                 </p>
-                <span>ドメイン取得費は別途必要です</span>
+                <span>取得・更新費は登録事業者への別払いです</span>
+                <Link className="lp-card-link" href="https://laruhp.com/domains">取得から接続までを見る</Link>
               </article>
               <article>
                 <Search size={24} />

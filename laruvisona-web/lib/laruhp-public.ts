@@ -12,7 +12,7 @@ export const LARUHP_ARTICLE_SLUGS = [
   'chatbot-jidou-outon',
 ] as const;
 
-const FIXED_PUBLIC_PATHS = ['/plans', '/contact', '/privacy', '/terms', '/tokusho'] as const;
+const FIXED_PUBLIC_PATHS = ['/plans', '/domains', '/contact', '/privacy', '/terms', '/tokusho'] as const;
 const PUBLIC_ASSET_PATHS = ['/opengraph-image'] as const;
 
 export const LARUHP_PUBLIC_PATHS = [

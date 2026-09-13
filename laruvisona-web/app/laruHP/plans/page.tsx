@@ -35,6 +35,7 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: 'SSL・サーバー費用込み',   hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'Google Analytics連携',    hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'お問い合わせフォーム',    hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  { label: '空き枠・担当者・設備の予約', hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'サポート',                hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
 ];
 
@@ -144,14 +145,13 @@ function CheckoutButton({
 // ログイン後に ?checkout=<plan>&billing=<...> が付いて戻ってきたら、選んだプランで自動的に決済を再開する
 function CheckoutResume() {
   const searchParams = useSearchParams();
-  const [resuming, setResuming] = useState(false);
+  const [resuming, setResuming] = useState(() => !!searchParams.get('checkout'));
   const [error, setError] = useState('');
 
   useEffect(() => {
     const plan = searchParams.get('checkout');
     if (!plan) return;
     const billing = searchParams.get('billing') === 'annual' ? 'annual' : 'monthly';
-    setResuming(true);
     startCheckout(plan, billing).then(err => {
       if (err) { setError(err); setResuming(false); }
     });

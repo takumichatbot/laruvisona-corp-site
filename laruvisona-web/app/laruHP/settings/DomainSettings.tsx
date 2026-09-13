@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { DOMAIN_BILLING_NOTE } from '@/lib/domain-guidance';
 
 /**
  * 独自ドメインの設定画面。
@@ -229,8 +231,27 @@ export default function DomainSettings() {
     <section className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
       <h2 className="font-bold text-sm text-gray-900 mb-1">独自ドメイン設定</h2>
       <p className="text-xs text-gray-500 mb-5">
-        お持ちのドメインを、このサイトの公開URLにします。ドメインを追加すると設定すべきDNSレコードが表示されます。
+        お持ちのドメインを、このサイトの公開URLにします。まだお持ちでなくても、標準URLで公開できます。
       </p>
+
+      <div className="grid gap-3 sm:grid-cols-2 mb-7" aria-label="独自ドメインを設定する前の案内">
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+          <p className="text-xs font-bold text-sky-950">ドメインを持っている</p>
+          <p className="mt-1 text-[11px] leading-5 text-sky-900">
+            移管は不要です。下の欄へ入力すると、そのドメイン専用のDNS設定を表示します。
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs font-bold text-gray-900">まだドメインを持っていない</p>
+          <p className="mt-1 text-[11px] leading-5 text-gray-600">{DOMAIN_BILLING_NOTE}</p>
+          <Link
+            href="https://laruhp.com/domains"
+            className="mt-3 inline-flex min-h-[44px] items-center text-xs font-bold text-sky-700 underline underline-offset-4"
+          >
+            取得方法と注意点を見る
+          </Link>
+        </div>
+      </div>
 
       <div className="space-y-8">
         {sites.map(site => (
