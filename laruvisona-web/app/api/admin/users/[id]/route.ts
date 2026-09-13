@@ -40,23 +40,43 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const priceId = PLAN_PRICE_MAP[body.plan];
     if (!priceId) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
 
-    const { data: profile } = await service.from('profiles').select('stripe_subscription_id').eq('id', id).single();
-    if (profile?.stripe_subscription_id) {
-      try {
-        const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
-        const itemId = sub.items.data[0]?.id;
-        if (itemId) {
-          await stripe.subscriptions.update(profile.stripe_subscription_id, {
-            items: [{ id: itemId, price: priceId }],
-            proration_behavior: 'create_prorations',
-            metadata: { plan: body.plan },
-          });
-        }
-      } catch (err) {
-        console.error('[admin/plan] stripe error:', err);
-      }
+    const profileResult = await service.from('profiles')
+      .select('stripe_subscription_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (profileResult.error) {
+      return NextResponse.json({ error: '契約状態を確認できませんでした' }, { status: 503 });
     }
-    await service.from('profiles').update({ plan: body.plan }).eq('id', id);
+    const subscriptionId = profileResult.data?.stripe_subscription_id;
+    if (!profileResult.data) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!subscriptionId) {
+      return NextResponse.json({ error: 'Stripe契約がないためプランを変更できません' }, { status: 409 });
+    }
+
+    try {
+      const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      const itemId = sub.items.data[0]?.id;
+      if (!itemId || sub.items.data.length !== 1 || ['canceled', 'incomplete_expired'].includes(sub.status)) {
+        return NextResponse.json({ error: 'Stripe契約の内容を確認してください' }, { status: 409 });
+      }
+      await stripe.subscriptions.update(subscriptionId, {
+        items: [{ id: itemId, price: priceId }],
+        proration_behavior: 'create_prorations',
+        metadata: { plan: body.plan },
+      });
+    } catch (err) {
+      console.error('[admin/plan] stripe error:', err instanceof Error ? err.message : 'unknown');
+      return NextResponse.json({ error: 'Stripeのプラン変更を確定できませんでした' }, { status: 502 });
+    }
+
+    const saved = await service.from('profiles')
+      .update({ plan: body.plan })
+      .eq('id', id)
+      .eq('stripe_subscription_id', subscriptionId)
+      .select('id');
+    if (saved.error || saved.data?.length !== 1) {
+      return NextResponse.json({ error: '決済変更後の契約状態を保存できませんでした' }, { status: 503 });
+    }
 
     // プラン変更メール
     if (process.env.RESEND_API_KEY) {
@@ -94,19 +114,35 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // 強制解約
   if (body.force_cancel) {
-    const { data: profile } = await service.from('profiles').select('stripe_subscription_id').eq('id', id).single();
-    if (profile?.stripe_subscription_id) {
-      try {
-        await stripe.subscriptions.cancel(profile.stripe_subscription_id);
-      } catch (err) {
-        console.error('[admin/cancel] stripe error:', err);
-      }
+    const profileResult = await service.from('profiles')
+      .select('stripe_subscription_id,subscription_status,plan')
+      .eq('id', id)
+      .maybeSingle();
+    if (profileResult.error) {
+      return NextResponse.json({ error: '契約状態を確認できませんでした' }, { status: 503 });
     }
-    await service.from('profiles').update({
+    if (!profileResult.data) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const subscriptionId = profileResult.data.stripe_subscription_id;
+    if (!subscriptionId) {
+      if (profileResult.data.subscription_status === 'canceled' && !profileResult.data.plan) {
+        return NextResponse.json({ ok: true, unchanged: true });
+      }
+      return NextResponse.json({ error: 'Stripe契約を特定できないため解約できません' }, { status: 409 });
+    }
+    try {
+      await stripe.subscriptions.cancel(subscriptionId);
+    } catch (err) {
+      console.error('[admin/cancel] stripe error:', err instanceof Error ? err.message : 'unknown');
+      return NextResponse.json({ error: 'Stripeの解約を確定できませんでした' }, { status: 502 });
+    }
+    const canceled = await service.from('profiles').update({
       subscription_status: 'canceled',
       stripe_subscription_id: null,
       plan: null,
-    }).eq('id', id);
+    }).eq('id', id).eq('stripe_subscription_id', subscriptionId).select('id');
+    if (canceled.error || canceled.data?.length !== 1) {
+      return NextResponse.json({ error: '解約後の契約状態を保存できませんでした' }, { status: 503 });
+    }
     return NextResponse.json({ ok: true });
   }
 
@@ -116,8 +152,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.is_suspended !== undefined) updates.is_suspended = body.is_suspended;
   if (body.admin_notes !== undefined) updates.admin_notes = body.admin_notes;
 
-  const { error } = await service.from('profiles').update(updates).eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: '更新項目がありません' }, { status: 400 });
+  }
+  const saved = await service.from('profiles').update(updates).eq('id', id).select('id');
+  if (saved.error || saved.data?.length !== 1) {
+    return NextResponse.json({ error: '利用者情報を更新できませんでした' }, { status: 503 });
+  }
 
   return NextResponse.json({ ok: true });
 }

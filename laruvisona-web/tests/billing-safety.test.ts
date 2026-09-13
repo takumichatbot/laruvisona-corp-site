@@ -7,6 +7,7 @@ const checkout = readFileSync(new URL('../app/api/stripe/checkout/route.ts', imp
 const upgrade = readFileSync(new URL('../app/api/stripe/upgrade/route.ts', import.meta.url), 'utf8');
 const portal = readFileSync(new URL('../app/api/stripe/portal/route.ts', import.meta.url), 'utf8');
 const deletion = readFileSync(new URL('../app/api/account/delete/route.ts', import.meta.url), 'utf8');
+const adminUser = readFileSync(new URL('../app/api/admin/users/[id]/route.ts', import.meta.url), 'utf8');
 
 test('Stripeの戻り先はリクエストOriginではなく固定したアプリoriginを使う', () => {
   const before = process.env.NEXT_PUBLIC_APP_URL;
@@ -53,4 +54,22 @@ test('最低契約期間中も解約を開放せず支払方法だけ更新で�
   assert.match(portal, /payment_method_update/);
   assert.match(portal, /paymentMethodOnly \? 'payment_method' : 'manage'/);
   assert.doesNotMatch(portal, /error: 'minimum_contract'/);
+});
+
+test('管理者操作もStripe失敗時にDBだけプラン変更・解約済みにしない', () => {
+  const planStart = adminUser.indexOf('// プラン変更');
+  const cancelStart = adminUser.indexOf('// 強制解約');
+  const regularStart = adminUser.indexOf('// 通常の更新');
+  const planSection = adminUser.slice(planStart, cancelStart);
+  const cancelSection = adminUser.slice(cancelStart, regularStart);
+
+  assert.match(planSection, /Stripeのプラン変更を確定できませんでした/);
+  assert.ok(planSection.indexOf('stripe.subscriptions.update') < planSection.indexOf(".update({ plan: body.plan })"));
+  assert.match(planSection, /\.eq\('stripe_subscription_id', subscriptionId\)[\s\S]*?\.select\('id'\)/);
+  assert.match(planSection, /saved\.error \|\| saved\.data\?\.length !== 1/);
+
+  assert.match(cancelSection, /Stripeの解約を確定できませんでした/);
+  assert.ok(cancelSection.indexOf('stripe.subscriptions.cancel') < cancelSection.indexOf("subscription_status: 'canceled'"));
+  assert.match(cancelSection, /\.eq\('stripe_subscription_id', subscriptionId\)\.select\('id'\)/);
+  assert.match(cancelSection, /canceled\.error \|\| canceled\.data\?\.length !== 1/);
 });
