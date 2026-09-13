@@ -4,6 +4,7 @@ import { Resend } from 'resend';
 import { signResetToken } from '@/lib/member-auth';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import { hpMemberEmail, hpMemberSiteId, readHpMemberBody } from '@/lib/hp-member-contract';
+import { singleLine } from '@/lib/contact-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,10 +39,10 @@ export async function POST(req: Request) {
     const link = `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/hp/member-reset?site=${siteId}&token=${encodeURIComponent(token)}`;
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
-        from: `${site?.name || 'LARU HP'} <noreply@laruvisona.jp>`,
+      const result = await resend.emails.send({
+        from: `${singleLine(site?.name || 'LARU HP')} <noreply@laruvisona.jp>`,
         to: emailNorm,
-        subject: `【${site?.name || 'サイト'}】パスワード再設定`,
+        subject: `【${singleLine(site?.name || 'サイト')}】パスワード再設定`,
         html: `<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">
           <h2 style="color:#0f172a;font-size:18px">パスワード再設定</h2>
           <p style="color:#475569;font-size:14px;line-height:1.7">下のボタンから新しいパスワードを設定してください（リンクは1時間有効）。心当たりがない場合は破棄してください。</p>
@@ -49,9 +50,10 @@ export async function POST(req: Request) {
           <p style="color:#94a3b8;font-size:12px;word-break:break-all">${link}</p>
         </div>`,
       });
+      if (result.error) throw new Error('resend rejected');
     } catch (e) { console.error('[members/request-reset] mail failed:', (e as Error)?.message); }
   } else if (member) {
-    console.log('[members/request-reset] RESEND未設定のためメール送信スキップ', emailNorm);
+    console.warn('[members/request-reset] mail unavailable');
   }
 
   return NextResponse.json({ ok: true });

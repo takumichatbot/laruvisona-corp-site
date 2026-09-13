@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       if (user && !user.user_metadata?.welcome_sent && process.env.RESEND_API_KEY) {
         try {
           const resend = new Resend(process.env.RESEND_API_KEY);
-          await resend.emails.send({
+          const welcome = await resend.emails.send({
             from: 'LARU HP <noreply@laruvisona.jp>',
             to: user.email!,
             subject: '【LARU HP】ご登録ありがとうございます',
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 </body>
 </html>`,
           });
-          await supabase.auth.updateUser({ data: { welcome_sent: true } });
+          if (!welcome.error) await supabase.auth.updateUser({ data: { welcome_sent: true } });
         } catch {
           // Non-fatal
         }
