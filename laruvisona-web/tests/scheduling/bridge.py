@@ -27,7 +27,8 @@ def serve(sql,lit,site,owner,day):
      if 'stub-access-token' not in auth and 'stub-service' not in auth:return self.send({'error':'Unauthorized'},401)
      return self.send({'id':owner,'email':'owner@example.invalid','aud':'authenticated','role':'authenticated'})
     role='service_role' if 'stub-service' in auth else 'authenticated' if 'stub-access-token' in auth else 'anon'
-    prefix=f"set role {role};set request.jwt.claims={lit(json.dumps({'sub':owner} if role=='authenticated' else {}))};"
+    # Match production PostgREST: timestamptz JSON uses UTC +00:00, not the Mac's timezone.
+    prefix=f"set time zone 'UTC';set role {role};set request.jwt.claims={lit(json.dumps({'sub':owner} if role=='authenticated' else {}))};"
     body=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))) or '{}') if self.command in ('POST','PATCH') else {}
     if '/rpc/' in u.path:
      name=u.path.rsplit('/',1)[1]

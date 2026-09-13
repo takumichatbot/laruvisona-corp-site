@@ -140,7 +140,7 @@ export function reserveInput(b: Record<string, unknown>) {
     throw Error("担当者を選び直してください");
   if (
     typeof b.startsAt !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|\+09:00)$/.test(
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|\+00:00|\+09:00)$/.test(
       b.startsAt,
     ) ||
     !Number.isFinite(Date.parse(b.startsAt))

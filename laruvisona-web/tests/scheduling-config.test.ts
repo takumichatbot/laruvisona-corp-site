@@ -72,6 +72,19 @@ test("予約入力は価格・所要時間・設備の指定を信頼せず必�
   assert.throws(() => reserveInput({ ...b, token: "bad" }));
 });
 
+test("PostgRESTのUTC空き枠をそのまま予約でき、JST・Z表記と同じ時刻になる", () => {
+  const b = {
+    configVersion: 1,
+    clientKey: "11111111-1111-4111-8111-111111111111",
+    token: "a".repeat(64), name: "内部テスト", email: "test@example.invalid",
+    phone: "", serviceId: "s1", staffId: "staff-1",
+  };
+  for (const startsAt of ["2026-09-16T00:00:00+00:00", "2026-09-16T00:00:00Z", "2026-09-16T09:00:00+09:00"])
+    assert.equal(reserveInput({ ...b, startsAt }).startsAt, "2026-09-16T00:00:00.000Z");
+  for (const startsAt of ["2026-09-16T00:00:00", "2026-09-16T00:00:00+99:00", "invalid"])
+    assert.throws(() => reserveInput({ ...b, startsAt }));
+});
+
 test("固定枠との互換: 未適用だけは旧予約を使い、DB障害は不存在扱いしない", async () => {
   const { scheduledBookingLink } = await import("../lib/scheduling/legacy.ts");
   const fake = (result: unknown) => ({
