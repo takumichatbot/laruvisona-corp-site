@@ -111,5 +111,6 @@ test('portal は戻り先を検証する', () => {
 
 test('popup は公開済みサイトの設定しか返さない', () => {
   const eqPublished = (popup.match(/\.eq\('published',\s*true\)/g) || []).length;
-  assert.ok(eqPublished >= 2, `published の確認が足りない（${eqPublished}箇所）`);
+  assert.ok(eqPublished >= 1, `公開済み条件で一度に解決していない（${eqPublished}箇所）`);
+  assert.match(popup, /query = siteId \? query\.eq\('id'/, 'siteId経路が公開条件と同じクエリに閉じていない');
 });

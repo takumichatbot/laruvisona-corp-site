@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { popupButtonUrl } from '@/lib/popup-contract';
 
 interface PopupConfig {
   id: string;
@@ -82,33 +83,52 @@ export default function PopupsPage() {
   }, []);
 
   const savePopups = async (newPopups: PopupConfig[]) => {
-    if (!selectedSite) return;
+    if (!selectedSite) return false;
     setSaving(true);
     setMsg('');
     const settings = selectedSite.settings_json || {};
-    const res = await fetch(`/api/sites/${selectedSite.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings_patch: { popups: newPopups } }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`/api/sites/${selectedSite.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings_patch: { popups: newPopups } }),
+      });
+    } catch {
+      setMsg('接続できませんでした。入力内容を保ったまま、もう一度お試しください。');
+      setSaving(false);
+      return false;
+    }
     if (res.ok) {
       setMsg('保存しました');
+      setPopups(newPopups);
       setSelectedSite(prev => prev ? { ...prev, settings_json: { ...settings, popups: newPopups } } : prev);
+      setSites(prev => prev.map(site => site.id === selectedSite.id
+        ? { ...site, settings_json: { ...(site.settings_json || {}), popups: newPopups } }
+        : site));
       setTimeout(() => setMsg(''), 3000);
+      setSaving(false);
+      return true;
     } else {
       setMsg('エラーが発生しました');
     }
     setSaving(false);
+    return false;
   };
 
   const handleAdd = async () => {
+    if (!form.title.trim()) { setMsg('タイトルを入力してください'); return; }
     if (form.trigger === 'scroll' && (form.triggerValue < 1 || form.triggerValue > 100)) {
-      setMsg('⚠ スクロール値は1〜100%の範囲で入力してください');
+      setMsg('スクロール値は1〜100%の範囲で入力してください');
       return;
     }
     if (form.trigger === 'timer' && (form.triggerValue < 1 || form.triggerValue > 120)) {
-      setMsg('⚠ タイマー値は1〜120秒の範囲で入力してください');
+      setMsg('タイマー値は1〜120秒の範囲で入力してください');
       return;
+    }
+    if ((form.maxShows ?? 0) < 0 || (form.maxShows ?? 0) > 1000) { setMsg('最大表示回数は0〜1000回で入力してください'); return; }
+    if ((form.hideForDays ?? 0) < 0 || (form.hideForDays ?? 0) > 365) { setMsg('非表示期間は0〜365日で入力してください'); return; }
+    if (form.buttonUrl && popupButtonUrl(form.buttonUrl) === '#' && form.buttonUrl !== '#') {
+      setMsg('リンク先はページ内リンク、同じサイトのパス、HTTPS、メール、電話を指定してください'); return;
     }
     const newPopup: PopupConfig = {
       ...form,
@@ -117,20 +137,16 @@ export default function PopupsPage() {
       createdAt: new Date().toISOString(),
     };
     const next = [...popups, newPopup];
-    setPopups(next);
-    await savePopups(next);
-    setForm(DEFAULT_POPUP);
+    if (await savePopups(next)) setForm(DEFAULT_POPUP);
   };
 
   const handleToggle = async (id: string) => {
     const next = popups.map(p => p.id === id ? { ...p, enabled: !p.enabled } : p);
-    setPopups(next);
     await savePopups(next);
   };
 
   const handleDelete = async (id: string) => {
     const next = popups.filter(p => p.id !== id);
-    setPopups(next);
     await savePopups(next);
   };
 
@@ -176,8 +192,11 @@ export default function PopupsPage() {
               <button
                 onClick={() => {
                   const last = popups[popups.length - 1];
-                  const { id: _id, createdAt: _c, enabled: _e, ...rest } = last;
-                  setForm(rest);
+                  setForm({
+                    title: last.title, body: last.body, buttonText: last.buttonText, buttonUrl: last.buttonUrl,
+                    trigger: last.trigger, triggerValue: last.triggerValue, bgColor: last.bgColor,
+                    textColor: last.textColor, maxShows: last.maxShows, hideForDays: last.hideForDays,
+                  });
                 }}
                 className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 bg-sky-50 px-3 py-1.5 rounded-lg font-semibold transition-all"
                 title="最後に作成したポップアップの設定を引き継ぐ"
@@ -371,7 +390,7 @@ export default function PopupsPage() {
 
           {popups.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-3xl mb-3">💬</div>
+              <svg className="mx-auto mb-3 text-gray-300" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3v-3A2.5 2.5 0 0 1 4 12.5z"/></svg>
               <p className="text-sm text-gray-500">まだポップアップがありません</p>
             </div>
           ) : (
@@ -412,25 +431,13 @@ export default function PopupsPage() {
           )}
         </section>
 
-        {/* Embed guide */}
+        {/* Published behavior */}
         {selectedSite?.slug && (
           <section className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
-            <h3 className="font-bold text-sm text-indigo-900 mb-2">サイトへの埋め込み方法</h3>
-            <p className="text-xs text-indigo-700 mb-3 leading-relaxed">
-              以下のスクリプトタグをビルダーの「カスタムHTML」に貼り付けると、公開サイトに自動でポップアップが表示されます。
+            <h3 className="font-bold text-sm text-indigo-900 mb-2">公開サイトへの反映</h3>
+            <p className="text-xs text-indigo-700 leading-relaxed">
+              有効にしたポップアップは、次にサイトを公開した時点から自動で表示されます。埋め込みコードの操作は必要ありません。
             </p>
-            <div className="bg-white border border-indigo-200 rounded-xl p-3 font-mono text-[11px] text-gray-700 break-all select-all">
-              {`<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/popup?slug=${selectedSite.slug}" defer></script>`}
-            </div>
-            <button
-              onClick={() => {
-                const tag = `<script src="${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/popup?slug=${selectedSite!.slug}" defer></script>`;
-                navigator.clipboard.writeText(tag);
-              }}
-              className="mt-2 text-xs text-indigo-600 hover:text-indigo-500 border border-indigo-200 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              タグをコピー
-            </button>
           </section>
         )}
 
