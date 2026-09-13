@@ -1,0 +1,71 @@
+# LARU HP 2026-09-14 出荷準備
+
+このブランチは、制作・公開・独自ドメイン・問い合わせ・CRM・本格予約・ショップ決済・会員・配信・分析を一つの運用へつなぐローカル変更である。本番変更はこの文書の順序で、各停止条件を満たしたときだけ進める。
+
+## 現在の固定点
+
+- ブランチ: `codex/domain-onboarding-20260914`
+- `origin/main` から32コミット（文書コミット前。push直前に数え直す）
+- 全単体テスト: 706件通過
+- `next build`: exit 0
+- SQL回帰: ランナーへ統合済み。ただしこのMacにはPostgreSQL実行環境が無いため未実行
+- push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
+
+## SQLの適用順
+
+本番に書く操作である。各ファイルを一つずつ実行し、失敗したら次へ進まない。
+
+1. `contacts_crm.sql`
+2. `hp_orders.sql`
+3. `hp_loyalty.sql`
+4. `hp_newsletter.sql`
+5. `hp_sequences.sql`
+6. `hp_members.sql`
+7. `site_members.sql`
+8. `hp_analytics.sql`
+9. `hp_scheduling_notifications.sql`（`hp_scheduling.sql` 適用済みが前提）
+10. `hp_scheduling_reminders.sql`（同上）
+11. `hp_scheduled_emails.sql`
+12. `hp_push_subscriptions.sql`
+
+適用後に `release_state_check_20260914.sql` を読み取り実行する。最終行 `ALL_REQUIRED_STATE` が `true` でなければコードを有効化しない。この確認は関数本体の業務動作や実データを保証しないため、機能ごとの試験も必要である。
+
+## Render設定
+
+値はチャット、画面記録、ログへ写さない。
+
+- 基本: `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`ADMIN_SECRET`、`RESEND_API_KEY`
+- 独自ドメイン: `DOMAIN_PROBE_SECRET`、`RENDER_API_KEY`、`RENDER_SERVICE_ID`、`RENDER_SERVICE_SLUG`、`RENDER_APEX_IP`
+- ショップ: `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_CONNECT_WEBHOOK_SECRET`、`HP_SHOP_PAYMENTS_ENABLED=1`
+- 予約事前決済: 上記Stripe設定、`HP_BOOKING_PREPAY_ENABLED=1`
+- 定期配信: `RETENTION_SECRET`
+- 端末通知（任意）: 同じ組の `NEXT_PUBLIC_VAPID_PUBLIC_KEY` と `VAPID_PUBLIC_KEY`、`VAPID_PRIVATE_KEY`、任意の `VAPID_EMAIL`
+- `REPUBLISH_ON_BOOT` は設定しない。公開HTMLの再生成は対象を確認して手動で行う。
+
+## 出荷の順番
+
+1. GitHub main、Render Live SHA、公開HTML版分布、既存独自ドメイン割当、必要な環境変数の有無を読み取りで再確認する。
+2. 本番DBの控えを取得する。
+3. SQLを上記順で適用し、状態確認の最終行とfalse行を保存する。
+4. 必要なRender設定を追加する。再起動後に旧コードの基本画面が正常か確認する。
+5. ブランチ先端SHAとコミット数を固定し、mainへ通常マージしてpushする。force pushしない。
+6. Render Liveが固定SHAになったことを確認する。
+7. ログイン、制作、保存、公開、問い合わせを最小1件ずつ確認する。
+8. 予約は空き枠取得→確定→通知、ショップはテスト決済→注文→返金、端末通知は登録→受信→解除を各1件確認する。
+9. 独自ドメインはテスト用ドメインだけで所有確認・接続・主従308・解除を確認する。
+10. 公開HTMLは `dryRun:true, slug, limit:1` で対象IDと指紋を確認してから1件だけ再生成する。応答のundoを保存する。
+
+## 停止条件
+
+- 読み取り時点のmainまたはRender Liveが想定SHAと違う
+- `REPUBLISH_ON_BOOT` が存在する
+- SQL状態確認の最終行がfalse
+- Render Liveが固定SHAにならない
+- 保存・公開・問い合わせのいずれかが失敗する
+- Stripeの環境（test/live）と接続口座の環境が一致しない
+- dryRunの対象が1件でない、IDや指紋が変わる、`dryRun:true` が返らない
+- 再生成が `updated=1, conflicts=0, failed=[]` にならない
+
+## 公開後に確認する指標
+
+初週は、公開成功率、問い合わせ保存成功率、通知経路別の失敗、予約確定・リマインド失敗、注文の `review` 件数、決済・返金の未確定、独自ドメインの失敗理由、404、Web Vitalsを毎日確認する。集客施策は問い合わせ・予約・決済の本番試験が通ってから開始する。
