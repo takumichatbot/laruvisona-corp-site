@@ -14,12 +14,13 @@ export async function GET(req: Request) {
   const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { data: campaigns } = await supabase
+  const { data: campaigns, error } = await supabase
     .from('newsletter_campaigns')
-    .select('id, subject, sent_count, open_count, click_count, created_at')
+    .select('id, subject, variant, sent_count, failed_count, open_count, click_count, created_at')
     .eq('site_id', siteId)
     .order('created_at', { ascending: false })
     .limit(20);
 
+  if (error) return NextResponse.json({ error: '送信履歴を読み込めませんでした' }, { status: 500 });
   return NextResponse.json({ campaigns: campaigns || [] });
 }

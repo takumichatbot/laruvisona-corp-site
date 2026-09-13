@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ siteId: 
     .eq('site_id', siteId)
     .order('subscribed_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: '登録者を読み込めませんでした' }, { status: 500 });
 
   return NextResponse.json({ subscribers: data || [] });
 }
@@ -29,16 +29,22 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ siteI
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { siteId } = await params;
-  const { email } = await req.json() as { email: string };
+  let email = '';
+  try { ({ email } = await req.json() as { email: string }); } catch {}
+  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return NextResponse.json({ error: 'メールアドレスを確認してください' }, { status: 400 });
+  }
 
   const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
   if (!site) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  await supabase
+  const { data, error } = await supabase
     .from('newsletter_subscribers')
     .update({ unsubscribed_at: new Date().toISOString() })
     .eq('site_id', siteId)
-    .eq('email', email);
+    .eq('email', email.toLowerCase())
+    .select('id');
 
+  if (error || data?.length !== 1) return NextResponse.json({ error: '配信を解除できませんでした' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, Mail, Pause, Play, X } from 'lucide-react';
 
 interface Subscriber {
   id: string;
@@ -18,6 +19,8 @@ interface Campaign {
   sent_count: number;
   open_count: number;
   click_count: number;
+  failed_count?: number;
+  variant?: 'A' | 'B';
   created_at: string;
 }
 
@@ -57,15 +60,17 @@ export default function NewsletterPage() {
   const [sendConfirming, setSendConfirming] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string | null>(null);
+  const [pageError, setPageError] = useState('');
+  const sendRequestId = useRef<string | null>(null);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'unsubscribed'>('active');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [tab, setTab] = useState<'subscribers' | 'campaigns'>('subscribers');
-  const [pausedSending, setPausedSending] = useState(() =>
-    typeof window !== 'undefined' && localStorage.getItem('laruHP_newsletter_paused') === '1'
-  );
+  const [pausedSending, setPausedSending] = useState(false);
+  const [pauseSaving, setPauseSaving] = useState(false);
+  const [pauseLoading, setPauseLoading] = useState(false);
   const [lastExportAt, setLastExportAt] = useState<string | null>(() =>
     typeof window !== 'undefined' ? localStorage.getItem('laruHP_newsletter_last_export') : null
   );
@@ -79,9 +84,12 @@ export default function NewsletterPage() {
   const [unsubReasonEmail, setUnsubReasonEmail] = useState<string | null>(null);
   const [unsubReason, setUnsubReason] = useState('');
   const UNSUB_REASONS = ['配信頻度が多い', '内容が合わない', '必要なくなった', 'その他'];
-  const unsubReasonCounts: Record<string, number> = (() => {
-    try { return JSON.parse(localStorage.getItem('laruHP_unsub_reasons') || '{}'); } catch { return {}; }
-  })();
+  const [unsubReasonCounts, setUnsubReasonCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    try { setUnsubReasonCounts(JSON.parse(localStorage.getItem('laruHP_unsub_reasons') || '{}')); }
+    catch { setUnsubReasonCounts({}); }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -98,35 +106,73 @@ export default function NewsletterPage() {
 
   const loadSubscribers = useCallback(async (siteId: string) => {
     setSubLoading(true);
-    const res = await fetch(`/api/newsletter/${siteId}/subscribers`);
-    const data = await res.json();
-    setSubscribers(data.subscribers || []);
-    setSubLoading(false);
+    try {
+      const res = await fetch(`/api/newsletter/${siteId}/subscribers`);
+      const data = await res.json();
+      if (!res.ok) throw Error();
+      setSubscribers(data.subscribers || []);
+    } catch { setPageError('登録者を読み込めませんでした'); }
+    finally { setSubLoading(false); }
   }, []);
 
   const loadCampaigns = useCallback(async (siteId: string) => {
     setCampLoading(true);
-    const res = await fetch(`/api/newsletter/campaigns?siteId=${siteId}`);
-    const data = await res.json();
-    setCampaigns(data.campaigns || []);
-    setCampLoading(false);
+    try {
+      const res = await fetch(`/api/newsletter/campaigns?siteId=${siteId}`);
+      const data = await res.json();
+      if (!res.ok) throw Error();
+      setCampaigns(data.campaigns || []);
+    } catch { setPageError('送信履歴を読み込めませんでした'); }
+    finally { setCampLoading(false); }
+  }, []);
+
+  const loadNewsletterSettings = useCallback(async (siteId: string) => {
+    setPauseLoading(true);
+    setPausedSending(false);
+    try {
+      const res = await fetch(`/api/newsletter/settings?siteId=${encodeURIComponent(siteId)}`);
+      const data = await res.json();
+      if (!res.ok || typeof data.paused !== 'boolean') throw Error();
+      setPausedSending(data.paused);
+    } catch { setPageError('配信設定を読み込めませんでした'); }
+    finally { setPauseLoading(false); }
   }, []);
 
   useEffect(() => {
     if (selectedSiteId) {
       loadSubscribers(selectedSiteId);
       loadCampaigns(selectedSiteId);
+      loadNewsletterSettings(selectedSiteId);
     }
-  }, [selectedSiteId, loadSubscribers, loadCampaigns]);
+  }, [selectedSiteId, loadSubscribers, loadCampaigns, loadNewsletterSettings]);
+
+  const saveNewsletterPaused = async (paused: boolean) => {
+    if (!selectedSiteId || pauseSaving) return;
+    setPauseSaving(true);
+    setPageError('');
+    try {
+      const res = await fetch('/api/newsletter/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId: selectedSiteId, paused }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.paused !== paused) throw Error();
+      setPausedSending(paused);
+      setPauseConfirming(false);
+    } catch { setPageError(paused ? '配信を停止できませんでした' : '配信を再開できませんでした'); }
+    finally { setPauseSaving(false); }
+  };
 
   const handleUnsubscribe = async (email: string) => {
-    if (!selectedSiteId) return;
-    await fetch(`/api/newsletter/${selectedSiteId}/subscribers`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    setSubscribers(prev => prev.map(s => s.email === email ? { ...s, unsubscribed_at: new Date().toISOString() } : s));
+    if (!selectedSiteId) return false;
+    try {
+      const res = await fetch(`/api/newsletter/${selectedSiteId}/subscribers`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw Error();
+      setSubscribers(prev => prev.map(s => s.email === email ? { ...s, unsubscribed_at: new Date().toISOString() } : s));
+      return true;
+    } catch { setPageError('配信を解除できませんでした。対象は有効のままです'); return false; }
   };
 
   const handleExportCsv = () => {
@@ -176,61 +222,42 @@ export default function NewsletterPage() {
         });
         if (res.ok) success++;
       }
-      setCsvImportResult(`✓ ${success}件インポート完了`);
+      setCsvImportResult(`${success}件をインポートしました`);
       const cRes = await fetch(`/api/newsletter/${selectedSiteId}/subscribers`);
       const d = await cRes.json();
       setSubscribers(d.subscribers || []);
     } catch (err) {
-      setCsvImportResult(`❌ CSVの読み込みに失敗しました（${err instanceof Error ? err.message : '形式を確認してください: 1列目=メールアドレス, 2列目=名前'}）`);
+      setCsvImportResult(`CSVの読み込みに失敗しました（${err instanceof Error ? err.message : '形式を確認してください: 1列目=メールアドレス, 2列目=名前'}）`);
     }
     setCsvImporting(false);
     setTimeout(() => setCsvImportResult(null), 5000);
   };
 
   const handleSend = async () => {
-    if (!selectedSiteId || !subject.trim() || !body.trim()) return;
+    if (!selectedSiteId || pausedSending || pauseLoading || !subject.trim() || !body.trim()) return;
     setSending(true);
     setSendResult(null);
-    if (abTestMode && subjectB.trim()) {
-      const [resA, resB] = await Promise.all([
-        fetch('/api/newsletter/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ siteId: selectedSiteId, subject: subject.trim(), html: body.replace(/\n/g, '<br>'), abGroup: 'A' }),
-        }),
-        fetch('/api/newsletter/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ siteId: selectedSiteId, subject: subjectB.trim(), html: body.replace(/\n/g, '<br>'), abGroup: 'B' }),
-        }),
-      ]);
-      const dA = await resA.json();
-      const dB = await resB.json();
-      if (dA.ok || dB.ok) {
-        setSendResult(`A/Bテスト送信完了: A=${dA.sent || 0}件, B=${dB.sent || 0}件`);
-        setSubject(''); setSubjectB(''); setBody(''); setAbTestMode(false);
-        setShowSendModal(false); setSendConfirming(false);
-        loadCampaigns(selectedSiteId);
-      } else {
-        setSendResult(`エラー: ${dA.error || dB.error}`);
-      }
-    } else {
+    sendRequestId.current ||= crypto.randomUUID();
+    try {
       const res = await fetch('/api/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: selectedSiteId, subject, html: body.replace(/\n/g, '<br>') }),
+        body: JSON.stringify({
+          siteId: selectedSiteId, requestId: sendRequestId.current, subject: subject.trim(),
+          subjectB: abTestMode ? subjectB.trim() : '', body, segment: sendSegment,
+        }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        setSendResult(`${data.sent}件に送信しました`);
-        setSubject(''); setBody('');
-        setShowSendModal(false); setSendConfirming(false);
-        loadCampaigns(selectedSiteId);
-      } else {
-        setSendResult(`エラー: ${data.error}`);
-      }
-    }
-    setSending(false);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) { setSendResult(`エラー: ${data.error || '送信できませんでした'}`); return; }
+      const groups = data.groups as { A?: number; B?: number } | undefined;
+      const detail = abTestMode ? `（A ${groups?.A || 0}件・B ${groups?.B || 0}件）` : '';
+      const failed = Number(data.failed || 0);
+      setSendResult(`${data.sent}件に送信しました${detail}${failed ? `。${failed}件は送信できませんでした` : ''}`);
+      setSubject(''); setSubjectB(''); setBody(''); setAbTestMode(false);
+      setShowSendModal(false); setSendConfirming(false); sendRequestId.current = null;
+      loadCampaigns(selectedSiteId);
+    } catch { setSendResult('エラー: 通信結果を確認できませんでした。同じ送信操作でもう一度確認してください'); }
+    finally { setSending(false); }
   };
 
   const filtered = subscribers.filter(s => {
@@ -276,14 +303,15 @@ export default function NewsletterPage() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  if (unsubReason) {
+                onClick={async () => {
+                  if (await handleUnsubscribe(unsubReasonEmail)) {
+                    setUnsubReasonEmail(null);
+                    if (!unsubReason) return;
                     const current: Record<string, number> = JSON.parse(localStorage.getItem('laruHP_unsub_reasons') || '{}');
                     current[unsubReason] = (current[unsubReason] || 0) + 1;
                     localStorage.setItem('laruHP_unsub_reasons', JSON.stringify(current));
+                    setUnsubReasonCounts(current);
                   }
-                  handleUnsubscribe(unsubReasonEmail);
-                  setUnsubReasonEmail(null);
                 }}
                 className="flex-1 bg-red-600 text-white text-sm font-bold py-2 rounded-xl hover:bg-red-500 transition-colors"
               >解除する</button>
@@ -304,16 +332,17 @@ export default function NewsletterPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {pageError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{pageError}</div>}
         {loading ? (
           <div className="min-h-[40vh] flex items-center justify-center">
             <div className="text-gray-500 text-sm">読み込み中...</div>
           </div>
         ) : sites.length === 0 ? (
           <div className="min-h-[40vh] flex flex-col items-center justify-center text-center py-16">
-            <div className="text-4xl mb-4">📧</div>
+            <Mail className="mb-4 h-11 w-11 text-sky-500" aria-hidden="true" />
             <p className="text-gray-600 text-sm font-semibold mb-1">サイトがありません</p>
             <p className="text-gray-400 text-xs mb-4">まずダッシュボードからサイトを作成してください</p>
-            <a href="/laruHP/dashboard" className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-xl hover:bg-sky-500 transition-colors">ダッシュボードへ</a>
+            <Link href="/laruHP/dashboard" className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-xl hover:bg-sky-500 transition-colors">ダッシュボードへ</Link>
           </div>
         ) : (
           <>
@@ -341,10 +370,10 @@ export default function NewsletterPage() {
                       disabled={activeCount === 0}
                       className={`text-xs px-3 py-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${lastExportAt && (Date.now() - new Date(lastExportAt).getTime()) > 30 * 86400000 ? 'border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100' : 'border border-gray-200 hover:border-gray-300 text-gray-600'}`}
                     >
-                      {lastExportAt && (Date.now() - new Date(lastExportAt).getTime()) > 30 * 86400000 ? '⚠ ' : ''}CSV エクスポート
+                      {lastExportAt && (Date.now() - new Date(lastExportAt).getTime()) > 30 * 86400000 ? '要更新: ' : ''}CSV エクスポート
                     </button>
                   </div>
-                  {csvImportResult && <span className={`text-[10px] font-semibold ${csvImportResult.startsWith('✓') ? 'text-green-600' : 'text-red-500'}`}>{csvImportResult}</span>}
+                  {csvImportResult && <span className={`text-[10px] font-semibold ${csvImportResult.includes('インポートしました') ? 'text-green-600' : 'text-red-500'}`}>{csvImportResult}</span>}
                   {lastExportAt && (
                     <span className="text-[10px] text-gray-400">最終エクスポート: {new Date(lastExportAt).toLocaleDateString('ja-JP')}</span>
                   )}
@@ -353,8 +382,8 @@ export default function NewsletterPage() {
                   )}
                 </div>
                 <button
-                  onClick={() => { setShowSendModal(true); setSendResult(null); }}
-                  disabled={activeCount === 0}
+                  onClick={() => { setShowSendModal(true); setSendResult(null); sendRequestId.current = crypto.randomUUID(); }}
+                  disabled={activeCount === 0 || pausedSending || pauseLoading}
                   className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-sky-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   メール送信
@@ -414,7 +443,7 @@ export default function NewsletterPage() {
                       title="登録日 終了"
                     />
                     {(dateFrom || dateTo) && (
-                      <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-[10px] text-gray-400 hover:text-gray-700 px-1">✕</button>
+                      <button onClick={() => { setDateFrom(''); setDateTo(''); }} aria-label="日付条件を消す" className="text-gray-400 hover:text-gray-700 p-1"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                     )}
                   </div>
                 </div>
@@ -485,7 +514,7 @@ export default function NewsletterPage() {
               return (<>
               {showUnsubWarning && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-start gap-3">
-                  <span className="text-red-500 text-lg flex-shrink-0">⚠️</span>
+                  <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" aria-hidden="true" />
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm text-red-800 mb-0.5">解除率が連続して高い状態です</div>
                     <p className="text-xs text-red-700 leading-relaxed">直近{recentDangerCount}回のキャンペーンで解除率2%超が検出されました。配信内容・頻度の見直し、またはリストのクリーニングをお勧めします。</p>
@@ -493,27 +522,31 @@ export default function NewsletterPage() {
                       <button
                         onClick={() => setPauseConfirming(true)}
                         className="mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors bg-red-100 text-red-700 hover:bg-red-200"
-                      >⏸ 配信を一時停止する</button>
+                      ><Pause className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />配信を一時停止する</button>
                     )}
                     {!pausedSending && pauseConfirming && (
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-red-700 font-semibold">本当に一時停止しますか？</span>
-                        <button onClick={() => { setPausedSending(true); localStorage.setItem('laruHP_newsletter_paused', '1'); setPauseConfirming(false); }} className="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors">停止する</button>
+                        <button onClick={() => saveNewsletterPaused(true)} disabled={pauseSaving} className="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors disabled:opacity-50">{pauseSaving ? '保存中...' : '停止する'}</button>
                         <button onClick={() => setPauseConfirming(false)} className="text-xs font-bold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">キャンセル</button>
                       </div>
                     )}
                     {pausedSending && (
                       <button
-                        onClick={() => { setPausedSending(false); localStorage.setItem('laruHP_newsletter_paused', '0'); }}
-                        className="mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors bg-green-100 text-green-700 hover:bg-green-200"
-                      >▶ 配信を再開する</button>
+                        onClick={() => saveNewsletterPaused(false)}
+                        disabled={pauseSaving}
+                        className="mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
+                      ><Play className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />{pauseSaving ? '保存中...' : '配信を再開する'}</button>
                     )}
                   </div>
                 </div>
               )}
               {pausedSending && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4 flex items-center gap-2 text-xs text-amber-700 font-semibold">
-                  <span>⏸</span> 配信が一時停止中です。再開するには上のボタンを押してください。
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4 flex items-center justify-between gap-3 text-xs text-amber-700 font-semibold">
+                  <span className="flex items-center gap-2"><Pause className="h-4 w-4" aria-hidden="true" />配信が一時停止中です。</span>
+                  <button onClick={() => saveNewsletterPaused(false)} disabled={pauseSaving} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-amber-800 disabled:opacity-50">
+                    {pauseSaving ? '保存中...' : '配信を再開する'}
+                  </button>
                 </div>
               )}
               {campaigns.length >= 2 && (
@@ -575,11 +608,11 @@ export default function NewsletterPage() {
                           <div className="flex items-center gap-1.5 shrink-0">
                             {unsubSpike ? (
                               <span className="text-[10px] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full font-bold" title="解除率が5%を超えています。配信内容の見直しをお勧めします。">
-                                ⚠ 解除率急増
+                                解除率急増
                               </span>
                             ) : unsubDanger ? (
                               <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-bold" title="解除率が2%を超えています。配信頻度や内容をご確認ください。">
-                                ⚠ 解除率注意
+                                解除率注意
                               </span>
                             ) : null}
                             <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
@@ -624,7 +657,7 @@ export default function NewsletterPage() {
                           <div className={`rounded-lg px-2 py-2 text-center border ${unsubSpike ? 'bg-red-50 border-red-200' : unsubDanger ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100'}`}>
                             <p className={`text-base font-bold ${unsubSpike ? 'text-red-600' : unsubDanger ? 'text-amber-700' : 'text-gray-500'}`}>{unsubRate}%</p>
                             <p className="text-[10px] text-gray-500 mt-0.5">解除率</p>
-                            <p className={`text-[10px] ${unsubSpike ? 'text-red-400' : unsubDanger ? 'text-amber-500' : 'text-gray-400'}`}>{unsubAfter}件{unsubDanger ? ' ⚠' : ''}</p>
+                            <p className={`text-[10px] ${unsubSpike ? 'text-red-400' : unsubDanger ? 'text-amber-500' : 'text-gray-400'}`}>{unsubAfter}件{unsubDanger ? '・要確認' : ''}</p>
                           </div>
                         </div>
                         )}
@@ -757,7 +790,7 @@ export default function NewsletterPage() {
                     </button>
                     <button
                       onClick={handleSend}
-                      disabled={sending}
+                      disabled={sending || pausedSending || pauseLoading}
                       className="flex-1 text-sm bg-red-600 text-white font-bold py-2.5 rounded-lg hover:bg-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {sending ? `送信中 (${segmentCount}件)` : '送信を確定する'}
@@ -775,7 +808,7 @@ export default function NewsletterPage() {
                   </button>
                   <button
                     onClick={() => setSendConfirming(true)}
-                    disabled={sending || !subject.trim() || !body.trim()}
+                    disabled={sending || pausedSending || pauseLoading || !subject.trim() || !body.trim() || (abTestMode && !subjectB.trim())}
                     className="flex-1 text-sm bg-sky-600 text-white font-bold py-2.5 rounded-lg hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     送信する →
