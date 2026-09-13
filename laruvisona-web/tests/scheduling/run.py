@@ -27,6 +27,10 @@ def sql(q,ok=True):
  p=subprocess.run([binary('psql'),'-X','-h',str(WORK),'-d','postgres','-v','ON_ERROR_STOP=1','-Atq','-c',q],capture_output=True,text=True)
  if ok and p.returncode:raise AssertionError(p.stderr+'\n'+q[:180])
  return p.stdout.strip() if ok else p
+def payment_state_check():
+ return subprocess.run([binary('psql'),'-X','-h',str(WORK),'-d','postgres','-v','ON_ERROR_STOP=1','-AtF','|','-f',str(ROOT/'supabase/hp_scheduling_payments_state_check.sql')],check=True,capture_output=True,text=True).stdout
+def state_row(output,n):
+ return next((line.split('|')[-1] for line in output.splitlines() if line.startswith(f'{n}|')),None)
 count=0
 def check(name,condition):
  global count
@@ -156,7 +160,7 @@ def run():
  check('匿名は決済口座を読めない',sql('set role anon;select * from hp_payment_accounts',False).returncode!=0)
  check('所有者も決済記録を直接読めない',sql(f'''set role authenticated;set request.jwt.claims='{json.dumps({'sub':OWNER})}';select * from hp_booking_payments''',False).returncode!=0)
  check('匿名は決済確定RPCを直接呼べない',sql(f"set role anon;select hp_payment_settle('{SITE}','{waiting['id']}','abandoned',null,null,null)",False).returncode!=0)
- reset();print(f'{count}/{count} SQL checks passed',flush=True)
+ reset()
 try:
  subprocess.run([binary('initdb'),'-D',str(WORK/'data'),'--auth=trust'],stdout=subprocess.DEVNULL,check=True)
  subprocess.run([binary('pg_ctl'),'-D',str(WORK/'data'),'-o',f"-k {WORK} -h ''",'-l',str(WORK/'postgres.log'),'-w','start'],stdout=subprocess.DEVNULL,check=True)
@@ -165,9 +169,25 @@ try:
  sql(f"insert into auth.users(id) values('{OWNER}'),('{STRANGER}');insert into sites(id,user_id,name,slug,published) values('{SITE}','{OWNER}','相談室 まどか','予約テスト',true),('{OTHER}','{STRANGER}','別の店舗','other-site',true)")
  configure(C,0);before=json.loads(book())
  subprocess.run([binary('psql'),'-X','-h',str(WORK),'-d','postgres','-v','ON_ERROR_STOP=1','-q','-f',str(ROOT/'supabase/hp_scheduling_payments.sql')],check=True,stdout=subprocess.DEVNULL)
+ state=payment_state_check()
+ check('決済SQLの読み取り確認が全項目一致',state_row(state,99)=='t')
  check('既存の来店時払い予約を保ったまま決済機能を追加',sql(f"select status||':'||payment_status from hp_appointments where id='{before['id']}'")=='confirmed:onsite')
  sql('truncate hp_booking_events,hp_booking_allocations,hp_appointments,hp_booking_calendars cascade;')
  run()
+ sql('grant select on public.hp_payment_accounts to anon')
+ state=payment_state_check()
+ check('確認SQLは利用者への決済口座開放を検出',state_row(state,15)=='f' and state_row(state,99)=='f')
+ sql('revoke all on public.hp_payment_accounts from anon')
+ sql('alter function public.hp_payment_settle(uuid,uuid,text,text,text,integer) security invoker')
+ state=payment_state_check()
+ check('確認SQLは決済確定RPCのSECURITY DEFINER欠落を検出',state_row(state,19)=='f' and state_row(state,99)=='f')
+ sql('alter function public.hp_payment_settle(uuid,uuid,text,text,text,integer) security definer')
+ sql("create function public.hp_payment_attach(uuid) returns void language sql as 'select'")
+ state=payment_state_check()
+ check('確認SQLは同名の古いRPCを検出',state_row(state,18)=='f' and state_row(state,99)=='f')
+ sql('drop function public.hp_payment_attach(uuid)')
+ check('異常を戻すと確認SQLが再び一致',state_row(payment_state_check(),99)=='t')
+ print(f'{count}/{count} SQL checks passed',flush=True)
  if '--serve' in sys.argv:
   import importlib.util
   spec=importlib.util.spec_from_file_location('bridge',ROOT/'tests/scheduling/bridge.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);m.serve(sql,lit,SITE,OWNER,DAY)

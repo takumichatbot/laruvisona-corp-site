@@ -40,6 +40,7 @@ Checkout作成と返金要求は予約ID由来の固定 idempotency key を使�
 
 1. コードレビューと全回帰を終える。
 2. `supabase/hp_scheduling_payments.sql` を、すでに `hp_scheduling.sql` が適用されたDBへ1トランザクションで適用する。
+   続けて読み取り専用の `supabase/hp_scheduling_payments_state_check.sql` を実行し、最終行99が `true` であることを確認する。falseなら機能を有効にせず、落ちた項目を記録して止める。
 3. Stripe ConnectのOAuthとConnect webhookをテストモードで設定する。
 4. コードをデプロイする。機能フラグはまだ設定しない。
 5. テスト口座で接続、予約、成功、Checkout中断、期限切れ、キャンセル、返金、Webhook再送を確認する。
