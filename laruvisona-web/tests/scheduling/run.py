@@ -166,7 +166,7 @@ def run():
 try:
  subprocess.run([binary('initdb'),'-D',str(WORK/'data'),'--auth=trust'],stdout=subprocess.DEVNULL,check=True)
  subprocess.run([binary('pg_ctl'),'-D',str(WORK/'data'),'-o',f"-k {WORK} -h ''",'-l',str(WORK/'postgres.log'),'-w','start'],stdout=subprocess.DEVNULL,check=True)
- for f in ['test-bootstrap.sql','schema.sql','sites_data_column.sql','hp_reservations.sql','hp_scheduling.sql']:
+ for f in ['test-bootstrap.sql','schema.sql','sites_data_column.sql','hp_reservations.sql','hp_reservations_reminded.sql','hp_scheduling.sql']:
   subprocess.run([binary('psql'),'-X','-h',str(WORK),'-d','postgres','-v','ON_ERROR_STOP=1','-q','-f',str(ROOT/'supabase'/f)],check=True,stdout=subprocess.DEVNULL)
  sql(f"insert into auth.users(id) values('{OWNER}'),('{STRANGER}');insert into sites(id,user_id,name,slug,published) values('{SITE}','{OWNER}','相談室 まどか','予約テスト',true),('{OTHER}','{STRANGER}','別の店舗','other-site',true)")
  configure(C,0);before=json.loads(book())
@@ -203,6 +203,20 @@ try:
  check('異なる取得票では送信結果を書けない',sql(f"select hp_schedule_finish_reminder('{claimed[0]['reminder_id']}','{uuid.uuid4()}',true,null)")=='f')
  check('正しい取得票で送信済みにできる',sql(f"select hp_schedule_finish_reminder('{claimed[0]['reminder_id']}','{claimed[0]['claim_token']}',true,null)")=='t')
  check('送信済みは再取得しない',json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_schedule_claim_reminders(20) x"))==[])
+ # Legacy fixed-slot reservations use the same lease and finite-retry guarantees.
+ legacy='77777777-7777-4777-8777-777777777777'
+ sql(f"insert into hp_reservations(id,site_id,slot_id,slot_datetime,name,email,service,status) values('{legacy}','{OTHER}','legacy',now()+interval '12 hours','旧予約 客','legacy@example.invalid','旧メニュー','confirmed')")
+ legacy_claim=json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_legacy_claim_reminders(20) x"))
+ check('旧予約リマインドも期限から排他取得',len(legacy_claim)==1 and legacy_claim[0]['reservation_id']==legacy)
+ check('取得中の旧予約を別実行へ渡さない',json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_legacy_claim_reminders(20) x"))==[])
+ check('異なる取得票で旧予約を送信済みにしない',sql(f"select hp_legacy_finish_reminder('{legacy}','{uuid.uuid4()}',true,null)")=='f')
+ check('送信事業者失敗時は旧予約を未送信で保持',sql(f"select hp_legacy_finish_reminder('{legacy}','{legacy_claim[0]['claim_token']}',false,'provider rejected')")=='t' and sql(f"select reminded::text from hp_reservations where id='{legacy}'")=='false')
+ check('再試行時刻前には旧予約を再取得しない',json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_legacy_claim_reminders(20) x"))==[])
+ sql(f"update hp_reservations set reminder_next_attempt_at=now() where id='{legacy}'")
+ legacy_retry=json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_legacy_claim_reminders(20) x"))
+ check('旧予約を再取得して送信済みにできる',len(legacy_retry)==1 and sql(f"select hp_legacy_finish_reminder('{legacy}','{legacy_retry[0]['claim_token']}',true,null)")=='t')
+ check('送信済みの旧予約は再取得しない',json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_legacy_claim_reminders(20) x"))==[])
+ check('利用者は旧予約の内部送信状態を書き換えられない','reminder_state_managed_by_server' in sql(f'''set role authenticated;set request.jwt.claims='{json.dumps({'sub':STRANGER})}';update hp_reservations set reminded=false where id='{legacy}' ''',False).stderr)
  notices=json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_schedule_claim_notifications(20) x"))
  check('未送信の予約確定通知を排他取得',len(notices)==1 and notices[0]['appointment_id']==reminder['id'])
  check('メール未完了なのに通知成功を確定しない',sql(f"select hp_schedule_finish_notification('{notices[0]['site_id']}','{notices[0]['appointment_id']}',{notices[0]['revision']},'{notices[0]['claim_token']}',true,null)")=='f')

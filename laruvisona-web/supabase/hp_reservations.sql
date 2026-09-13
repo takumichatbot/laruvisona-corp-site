@@ -28,11 +28,13 @@ create table if not exists public.hp_reservations (
 
 alter table public.hp_reservations enable row level security;
 
+drop policy if exists "Users see own reservations" on public.hp_reservations;
 create policy "Users see own reservations" on public.hp_reservations
   for select using (
     site_id in (select id from public.sites where user_id = auth.uid())
   );
 
+drop policy if exists "Users update own reservations" on public.hp_reservations;
 create policy "Users update own reservations" on public.hp_reservations
   for update using (
     site_id in (select id from public.sites where user_id = auth.uid())

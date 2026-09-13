@@ -197,6 +197,11 @@ app.prepare().then(() => {
         signal:AbortSignal.timeout(55000),
       });
       if (!r.ok) console.warn('[booking-reminders] delivery incomplete:',r.status);
+      const legacy = await fetch(`http://127.0.0.1:${port}/api/booking/reminders`, {
+        method:'POST',headers:{Authorization:`Bearer ${process.env.ADMIN_SECRET}`},
+        signal:AbortSignal.timeout(55000),
+      });
+      if (!legacy.ok) console.warn('[booking-reminders] legacy delivery incomplete:',legacy.status);
     } catch {console.warn('[booking-reminders] delivery unavailable');}
     finally {bookingReminderRunning=false;}
   }
@@ -318,7 +323,6 @@ app.prepare().then(() => {
       // 毎日呼び、週キーの台帳で月曜の初回送信と翌日以降の失敗再試行を両立する。
       await postCron('/api/digest/send');
       await postCron('/api/sms/reminders');
-      await postCron('/api/booking/reminders');
     }
   }
   setInterval(maybeDaily, 30 * 60 * 1000); // 30分ごとに判定

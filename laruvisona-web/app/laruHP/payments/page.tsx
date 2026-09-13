@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Check, ClipboardCopy, ExternalLink, Link2Off, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Check, ClipboardCopy, CreditCard, ExternalLink, Link2Off, ShoppingBag } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface PaymentLink {
@@ -94,7 +94,9 @@ export default function LegacyPaymentsPage() {
         <section className="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
           <div className="grid gap-5 p-6 sm:grid-cols-[1fr_auto] sm:items-center">
             <div>
-              <p className="mb-2 text-xs font-bold tracking-[.14em] text-sky-700">販売機能を統合しました</p>
+              <p className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[.14em] text-sky-700">
+                <CreditCard size={15} aria-hidden="true" />販売機能を統合しました
+              </p>
               <h2 className="text-xl font-bold tracking-tight">新しい販売はショップから設定できます</h2>
               <p className="mt-2 max-w-xl text-sm leading-7 text-gray-600">
                 売上をご自身のStripe口座へ直接入金し、商品・在庫・注文通知・返金まで一緒に管理できます。この画面では、以前作成したリンクの確認と停止だけ行えます。

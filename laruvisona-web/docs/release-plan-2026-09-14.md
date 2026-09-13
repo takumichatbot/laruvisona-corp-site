@@ -23,11 +23,13 @@
 6. `hp_members.sql`
 7. `site_members.sql`
 8. `hp_analytics.sql`
-9. `hp_scheduling.sql`
-10. `hp_scheduling_notifications.sql`
-11. `hp_scheduling_reminders.sql`
-12. `hp_scheduled_emails.sql`
-13. `hp_push_subscriptions.sql`
+9. `hp_reservations.sql`
+10. `hp_reservations_reminded.sql`
+11. `hp_scheduling.sql`
+12. `hp_scheduling_notifications.sql`
+13. `hp_scheduling_reminders.sql`
+14. `hp_scheduled_emails.sql`
+15. `hp_push_subscriptions.sql`
 
 適用後に `release_state_check_20260914.sql` を読み取り実行する。最終行 `ALL_REQUIRED_STATE` が `true` でなければコードを有効化しない。この確認は関数本体の業務動作や実データを保証しないため、機能ごとの試験も必要である。
 
