@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, BarChart3, Search } from 'lucide-react';
 
 interface DailyView {
   date: string;
@@ -17,12 +18,6 @@ interface Site {
   published: boolean;
   type?: string | null;
 }
-
-const TYPE_EMOJI: Record<string, string> = {
-  LocalBusiness: '🏪', Restaurant: '🍽', MedicalBusiness: '🏥', BeautySalon: '💇',
-  Dentist: '🦷', LegalService: '⚖️', AccountingService: '📊', RealEstateAgent: '🏠',
-  Store: '🛍', Florist: '🌸', TravelAgency: '✈️', FitnessCenter: '💪',
-};
 
 interface Contact {
   id: string;
@@ -273,7 +268,7 @@ export default function AnalyticsPage() {
               }}
               className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-sky-500"
             >
-              {sites.map(s => <option key={s.id} value={s.id}>{(s.type && TYPE_EMOJI[s.type] ? TYPE_EMOJI[s.type] + ' ' : '')}{s.name}</option>)}
+              {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
           <div className="flex items-center gap-2">
@@ -303,7 +298,7 @@ export default function AnalyticsPage() {
         {/* Unpublished site notice */}
         {selectedSite && !selectedSite.published && (
           <div className="bg-amber-100 border border-amber-300 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-            <p className="text-xs text-amber-900 font-medium">⚠ このサイトはまだ未公開です。公開するとアクセス解析データが蓄積されます。</p>
+            <p className="flex items-center gap-2 text-xs text-amber-900 font-medium"><AlertTriangle size={15} aria-hidden="true" />このサイトはまだ未公開です。公開するとアクセス解析データが蓄積されます。</p>
             <Link href="/laruHP/dashboard" className="text-xs font-bold text-amber-700 whitespace-nowrap hover:underline">ダッシュボードへ →</Link>
           </div>
         )}
@@ -344,7 +339,7 @@ export default function AnalyticsPage() {
             </>
           ) : (
             <div className="text-center py-10">
-              <div className="text-6xl mb-4">📊</div>
+              <BarChart3 size={44} className="mx-auto mb-4 text-sky-300" aria-hidden="true" />
               <p className="text-sm font-medium text-gray-600 mb-1">
                 {selectedSite?.published ? 'まだ訪問データがありません' : 'サイトが未公開です'}
               </p>
@@ -360,7 +355,7 @@ export default function AnalyticsPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 border border-sky-200 bg-sky-50 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition-colors"
                 >
-                  🔍 Google Search Consoleに登録してインデックスを促進 →
+                  <Search size={14} aria-hidden="true" />Google Search Consoleに登録してインデックスを促進 →
                 </a>
               )}
             </div>

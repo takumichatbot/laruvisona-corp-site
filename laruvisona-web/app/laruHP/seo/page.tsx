@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, Check, RefreshCw, Search } from 'lucide-react';
 
 interface Site {
   id: string;
@@ -315,7 +316,7 @@ export default function SeoPage() {
                       title={!c.ok && hint ? hint.tip : undefined}
                       className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border cursor-default ${c.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200 underline decoration-dotted'}`}
                     >
-                      {c.ok ? '✓' : '⚠'} {c.label}
+                      {c.ok ? <Check size={11} className="mr-1 inline" aria-hidden="true" /> : <AlertTriangle size={11} className="mr-1 inline" aria-hidden="true" />}{c.label}
                     </span>
                   );
                 })}
@@ -338,7 +339,7 @@ export default function SeoPage() {
         {needsRepublish && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="flex-shrink-0">🔄</span>
+              <RefreshCw size={15} className="flex-shrink-0" aria-hidden="true" />
               <span className="text-xs font-semibold text-amber-800">SEO設定を変更しました。Googleへの反映には再公開が必要です。</span>
             </div>
             <button
@@ -682,7 +683,7 @@ export default function SeoPage() {
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 hover:text-sky-600 transition-colors"
           >
-            🔍 Google でインデックス状況を確認 →
+            <Search size={13} aria-hidden="true" />Google でインデックス状況を確認 →
           </a>
         )}
 

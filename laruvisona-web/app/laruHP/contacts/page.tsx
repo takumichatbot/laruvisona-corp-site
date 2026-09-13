@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CalendarClock, Inbox, Mail, Sparkles } from 'lucide-react';
+import { CalendarClock, Clock3, Inbox, Mail, Sparkles } from 'lucide-react';
 
 type CrmStatus = 'new' | 'in_progress' | 'done' | 'lost';
 
@@ -413,7 +413,7 @@ export default function ContactsPage() {
                   onClick={() => setShowOverdueOnly(v => !v)}
                   className={`flex items-center gap-1.5 flex-shrink-0 px-2 py-0.5 rounded border transition-all ${showOverdueOnly ? 'bg-red-500/20 border-red-500/40 text-red-300' : 'border-transparent text-red-400 hover:bg-red-500/10'}`}
                 >
-                  <span className="text-[10px] font-semibold">⏰ フォロー期限超過 {overdue}件</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold"><Clock3 size={12} aria-hidden="true" />フォロー期限超過 {overdue}件</span>
                 </button>
               )}
               {sites.length > 1 && (

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, Check, CircleDollarSign, ClipboardCopy, CreditCard, FileDown, X } from 'lucide-react';
 
 interface PaymentLink {
   id: string;
@@ -129,7 +130,7 @@ export default function PaymentsPage() {
     <>
     {duplicateToast && (
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-gray-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl animate-fadeIn">
-        📋 フォームに複製しました — 内容を確認して作成してください
+        <ClipboardCopy size={15} aria-hidden="true" />フォームに複製しました — 内容を確認して作成してください
       </div>
     )}
     <div className="min-h-screen bg-sky-50 text-gray-900">
@@ -158,7 +159,7 @@ export default function PaymentsPage() {
             }}
             className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-all flex-shrink-0"
           >
-            📊 CSV出力
+            <FileDown size={14} aria-hidden="true" />CSV出力
           </button>
         )}
       </header>
@@ -193,7 +194,7 @@ export default function PaymentsPage() {
                   <p className="text-[10px] text-green-500 mt-1">日平均 ¥{dailyAvg.toLocaleString()} · 月間予測 ¥{projectedMonthly.toLocaleString()}</p>
                 )}
               </div>
-              <div className="text-4xl">💰</div>
+              <CircleDollarSign size={36} className="text-green-400" aria-hidden="true" />
             </div>
           );
         })()}
@@ -293,7 +294,7 @@ export default function PaymentsPage() {
 
           {paymentLinks.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-3xl mb-3">💳</div>
+              <CreditCard size={34} className="mx-auto mb-3 text-sky-300" aria-hidden="true" />
               <p className="text-sm text-gray-500 font-semibold">まだ決済リンクがありません</p>
               <p className="text-xs text-gray-400 mt-1 mb-3">商品・サービス・予約金・寄付など、URLを共有するだけで即座に決済を受け付けられます。</p>
               <div className="flex flex-wrap justify-center gap-2">
@@ -325,12 +326,12 @@ export default function PaymentsPage() {
                           : isSoon
                           ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                           : 'bg-green-100 text-green-700 border border-green-200';
-                        const badgeIcon = isExpired ? '✕' : isSoon ? '⚠' : '✓';
+                        const BadgeIcon = isExpired ? X : isSoon ? AlertTriangle : Check;
                         return (
                           <>
                             <span className="text-gray-300">·</span>
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${badgeCls}`}>
-                              {badgeIcon} {isExpired ? '期限切れ' : `あと${daysLeft}日`}
+                              <BadgeIcon size={11} className="mr-1 inline" aria-hidden="true" />{isExpired ? '期限切れ' : `あと${daysLeft}日`}
                             </span>
                           </>
                         );
@@ -361,7 +362,7 @@ export default function PaymentsPage() {
                         aria-label={copiedId === link.id ? 'コピー済み' : `${link.description}のURLをコピー`}
                         className={`flex-shrink-0 text-xs px-3 min-h-[44px] rounded-lg transition-all font-bold ${copiedId === link.id ? 'bg-green-100 border border-green-300 text-green-700' : 'bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100'}`}
                       >
-                        {copiedId === link.id ? '✓ コピー済み' : 'コピー'}
+                        {copiedId === link.id ? <><Check size={13} className="mr-1 inline" aria-hidden="true" />コピー済み</> : 'コピー'}
                       </button>
                     </div>
                     <div className="text-[10px] text-gray-400 mt-1.5">ボタン: {link.buttonText}</div>
@@ -371,7 +372,7 @@ export default function PaymentsPage() {
                         className="text-[10px] bg-purple-50 border border-purple-200 text-purple-700 px-2 py-1 rounded-lg hover:bg-purple-100 transition-all font-bold"
                         title="メール・LINEに貼り付ける形式でコピー"
                       >
-                        📋 メール用コピー
+                        <ClipboardCopy size={12} className="mr-1 inline" aria-hidden="true" />メール用コピー
                       </button>
                       <button
                         onClick={() => setQrLink(link)}

@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { Globe2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Slot {
   id: string;
@@ -43,6 +45,7 @@ function newId() { return crypto.randomUUID(); }
 
 export default function BookingPage() {
   const supabase = createClient();
+  const router = useRouter();
   const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState('');
   const [config, setConfig] = useState<BookingConfig>(DEFAULT_CONFIG);
@@ -58,7 +61,7 @@ export default function BookingPage() {
   const load = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { window.location.href = '/laruHP/auth/login?redirectTo=/laruHP/booking'; return; }
+      if (!user) { router.replace('/laruHP/auth/login?redirectTo=/laruHP/booking'); return; }
       const { data, error } = await supabase.from('sites').select('id, name, data').eq('user_id', user.id);
       if (error) { setLoadError(error.message); return; }
       setSites(data ?? []);
@@ -68,7 +71,7 @@ export default function BookingPage() {
     } finally {
       setLoaded(true);
     }
-  }, [supabase, siteId]);
+  }, [router, supabase, siteId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -181,7 +184,7 @@ export default function BookingPage() {
         <div className="text-center max-w-sm">
           <p className="text-slate-300 text-sm font-semibold mb-2">サイトがありません</p>
           <p className="text-slate-500 text-xs mb-4">先にビルダーでサイトを作成・公開してください。</p>
-          <a href="/laruHP/dashboard" className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg">ダッシュボードへ</a>
+          <Link href="/laruHP/dashboard" className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg">ダッシュボードへ</Link>
         </div>
       </div>
     );
@@ -289,7 +292,7 @@ export default function BookingPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-white text-sm">{formatDt(slot.datetime)}</span>
                       {formatDtLocal(slot.datetime) && (
-                        <span className="text-blue-300 text-[10px] bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded-full font-semibold">🌐 {formatDtLocal(slot.datetime)}</span>
+                        <span className="inline-flex items-center gap-1 text-blue-300 text-[10px] bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded-full font-semibold"><Globe2 size={11} aria-hidden="true" />{formatDtLocal(slot.datetime)}</span>
                       )}
                       <span className="text-slate-500 text-xs">{slot.duration}分</span>
                       <span className="text-slate-400 text-xs">{slot.label}</span>
