@@ -1,5 +1,6 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { jsonForScript, safeToken } from '@/lib/safe-markup';
+import { analyticsTrackingScript,signAnalyticsSite } from '@/lib/analytics-contract';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { canonicalBase, isHostForSite, decodeSlug } from '@/lib/public-site-url';
@@ -200,10 +201,8 @@ export default async function PublishedSitePage({ params }: Props) {
       {laruseoPublicId && (
         <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
       )}
-      {/* Pageview tracking（ISR下でも訪問ごとに記録）*/}
-      <script dangerouslySetInnerHTML={{ __html: `fetch('/api/pageview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:${jsonForScript(slug)}}),keepalive:true}).catch(function(){});` }} />
-      {/* Heatmap tracking */}
-      <script dangerouslySetInnerHTML={{ __html: `(function(){var S=${jsonForScript(slug)},P='/api/heatmap?slug='+encodeURIComponent(S),Q=[];function flush(){if(!Q.length)return;fetch(P,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Q),keepalive:true});Q=[];}document.addEventListener('click',function(e){Q.push({type:'click',x:e.clientX,y:e.clientY,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});});window.addEventListener('scroll',function(){var d=Math.round((scrollY/(document.body.scrollHeight-innerHeight||1))*100);Q.push({type:'scroll',scrollDepth:d,path:location.pathname,viewport:{w:innerWidth,h:innerHeight}});},{passive:true});window.addEventListener('beforeunload',flush);setInterval(flush,30000);})()` }} />
+      {/* Signed first-party pageview and heatmap tracking. */}
+      <script dangerouslySetInnerHTML={{ __html: analyticsTrackingScript(slug,signAnalyticsSite(slug)) }} />
       {/* Popup */}
       {hasActivePopup && (
         <script src={`/api/popup?slug=${slug}`} defer />

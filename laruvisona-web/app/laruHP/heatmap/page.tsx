@@ -190,7 +190,7 @@ export default function HeatmapPage() {
                   onClick={() => { setDeviceFilter(d); }}
                   className={`px-3 py-2.5 text-xs font-bold transition-colors ${deviceFilter === d ? 'bg-sky-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
-                  {d === 'all' ? '全部' : d === 'mobile' ? '📱' : '🖥'}
+                  {d === 'all' ? '全部' : d === 'mobile' ? 'スマホ' : 'PC'}
                 </button>
               ))}
             </div>
@@ -222,7 +222,9 @@ export default function HeatmapPage() {
 
             {data.total === 0 ? (
               <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-                <div className="text-5xl mb-4">📊</div>
+                <div aria-hidden="true" className="mx-auto mb-4 grid h-12 w-12 grid-cols-3 items-end gap-1 rounded-xl border border-sky-200 p-2">
+                  <span className="h-3 rounded-sm bg-sky-300"/><span className="h-6 rounded-sm bg-sky-500"/><span className="h-8 rounded-sm bg-sky-700"/>
+                </div>
                 <p className="font-bold text-gray-600">データがまだありません</p>
                 <p className="text-xs text-gray-400 mt-1 mb-4">サイトが訪問されると自動的に計測されます</p>
                 <Link href="/laruHP/studio" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-4 py-2 rounded-lg transition-colors font-semibold">
@@ -301,7 +303,7 @@ export default function HeatmapPage() {
 
         {!data && !loading && !error && (
           <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-            <div className="text-5xl mb-4">🔥</div>
+            <div aria-hidden="true" className="mx-auto mb-4 h-12 w-12 rounded-full border border-sky-200 bg-[radial-gradient(circle,#ef4444_0_12%,#f59e0b_13%_28%,#38bdf8_29%_46%,transparent_47%)]"/>
             <p className="text-sm font-semibold text-gray-600">サイトを選択してデータを読み込んでください</p>
           </div>
         )}
