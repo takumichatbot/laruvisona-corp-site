@@ -52,14 +52,14 @@ export function validProductId(value: unknown): value is string {
 export function parseNewProduct(value: unknown): Omit<StoredProduct, 'id' | 'createdAt'> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('商品を確認してください');
   const input = value as Record<string, unknown>;
-  const price = integer(input.price, 1, 99_999_999);
+  const price = integer(input.price, 50, 99_999_999);
   const rawVariants = input.variants == null ? [] : input.variants;
   if (!Array.isArray(rawVariants) || rawVariants.length > 50) throw new Error('選択肢を確認してください');
   const variants = rawVariants.map(raw => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('選択肢を確認してください');
     const item = raw as Record<string, unknown>;
     const priceDelta = integer(item.priceDelta ?? 0, -99_999_998, 99_999_999);
-    if (price + priceDelta < 1) throw new Error('選択肢の価格を確認してください');
+    if (price + priceDelta < 50) throw new Error('選択肢の価格を確認してください');
     return {
       id: validProductId(item.id) ? item.id : randomUUID(),
       name: text(item.name, 80, true),

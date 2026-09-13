@@ -12,9 +12,9 @@ test('商品は価格・在庫・選択肢を販売可能な範囲に整える',
   assert.equal(product.price, 1200);
   assert.equal(product.variants?.[0].priceDelta, -200);
   assert.equal(product.variants?.[0].stock, 2);
-  assert.throws(() => parseNewProduct({ name: 'x', price: 0 }));
+  assert.throws(() => parseNewProduct({ name: 'x', price: 49 }));
   assert.throws(() => parseNewProduct({ name: 'x', price: 100, stock: -1 }));
-  assert.throws(() => parseNewProduct({ name: 'x', price: 100, variants: [{ name: '赤', priceDelta: -100 }] }));
+  assert.throws(() => parseNewProduct({ name: 'x', price: 100, variants: [{ name: '赤', priceDelta: -51 }] }));
 });
 
 test('商品APIは所有者・同時更新・DB失敗を扱い、更新項目を販売状態に限定する', () => {

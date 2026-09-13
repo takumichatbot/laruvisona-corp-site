@@ -10,6 +10,12 @@ export { bookingReturnUrl, validatePaymentSession } from './payment-contract';
 export function paymentsAvailable() {
   return process.env.HP_BOOKING_PREPAY_ENABLED === '1' && !!process.env.STRIPE_SECRET_KEY && !!process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
 }
+
+export function stripeConnectAvailable() {
+  return (process.env.HP_BOOKING_PREPAY_ENABLED === '1' || process.env.HP_SHOP_PAYMENTS_ENABLED === '1')
+    && !!process.env.STRIPE_SECRET_KEY
+    && !!process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
+}
 type Payment = BookingPayment;
 const checked = <T>(r:{data:T;error:unknown}) => {if(r.error) throw Error('payment_database');return r.data;};
 

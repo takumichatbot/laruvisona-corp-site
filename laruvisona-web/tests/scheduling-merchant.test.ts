@@ -124,3 +124,34 @@ test("口座更新と接続解除をWebhook用の安全な状態へ変換する"
   const revoked={type:"account.application.deauthorized",account:"acct_shop",data:{object:{}}} as unknown as Stripe.Event;
   assert.deepEqual(merchantAccountEvent(revoked),{accountId:"acct_shop",charges_enabled:false,payouts_enabled:false});
 });
+
+test("ショップ決済の有効化だけでは予約の事前決済を有効にしない", async () => {
+  const previous = {
+    booking: process.env.HP_BOOKING_PREPAY_ENABLED,
+    shop: process.env.HP_SHOP_PAYMENTS_ENABLED,
+    secret: process.env.STRIPE_SECRET_KEY,
+    webhook: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+  };
+  delete process.env.HP_BOOKING_PREPAY_ENABLED;
+  process.env.HP_SHOP_PAYMENTS_ENABLED = "1";
+  process.env.STRIPE_SECRET_KEY = "sk_test_fixture";
+  process.env.STRIPE_CONNECT_WEBHOOK_SECRET = "whsec_fixture";
+  const unexpectedDb = new Proxy({}, {
+    get() { throw new Error("利用不可の機能でDBを読んではいけない"); },
+  }) as SupabaseClient;
+  const unexpectedStripe = new Proxy({}, {
+    get() { throw new Error("利用不可の機能でStripeを読んではいけない"); },
+  }) as Stripe;
+  try {
+    assert.deepEqual(await merchantStatus("user-1", unexpectedDb, unexpectedStripe, "booking"), {
+      ready: false, connected: false, available: false,
+    });
+  } finally {
+    const restore = (key: string, value: string | undefined) =>
+      value === undefined ? delete process.env[key] : (process.env[key] = value);
+    restore("HP_BOOKING_PREPAY_ENABLED", previous.booking);
+    restore("HP_SHOP_PAYMENTS_ENABLED", previous.shop);
+    restore("STRIPE_SECRET_KEY", previous.secret);
+    restore("STRIPE_CONNECT_WEBHOOK_SECRET", previous.webhook);
+  }
+});

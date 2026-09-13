@@ -41,12 +41,16 @@ test('Stripeの確定明細とカートの数量・金額を照合する', () =>
 });
 
 test('Webhookは先に在庫を減らさず、DBの原子的な注文確定を使う', () => {
-  const webhook = readFileSync(new URL('../app/api/stripe/webhook/route.ts', import.meta.url), 'utf8');
-  assert.match(webhook, /listLineItems\(session\.id/);
-  assert.match(webhook, /rpc\('laruhp_shop_commit_order'/);
-  assert.doesNotMatch(webhook, /from\('hp_orders'\)\.upsert/);
-  assert.match(webhook, /if \(!result\.created\) break/);
-  assert.match(webhook, /escapeContactHtml\(item\.name\)/);
+  const service = readFileSync(new URL('../lib/shop-webhook.ts', import.meta.url), 'utf8');
+  const platformWebhook = readFileSync(new URL('../app/api/stripe/webhook/route.ts', import.meta.url), 'utf8');
+  const connectWebhook = readFileSync(new URL('../app/api/stripe/scheduling-webhook/route.ts', import.meta.url), 'utf8');
+  assert.match(service, /listLineItems\(/);
+  assert.match(service, /rpc\('laruhp_shop_commit_order'/);
+  assert.doesNotMatch(service, /from\('hp_orders'\)\.upsert/);
+  assert.match(service, /if \(!result\.created\) return result/);
+  assert.match(service, /escapeContactHtml\(item\.name\)/);
+  assert.match(platformWebhook, /commitShopCheckout\(session, null/);
+  assert.match(connectWebhook, /commitShopCheckout\(session,e\.account/);
 });
 
 test('注文確定SQLはサイトをロックし、重複確認後に在庫と注文を同じ関数で保存する', () => {
@@ -65,4 +69,21 @@ test('Checkoutは公開サイトだけを扱い、カートmetadataを省略し�
   assert.match(checkout, /\.eq\('published', true\)/);
   assert.match(checkout, /const encodedCart = cartMetadata\(cart\)/);
   assert.doesNotMatch(checkout, /cartJson\.length <=/);
+  assert.match(checkout, /HP_SHOP_PAYMENTS_ENABLED/);
+  assert.match(checkout, /charges_enabled,payouts_enabled/);
+  assert.match(checkout, /\{ stripeAccount: merchant\.account_id \}/);
+  assert.match(checkout, /payment_method_types: \['card'\]/);
+  assert.doesNotMatch(checkout, /application_fee_amount/);
+  const webhook = readFileSync(new URL('../lib/shop-webhook.ts', import.meta.url), 'utf8');
+  assert.match(webhook, /session\.payment_status !== 'paid'/);
+});
+
+test('ショップの入金先接続は予約課金とは別の機能フラグを使う', () => {
+  const merchant = readFileSync(new URL('../lib/scheduling/merchant.ts', import.meta.url), 'utf8');
+  const shop = readFileSync(new URL('../app/api/sites/[id]/shop/payments/route.ts', import.meta.url), 'utf8');
+  const callback = readFileSync(new URL('../app/api/stripe/shop-connect/callback/route.ts', import.meta.url), 'utf8');
+  assert.match(merchant, /surface === 'booking'[\s\S]*paymentsAvailable\(\)/);
+  assert.match(merchant, /HP_SHOP_PAYMENTS_ENABLED === '1'/);
+  assert.match(shop, /merchantStatus\(auth\.user\.id, auth\.db, undefined, 'shop'\)/);
+  assert.match(callback, /merchantStatus\(user\.id, undefined, undefined, 'shop'\)/);
 });

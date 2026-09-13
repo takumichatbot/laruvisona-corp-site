@@ -38,6 +38,7 @@ interface Site {
   slug: string | null;
   published?: boolean;
 }
+interface PaymentStatus { available: boolean; connected: boolean; ready: boolean }
 
 const DEFAULT_FORM = {
   name: '',
@@ -66,6 +67,8 @@ export default function ShopPage() {
   const [showForm, setShowForm] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [collectShipping, setCollectShipping] = useState(false);
+  const [payments, setPayments] = useState<PaymentStatus | null>(null);
+  const [connecting, setConnecting] = useState(false);
 
   const showMsg = (text: string, type: 'success' | 'error' = 'success') => {
     setMsgType(type);
@@ -97,13 +100,31 @@ export default function ShopPage() {
 
   const loadProducts = async (siteId: string) => {
     try {
-      const res = await fetch(`/api/products?siteId=${siteId}`);
+      const [res, paymentRes] = await Promise.all([
+        fetch(`/api/products?siteId=${siteId}`),
+        fetch(`/api/sites/${siteId}/shop/payments`, { cache: 'no-store' }),
+      ]);
       if (!res.ok) throw new Error('products fetch failed');
       const d = await res.json();
       setProducts(d.products || []);
       setCollectShipping(d.collectShipping === true);
+      setPayments(paymentRes.ok ? await paymentRes.json() : { available: false, connected: false, ready: false });
     } catch {
       showMsg('商品の読み込みに失敗しました', 'error');
+    }
+  };
+
+  const connectStripe = async () => {
+    if (!selectedSite) return;
+    setConnecting(true);
+    try {
+      const response = await fetch(`/api/sites/${selectedSite.id}/shop/payments`, { method: 'POST' });
+      const body = await response.json().catch(() => ({})) as { url?: string; error?: string };
+      if (!response.ok || !body.url) throw new Error(body.error || 'Stripeを開けませんでした');
+      window.location.assign(body.url);
+    } catch (error) {
+      showMsg((error as Error).message || 'Stripeを開けませんでした', 'error');
+      setConnecting(false);
     }
   };
 
@@ -277,6 +298,30 @@ export default function ShopPage() {
               </p>
             )}
           </div>
+        )}
+
+        {selectedSite && (
+          <section className="bg-white border border-gray-200 rounded-2xl p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1">
+                <h2 className="font-bold text-sm text-gray-900">売上の入金先</h2>
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  {payments?.ready
+                    ? 'Stripeへの入金先を確認済みです。売上は店舗のStripe口座へ直接入ります。'
+                    : payments?.connected
+                      ? 'Stripe側の本人確認または入金設定を完了してください。'
+                      : '販売を始める前に、売上を受け取るStripe口座を接続してください。'}
+                </p>
+              </div>
+              {!payments?.ready && (
+                <button type="button" onClick={connectStripe} disabled={connecting || !payments?.available}
+                  className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                  {connecting ? 'Stripeを開いています' : payments?.connected ? 'Stripeの設定を続ける' : 'Stripeを接続する'}
+                </button>
+              )}
+            </div>
+            {!payments?.available && <p className="mt-2 text-xs text-amber-700">オンライン決済の有効化前です。商品は準備できますが、まだ購入受付は始まりません。</p>}
+          </section>
         )}
 
         {/* ショップ設定 */}

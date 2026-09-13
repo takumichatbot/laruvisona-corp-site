@@ -4,18 +4,27 @@ import { reply } from '@/lib/scheduling/server';
 import { paymentService } from '@/lib/scheduling/payments';
 import { merchantAccountEvent } from '@/lib/scheduling/merchant';
 import type Stripe from 'stripe';
+import { commitShopCheckout } from '@/lib/shop-webhook';
+import { readRequestText } from '@/lib/contact-contract';
 export const dynamic='force-dynamic';
 export async function POST(req:Request){
  const secret=process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
  if(!secret)return reply({error:'Webhook not configured'},503);
  let e:Stripe.Event;
- try{e=getStripe().webhooks.constructEvent(await req.text(),req.headers.get('stripe-signature')||'',secret);}catch{return reply({error:'Invalid signature'},400);}
+ try{e=getStripe().webhooks.constructEvent(await readRequestText(req,1_000_000),req.headers.get('stripe-signature')||'',secret);}catch{return reply({error:'Invalid signature'},400);}
  if(!e.account)return reply({received:true});
  const db=createServiceClient();
  const accountUpdate=merchantAccountEvent(e);
  if(accountUpdate){
   const saved=await db.from('hp_payment_accounts').update({charges_enabled:accountUpdate.charges_enabled,payouts_enabled:accountUpdate.payouts_enabled,updated_at:new Date().toISOString()}).eq('account_id',accountUpdate.accountId);
   return saved.error?reply({error:'Database unavailable'},503):reply({received:true});
+ }
+ if(e.type==='checkout.session.completed'){
+  const session=e.data.object as Stripe.Checkout.Session;
+  if(session.metadata?.kind==='shop'){
+   try{await commitShopCheckout(session,e.account,db,getStripe());return reply({received:true});}
+   catch{return reply({error:'Shop order could not be saved'},503);}
+  }
  }
  let query=db.from('hp_booking_payments').select('site_id,appointment_id').eq('account_id',e.account);
  if(e.type==='checkout.session.completed'||e.type==='checkout.session.expired'){

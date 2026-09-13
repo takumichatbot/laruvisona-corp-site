@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { safeReturnUrl } from '@/lib/site-origin';
 import { cartMetadata, normalizeShopCart } from '@/lib/shop-order';
 import { readContactBody } from '@/lib/contact-contract';
 import { validOrderId } from '@/lib/order-contract';
+import { getStripe } from '@/lib/stripe';
+import { stripeConnectAvailable } from '@/lib/scheduling/payments';
 
 // POST /api/shop/checkout — カート（複数商品・数量）対応の Stripe Checkout
 // 公開エンドポイント（公開ショップから購入）。単品(productId)も後方互換で受け付ける。
@@ -56,8 +58,18 @@ export async function POST(req: Request) {
   }
 
   const service = await createServiceClient();
-  const { data: site } = await service.from('sites').select('name, settings_json, slug, custom_domain').eq('id', siteId).eq('published', true).single();
+  if (process.env.HP_SHOP_PAYMENTS_ENABLED !== '1' || !stripeConnectAvailable()) {
+    return NextResponse.json({ error: 'オンライン決済は現在準備中です' }, { status: 503 });
+  }
+  const { data: site } = await service.from('sites').select('name, user_id, settings_json, slug, custom_domain').eq('id', siteId).eq('published', true).single();
   if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+  const { data: merchant, error: merchantError } = await service.from('hp_payment_accounts')
+    .select('account_id,livemode,charges_enabled,payouts_enabled')
+    .eq('user_id', site.user_id).maybeSingle();
+  const live = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') === true;
+  if (merchantError || !merchant?.account_id || !merchant.charges_enabled || !merchant.payouts_enabled || merchant.livemode !== live) {
+    return NextResponse.json({ error: 'このショップの入金先が準備できていません' }, { status: 503 });
+  }
 
   const shopSettings = (site.settings_json as Record<string, unknown>) || {};
   const products = Array.isArray(shopSettings.products) ? shopSettings.products as ProductRow[] : [];
@@ -84,7 +96,7 @@ export async function POST(req: Request) {
     }
 
     const unitAmount = product.price + (variant?.priceDelta || 0);
-    if (!Number.isSafeInteger(unitAmount) || unitAmount < 1 || unitAmount > 99_999_999) {
+    if (!Number.isSafeInteger(unitAmount) || unitAmount < 50 || unitAmount > 99_999_999) {
       return NextResponse.json({ error: '商品の価格を確認してください' }, { status: 409 });
     }
     const displayName = variant ? `${product.name}（${variant.name}）` : product.name;
@@ -103,11 +115,12 @@ export async function POST(req: Request) {
     cart.push({ id: product.id, ...(variant ? { v: variant.id } : {}), q: qty });
   }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const stripe = getStripe();
   try {
     const encodedCart = cartMetadata(cart);
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
+      payment_method_types: ['card'],
       line_items: lineItems,
       // 戻り先はクライアントの言い値をそのまま使わない。
       // そのサイトが正当に配信されているホストでなければ自サイトに落とす。
@@ -124,7 +137,7 @@ export async function POST(req: Request) {
         ...encodedCart,
         ...(cart.length === 1 ? { laru_product_id: cart[0].id } : {}),
       },
-    });
+    }, { stripeAccount: merchant.account_id });
     return NextResponse.json({ url: session.url });
   } catch (err: unknown) {
     console.error('[shop/checkout] stripe error:', (err as { message?: string })?.message);
