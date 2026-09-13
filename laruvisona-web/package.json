@@ -8,7 +8,8 @@
     "start": "node server.js",
     "lint": "eslint",
     "test": "node --import ./tests/_resolve-ts.mjs --test \"tests/**/*.test.ts\"",
-    "test:http": "bash tests/http/run.sh"
+    "test:http": "bash tests/http/run.sh",
+    "seo:indexnow": "node scripts/submit-indexnow.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
