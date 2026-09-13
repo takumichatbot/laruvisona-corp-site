@@ -185,6 +185,24 @@ app.prepare().then(() => {
   }
   setInterval(reconcileBookingPayments,60000).unref();
 
+  // New scheduling reminders use a durable DB queue. Run often enough for the
+  // two-hour notice; database leases make multiple instances safe.
+  let bookingReminderRunning = false;
+  async function sendBookingReminders() {
+    if (dev || !process.env.ADMIN_SECRET || !process.env.RESEND_API_KEY || bookingReminderRunning) return;
+    bookingReminderRunning = true;
+    try {
+      const r = await fetch(`http://127.0.0.1:${port}/api/cron/booking-reminders`, {
+        method:'POST',headers:{Authorization:`Bearer ${process.env.ADMIN_SECRET}`},
+        signal:AbortSignal.timeout(55000),
+      });
+      if (!r.ok) console.warn('[booking-reminders] delivery incomplete:',r.status);
+    } catch {console.warn('[booking-reminders] delivery unavailable');}
+    finally {bookingReminderRunning=false;}
+  }
+  setTimeout(sendBookingReminders,45000).unref();
+  setInterval(sendBookingReminders,15*60000).unref();
+
   // 30秒ごとに全接続へ ping。前回 pong が無ければ切断（死んだ接続を掃除）。
   // 猶予は最大60秒なので Cloudflare 経由の pong 遅延では誤切断しない。
   const hbInterval = setInterval(() => {

@@ -171,6 +171,7 @@ try:
  sql(f"insert into auth.users(id) values('{OWNER}'),('{STRANGER}');insert into sites(id,user_id,name,slug,published) values('{SITE}','{OWNER}','相談室 まどか','予約テスト',true),('{OTHER}','{STRANGER}','別の店舗','other-site',true)")
  configure(C,0);before=json.loads(book())
  subprocess.run([binary('psql'),'-X','-h',str(WORK),'-d','postgres','-v','ON_ERROR_STOP=1','-q','-f',str(ROOT/'supabase/hp_scheduling_payments.sql')],check=True,stdout=subprocess.DEVNULL)
+ subprocess.run([binary('psql'),'-X','-h',str(WORK),'-d','postgres','-v','ON_ERROR_STOP=1','-q','-f',str(ROOT/'supabase/hp_scheduling_reminders.sql')],check=True,stdout=subprocess.DEVNULL)
  state=payment_state_check()
  check('決済SQLの読み取り確認が全項目一致',state_row(state,99)=='t')
  retiring='66666666-6666-4666-8666-666666666666'
@@ -192,6 +193,15 @@ try:
  check('確認SQLは同名の古いRPCを検出',state_row(state,18)=='f' and state_row(state,99)=='f')
  sql('drop function public.hp_payment_attach(uuid)')
  check('異常を戻すと確認SQLが再び一致',state_row(payment_state_check(),99)=='t')
+ # Reminders are durable, revision-scoped and claimed by only one worker.
+ reset();reminder=json.loads(book())
+ sql(f"update hp_appointments set starts_at=now()+interval '2 hours',ends_at=now()+interval '3 hours',occupied_until=now()+interval '3 hours 15 minutes' where id='{reminder['id']}'")
+ claimed=json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_schedule_claim_reminders(20) x"))
+ check('2時間前リマインドを期限から作って取得',len(claimed)==1 and claimed[0]['kind']=='2h' and claimed[0]['appointment_id']==reminder['id'])
+ check('取得中のリマインドを別実行へ渡さない',json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_schedule_claim_reminders(20) x"))==[])
+ check('異なる取得票では送信結果を書けない',sql(f"select hp_schedule_finish_reminder('{claimed[0]['reminder_id']}','{uuid.uuid4()}',true,null)")=='f')
+ check('正しい取得票で送信済みにできる',sql(f"select hp_schedule_finish_reminder('{claimed[0]['reminder_id']}','{claimed[0]['claim_token']}',true,null)")=='t')
+ check('送信済みは再取得しない',json.loads(sql("select coalesce(jsonb_agg(x),'[]') from hp_schedule_claim_reminders(20) x"))==[])
  print(f'{count}/{count} SQL checks passed',flush=True)
  if '--serve' in sys.argv:
   import importlib.util
