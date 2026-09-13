@@ -18,7 +18,7 @@ export default function ContactPage() {
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/laruHP" className="flex items-center gap-3">
+          <Link href="https://laruhp.com/" className="flex items-center gap-3">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
@@ -65,7 +65,7 @@ export default function ContactPage() {
           </div>
 
           <div className="mt-10 text-center">
-            <Link href="/laruHP" className="text-sky-700 hover:text-sky-800 text-sm transition-colors">← LARU HP トップに戻る</Link>
+            <Link href="https://laruhp.com/" className="text-sky-700 hover:text-sky-800 text-sm transition-colors">← LARU HP トップに戻る</Link>
           </div>
         </div>
       </main>

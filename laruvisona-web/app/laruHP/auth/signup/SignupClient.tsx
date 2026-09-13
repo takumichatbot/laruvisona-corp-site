@@ -91,7 +91,7 @@ function SignupForm() {
             <strong className="text-gray-900">{email}</strong> に確認メールを送信しました。<br />
             メール内のリンクをクリックしてアカウントを有効化してください。
           </p>
-          <Link href="/laruHP" className="text-sky-600 hover:text-sky-500 text-sm">← LARU HPトップへ</Link>
+          <Link href="https://laruhp.com/" className="text-sky-600 hover:text-sky-500 text-sm">← LARU HPトップへ</Link>
         </div>
       </div>
     );
@@ -100,7 +100,7 @@ function SignupForm() {
   return (
     <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
-        <Link href="/laruHP" className="flex items-center justify-center gap-3 mb-10">
+        <Link href="https://laruhp.com/" className="flex items-center justify-center gap-3 mb-10">
           <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" />
         </Link>
 

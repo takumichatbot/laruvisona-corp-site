@@ -29,7 +29,7 @@ export default function ArticlesPage() {
     <div className="min-h-screen bg-sky-50">
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/laruHP" className="flex items-center gap-3">
+          <Link href="https://laruhp.com/" className="flex items-center gap-3">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
@@ -97,7 +97,7 @@ export default function ArticlesPage() {
 
       <footer className="border-t border-gray-200 bg-white py-8 text-center text-xs text-gray-400">
         © 2026 株式会社LaruVisona. All Rights Reserved. ·{' '}
-        <Link href="/laruHP" className="hover:text-gray-600">LARU HP トップ</Link>
+        <Link href="https://laruhp.com/" className="hover:text-gray-600">LARU HP トップ</Link>
       </footer>
     </div>
   );

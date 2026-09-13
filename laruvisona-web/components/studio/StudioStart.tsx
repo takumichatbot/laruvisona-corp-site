@@ -37,7 +37,7 @@ import "./studio-start.css";
 function StudioHeader({ step }: { step: number }) {
   return (
     <header className="ls-start-header">
-      <Link href="/laruHP" className="ls-start-logo">
+      <Link href="https://laruhp.com/" className="ls-start-logo">
         LARU <strong>HP</strong>
         <span>制作スタジオ</span>
       </Link>

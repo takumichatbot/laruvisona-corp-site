@@ -18,7 +18,7 @@ export default function NotFound() {
             ダッシュボードへ
           </Link>
           <Link
-            href="/laruHP"
+            href="https://laruhp.com/"
             className="bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-bold py-3 px-8 rounded-xl transition-colors text-sm"
           >
             トップページへ

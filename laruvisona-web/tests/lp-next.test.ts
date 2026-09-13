@@ -22,7 +22,7 @@ test('プレビューは検索対象から外す', () => {
 test('canonicalを本番LPに向けない', () => {
   // 実体は app/lp-next（ルートレイアウトのみ）に移したので、
   // laruHPレイアウトの canonical は継承しない。それでも明示しておく。
-  assert.match(layout, /canonical: 'https:\/\/laruvisona\.jp\/laruHP'/, '既存LPのcanonicalが変わった');
+  assert.match(layout, /canonical: 'https:\/\/laruhp\.com\/'/, '正式LPは専用ドメインをcanonicalにする');
   assert.match(page, /canonical: 'https:\/\/laruvisona\.jp\/laruHP\/lp-next'/);
 });
 

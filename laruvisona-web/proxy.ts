@@ -122,6 +122,15 @@ export async function proxy(request: NextRequest) {
   const hostname = (request.headers.get('host') || '').split(':')[0];
   const pathname = request.nextUrl.pathname;
 
+  // 旧案内URLは本文を返さず正規ドメインへ恒久転送する。
+  // /laruHP/studio・認証・顧客ドメインには適用しない。
+  if (['laruvisona.jp', 'www.laruvisona.jp'].includes(hostname.toLowerCase()) &&
+      ['/laruHP', '/laruHP/'].includes(pathname) && ['GET', 'HEAD'].includes(request.method)) {
+    const to = new URL(LARUHP_ORIGIN);
+    to.search = request.nextUrl.search;
+    return NextResponse.redirect(to, 308);
+  }
+
   // サービス自身の案内ホスト。顧客ドメインの解決や認証DBには渡さない。
   if (isLaruHpHost(hostname)) {
     if (!['GET', 'HEAD'].includes(request.method)) {

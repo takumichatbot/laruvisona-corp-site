@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: 'LARU HP — AIで最高のHPを最短で',
     description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月無料）。代理店向けエージェンシープランも提供中。',
     type: 'website',
-    url: 'https://laruvisona.jp/laruHP',
+    url: 'https://laruhp.com/',
     siteName: 'LARU HP',
     images: [{ url: '/laruHP/opengraph-image', width: 1200, height: 630, alt: 'LARU HP — AIホームページビルダー' }],
   },
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     images: ['/laruHP/opengraph-image'],
   },
   alternates: {
-    canonical: 'https://laruvisona.jp/laruHP',
+    canonical: 'https://laruhp.com/',
   },
   // manifest と icons は metadata で指定する。生の <link> を書くと、
   // 入れ子のレイアウト（/laruHP/bridge など）で別の manifest を出したいときに
@@ -64,7 +64,7 @@ const jsonLd = {
     ],
   },
   description: 'AIで業種別ホームページを自動生成するSaaSサービス。個人は月額999円から、代理店向けエージェンシープランは¥19,800/月。初月無料。',
-  url: 'https://laruvisona.jp/laruHP',
+  url: 'https://laruhp.com/',
   publisher: {
     '@type': 'Organization',
     name: '株式会社LaruVisona',

@@ -46,7 +46,7 @@ const products = [
     ),
     text: "写真と言葉から、事業の顔をつくる。制作から公開、その後の更新までを支えるホームページ作成サービス。",
     tags: ["ホームページ制作", "編集・公開"],
-    href: "/laruHP",
+    href: "https://laruhp.com/",
     link: "LARU HPを見る",
   },
   {

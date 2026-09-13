@@ -18,6 +18,7 @@ import {
 import BrandFonts from '@/components/BrandFonts';
 import CreationLab from '@/components/lp/CreationLab';
 import HeroExperience from '@/components/lp/HeroExperience';
+import { jsonForScript } from '@/lib/safe-markup';
 import { PLANS, TERMS, PRIMARY_CTA, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
 import './landing.css';
 
@@ -76,6 +77,10 @@ export default function LaruHPLandingPage() {
   return (
     <div className="lhp-landing">
       <BrandFonts />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonForScript({
+        '@context': 'https://schema.org', '@type': 'WebSite',
+        name: 'LARU HP', alternateName: 'LARUHP', url: 'https://laruhp.com/',
+      }) }} />
       <a className="lp-skip" href="#lp-main">
         本文へ移動
       </a>

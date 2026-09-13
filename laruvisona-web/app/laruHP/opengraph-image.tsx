@@ -105,7 +105,7 @@ export default function Image() {
               fontSize: 18,
             }}
           >
-            laruvisona.jp/laruHP
+            laruhp.com
           </div>
         </div>
       </div>

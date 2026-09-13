@@ -390,7 +390,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
       {/* ─── Header ─── */}
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/laruHP" className="flex items-center gap-2">
+          <Link href="https://laruhp.com/" className="flex items-center gap-2">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-3">
@@ -626,7 +626,7 @@ export default async function IndustryLP({ params }: { params: Promise<{ industr
             <Link href="/laruHP/privacy" className="hover:text-white transition-colors">プライバシーポリシー</Link>
             <Link href="/laruHP/terms" className="hover:text-white transition-colors">利用規約</Link>
             <Link href="/laruHP/tokusho" className="hover:text-white transition-colors">特定商取引法</Link>
-            <Link href="/laruHP" className="hover:text-white transition-colors">トップ</Link>
+            <Link href="https://laruhp.com/" className="hover:text-white transition-colors">トップ</Link>
           </div>
         </div>
         <div className="max-w-4xl mx-auto mt-6 pt-6 border-t border-gray-800 text-xs text-center">

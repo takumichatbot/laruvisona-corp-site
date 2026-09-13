@@ -132,7 +132,7 @@ const BUILT: {
     role: '自社プロダクト（企画・開発・運用）',
     desc: '業種情報を入力するだけで、AIがホームページを自動生成する自社SaaS。ビジュアルエディタ・SEO自動最適化まで自社開発しています。',
     tags: ['Next.js', 'React', 'TypeScript', '生成AI連携'],
-    link: { href: '/laruHP', label: 'LARU HP を見る', external: false },
+    link: { href: 'https://laruhp.com/', label: 'LARU HP を見る', external: true },
   },
   {
     name: 'FLASTAL',

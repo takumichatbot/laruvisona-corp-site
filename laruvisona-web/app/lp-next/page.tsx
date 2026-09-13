@@ -131,7 +131,7 @@ export default function LpNextPage() {
       <div className="bg-amber-100 text-amber-900 text-[13px] px-4 py-2 text-center">
         これは新しいLPのプレビューです。検索には出ません。
         <Link
-          href="/laruHP"
+          href="https://laruhp.com/"
           className="inline-flex items-center min-h-[44px] px-2 underline font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
         >今のLPを見る</Link>
       </div>

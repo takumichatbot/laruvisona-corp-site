@@ -35,3 +35,16 @@ test('デモの日本語・写真・見せ方を期限つきで引き継ぐ', ()
   assert.equal(parseCompositionTransfer('#creation=' + 'x'.repeat(12001)), null);
   assert.equal(parseCompositionTransfer('#creation='+encodeURIComponent(JSON.stringify({at:1000,choice:{...value,photo:'https://evil.test'}})),1000), null);
 });
+
+test('会社の旧案内URLだけを新ドメインへ308転送し、クエリを保持する', async () => {
+  for (const host of ['laruvisona.jp', 'www.laruvisona.jp']) {
+    for (const path of ['/laruHP', '/laruHP/']) {
+      for (const method of ['GET', 'HEAD']) {
+        const res = await proxy(req(path + '?utm_source=google', host, method));
+        assert.equal(res.status, 308);
+        assert.equal(res.headers.get('location'), 'https://laruhp.com/?utm_source=google');
+        assert.equal(res.headers.get('x-middleware-rewrite'), null);
+      }
+    }
+  }
+});

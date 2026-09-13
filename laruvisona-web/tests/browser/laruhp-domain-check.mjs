@@ -1,21 +1,27 @@
 // ローカル本番用ビルドを3325で起動。2つのoriginを保って検証用サーバへ転送する。
 import {createRequire} from 'node:module';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 const {chromium}=createRequire(process.env.PLAYWRIGHT_FROM ? process.env.PLAYWRIGHT_FROM + '/' : import.meta.url)('playwright');
-const root=fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
+const live=process.env.LIVE === 'yes';
 
 const results=[];const out=process.env.OUTPUT_DIR || '/tmp/laruhp-domain-check';fs.mkdirSync(out,{recursive:true});
 function check(name,ok,detail){results.push({name,ok,detail});console.log(ok?'OK':'FAIL',name,detail||'');if(!ok)throw Error(name);}
 const browser=await chromium.launch({args:['--enable-unsafe-swiftshader']});
 try{for(const width of [390,1440]){
 const c=await browser.newContext({viewport:{width,height:width===390?844:1000},locale:'ja-JP'});
-await c.route('**/*',async r=>{const u=new URL(r.request().url());if(['laruhp.com','www.laruhp.com','laruvisona.jp'].includes(u.hostname)){
+await c.route('**/*',async r=>{if(live){if(['GET','HEAD','OPTIONS'].includes(r.request().method()))return r.continue();return r.abort();}const u=new URL(r.request().url());if(['laruhp.com','www.laruhp.com','laruvisona.jp'].includes(u.hostname)){
  const response=await r.fetch({url:'http://127.0.0.1:3325'+u.pathname+u.search,headers:{...r.request().headers(),host:u.hostname},maxRedirects:0});await r.fulfill({response});
 }else if(['127.0.0.1','localhost','fonts.googleapis.com','fonts.gstatic.com'].includes(u.hostname))await r.continue();else await r.abort();});
 const p=await c.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
-const response=await p.goto('https://laruhp.com/?utm_source=domain-test',{waitUntil:'networkidle'});
+// Playwrightの経路差し替えは転送先へ再適用されない。ローカルでは308を直接検査し、
+// 転送先は明示的に開く。本番モードでは旧URLからブラウザ自身が転送をたどる。
+if(!live){
+ const old=await c.request.get('http://127.0.0.1:3325/laruHP?utm_source=domain-test',{headers:{host:'laruvisona.jp'},maxRedirects:0});
+ check(width+' local old URL 308',old.status()===308&&old.headers().location==='https://laruhp.com/?utm_source=domain-test');
+}
+const response=await p.goto(live?'https://laruvisona.jp/laruHP?utm_source=domain-test':'https://laruhp.com/?utm_source=domain-test',{waitUntil:'networkidle'});
 check(width+' root 200',response.status()===200);
+check(width+(live?' old URL redirects to new domain':' new domain URL'),p.url()==='https://laruhp.com/?utm_source=domain-test');
 check(width+' LP headline',/その仕事に、/.test(await p.locator('h1').innerText()));
 check(width+' canonical',new URL(await p.locator('link[rel=canonical]').getAttribute('href')).href==='https://laruhp.com/');
 check(width+' no overflow',await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -36,4 +42,4 @@ check(width+' transfer hash removed',new URL(p.url()).hash==='');
 check(width+' edited name preserved',await p.locator('input').evaluateAll(els=>els.some(el=>el.value==='ドメイン確認喫茶')));
 check(width+' no exceptions',errors.length===0,errors);
 await p.screenshot({path:out+'/'+width+'-studio.png'});await c.unrouteAll({behavior:'ignoreErrors'});await c.close();
-}}finally{await browser.close();fs.writeFileSync(out+'/local-browser.json',JSON.stringify({conditions:'Production build, isolated fixture, requests routed to local server preserving host, Google Fonts allowed, no production writes',results},null,2));}
+}}finally{await browser.close();fs.writeFileSync(out+(live?'/production-browser.json':'/local-browser.json'),JSON.stringify({conditions:live?'Production HTTPS, fresh anonymous browser, all non-read requests blocked':'Production build, isolated fixture, redirect checked without following; target explicitly opened with local host routing, Google Fonts allowed, no production writes',results},null,2));}

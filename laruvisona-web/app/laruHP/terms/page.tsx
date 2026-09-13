@@ -55,7 +55,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-[#030712] text-white">
       <header className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href="/laruHP" className="flex items-center gap-2">
+          <Link href="https://laruhp.com/" className="flex items-center gap-2">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto brightness-0 invert" />
           </Link>
           <span className="text-slate-600">/</span>
@@ -82,7 +82,7 @@ export default function TermsPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <Link href="/laruHP" className="text-blue-400 hover:text-blue-300 text-sm">← LARU HP トップに戻る</Link>
+          <Link href="https://laruhp.com/" className="text-blue-400 hover:text-blue-300 text-sm">← LARU HP トップに戻る</Link>
         </div>
       </main>
     </div>

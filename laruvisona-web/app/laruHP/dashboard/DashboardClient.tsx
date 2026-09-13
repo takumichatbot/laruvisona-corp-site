@@ -910,7 +910,7 @@ export default function DashboardPage() {
             )}
             <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm sticky top-0 z-30">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
-                <Link href="/laruHP" className="flex items-center gap-2.5">
+                <Link href="https://laruhp.com/" className="flex items-center gap-2.5">
                   {rawPlan === 'agency' && (profile?.agency_logo_url || profile?.agency_brand_name) ? (
                     profile?.agency_logo_url
                       // eslint-disable-next-line @next/next/no-img-element

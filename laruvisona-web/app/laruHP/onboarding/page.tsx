@@ -724,7 +724,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-white border-b border-sky-100 shadow-sm backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/laruHP" className="flex items-center gap-3">
+          <Link href="https://laruhp.com/" className="flex items-center gap-3">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <div className="flex flex-col items-end">
@@ -1785,7 +1785,7 @@ const selectedIndustry = INDUSTRIES.find(i => i.id === form.industry);
         {step < 5 && !generating && (
           <div className="flex justify-between mt-10">
             {step === 1 ? (
-              <Link href="/laruHP" className="flex items-center gap-1.5 px-6 py-3 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-sky-300 bg-white transition-all text-sm">
+              <Link href="https://laruhp.com/" className="flex items-center gap-1.5 px-6 py-3 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-sky-300 bg-white transition-all text-sm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 トップへ戻る
               </Link>

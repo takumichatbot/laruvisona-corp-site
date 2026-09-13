@@ -29,7 +29,7 @@ const PURPOSES: Purpose[] = [
       '4つの質問に答えると、写真も文章も入ったたたき台ができます。出来上がった画面を見ながら直して、そのまま公開できます。',
       '公開したあとも同じ画面から自分で直せます。予約・問い合わせフォーム、独自ドメイン、SSLを含みます。月額999円（税別）から。',
     ],
-    link: { label: 'LARU HP を見る', href: '/laruHP' },
+    link: { label: 'LARU HP を見る', href: 'https://laruhp.com/' },
     sub: { label: 'この上の実例を、もう一度さわる', href: '#live' },
   },
   {
