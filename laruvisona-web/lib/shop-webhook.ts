@@ -1,17 +1,7 @@
-import { Resend } from 'resend';
 import type Stripe from 'stripe';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cartFromMetadata, snapshotStripeItems } from './shop-order';
-import { escapeContactHtml, singleLine } from './contact-contract';
-
-async function notify(to: string, subject: string, html: string) {
-  if (!process.env.RESEND_API_KEY) return;
-  try {
-    await new Resend(process.env.RESEND_API_KEY).emails.send({
-      from: 'LARU HP <noreply@laruvisona.jp>', to, subject, html,
-    });
-  } catch { /* 注文は保存済み。通知失敗でWebhookを再処理しない */ }
-}
+import { deliverShopOrderNotification } from './shop-notification';
 
 export async function commitShopCheckout(
   session: Stripe.Checkout.Session,
@@ -77,26 +67,9 @@ export async function commitShopCheckout(
     stripe_payment_intent_id: intentId,
   }).eq('id', result.id).eq('site_id', siteId).select('id');
   if (linked.error || !linked.data || linked.data.length !== 1) throw new Error('shop_database');
-  if (!result.created) return result;
-
-  const settings = (site.settings_json as Record<string, unknown>) || {};
-  const { data: { user: owner } } = await db.auth.admin.getUserById(site.user_id);
-  const to = typeof settings.notifyEmail === 'string' && settings.notifyEmail ? settings.notifyEmail : owner?.email;
-  if (to) {
-    const review = result.status === 'review'
-      ? '<p style="padding:12px;background:#fff7ed;color:#9a3412">在庫との対応を確認してください。</p>' : '';
-    await notify(
-      to,
-      `【ご注文】${singleLine(site.name)} — 新しい注文が入りました`,
-      `<div style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px">
-        <h2 style="color:#0f172a">新しいご注文</h2>${review}
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          ${orderItems.map(item => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${escapeContactHtml(item.name)} × ${item.quantity}</td></tr>`).join('')}
-        </table>
-        <p style="font-size:18px;font-weight:700;color:#0369a1">合計: ¥${(session.amount_total || 0).toLocaleString()}</p>
-        <p style="color:#475569;font-size:14px">購入者メール: ${escapeContactHtml(customer?.email || '—')}</p>
-      </div>`,
-    );
-  }
+  // 注文は既に確定している。通知失敗でStripeへ失敗を返さず、DBキューから再送する。
+  // 重複Webhookでも未通知なら同じ冪等キーで再試行できる。
+  try { await deliverShopOrderNotification(result.id, db); }
+  catch { /* 注文確定を通知の障害で巻き戻さない。再送キューが引き継ぐ。 */ }
   return result;
 }

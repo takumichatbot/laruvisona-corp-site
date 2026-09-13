@@ -32,6 +32,21 @@ alter table public.hp_orders add column if not exists stripe_account_id text;
 alter table public.hp_orders add column if not exists stripe_payment_intent_id text;
 alter table public.hp_orders add column if not exists refund_id text;
 alter table public.hp_orders add column if not exists refund_started_at timestamptz;
+alter table public.hp_orders add column if not exists notified_at timestamptz;
+alter table public.hp_orders add column if not exists notification_attempts integer not null default 0;
+alter table public.hp_orders add column if not exists next_notification_at timestamptz not null default (now() + interval '2 minutes');
+alter table public.hp_orders add column if not exists notification_claim_token uuid;
+alter table public.hp_orders add column if not exists notification_claimed_until timestamptz;
+alter table public.hp_orders add column if not exists notification_last_error text;
+
+do $$ begin
+  if not exists(select 1 from pg_constraint where conrelid='public.hp_orders'::regclass and conname='hp_orders_notification_attempts') then
+    alter table public.hp_orders add constraint hp_orders_notification_attempts check(notification_attempts between 0 and 5);
+  end if;
+  if not exists(select 1 from pg_constraint where conrelid='public.hp_orders'::regclass and conname='hp_orders_notification_lease') then
+    alter table public.hp_orders add constraint hp_orders_notification_lease check((notification_claim_token is null)=(notification_claimed_until is null));
+  end if;
+end $$;
 
 alter table public.hp_orders enable row level security;
 
@@ -59,6 +74,8 @@ grant select on public.hp_orders to authenticated;
 grant update (status, note) on public.hp_orders to authenticated;
 
 create index if not exists hp_orders_site_idx on public.hp_orders (site_id, created_at desc);
+create index if not exists hp_orders_notification_due on public.hp_orders(next_notification_at,created_at)
+  where notified_at is null;
 
 create or replace function public.laruhp_order_status_guard() returns trigger
 language plpgsql
@@ -212,3 +229,37 @@ $$;
 
 revoke all on function public.laruhp_shop_commit_order(uuid,text,text,text,text,integer,jsonb,jsonb,jsonb) from public, anon, authenticated;
 grant execute on function public.laruhp_shop_commit_order(uuid,text,text,text,text,integer,jsonb,jsonb,jsonb) to service_role;
+
+create or replace function public.laruhp_shop_claim_notifications(p_limit integer default 20)
+returns table(order_id uuid,claim_token uuid) language plpgsql security definer set search_path=public as $$
+begin
+  update hp_orders set notification_claim_token=null,notification_claimed_until=null,
+    next_notification_at=now(),notification_last_error='stale_claim'
+  where notified_at is null and notification_claimed_until<=now();
+  return query with due as (
+    select o.id from hp_orders o where o.notified_at is null and o.notification_attempts<5
+      and o.next_notification_at<=now() and o.created_at>now()-interval '23 hours'
+      and o.notification_claim_token is null
+    order by o.next_notification_at,o.created_at for update of o skip locked limit greatest(1,least(p_limit,100))
+  ), claimed as (
+    update hp_orders o set notification_attempts=o.notification_attempts+1,
+      notification_claim_token=gen_random_uuid(),notification_claimed_until=now()+interval '10 minutes'
+    from due where o.id=due.id returning o.id,o.notification_claim_token
+  ) select c.id,c.notification_claim_token from claimed c;
+end $$;
+
+create or replace function public.laruhp_shop_finish_notification(
+  p_order_id uuid,p_claim_token uuid,p_success boolean,p_error text default null
+) returns boolean language plpgsql security definer set search_path=public as $$
+declare n integer;
+begin
+  update hp_orders set notification_claim_token=null,notification_claimed_until=null,
+    next_notification_at=case when p_success or notification_attempts>=5 then next_notification_at
+      else now()+make_interval(mins=>least(60,5*power(2,greatest(notification_attempts-1,0))::integer)) end,
+    notification_last_error=case when p_success then null else left(coalesce(p_error,'delivery_failed'),500) end
+  where id=p_order_id and notification_claim_token=p_claim_token and (not p_success or notified_at is not null);
+  get diagnostics n=row_count; return n=1;
+end $$;
+
+revoke all on function public.laruhp_shop_claim_notifications(integer),public.laruhp_shop_finish_notification(uuid,uuid,boolean,text) from public,anon,authenticated;
+grant execute on function public.laruhp_shop_claim_notifications(integer),public.laruhp_shop_finish_notification(uuid,uuid,boolean,text) to service_role;

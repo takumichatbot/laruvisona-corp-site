@@ -47,8 +47,8 @@ test('Webhookは先に在庫を減らさず、DBの原子的な注文確定を�
   assert.match(service, /listLineItems\(/);
   assert.match(service, /rpc\('laruhp_shop_commit_order'/);
   assert.doesNotMatch(service, /from\('hp_orders'\)\.upsert/);
-  assert.match(service, /if \(!result\.created\) return result/);
-  assert.match(service, /escapeContactHtml\(item\.name\)/);
+  assert.match(service, /deliverShopOrderNotification\(result\.id, db\)/);
+  assert.match(service, /通知の障害で巻き戻さない/);
   assert.match(platformWebhook, /commitShopCheckout\(session, null/);
   assert.match(connectWebhook, /commitShopCheckout\(session,e\.account/);
 });
