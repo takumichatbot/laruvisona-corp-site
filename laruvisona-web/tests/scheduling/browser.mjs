@@ -66,6 +66,10 @@ try {
   );
   await p.getByRole("button", { name: "受付の設定", exact: true }).click();
   await p.getByRole("heading", { name: "営業時間", exact: true }).waitFor();
+  check(
+    "機能フラグを切った事前決済を利用者に予告表示しない",
+    (await p.getByText("事前決済は現在準備中です。来店時払いは利用できます。", { exact: true }).count()) === 0,
+  );
   await p.getByLabel("何日先まで予約できるか").fill("45");
   await p.getByRole("button", { name: "設定を保存", exact: true }).click();
   await p.getByText("予約設定を保存しました", { exact: true }).waitFor();

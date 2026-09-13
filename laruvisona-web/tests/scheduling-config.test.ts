@@ -47,6 +47,19 @@ test("担当者不在のメニューは公開しない", () => {
   c.services[0].staffIds = [];
   assert.throws(() => parseSchedule(c));
 });
+
+test("前払いは明示したときだけ有効で、Stripeの最低額未満を拒否", () => {
+  const legacy = defaultSchedule() as unknown as Record<string, unknown>;
+  delete legacy.paymentMode;
+  assert.equal(parseSchedule(legacy).paymentMode, undefined);
+  const prepaid = defaultSchedule();
+  prepaid.paymentMode = "prepay";
+  prepaid.services[0].price = 50;
+  assert.equal(parseSchedule(prepaid).paymentMode, "prepay");
+  prepaid.services[0].price = 49;
+  assert.throws(() => parseSchedule(prepaid), /50円以上/);
+  assert.throws(() => parseSchedule({ ...defaultSchedule(), paymentMode: "credit" }));
+});
 test("予約入力は価格・所要時間・設備の指定を信頼せず必要項目だけ取り出す", () => {
   const b = {
     configVersion: 1,

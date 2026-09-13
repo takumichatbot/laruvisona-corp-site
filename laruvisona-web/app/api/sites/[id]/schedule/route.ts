@@ -1,3 +1,5 @@
+import { merchantStatus } from "@/lib/scheduling/merchant";
+import { paymentService } from "@/lib/scheduling/payments";
 import { notifyAppointment } from "@/lib/scheduling/notify";
 import { owner, readBody, reply, fail } from "@/lib/scheduling/server";
 import {
@@ -26,7 +28,7 @@ export async function GET(req: Request, { params }: Context) {
     auth.db
       .from("hp_appointments")
       .select(
-        "id,service_id,service_name,staff_id,staff_name,resource_id,resource_name,starts_at,ends_at,price,name,email,phone,status,revision",
+        "id,service_id,service_name,staff_id,staff_name,resource_id,resource_name,starts_at,ends_at,price,name,email,phone,status,revision,payment_status,hold_until",
       )
       .eq("site_id", id)
       .gte("starts_at", from.toISOString())
@@ -62,6 +64,10 @@ export async function PUT(req: Request, { params }: Context) {
       throw Error("設定を読み直してください");
   } catch (e) {
     return reply({ error: (e as Error).message }, 400);
+  }
+  if (config.paymentMode === "prepay") {
+    try { if (!(await merchantStatus(auth.user.id)).ready) return reply({error:"Stripeの入金先を接続し、決済可能な状態にしてから事前決済を選んでください"},409); }
+    catch { return reply({error:"Stripeの接続状態を確認できませんでした"},503); }
   }
   const result = await auth.db.rpc("hp_schedule_configure", {
     p_site: id,
@@ -117,6 +123,9 @@ export async function PATCH(req: Request, { params }: Context) {
     p_revision: b.revision,
   });
   if (result.error) return fail(result.error);
+  if (result.data.payment_status === "refund_pending") {
+    try { const a = await paymentService(auth.db).reconcile(id, result.data.id); if(a) result.data=a; } catch { /* Durable refund_pending is retried by reconciliation. */ }
+  }
   const notified = await notifyAppointment(
     id,
     result.data.id,

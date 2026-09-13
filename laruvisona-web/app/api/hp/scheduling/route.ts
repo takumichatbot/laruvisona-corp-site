@@ -1,3 +1,5 @@
+import { bookingReturnUrl, paymentService, paymentsAvailable } from "@/lib/scheduling/payments";
+import { merchantStatus } from "@/lib/scheduling/merchant";
 import { notifyAppointment } from "@/lib/scheduling/notify";
 import { createServiceClient } from "@/lib/supabase/server";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
@@ -52,6 +54,7 @@ export async function GET(req: Request) {
   // Never publish staff working patterns, days off or resource inventory.
   const publicConfig = {
     version: calendar.version,
+    paymentMode: config.paymentMode || "onsite",
     services: config.services.map((x) => ({ ...x, resourceIds: [] })),
     staff: config.staff.map(({ id, name }) => ({ id, name })),
     advanceDays: config.advanceDays,
@@ -126,13 +129,16 @@ export async function POST(req: Request) {
     const r = await db
       .from("hp_appointments")
       .select(
-        "id,service_id,service_name,staff_id,staff_name,resource_name,starts_at,ends_at,price,name,email,phone,status,revision",
+        "id,service_id,service_name,staff_id,staff_name,resource_name,starts_at,ends_at,price,name,email,phone,status,revision,payment_status,hold_until",
       )
       .eq("site_id", b.siteId)
       .eq("client_key", b.clientKey)
       .eq("token_hash", hash(b.token))
       .maybeSingle();
     if (r.error) return fail(r.error);
+    if (r.data?.payment_status && r.data.payment_status !== "onsite") {
+      try { const a=await paymentService(db).reconcile(b.siteId,r.data.id); if(a) return reply({appointment:a}); } catch { /* Still return the durable pending state, never confirmed by a query parameter. */ }
+    }
     return reply({ appointment: r.data });
   }
   if (b.action === "reserve") {
@@ -142,6 +148,12 @@ export async function POST(req: Request) {
     } catch (e) {
       return reply({ error: (e as Error).message }, 400);
     }
+    const calendar = await db.from("hp_booking_calendars").select("config").eq("site_id",b.siteId).maybeSingle();
+    if(calendar.error)return fail(calendar.error);
+    if(calendar.data?.config?.paymentMode === "prepay") {
+      const site=await db.from("sites").select("user_id").eq("id",b.siteId).single();
+      try { if (!site.data || !(await merchantStatus(site.data.user_id)).ready) return reply({error:"事前決済を一時停止しています。お店へお問い合わせください"},409); } catch {return reply({error:"決済の状態を確認できませんでした"},503);}
+    }
     const result = await db.rpc("hp_schedule_book", {
       p_site: b.siteId,
       p_input: input,
@@ -149,12 +161,30 @@ export async function POST(req: Request) {
       p_request_hash: hash(JSON.stringify(input)),
     });
     if (result.error) return fail(result.error);
+    if (result.data.status === "pending_payment") return reply({appointment:result.data});
     const notified = await notifyAppointment(
       b.siteId,
       result.data.id,
       result.data.revision,
     );
     return reply({ appointment: result.data, notified });
+  }
+  if (["checkout","payment-refresh","payment-cancel"].includes(String(b.action))) {
+    const token=managementToken(req);
+    if(typeof b.id!=="string"||!uuidPattern.test(b.id)||!token)return reply({error:"予約確認リンクを開き直してください"},404);
+    const found=await db.rpc("hp_schedule_change",{p_site:b.siteId,p_id:b.id,p_token_hash:token,p_owner:null,p_action:"lookup",p_start:null,p_staff:null,p_revision:null});
+    if(found.error)return fail(found.error);
+    try {
+      const payments=paymentService(db);
+      if(b.action==="checkout"){
+        if(!paymentsAvailable())return reply({error:"事前決済を一時停止しています"},503);
+        const {data:site}=await db.from("sites").select("slug,custom_domain").eq("id",b.siteId).single();
+        if(!site)return reply({error:"サイトが見つかりません"},404);
+        return reply(await payments.checkout(b.siteId,b.id,token,bookingReturnUrl(req.headers.get("origin"),site)));
+      }
+      const a=await payments.reconcile(b.siteId,b.id,b.action==="payment-cancel");
+      return reply({appointment:a||found.data});
+    } catch{return reply({error:"決済状態を確認できませんでした。再確認してください。状況が分かるまで二重にお支払いしないでください"},503);}
   }
   if (
     !["lookup", "cancel", "reschedule"].includes(String(b.action)) ||
@@ -188,6 +218,9 @@ export async function POST(req: Request) {
     p_revision: b.revision || null,
   });
   if (result.error) return fail(result.error);
+  if (result.data.payment_status && result.data.payment_status !== "onsite") {
+    try {const a=await paymentService(db).reconcile(b.siteId,result.data.id);if(a)result.data=a;} catch { /* Keep durable state for retry. */ }
+  }
   const notified =
     b.action === "lookup"
       ? undefined
