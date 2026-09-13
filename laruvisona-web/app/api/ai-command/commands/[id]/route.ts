@@ -3,14 +3,19 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { isAdminRequest } from '@/lib/adminAuth';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!await isAdminRequest()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!await isAdminRequest(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { id } = await params;
-  const body = await req.json();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: 'idを確認してください' }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  if (!body || body.status !== 'cancelled' || Object.keys(body).some(key => key !== 'status')) {
+    return NextResponse.json({ error: '取り消し以外の更新はできません' }, { status: 400 });
+  }
   const service = await createServiceClient();
   const { data, error } = await service
     .from('ai_commands')
-    .update(body)
+    .update({ status: 'cancelled' })
     .eq('id', id)
+    .in('status', ['pending', 'running'])
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

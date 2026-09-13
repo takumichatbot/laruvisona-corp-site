@@ -199,7 +199,7 @@ export default function AiCommandPage() {
 
   // Input
   const [input, setInput]             = useState('');
-  const [autoApprove, setAutoApprove] = useState(true);
+  const [autoApprove, setAutoApprove] = useState(false);
   const [autoRetry, setAutoRetry]     = useState(false);
   const [sending, setSending]         = useState(false);
   const [imageFiles, setImageFiles]   = useState<File[]>([]);
@@ -497,7 +497,7 @@ export default function AiCommandPage() {
     if (!msg.trim()) return;
     const sid = opts.sessionId ?? activeId;
     if (!sid) return;
-    let imageUrls: string[] = [];
+    const imageUrls: string[] = [];
     for (const f of (opts.files ?? [])) {
       const fd = new FormData(); fd.append('file', f);
       const r = await fetch('/api/ai-command/upload', { method: 'POST', body: fd });
