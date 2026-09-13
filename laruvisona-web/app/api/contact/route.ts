@@ -323,7 +323,7 @@ export async function POST(req: Request) {
 
   await sendUserPush(site.user_id, {
     title: `${site.name}に${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}`,
-    body: `${name} 様から届きました。内容を確認してください。`,
+    body: '新しい受付内容を管理画面で確認してください。',
     url: '/laruHP/contacts', tag: `contact-${contactRow.id}`,
   }, supabase);
   return NextResponse.json({ ok: true, notified: deliveryState.owner_email === 'success' });

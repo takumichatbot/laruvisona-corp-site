@@ -38,4 +38,8 @@ test('問い合わせ・予約・注文の実イベントから端末通知を�
     const source = readFileSync(new URL(path, import.meta.url), 'utf8');
     assert.match(source, /sendUserPush\(/);
   }
+  const contact = readFileSync(new URL('../app/api/contact/route.ts', import.meta.url), 'utf8');
+  const booking = readFileSync(new URL('../lib/scheduling/notify.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(contact, /body: `\$\{name\}/);
+  assert.doesNotMatch(booking, /body: `\$\{a\.name\}/);
 });

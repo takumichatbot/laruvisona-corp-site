@@ -8,6 +8,7 @@
 - 保存に失敗した場合は端末側の購読を解除し、画面でも有効扱いにしない。
 - Pushサービスが404または410を返した購読は無効化する。
 - Service WorkerはLARU HPの通知として表示し、問い合わせ・予約・注文の該当管理画面を開く。
+- ロック画面へ出る本文には顧客名、メール、電話、用件を含めない。詳細は認証後の管理画面で確認する。
 - VAPID鍵が無い環境では配信処理を利用不可として扱う。必要な設定は `NEXT_PUBLIC_VAPID_PUBLIC_KEY`、`VAPID_PUBLIC_KEY`、`VAPID_PRIVATE_KEY`、任意の `VAPID_EMAIL`。
 
 DBには `supabase/hp_push_subscriptions.sql` を適用する。通知はメールの代替ではなく、ログイン中の運営者へ早く気づかせる追加経路である。
