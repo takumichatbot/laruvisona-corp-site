@@ -6,8 +6,9 @@
 
 - ブランチ: `codex/domain-onboarding-20260914`
 - `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
-- 全単体テスト: 725件通過
+- 全単体テスト: 755件通過
 - `next build`: exit 0
+- `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
 - SQL回帰: ランナーへ統合済み。ただしこのMacにはPostgreSQL実行環境が無いため未実行
 - push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
 
@@ -59,6 +60,7 @@
    旧 `settings_json.payment_links` の保有サイトと件数も控え、該当者にはショップ移行前に個別案内する。
 2. 本番DBの控えを取得する。
 3. SQLを上記順で適用し、状態確認の最終行とfalse行を保存する。
+   `hp_public_rate_limits.sql` が未適用のまま新コードを出すと、問い合わせ・予約・ログイン・決済・分析・管理者認証は安全側に停止するため、SQL確認前にデプロイしない。
 4. 必要なRender設定を追加する。再起動後に旧コードの基本画面が正常か確認する。
 5. ブランチ先端SHAとコミット数を固定し、mainへ通常マージしてpushする。force pushしない。
 6. Render Liveが固定SHAになったことを確認する。
