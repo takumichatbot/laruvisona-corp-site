@@ -27,7 +27,8 @@ export async function notifyAppointment(
       .eq("id", siteId)
       .single();
     if (!site) return false;
-    const { data: user } = await db.auth.admin.getUserById(site.user_id);
+    const { data: user, error: userError } = await db.auth.admin.getUserById(site.user_id);
+    if (userError) return false;
     const owner = site.settings_json?.notifyEmail || user?.user?.email;
     const a = event.snapshot;
     const label =
@@ -70,15 +71,17 @@ export async function notifyAppointment(
         .from("hp_booking_events")
         .update({ [recipient.kind + "_notified"]: true })
         .eq("id", event.id)
-        .eq("site_id", siteId);
-      if (saved.error) return false;
+        .eq("site_id", siteId)
+        .select("id");
+      if (saved.error || saved.data?.length !== 1) return false;
     }
     const marked = await db
       .from("hp_booking_events")
       .update({ notified: true })
       .eq("id", event.id)
-      .eq("site_id", siteId);
-    return !marked.error;
+      .eq("site_id", siteId)
+      .select("id");
+    return !marked.error && marked.data?.length === 1;
   } catch {
     return false;
   }

@@ -203,6 +203,19 @@ app.prepare().then(() => {
   setTimeout(sendBookingReminders,45000).unref();
   setInterval(sendBookingReminders,15*60000).unref();
 
+  let bookingNotificationRunning = false;
+  async function retryBookingNotifications() {
+    if (dev || !process.env.ADMIN_SECRET || !process.env.RESEND_API_KEY || bookingNotificationRunning) return;
+    bookingNotificationRunning = true;
+    try {
+      const r=await fetch(`http://127.0.0.1:${port}/api/cron/booking-notifications`,{method:'POST',headers:{Authorization:`Bearer ${process.env.ADMIN_SECRET}`},signal:AbortSignal.timeout(55000)});
+      if(!r.ok)console.warn('[booking-notifications] retry incomplete:',r.status);
+    } catch {console.warn('[booking-notifications] retry unavailable');}
+    finally {bookingNotificationRunning=false;}
+  }
+  setTimeout(retryBookingNotifications,75000).unref();
+  setInterval(retryBookingNotifications,5*60000).unref();
+
   // 30秒ごとに全接続へ ping。前回 pong が無ければ切断（死んだ接続を掃除）。
   // 猶予は最大60秒なので Cloudflare 経由の pong 遅延では誤切断しない。
   const hbInterval = setInterval(() => {
