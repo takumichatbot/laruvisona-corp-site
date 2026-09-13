@@ -47,7 +47,10 @@ export async function POST(req: Request) {
   });
 
   // Update profile plan immediately
-  await supabase.from('profiles').update({ plan }).eq('id', user.id);
+  const saved = await supabase.from('profiles').update({ plan }).eq('id', user.id).select('id');
+  if (saved.error || saved.data?.length !== 1) {
+    return NextResponse.json({ error: 'プラン変更を保存できませんでした。決済状態を確認しています。' }, { status: 503 });
+  }
 
   // LARUbot なし → あり への切替時のみ LARUbot を自動登録（アップグレード処理は止めない）
   try {

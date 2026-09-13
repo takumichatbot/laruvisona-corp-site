@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
+import { billingAppOrigin } from '@/lib/billing-url';
 
-export async function POST(req: Request) {
+export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,23 +18,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No subscription found' }, { status: 404 });
   }
 
-  // Enforce 6-month minimum contract
+  const returnUrl = `${billingAppOrigin()}/laruHP/dashboard`;
+
+  // 最低契約期間中もカード変更は必要になり得る。通常のポータルを開くと
+  // Stripe側の設定次第で早期解約できるため、この期間だけ支払方法変更の
+  // 単一フローへ閉じる。契約期間後は通常の管理ポータルを開く。
+  let paymentMethodOnly = false;
   if (profile.contract_ends_at && profile.subscription_status === 'active') {
     const contractEnd = new Date(profile.contract_ends_at);
     if (contractEnd > new Date()) {
-      return NextResponse.json({
-        error: 'minimum_contract',
-        message: `最低契約期間中のため解約できません。解約可能日: ${contractEnd.toLocaleDateString('ja-JP')}`,
-        contract_ends_at: profile.contract_ends_at,
-      }, { status: 403 });
+      paymentMethodOnly = true;
     }
   }
 
-  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: profile.stripe_customer_id,
-    return_url: `${origin}/laruHP/dashboard`,
+    return_url: returnUrl,
+    ...(paymentMethodOnly ? {
+      flow_data: {
+        type: 'payment_method_update' as const,
+        after_completion: { type: 'redirect' as const, redirect: { return_url: returnUrl } },
+      },
+    } : {}),
   });
 
-  return NextResponse.json({ url: portalSession.url });
+  return NextResponse.json({ url: portalSession.url, mode: paymentMethodOnly ? 'payment_method' : 'manage' });
 }

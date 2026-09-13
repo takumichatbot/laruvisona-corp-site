@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
+import { billingAppOrigin } from '@/lib/billing-url';
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   hp: process.env.STRIPE_PRICE_ID,
@@ -20,6 +21,8 @@ const PLAN_ANNUAL_PRICE_MAP: Record<string, string | undefined> = {
   lite: process.env.STRIPE_LITE_ANNUAL_PRICE_ID, // ¥2,980 の年払い Price ID
 };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -30,7 +33,18 @@ export async function POST(req: Request) {
 
   const { siteId, plan = 'hp', billing = 'monthly' } = await req.json().catch(() => ({}));
   const isAnnual = billing === 'annual';
-  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
+  const origin = billingAppOrigin();
+
+  let ownedSiteId = '';
+  if (siteId !== undefined && siteId !== null && siteId !== '') {
+    if (typeof siteId !== 'string' || !UUID.test(siteId)) {
+      return NextResponse.json({ error: 'Invalid site' }, { status: 400 });
+    }
+    const owned = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).maybeSingle();
+    if (owned.error) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
+    if (!owned.data) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    ownedSiteId = owned.data.id;
+  }
 
   const resolvedPriceId = isAnnual ? PLAN_ANNUAL_PRICE_MAP[plan] : PLAN_PRICE_MAP[plan];
   // 月払い価格へのフォールバックはしない（表示と請求の食い違い＝誤課金を防ぐ）
@@ -50,7 +64,7 @@ export async function POST(req: Request) {
 
   // 既に契約中なら「新規サブスク作成」ではなく既存サブスクの価格を差し替える（日割り）。
   // これをしないと2本目のサブスクが作られて二重課金になる（旧サブスクは請求され続ける）。
-  if (profile?.stripe_subscription_id && profile.subscription_status !== 'canceled') {
+  if (profile?.stripe_subscription_id) {
     try {
       const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
       const reusable = !['canceled', 'incomplete_expired'].includes(sub.status);
@@ -67,11 +81,14 @@ export async function POST(req: Request) {
           proration_behavior: 'create_prorations',
           metadata: { ...(sub.metadata || {}), plan, billing },
         });
-        await supabase.from('profiles').update({ plan }).eq('id', user.id);
+        const saved = await supabase.from('profiles').update({ plan }).eq('id', user.id).select('id');
+        if (saved.error || saved.data?.length !== 1) {
+          return NextResponse.json({ error: 'プラン変更を保存できませんでした。決済状態を確認しています。' }, { status: 503 });
+        }
 
         // LARUbot なし → あり への切替時のみ LARUbot を自動登録（決済処理は止めない）
         try {
-          await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, siteId, prevPlan: profile.plan });
+          await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, siteId: ownedSiteId || undefined, prevPlan: profile.plan });
         } catch (e) {
           console.error('[stripe/checkout] LARUbot provision on upgrade failed:', e);
         }
@@ -79,8 +96,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ upgraded: true, plan });
       }
     } catch (err) {
-      // 旧サブスクが取得できない等は新規契約フローにフォールバック
-      console.error('[stripe/checkout] existing subscription check failed, falling back to new checkout:', err);
+      // 既存契約を確認できないまま新しい契約を作ると二重請求になり得る。
+      console.error('[stripe/checkout] existing subscription check failed:', (err as Error)?.message);
+      return NextResponse.json({ error: '現在の契約を確認できませんでした。時間をおいてお試しください。' }, { status: 503 });
     }
   }
 
@@ -91,14 +109,32 @@ export async function POST(req: Request) {
       email: user.email,
       name: profile?.business_name || user.email,
       metadata: { supabase_user_id: user.id },
-    });
+    }, { idempotencyKey: `laruhp-customer-${user.id}` });
     customerId = customer.id;
-    await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id);
+    const linked = await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id).select('id');
+    if (linked.error || linked.data?.length !== 1) {
+      return NextResponse.json({ error: '決済利用者を保存できませんでした。時間をおいてお試しください。' }, { status: 503 });
+    }
+  }
+
+  // 保存済みIDが欠落・古い場合でも、同じ顧客に有効な契約が残っていれば
+  // 新しい契約を作らない。手動確認でDBとStripeを同期してから再開する。
+  if (customerId) {
+    try {
+      const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+      const live = subscriptions.data.find(sub => !['canceled', 'incomplete_expired'].includes(sub.status));
+      if (live && live.id !== profile?.stripe_subscription_id) {
+        return NextResponse.json({ error: '既存の契約が見つかりました。契約状態を確認しています。' }, { status: 409 });
+      }
+    } catch (err) {
+      console.error('[stripe/checkout] customer subscriptions check failed:', (err as Error)?.message);
+      return NextResponse.json({ error: '現在の契約を確認できませんでした。時間をおいてお試しください。' }, { status: 503 });
+    }
   }
 
   const sessionMeta = {
     supabase_user_id: user.id,
-    site_id: siteId || '',
+    site_id: ownedSiteId,
     plan,
   };
 
@@ -123,7 +159,7 @@ export async function POST(req: Request) {
       success_url: `${origin}/laruHP/dashboard?payment=success`,
       cancel_url: `${origin}/laruHP/plans?payment=canceled`,
       locale: 'ja',
-    });
+    }, { idempotencyKey: `laruhp-checkout-${user.id}-${plan}-${billing}` });
     return NextResponse.json({ url: session.url });
   } catch (err: unknown) {
     const stripeErr = err as { message?: string; code?: string };
