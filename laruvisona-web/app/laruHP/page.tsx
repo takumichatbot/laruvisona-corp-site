@@ -17,24 +17,24 @@ import {
 } from 'lucide-react';
 import BrandFonts from '@/components/BrandFonts';
 import CreationLab from '@/components/lp/CreationLab';
-import Showcase from '@/components/lp/Showcase';
+import HeroExperience from '@/components/lp/HeroExperience';
 import { PLANS, TERMS, PRIMARY_CTA, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
 import './landing.css';
 
 export const metadata: Metadata = {
-  title: 'LARU HP｜らしさまで、伝わるホームページ。',
+  title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
   description:
-    '写真と言葉を選んで、完成を見ながら整える。お店にも、会社にも。自分で作り、育てるホームページ作成サービス LARU HP。',
+    '写真と言葉から、お店や会社にふさわしいホームページへ。実際の完成像を見ながら構成・書体・写真・動きを選んで作る、LARU HP。',
   openGraph: {
-    title: 'LARU HP｜らしさまで、伝わるホームページ。',
+    title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
     description:
       '写真と言葉を選んで、完成を見ながら整える。お店にも、会社にも。',
     url: 'https://laruvisona.jp/laruHP',
     images: [{ url: '/laruHP/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
-    title: 'LARU HP｜らしさまで、伝わるホームページ。',
-    description: '完成を見ながら、自分らしいホームページを。',
+    title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
+    description: '写真と言葉から、あなたの仕事が伝わるサイトへ。',
   },
 };
 const HOW_FAQ = [
@@ -101,29 +101,32 @@ export default function LaruHPLandingPage() {
         </div>
       </header>
       <main id="lp-main">
-        <section className="lp-hero">
+        <HeroExperience>
           <div className="lp-hero-copy">
             <p className="lp-eyebrow">
               <span />
               お店にも、会社にも。自分でつくるホームページ。
             </p>
             <h1>
-              らしさまで、
-              <br />
-              <span>伝わるホームページ。</span>
+              <span className="lp-hero-first">その仕事に、</span>
+              <span className="lp-hero-rest">
+                ふさわしい
+                <br />
+                ホームページを。
+              </span>
             </h1>
             <p className="lp-hero-lead">
-              写真と言葉を選んで、完成を見ながら整える。
+              写真を選ぶ。言葉を整える。
               <br />
-              大切にしていることが、ちゃんと届く一枚へ。
+              あなたの仕事が伝わるサイトを、ここで。
             </p>
             <div className="lp-hero-actions">
               <Link href="/laruHP/studio" className="lp-button">
-                自分のサイトをつくる
+                完成を見ながら、つくる
                 <ArrowUpRight size={20} />
               </Link>
               <a href="#experience" className="lp-text-link">
-                作り心地を試す
+                まずは、触ってみる
                 <ArrowRight size={18} />
               </a>
             </div>
@@ -133,8 +136,7 @@ export default function LaruHPLandingPage() {
               <span>初月無料・最低利用期間{TERMS.minimumMonths}ヶ月</span>
             </p>
           </div>
-          <Showcase />
-        </section>
+        </HeroExperience>
 
         <section className="lp-introduction lp-container">
           <p className="lp-section-label">
@@ -142,14 +144,14 @@ export default function LaruHPLandingPage() {
           </p>
           <div className="lp-introduction-grid">
             <h2>
-              いいホームページは、
+              写真も、言葉も、
               <br />
-              つくる時間も、<em>心地いい。</em>
+              あなたの仕事の顔になる。
             </h2>
             <p>
-              最初から、全部決まっていなくて大丈夫。
+              色だけでなく、構成から選べます。
               <br />
-              言葉にして、選んで、少しずつ自分らしく。
+              写真を大きく。説明を丁寧に。内容を選びやすく。
               <br />
               LARU HPは、完成を眺めながら
               <br className="lp-desktop-break" />
@@ -431,7 +433,7 @@ export default function LaruHPLandingPage() {
             LARU<span>HP</span>
             <i aria-hidden="true" />
           </Link>
-          <p>らしさまで、伝わるホームページ。</p>
+          <p>その仕事に、ふさわしいホームページを。</p>
         </div>
         <nav aria-label="フッター">
           <Link href="/">運営会社</Link>

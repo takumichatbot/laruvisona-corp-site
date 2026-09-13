@@ -1,0 +1,524 @@
+/* Cinematic landing: real video beneath readable HTML, real site captures on 3D planes. */
+.lhp-landing .lp-header {
+  background: #090e1c;
+  color: #eaf0ff;
+  border-bottom: 1px solid #ffffff12;
+}
+.lp-header .lp-wordmark {
+  color: #fff;
+}
+.lp-header .lp-wordmark span {
+  color: #9eacff;
+}
+.lp-header .lp-login,
+.lp-header nav a {
+  color: #c0cae0;
+}
+.lp-header .lp-button {
+  background: #5067f1;
+  color: white;
+}
+.lhp-landing .lp-cinema {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  background: #090e1c !important;
+  color: #f6f8ff;
+  padding: 0 !important;
+  overflow: clip;
+}
+.lp-film {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.lp-film video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.85;
+}
+.lp-film-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #080d1bea 0%, #080d1ba1 36%, #080d1b12 73%),
+    linear-gradient(0deg, #090e1c 0%, transparent 45%, #090e1c30 100%);
+}
+.lp-cinema-inner {
+  width: 100%;
+  max-width: 1440px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 46% 54%;
+  align-items: center;
+  min-height: 800px;
+  padding: 60px 5% 40px;
+  gap: 0;
+}
+.lhp-landing .lp-cinema .lp-hero-copy {
+  text-align: left;
+  min-width: 0;
+  padding: 0;
+  position: relative;
+  z-index: 2;
+}
+.lhp-landing .lp-cinema .lp-eyebrow {
+  justify-content: flex-start;
+  color: #b1c0db;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+}
+.lhp-landing .lp-cinema .lp-eyebrow > span {
+  background: #90a7ff;
+  box-shadow: 0 0 14px #8099ff;
+}
+.lhp-landing .lp-cinema h1 {
+  font-size: clamp(38px, 4.25vw, 64px);
+  line-height: 1.32;
+  letter-spacing: -0.06em;
+  margin: 28px 0 24px;
+  font-weight: 750;
+}
+.lhp-landing .lp-cinema h1 > span {
+  display: block;
+  color: inherit;
+}
+.lhp-landing .lp-cinema h1 .lp-hero-first {
+  font-size: 0.71em;
+  margin-bottom: 16px;
+  color: #d9e2f8;
+  letter-spacing: -0.04em;
+}
+.lhp-landing .lp-cinema h1 .lp-hero-rest {
+  background: linear-gradient(150deg, #fff 12%, #f5f7ff 42%, #99b3ff 100%);
+  background-clip: text;
+  color: transparent;
+}
+.lhp-landing .lp-cinema .lp-hero-lead {
+  color: #b0bfd7;
+  font-size: 14px;
+  line-height: 2.1;
+}
+.lhp-landing .lp-cinema .lp-hero-actions {
+  justify-content: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 15px 24px;
+  margin-top: 32px;
+}
+.lhp-landing .lp-cinema .lp-hero-actions .lp-button {
+  background: #e4eaff;
+  color: #14245e;
+  border-radius: 4px;
+  box-shadow: 0 8px 45px #718ef229;
+  font-size: 14px;
+  min-height: 56px;
+}
+.lhp-landing .lp-cinema .lp-text-link {
+  color: #d3def6;
+}
+.lhp-landing .lp-cinema .lp-price-hint {
+  color: #95a4c2;
+  line-height: 1.8;
+  font-size: 10px;
+}
+.lhp-landing .lp-cinema .lp-price-hint b {
+  color: #d0dcf6;
+}
+.lhp-landing .lp-cinema .lp-price-hint > span {
+  display: block;
+  margin: 2px 0 0;
+}
+.lhp-landing .lp-cinema .lp-showcase {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+.lhp-landing .lp-cinema .lp-industry-tabs {
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+}
+.lhp-landing .lp-cinema .lp-industry-tabs button {
+  font-size: 10px;
+  color: #aebcd8;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid #ffffff20;
+  white-space: nowrap;
+}
+.lhp-landing .lp-cinema .lp-industry-tabs button[aria-checked='true'] {
+  background: transparent;
+  color: #fff;
+  border-bottom: 2px solid #aab9ff;
+  box-shadow: none;
+}
+.lhp-landing .lp-cinema .lp-showcase-stage {
+  margin: 0;
+  perspective: none;
+  padding: 0;
+  height: 460px;
+  isolation: isolate;
+}
+.lp-webgl {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.lhp-landing .lp-cinema .lp-main-window {
+  position: absolute;
+  inset: 12% 5%;
+  width: 90%;
+  margin: 0;
+  border: 0;
+  border-radius: 3px;
+  box-shadow: 0 24px 70px #0008;
+  animation: none;
+  transform: perspective(1000px) rotateY(-12deg) rotateX(4deg);
+  transition: opacity 0.25s;
+  background: #fff;
+  overflow: hidden;
+  height: fit-content;
+}
+.lhp-landing .lp-cinema .lp-main-window img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.lp-sculpture[data-ready='true'] .lp-main-window {
+  opacity: 0;
+  pointer-events: none;
+}
+.lp-scene-halo {
+  position: absolute;
+  inset: 18% 6% 6%;
+  background: radial-gradient(ellipse, #6d8aff38, transparent 65%);
+  filter: blur(30px);
+  border-radius: 50%;
+}
+.lp-scene-rule {
+  position: absolute;
+  bottom: 4px;
+  left: 24%;
+  right: 24%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8296bf;
+  letter-spacing: 0.2em;
+  font-size: 10px;
+  z-index: 3;
+}
+.lp-scene-rule i {
+  height: 1px;
+  flex: 1;
+  background: #93a8e34d;
+}
+.lp-scene-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: #8c9fbe;
+  font-size: 10px;
+  position: relative;
+  z-index: 3;
+}
+.lp-scene-actions button {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 7px 12px;
+  border: 1px solid #b1c4ff42;
+  border-radius: 24px;
+  color: #d1ddf8;
+  min-height: 40px;
+  font-size: 10px;
+  background: #0d193a66;
+}
+.lhp-landing .lp-cinema .lp-showcase-caption {
+  padding: 0 7%;
+  margin: 14px 0 0;
+  gap: 12px;
+}
+.lhp-landing .lp-cinema .lp-showcase-caption p {
+  font-size: 15px;
+  color: #dce6ff;
+}
+.lhp-landing .lp-cinema .lp-showcase-caption p span {
+  color: #8499bd;
+  font-size: 10px;
+}
+.lhp-landing .lp-cinema .lp-showcase-caption a {
+  color: #c7d5fa;
+  border-color: #768cb954;
+  font-size: 11px;
+}
+.lhp-landing .lp-cinema .lp-example-note {
+  font-size: 9px;
+  color: #7d90b2;
+  margin: 16px 0 0;
+}
+.lp-cinema-footer {
+  position: relative;
+  z-index: 4;
+  max-width: 1296px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 0;
+  border-top: 1px solid #b0c4ff20;
+  color: #859abc;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  min-height: 80px;
+}
+.lp-film-control {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  border: 1px solid #a3baf03d;
+  border-radius: 30px;
+  padding: 7px 14px;
+  color: #ccd9f4;
+  font-size: 10px;
+  background: #0b1530;
+}
+.lp-motion-note {
+  font-size: 10px;
+  color: #899cbf;
+}
+.lhp-landing .lp-cinema a:focus-visible,
+.lhp-landing .lp-cinema button:focus-visible {
+  outline: 3px solid #b5caff;
+  outline-offset: 5px;
+}
+.lhp-landing .lp-cinema[data-motion='off'] *,
+.lhp-landing .lp-cinema[data-motion='off'] *::before,
+.lhp-landing .lp-cinema[data-motion='off'] *::after {
+  animation-play-state: paused !important;
+  scroll-behavior: auto !important;
+}
+@media (min-width: 1600px) {
+  .lp-cinema-inner {
+    min-height: 860px;
+  }
+  .lhp-landing .lp-cinema .lp-showcase-stage {
+    height: 500px;
+  }
+}
+@media (max-width: 1100px) {
+  .lp-cinema-inner {
+    padding: 54px 4% 32px;
+    min-height: 730px;
+    grid-template-columns: 45% 55%;
+  }
+  .lhp-landing .lp-cinema h1 {
+    font-size: 44px;
+  }
+  .lhp-landing .lp-cinema .lp-showcase-stage {
+    height: 400px;
+  }
+  .lp-cinema-footer {
+    margin: 0 4%;
+  }
+  .lhp-landing .lp-cinema .lp-industry-tabs button {
+    padding: 8px;
+    font-size: 9px;
+  }
+}
+@media (max-width: 760px) {
+  .lp-cinema-inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 40px 20px 20px;
+    gap: 22px;
+  }
+  .lhp-landing .lp-cinema .lp-hero-copy {
+    width: 100%;
+    padding: 0;
+    pointer-events: auto;
+  }
+  .lhp-landing .lp-cinema h1 {
+    font-size: clamp(35px, 9.5vw, 55px);
+    line-height: 1.28;
+    margin: 21px 0 18px;
+    letter-spacing: -0.045em;
+  }
+  .lhp-landing .lp-cinema h1 .lp-hero-first {
+    font-size: 0.68em;
+    margin-bottom: 9px;
+  }
+  .lhp-landing .lp-cinema .lp-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.025em;
+  }
+  .lhp-landing .lp-cinema .lp-hero-lead {
+    font-size: 12px;
+    line-height: 1.85;
+  }
+  .lhp-landing .lp-cinema .lp-hero-actions {
+    margin-top: 21px;
+    gap: 8px 18px;
+  }
+  .lhp-landing .lp-cinema .lp-hero-actions .lp-button {
+    font-size: 12px;
+    min-height: 52px;
+    padding: 13px 20px;
+    gap: 16px;
+  }
+  .lhp-landing .lp-cinema .lp-text-link {
+    font-size: 11px;
+    min-height: 44px;
+    gap: 8px;
+  }
+  .lhp-landing .lp-cinema .lp-price-hint {
+    margin-top: 12px;
+    font-size: 9px;
+  }
+  .lhp-landing .lp-cinema .lp-price-hint b {
+    font-size: 15px;
+  }
+  .lhp-landing .lp-cinema .lp-price-hint > span {
+    display: inline;
+    margin-left: 10px;
+  }
+  .lp-film video {
+    object-position: 58% center;
+    opacity: 1;
+  }
+  .lp-film-shade {
+    background: linear-gradient(
+      180deg,
+      #080d1ba6,
+      #080d1ba8 33%,
+      #090e1c05 61%,
+      #090e1c 96%
+    );
+  }
+  .lhp-landing .lp-cinema .lp-showcase {
+    width: calc(100% + 24px);
+    margin: 0 -12px;
+  }
+  .lhp-landing .lp-cinema .lp-showcase-stage {
+    height: 330px;
+  }
+  .lhp-landing .lp-cinema .lp-main-window {
+    inset: 9% 4%;
+    width: 92%;
+    transform: perspective(800px) rotateY(-10deg) rotateX(4deg);
+  }
+  .lhp-landing .lp-cinema .lp-industry-tabs {
+    justify-content: space-between;
+    padding: 0 8px;
+  }
+  .lhp-landing .lp-cinema .lp-industry-tabs button {
+    padding: 7px 6px;
+    font-size: 9px;
+    flex: 1;
+  }
+  .lp-scene-rule {
+    bottom: 5px;
+    left: 26%;
+    right: 26%;
+    font-size: 8px;
+  }
+  .lp-scene-actions {
+    gap: 9px;
+    font-size: 9px;
+    flex-wrap: wrap;
+  }
+  .lp-scene-actions button {
+    font-size: 9px;
+  }
+  .lhp-landing .lp-cinema .lp-showcase-caption {
+    padding: 0 12px;
+    margin-top: 14px;
+  }
+  .lhp-landing .lp-cinema .lp-showcase-caption p {
+    font-size: 13px;
+  }
+  .lhp-landing .lp-cinema .lp-showcase-caption a {
+    font-size: 10px;
+  }
+  .lhp-landing .lp-cinema .lp-example-note {
+    font-size: 8px;
+    margin-top: 12px;
+  }
+  .lp-cinema-footer {
+    margin: 0 20px;
+    padding: 12px 0;
+    min-height: 70px;
+    gap: 8px;
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+  .lp-film-control {
+    font-size: 9px;
+    white-space: nowrap;
+    padding: 7px 10px;
+  }
+  .lp-motion-note {
+    font-size: 8px;
+  }
+}
+@media (max-width: 360px) {
+  .lp-cinema-inner {
+    padding: 30px 16px 18px;
+    gap: 16px;
+  }
+  .lhp-landing .lp-cinema .lp-hero-actions {
+    gap: 3px 12px;
+  }
+  .lhp-landing .lp-cinema .lp-hero-actions .lp-button {
+    padding: 12px 15px;
+    font-size: 11px;
+  }
+  .lhp-landing .lp-cinema .lp-text-link {
+    font-size: 10px;
+  }
+  .lhp-landing .lp-cinema .lp-showcase-stage {
+    height: 285px;
+  }
+  .lhp-landing .lp-cinema .lp-price-hint > span {
+    display: block;
+    margin-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lhp-landing .lp-cinema .lp-webgl {
+    display: none;
+  }
+  .lhp-landing .lp-cinema .lp-main-window {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .lhp-landing .lp-cinema * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .lp-film video {
+    object-position: center;
+  }
+  .lp-scene-actions button {
+    display: none;
+  }
+}

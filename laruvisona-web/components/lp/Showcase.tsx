@@ -1,43 +1,75 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { Component, useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, Check, MousePointer2 } from 'lucide-react';
+import { ArrowUpRight, Layers3 } from 'lucide-react';
 import { LP_SHOWCASE } from '@/lib/lp-showcase';
-
-/** 作例は公開用HTMLの画面写真。操作する実物のデモとは分けて表示する。 */
+import { useHeroMotion } from './hero-motion';
+const Sculpture = dynamic(() => import('./SiteSculpture'), { ssr: false });
+class SceneBoundary extends Component<
+  { children: React.ReactNode; onFail: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onFail();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+/** The 3D planes carry a capture of the actual exported site; they do not imitate an editor. */
 export default function Showcase() {
-  const [active, setActive] = useState(0);
-  const root = useRef<HTMLDivElement>(null),
-    buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const [active, setActive] = useState(0),
+    [spread, setSpread] = useState(false),
+    [readyImage, setReadyImage] = useState(''),
+    [available, setAvailable] = useState(false),
+    [failed, setFailed] = useState(false);
+  const { paused, reduced, visible } = useHeroMotion();
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]),
+    stage = useRef<HTMLDivElement>(null);
   const current = LP_SHOWCASE[active];
+  const onReady = useCallback(
+      () => setReadyImage(current.image),
+      [current.image],
+    ),
+    onFail = useCallback(() => setFailed(true), []);
   useEffect(() => {
-    const el = root.current;
-    if (!el) return;
-    const mq = matchMedia('(prefers-reduced-motion: reduce)');
+    if (reduced) return;
+    const canvas = document.createElement('canvas'),
+      gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (gl) {
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      const timer = setTimeout(() => setAvailable(true), 180);
+      return () => clearTimeout(timer);
+    }
+  }, [reduced]);
+  useEffect(() => {
+    if (paused) return;
     let frame = 0;
     const paint = () => {
       frame = 0;
-      const box = el.getBoundingClientRect();
-      const progress = mq.matches
-        ? 0
-        : Math.max(0, Math.min(1, -box.top / Math.max(1, box.height)));
-      el.style.setProperty('--depart', String(progress));
+      const el = stage.current;
+      if (!el) return;
+      const b = el.getBoundingClientRect();
+      setSpread(b.top < -b.height * 0.08);
     };
     const scroll = () => {
       if (!frame) frame = requestAnimationFrame(paint);
     };
     window.addEventListener('scroll', scroll, { passive: true });
-    mq.addEventListener('change', scroll);
-    paint();
     return () => {
       window.removeEventListener('scroll', scroll);
-      mq.removeEventListener('change', scroll);
       cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [paused]);
+  const live = available && !failed && !reduced;
   return (
-    <div className="lp-showcase" ref={root} id="works">
+    <div className="lp-showcase" id="works">
       <div
         className="lp-industry-tabs"
         role="radiogroup"
@@ -57,11 +89,11 @@ export default function Showcase() {
             onKeyDown={(e) => {
               let next = i;
               if (['ArrowRight', 'ArrowDown'].includes(e.key))
-                next = (i + 1) % 4;
+                next = (i + 1) % LP_SHOWCASE.length;
               else if (['ArrowLeft', 'ArrowUp'].includes(e.key))
-                next = (i + 3) % 4;
+                next = (i + LP_SHOWCASE.length - 1) % LP_SHOWCASE.length;
               else if (e.key === 'Home') next = 0;
-              else if (e.key === 'End') next = 3;
+              else if (e.key === 'End') next = LP_SHOWCASE.length - 1;
               else return;
               e.preventDefault();
               setActive(next);
@@ -72,67 +104,59 @@ export default function Showcase() {
           </button>
         ))}
       </div>
-      <div className="lp-showcase-stage" aria-label={`${current.label}の作例`}>
-        <div className="lp-stage-orbit" aria-hidden="true" />
-        <div className="lp-side-window lp-side-left" aria-hidden="true">
-          <div className="lp-window-top">
-            <i />
-            <i />
-            <i />
-          </div>
-          <Image
-            src={LP_SHOWCASE[(active + 3) % 4].image}
-            alt=""
-            width={1100}
-            height={830}
-            sizes="280px"
-          />
-        </div>
-        <div className="lp-side-window lp-side-right" aria-hidden="true">
-          <div className="lp-window-top">
-            <i />
-            <i />
-            <i />
-          </div>
-          <Image
-            src={LP_SHOWCASE[(active + 1) % 4].image}
-            alt=""
-            width={1100}
-            height={830}
-            sizes="280px"
-          />
-        </div>
-        <div
-          className="lp-main-window"
-          style={{ borderColor: current.tone }}
-          key={current.id}
-        >
-          <div className="lp-window-top">
-            <span className="lp-window-dots">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span>{current.name}</span>
-            <span className="lp-window-status">
-              <Check size={11} />
-              公開イメージ
-            </span>
-          </div>
+      <div
+        ref={stage}
+        className="lp-showcase-stage lp-sculpture"
+        data-ready={live && readyImage === current.image}
+        data-spread={spread}
+        aria-label={`${current.label}の公開イメージを立体で表示`}
+      >
+        <div className="lp-scene-halo" aria-hidden="true" />
+        <div className="lp-main-window">
           <Image
             src={current.image}
             alt={`${current.name}の作例。${current.label}の架空のホームページ`}
             width={1100}
             height={830}
-            sizes="(max-width: 760px) 88vw, 720px"
+            sizes="(max-width:760px) 90vw, 640px"
             loading="eager"
             fetchPriority={active === 0 ? 'high' : 'auto'}
           />
         </div>
-        <span className="lp-stage-label" aria-hidden="true">
-          <MousePointer2 size={15} />
-          <span>あなたの「らしさ」を。</span>
-        </span>
+        {live && (
+          <div className="lp-webgl" onContextMenu={(e) => e.preventDefault()}>
+            <SceneBoundary onFail={onFail}>
+              <Sculpture
+                image={current.image}
+                spread={spread}
+                paused={paused}
+                visible={visible}
+                onReady={onReady}
+                onFail={onFail}
+              />
+            </SceneBoundary>
+          </div>
+        )}
+        <div className="lp-scene-rule" aria-hidden="true">
+          <span>写真</span>
+          <i />
+          <span>言葉</span>
+          <i />
+          <span>構成</span>
+        </div>
+      </div>
+      <div className="lp-scene-actions">
+        {live && !paused && (
+          <button
+            type="button"
+            aria-pressed={spread}
+            onClick={() => setSpread((v) => !v)}
+          >
+            <Layers3 size={15} />
+            {spread ? '一枚に組み上げる' : '立体で分解して見る'}
+          </button>
+        )}
+        <span>あなたがつくれる、完成の一例。</span>
       </div>
       <div className="lp-showcase-caption">
         <p aria-live="polite">

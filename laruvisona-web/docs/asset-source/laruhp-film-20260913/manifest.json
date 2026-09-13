@@ -1,0 +1,71 @@
+{
+  "job_id": "25c76310-99d1-4ee0-907e-2f274bff2ca2",
+  "requested": {
+    "model": "minimax_h3",
+    "duration": 6,
+    "resolution": "2K",
+    "aspect_ratio": "16:9",
+    "count": 1,
+    "prompt": "A refined cinematic background for a Japanese website creation product. Six seconds, locked camera, one continuous shot. Deep midnight indigo space with a broad soft blue ribbon of translucent flowing water and light slowly unfurling across the lower right and center, delicate caustic light traveling through its folds. The ribbon resembles an elegant flowing page, soft and fluid, never metal, never a rigid sculpture. Spacious composition: upper left and upper third remain calm dark negative space for real HTML typography; center foreground remains uncluttered for an independently rendered website interface. Rich depth, sophisticated editorial art direction, matte midnight background, controlled periwinkle and electric blue highlights, realistic soft refraction, no glitter, no particles, no cosmic stars, no grids. Gentle slow continuous motion through the whole shot, no cut, no camera shake, no violent motion. Start and end with closely similar composition for a loop. No text, no letters, no logo, no UI, no website mockup, no watermarks, no people. Silent visual."
+  },
+  "completedModel": "minimax_h3",
+  "creditBefore": 1165,
+  "creditAfter": 1153,
+  "credits": 12,
+  "originalFile": "/Users/saitoutakumi/Documents/LARUVisona/LARU-Brain/laruhp-film-20260913/flow-original.mp4",
+  "original": {
+    "width": 2560,
+    "height": 1440,
+    "durationSeconds": 6.584,
+    "bytes": 1866394,
+    "audio": "present in original; omitted in delivery"
+  },
+  "delivery": {
+    "loop": "Use first 6s; 0.6s tail-to-head crossfade, remove initial 0.6s; about 5.4s loop.",
+    "desktop": "1440x810 H.264 CRF24, silent, faststart",
+    "mobile": "600x800 H.264 CRF25, crop 1080x1440 at x1000,y0, silent, faststart",
+    "poster": "video frame at 0.6s, 1200x675 WebP quality85"
+  },
+  "files": [
+    {
+      "file": "public/lp/film/flow-mobile.mp4",
+      "bytes": 278251,
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_type": "video",
+          "width": 600,
+          "height": 800
+        }
+      ],
+      "format": {
+        "duration": "5.416667"
+      }
+    },
+    {
+      "file": "public/lp/film/flow-desktop.mp4",
+      "bytes": 586604,
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_type": "video",
+          "width": 1440,
+          "height": 810
+        }
+      ],
+      "format": {
+        "duration": "5.416667"
+      }
+    },
+    {
+      "file": "public/lp/film/flow-poster.webp",
+      "bytes": 35292
+    },
+    {
+      "file": "public/lp/film/flow-share.jpg",
+      "bytes": 65867
+    }
+  ]
+}

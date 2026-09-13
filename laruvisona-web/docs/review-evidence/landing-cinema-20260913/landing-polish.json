@@ -1,0 +1,369 @@
+[
+  {
+    "name": "320 横はみ出しなし",
+    "ok": true
+  },
+  {
+    "name": "320 見出しが最初に読める",
+    "ok": true
+  },
+  {
+    "name": "320 完成例が最初の画面内にある",
+    "ok": true
+  },
+  {
+    "name": "320 主導線は52px以上",
+    "ok": true
+  },
+  {
+    "name": "320 業種選択は44px以上",
+    "ok": true
+  },
+  {
+    "name": "320 restaurant 作例切替",
+    "ok": true
+  },
+  {
+    "name": "320 restaurant 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "320 construction 作例切替",
+    "ok": true
+  },
+  {
+    "name": "320 construction 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "320 retail 作例切替",
+    "ok": true
+  },
+  {
+    "name": "320 retail 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "320 業種のキーボード操作",
+    "ok": true
+  },
+  {
+    "name": "320 実物デモの見せ方を変えられる",
+    "ok": true
+  },
+  {
+    "name": "320 デモに入力できるフレームがある",
+    "ok": true
+  },
+  {
+    "name": "320 FAQを開ける",
+    "ok": true
+  },
+  {
+    "name": "320 業種の引き継ぎ",
+    "ok": true
+  },
+  {
+    "name": "320 中身の一覧に横はみ出しなし",
+    "ok": true
+  },
+  {
+    "name": "320 一覧は絵文字を使わない",
+    "ok": true
+  },
+  {
+    "name": "320 節がSVGアイコンを持つ",
+    "ok": true
+  },
+  {
+    "name": "320 ボタンの入れ子がない",
+    "ok": true
+  },
+  {
+    "name": "320 並べ替えの操作が見える",
+    "ok": true
+  },
+  {
+    "name": "320 並べ替えは44px以上",
+    "ok": true
+  },
+  {
+    "name": "320 上へ並べ替え",
+    "ok": true
+  },
+  {
+    "name": "320 下へ並べ替え",
+    "ok": true
+  },
+  {
+    "name": "320 削除を反映",
+    "ok": true
+  },
+  {
+    "name": "320 削除を取り消せる",
+    "ok": true
+  },
+  {
+    "name": "320 追加の一覧も絵文字なし",
+    "ok": true
+  },
+  {
+    "name": "320 節追加後は編集欄へ",
+    "ok": true
+  },
+  {
+    "name": "320 写真の編集が開く",
+    "ok": true
+  },
+  {
+    "name": "320 JavaScript例外なし",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "390 横はみ出しなし",
+    "ok": true
+  },
+  {
+    "name": "390 見出しが最初に読める",
+    "ok": true
+  },
+  {
+    "name": "390 完成例が最初の画面内にある",
+    "ok": true
+  },
+  {
+    "name": "390 主導線は52px以上",
+    "ok": true
+  },
+  {
+    "name": "390 業種選択は44px以上",
+    "ok": true
+  },
+  {
+    "name": "390 restaurant 作例切替",
+    "ok": true
+  },
+  {
+    "name": "390 restaurant 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "390 construction 作例切替",
+    "ok": true
+  },
+  {
+    "name": "390 construction 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "390 retail 作例切替",
+    "ok": true
+  },
+  {
+    "name": "390 retail 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "390 業種のキーボード操作",
+    "ok": true
+  },
+  {
+    "name": "390 実物デモの見せ方を変えられる",
+    "ok": true
+  },
+  {
+    "name": "390 デモに入力できるフレームがある",
+    "ok": true
+  },
+  {
+    "name": "390 FAQを開ける",
+    "ok": true
+  },
+  {
+    "name": "390 業種の引き継ぎ",
+    "ok": true
+  },
+  {
+    "name": "390 中身の一覧に横はみ出しなし",
+    "ok": true
+  },
+  {
+    "name": "390 一覧は絵文字を使わない",
+    "ok": true
+  },
+  {
+    "name": "390 節がSVGアイコンを持つ",
+    "ok": true
+  },
+  {
+    "name": "390 ボタンの入れ子がない",
+    "ok": true
+  },
+  {
+    "name": "390 並べ替えの操作が見える",
+    "ok": true
+  },
+  {
+    "name": "390 並べ替えは44px以上",
+    "ok": true
+  },
+  {
+    "name": "390 上へ並べ替え",
+    "ok": true
+  },
+  {
+    "name": "390 下へ並べ替え",
+    "ok": true
+  },
+  {
+    "name": "390 削除を反映",
+    "ok": true
+  },
+  {
+    "name": "390 削除を取り消せる",
+    "ok": true
+  },
+  {
+    "name": "390 追加の一覧も絵文字なし",
+    "ok": true
+  },
+  {
+    "name": "390 節追加後は編集欄へ",
+    "ok": true
+  },
+  {
+    "name": "390 写真の編集が開く",
+    "ok": true
+  },
+  {
+    "name": "390 JavaScript例外なし",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "1440 横はみ出しなし",
+    "ok": true
+  },
+  {
+    "name": "1440 見出しが最初に読める",
+    "ok": true
+  },
+  {
+    "name": "1440 完成例が最初の画面内にある",
+    "ok": true
+  },
+  {
+    "name": "1440 主導線は52px以上",
+    "ok": true
+  },
+  {
+    "name": "1440 業種選択は44px以上",
+    "ok": true
+  },
+  {
+    "name": "1440 restaurant 作例切替",
+    "ok": true
+  },
+  {
+    "name": "1440 restaurant 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "1440 construction 作例切替",
+    "ok": true
+  },
+  {
+    "name": "1440 construction 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "1440 retail 作例切替",
+    "ok": true
+  },
+  {
+    "name": "1440 retail 制作先へ業種を渡す",
+    "ok": true
+  },
+  {
+    "name": "1440 業種のキーボード操作",
+    "ok": true
+  },
+  {
+    "name": "1440 実物デモの見せ方を変えられる",
+    "ok": true
+  },
+  {
+    "name": "1440 デモに入力できるフレームがある",
+    "ok": true
+  },
+  {
+    "name": "1440 FAQを開ける",
+    "ok": true
+  },
+  {
+    "name": "1440 業種の引き継ぎ",
+    "ok": true
+  },
+  {
+    "name": "1440 中身の一覧に横はみ出しなし",
+    "ok": true
+  },
+  {
+    "name": "1440 一覧は絵文字を使わない",
+    "ok": true
+  },
+  {
+    "name": "1440 節がSVGアイコンを持つ",
+    "ok": true
+  },
+  {
+    "name": "1440 ボタンの入れ子がない",
+    "ok": true
+  },
+  {
+    "name": "1440 並べ替えの操作が見える",
+    "ok": true
+  },
+  {
+    "name": "1440 並べ替えは44px以上",
+    "ok": true
+  },
+  {
+    "name": "1440 上へ並べ替え",
+    "ok": true
+  },
+  {
+    "name": "1440 下へ並べ替え",
+    "ok": true
+  },
+  {
+    "name": "1440 削除を反映",
+    "ok": true
+  },
+  {
+    "name": "1440 削除を取り消せる",
+    "ok": true
+  },
+  {
+    "name": "1440 追加の一覧も絵文字なし",
+    "ok": true
+  },
+  {
+    "name": "1440 節追加後は編集欄へ",
+    "ok": true
+  },
+  {
+    "name": "1440 写真の編集が開く",
+    "ok": true
+  },
+  {
+    "name": "1440 JavaScript例外なし",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "動きを減らす設定で作例の入場アニメーション停止",
+    "ok": true
+  }
+]

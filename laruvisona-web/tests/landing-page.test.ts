@@ -1,7 +1,7 @@
 // LARU HP の案内ページ（/laruHP）の約束事を固定する。
 //
 // 以前のページは、GSAPの入場演出が完走しないと見出しもCTAも見えなかった。
-// 3D（WebGL）と背景動画も載っていて、通信量と発熱の割に商品の説明をしていなかった。
+// 今回は動画と立体表示を採用するが、見出しとCTAをその完走条件にはしない。
 // 作り直したので、同じ失敗に戻らないための条件をここで固定する。
 //
 // 見た目そのものはテストできないが、「内容が必ず見える」「重いものを勝手に読まない」
@@ -21,14 +21,29 @@ test('内容を隠してから見せる演出に依存しない', () => {
   assert.equal(/gsap|ScrollTrigger/.test(src), false, '入場演出のためのライブラリが戻っている');
 });
 
-test('ファーストビューに3D（WebGL）を載せない', () => {
-  assert.equal(/LaruHPScene|@react-three|from 'three'/.test(src), false, '3Dが戻っている');
-  assert.equal(/@react-three|from 'three'/.test(demo), false, '組み上がるデモに3Dが入っている');
+test('立体表示は別読み込みで、静止画の完成例を残す', () => {
+  assert.match(showcase, /dynamic\(/);
+  assert.match(showcase, /ssr: false/);
+  assert.match(showcase, /!reduced/);
+  assert.match(showcase, /lp-main-window/);
+  assert.equal(
+    /@react-three|from 'three'/.test(demo),
+    false,
+    '操作するHTMLデモは従来のまま',
+  );
 });
 
-test('案内ページが動画を読み込まない', () => {
-  // 素材が届いたら足すが、そのときも「静止画が先・条件が揃ってから」を守る。
-  assert.equal(/<video|HeroBackgroundVideo|LoopVideo/.test(src), false, '動画が戻っている');
+test('動画は静止画を先に出し、停止と端末設定を尊重する', () => {
+  const hero = readFileSync(
+    new URL('../components/lp/HeroExperience.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.match(hero, /preload="none"/);
+  assert.match(hero, /poster=/);
+  assert.match(hero, /paused \|\| !visible \|\| document.hidden/);
+  assert.match(hero, /if \(saveData\) return/);
+  assert.match(hero, /動きを止める/);
+  assert.match(hero, /el.pause\(\)/);
 });
 
 test('最初の完成例だけを優先し、寸法付き画像を配信する', () => {

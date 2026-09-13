@@ -1,0 +1,244 @@
+{
+  "conditions": "isolated production build, local matching font files, actual delivered mp4; Chromium SwiftShader WebGL; not device performance",
+  "results": [
+    {
+      "name": "390 Japanese headline",
+      "ok": true
+    },
+    {
+      "name": "390 no overflow",
+      "ok": true
+    },
+    {
+      "name": "390 headline and CTA visible",
+      "ok": true
+    },
+    {
+      "name": "390 actual muted inline video",
+      "ok": true
+    },
+    {
+      "name": "390 responsive video file",
+      "ok": true
+    },
+    {
+      "name": "390 real 3D canvas",
+      "ok": true
+    },
+    {
+      "name": "390 rendered geometry changes",
+      "ok": true
+    },
+    {
+      "name": "390 video freezes",
+      "ok": true,
+      "detail": {
+        "t1": 4.846181,
+        "t2": 4.846181
+      }
+    },
+    {
+      "name": "390 no height or scroll jump",
+      "ok": true
+    },
+    {
+      "name": "390 motion action absent when paused",
+      "ok": true
+    },
+    {
+      "name": "390 WebGL freezes too",
+      "ok": true
+    },
+    {
+      "name": "390 video resumes",
+      "ok": true
+    },
+    {
+      "name": "390 industry selection and destination",
+      "ok": true
+    },
+    {
+      "name": "390 offscreen video stops",
+      "ok": true
+    },
+    {
+      "name": "390 real editing demo still works",
+      "ok": true
+    },
+    {
+      "name": "390 no page errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "320 Japanese headline",
+      "ok": true
+    },
+    {
+      "name": "320 no overflow",
+      "ok": true
+    },
+    {
+      "name": "320 headline and CTA visible",
+      "ok": true
+    },
+    {
+      "name": "320 actual muted inline video",
+      "ok": true
+    },
+    {
+      "name": "320 responsive video file",
+      "ok": true
+    },
+    {
+      "name": "320 real 3D canvas",
+      "ok": true
+    },
+    {
+      "name": "320 rendered geometry changes",
+      "ok": true
+    },
+    {
+      "name": "320 video freezes",
+      "ok": true,
+      "detail": {
+        "t1": 3.839054,
+        "t2": 3.839054
+      }
+    },
+    {
+      "name": "320 no height or scroll jump",
+      "ok": true
+    },
+    {
+      "name": "320 motion action absent when paused",
+      "ok": true
+    },
+    {
+      "name": "320 WebGL freezes too",
+      "ok": true
+    },
+    {
+      "name": "320 video resumes",
+      "ok": true
+    },
+    {
+      "name": "320 industry selection and destination",
+      "ok": true
+    },
+    {
+      "name": "320 offscreen video stops",
+      "ok": true
+    },
+    {
+      "name": "320 real editing demo still works",
+      "ok": true
+    },
+    {
+      "name": "320 no page errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "1440 Japanese headline",
+      "ok": true
+    },
+    {
+      "name": "PC copy and scene each have room",
+      "ok": true
+    },
+    {
+      "name": "1440 no overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 headline and CTA visible",
+      "ok": true
+    },
+    {
+      "name": "1440 actual muted inline video",
+      "ok": true
+    },
+    {
+      "name": "1440 responsive video file",
+      "ok": true
+    },
+    {
+      "name": "1440 real 3D canvas",
+      "ok": true
+    },
+    {
+      "name": "1440 rendered geometry changes",
+      "ok": true
+    },
+    {
+      "name": "1440 video freezes",
+      "ok": true,
+      "detail": {
+        "t1": 5.147241,
+        "t2": 5.147241
+      }
+    },
+    {
+      "name": "1440 no height or scroll jump",
+      "ok": true
+    },
+    {
+      "name": "1440 motion action absent when paused",
+      "ok": true
+    },
+    {
+      "name": "1440 WebGL freezes too",
+      "ok": true
+    },
+    {
+      "name": "1440 video resumes",
+      "ok": true
+    },
+    {
+      "name": "1440 industry selection and destination",
+      "ok": true
+    },
+    {
+      "name": "1440 offscreen video stops",
+      "ok": true
+    },
+    {
+      "name": "1440 real editing demo still works",
+      "ok": true
+    },
+    {
+      "name": "1440 no page errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "reduced motion no video request",
+      "ok": true
+    },
+    {
+      "name": "reduced motion no canvas",
+      "ok": true
+    },
+    {
+      "name": "reduced motion fallback visible",
+      "ok": true
+    },
+    {
+      "name": "reduced motion no restart control",
+      "ok": true
+    },
+    {
+      "name": "context loss restores screenshot",
+      "ok": true
+    },
+    {
+      "name": "no JS headline and CTA available",
+      "ok": true
+    },
+    {
+      "name": "no JS fallback image visible",
+      "ok": true
+    }
+  ]
+}

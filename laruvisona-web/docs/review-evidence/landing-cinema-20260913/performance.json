@@ -1,0 +1,71 @@
+{
+  "conditions": "local production build, matching local fonts, external analytics/chat blocked, 1.6Mbps/150ms/4x CPU, cold Chromium SwiftShader, not real device or production speed",
+  "samples": [
+    {
+      "width": 390,
+      "run": 0,
+      "bytes": 762274,
+      "lcp": 1296,
+      "cls": 0,
+      "video": 3220.899999976158,
+      "scene": 3809.2999999523163,
+      "fcp": 1088,
+      "visibility": "visible"
+    },
+    {
+      "width": 390,
+      "run": 1,
+      "bytes": 762274,
+      "lcp": 1288,
+      "cls": 0,
+      "video": 3132.199999988079,
+      "scene": 3630.199999988079,
+      "fcp": 1032,
+      "visibility": "visible"
+    },
+    {
+      "width": 390,
+      "run": 2,
+      "bytes": 483689,
+      "lcp": 1292,
+      "cls": 0,
+      "video": 2481.100000023842,
+      "scene": 3874.600000023842,
+      "fcp": 1016,
+      "visibility": "visible"
+    },
+    {
+      "width": 1440,
+      "run": 0,
+      "bytes": 524288,
+      "lcp": 1320,
+      "cls": 0.00024968144923080633,
+      "video": 2699.199999988079,
+      "scene": 3965.800000011921,
+      "fcp": 1044,
+      "visibility": "visible"
+    },
+    {
+      "width": 1440,
+      "run": 1,
+      "bytes": 524288,
+      "lcp": 1316,
+      "cls": 0.00024968144923080633,
+      "video": 2575.599999964237,
+      "scene": 3912.599999964237,
+      "fcp": 1056,
+      "visibility": "visible"
+    },
+    {
+      "width": 1440,
+      "run": 2,
+      "bytes": 523725,
+      "lcp": 1328,
+      "cls": 0.00024968144923080633,
+      "video": 2741.800000011921,
+      "scene": 3956.899999976158,
+      "fcp": 1056,
+      "visibility": "visible"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ export const LP_SHOWCASE = [
     description: '髪と暮らしに向き合う、予約制サロン。',
     photo: '/salon/hero-1200.jpg',
     preset: 'refined',
-    image: '/lp/showcase-beauty-v1.webp',
+    image: '/lp/showcase-beauty-v2.webp',
     tone: '#e7e0d5',
   },
   {
@@ -18,9 +18,9 @@ export const LP_SHOWCASE = [
     copy: '訪れたくなる、空気まで。',
     heading: '一杯の余白を、\n日々のまんなかに。',
     description: '季節の味と、ゆっくり流れる時間を。',
-    photo: '/company/concepts/retreat.webp',
+    photo: '/studio/references/cafe-v1.webp',
     preset: 'warm',
-    image: '/lp/showcase-restaurant-v1.webp',
+    image: '/lp/showcase-restaurant-v2.webp',
     tone: '#e1e7dc',
   },
   {
@@ -32,7 +32,7 @@ export const LP_SHOWCASE = [
     description: '暮らしの話からはじめる、住まいづくり。',
     photo: '/company/concepts/architecture.webp',
     preset: 'calm',
-    image: '/lp/showcase-construction-v1.webp',
+    image: '/lp/showcase-construction-v2.webp',
     tone: '#e1e5e8',
   },
   {
@@ -42,9 +42,9 @@ export const LP_SHOWCASE = [
     copy: 'ものの魅力が、まっすぐ届く。',
     heading: '暮らしに、\n好きな道具を。',
     description: '日々の道具を、大切に選ぶお店です。',
-    photo: '/company/concepts/ceramics.webp',
+    photo: '/studio/references/tableware-v1.webp',
     preset: 'refined',
-    image: '/lp/showcase-retail-v1.webp',
+    image: '/lp/showcase-retail-v2.webp',
     tone: '#eee0d5',
   },
 ] as const;
