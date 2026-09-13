@@ -9,7 +9,7 @@
 - 全単体テスト: 756件通過
 - `next build`: exit 0
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
-- SQL回帰: ランナーへ統合済み。ただしこのMacにはPostgreSQL実行環境が無いため未実行
+- SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と146項目が通過。状態確認の最終行もtrue
 - push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
 
 ## SQLの適用順

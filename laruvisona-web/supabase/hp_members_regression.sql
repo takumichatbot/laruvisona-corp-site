@@ -1,9 +1,9 @@
 \echo '--- 公開サイト会員 ---'
 do $$
-declare owner_a uuid := '10000000-0000-4000-8000-000000000010';
-declare owner_b uuid := '10000000-0000-4000-8000-000000000011';
-declare site_a uuid := '20000000-0000-4000-8000-000000000010';
-declare site_b uuid := '20000000-0000-4000-8000-000000000011';
+declare owner_a uuid := '10000000-0000-4000-8000-000000000110';
+declare owner_b uuid := '10000000-0000-4000-8000-000000000111';
+declare site_a uuid := '20000000-0000-4000-8000-000000000110';
+declare site_b uuid := '20000000-0000-4000-8000-000000000111';
 begin
   insert into auth.users(id) values(owner_a),(owner_b);
   insert into public.sites(id,user_id,name,slug,published) values
@@ -27,7 +27,7 @@ begin
 end $$;
 
 set role authenticated;
-select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000010"}',false);
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000110"}',false);
 do $$ declare n integer; begin
   select count(*) into n from public.hp_members;
   if n <> 1 then raise exception 'owner can see another site members: %', n; end if;

@@ -30,7 +30,7 @@
 - TypeScript: clean
 - 変更ファイルの ESLint: clean
 - `npm audit --omit=dev`: 0 vulnerabilities
-- SQLは統合ランナーと状態確認へ収録。MacにPostgreSQL実行環境がないため、実PostgreSQLでの最終再実行は本番適用前の必須項目として残す。
+- SQL統合回帰は、ネットワークを切った使い捨てPostgreSQL 16で全移行を先頭から適用して146項目通過。状態確認の最終行もtrue。本格予約は同時枠の排他・再送・担当者/設備確保・取消後の枠解放、公開利用枠は上限・用途分離・永続化・入力拒否まで実DBで確認した。
 
 ## 本番でだけ確定できること
 
