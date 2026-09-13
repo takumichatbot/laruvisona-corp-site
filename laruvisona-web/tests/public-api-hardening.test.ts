@@ -48,6 +48,13 @@ test('決済の戻り先はクライアントの言い値をそのまま使わ�
   assert.equal(/const base = \(siteUrl \|\|/.test(buy), false);
 });
 
+test('旧購入APIは運営が許可した価格だけを扱い、新規販売を店舗ショップへ分ける', () => {
+  const buy = read('app/api/stripe/buy/route.ts');
+  assert.match(buy, /STRIPE_PUBLIC_BUY_PRICE_IDS/);
+  assert.match(buy, /allowedPrices\.has\(priceId\)/);
+  assert.match(buy, /ショップ機能をご利用ください/);
+});
+
 test('safeReturnUrl は許可外ホストを自サイトに落とす', () => {
   const site = { slug: 'demo', custom_domain: 'example-shop.jp' };
   const evil = safeReturnUrl('https://attacker.example/steal', 'https://example-shop.jp', site);

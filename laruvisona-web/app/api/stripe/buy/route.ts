@@ -20,6 +20,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: '決済が設定されていません（管理者にお問い合わせください）' }, { status: 500 });
   }
 
+  // この旧APIは運営Stripeへ直接入金され、店舗の注文台帳も作らない。
+  // 公開サイトの新規販売はConnect対応ショップを使う。既存の運営商品だけは
+  // サーバー側allowlistへ明示したPrice IDに限って互換提供する。
+  const allowedPrices = new Set((process.env.STRIPE_PUBLIC_BUY_PRICE_IDS || '')
+    .split(',').map(value => value.trim()).filter(value => /^price_[A-Za-z0-9]+$/.test(value)));
+  if (allowedPrices.size === 0) {
+    return NextResponse.json({ error: 'この決済方法は現在利用できません。ショップ機能をご利用ください。' }, { status: 503 });
+  }
+  if (!allowedPrices.has(priceId)) {
+    return NextResponse.json({ error: 'この商品は現在購入できません。' }, { status: 400 });
+  }
+
   // 決済後の戻り先。siteUrl はクライアントの言い値なので、そのまま使うと
   // 決済を終えた利用者を攻撃者のドメインへ飛ばせる（オープンリダイレクト）。
   // このAPIは本体サイトの購読ボタン用なので、本体のホストだけを許可する。
