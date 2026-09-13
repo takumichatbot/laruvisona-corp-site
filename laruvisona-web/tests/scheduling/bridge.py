@@ -30,6 +30,10 @@ def serve(sql,lit,site,owner,day):
     # Match production PostgREST: timestamptz JSON uses UTC +00:00, not the Mac's timezone.
     prefix=f"set time zone 'UTC';set role {role};set request.jwt.claims={lit(json.dumps({'sub':owner} if role=='authenticated' else {}))};"
     body=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))) or '{}') if self.command in ('POST','PATCH') else {}
+    if u.path=='/__site-meta' and self.command=='POST':
+     if not isinstance(body.get('published'),bool) or not (body.get('custom_domain') is None or body.get('custom_domain')=='salon.example'):return self.send({'error':'invalid fixture input'},400)
+     sql('update sites set published='+('true' if body['published'] else 'false')+',custom_domain='+lit(body.get('custom_domain'))+' where id='+lit(site))
+     return self.send({'ok':True})
     if '/rpc/' in u.path:
      name=u.path.rsplit('/',1)[1]
      if name not in functions:return self.send({'error':'not found'},404)

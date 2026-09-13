@@ -89,6 +89,50 @@ try {
     });
   }
   await p.setViewportSize({ width: 390, height: 844 });
+  // Guided setup and sharing use the same persisted calendar, not a second config.
+  await p.getByRole('button',{name:'順番に設定する',exact:true}).click();
+  const headings=['営業時間','担当者','部屋・設備','メニュー','受付ルール'];
+  for(let i=0;i<headings.length;i++) {
+    check('手順 '+(i+1)+' '+headings[i],await p.getByRole('heading',{name:headings[i],exact:true}).isVisible());
+    check('手順の選択状態 '+(i+1),await p.locator('[aria-current="step"]').innerText().then(t=>t.includes(headings[i])));
+    if(i<4) await p.getByRole('button',{name:'次へ',exact:true}).click();
+  }
+  await p.getByLabel('何日先まで予約できるか').fill('46');
+  await p.getByRole('button',{name:'設定を保存',exact:true}).click();
+  await p.getByRole('heading',{name:'予約を受け付ける準備',exact:true}).waitFor();
+  const install=p.getByRole('link',{name:'制作画面で予約ボタンを設置',exact:true});
+  check('設置先が同じサイト', (await install.getAttribute('href'))===`/laruHP/studio?siteId=${meta.site}&booking=schedule`);
+  await p.getByRole('img',{name:'お客様向け予約ページのQRコード'}).waitFor();
+  check('QR画像はローカルPNG', (await p.getByRole('img',{name:'お客様向け予約ページのQRコード'}).getAttribute('src')).startsWith('data:image/png;base64,'));
+  for (const width of [320,390,1440]) {
+    await p.setViewportSize({width,height:900});
+    check(width+'共有画面の横はみ出しなし',await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await p.screenshot({path:out+`/${width}-sharing.png`,fullPage:true});
+  }
+  await fetch('http://127.0.0.1:55019/__site-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published:true,custom_domain:'salon.example'})});
+  await p.getByRole('button',{name:'公開・受付状態を更新',exact:true}).click();
+  await p.waitForFunction(()=>document.querySelector('input[readonly]')?.value==='https://salon.example/reserve');
+  check('独自ドメインを再取得して共有URLに反映',await p.getByLabel('お客様向けの予約URL').inputValue()==='https://salon.example/reserve');
+  await fetch('http://127.0.0.1:55019/__site-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published:false,custom_domain:null})});
+  await p.getByRole('button',{name:'公開・受付状態を更新',exact:true}).click();
+  await p.getByText('サイトはまだ非公開です。',{exact:true}).waitFor();
+  check('非公開時は配布URLとQRを出さない',await p.getByLabel('お客様向けの予約URL').count()===0 && await p.getByRole('img',{name:'お客様向け予約ページのQRコード'}).count()===0);
+  await fetch('http://127.0.0.1:55019/__site-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published:true,custom_domain:null})});
+  await p.getByRole('button',{name:'公開・受付状態を更新',exact:true}).click();
+  await p.getByLabel('お客様向けの予約URL').waitFor();
+  await p.getByRole('button',{name:'設定を確認する',exact:true}).click();
+  await p.getByLabel('何日先まで予約できるか').fill('47');
+  await p.getByRole('button',{name:'サイトに設置・共有',exact:true}).click();
+  check('未保存設定では共有しない',await p.getByLabel('お客様向けの予約URL').count()===0);
+  check('未保存のまま制作画面へ移動しない',await p.getByRole('link',{name:'制作画面で予約ボタンを設置',exact:true}).getAttribute('aria-disabled')==='true');
+  await p.getByRole('button',{name:'設定を確認する',exact:true}).click();
+  await p.getByRole('button',{name:'設定を保存',exact:true}).click();
+  await p.getByLabel('お客様向けの予約URL').waitFor();
+  await p.goto(base+'/laruHP/booking/schedule?siteId=22222222-2222-4222-8222-222222222222');
+  await p.getByRole('alert').filter({hasText:'指定したサイトは見つかりません。サイト一覧から開き直してください。'}).waitFor();
+  check('他サイト指定を自分の先頭サイトへすり替えない',await p.getByRole('heading',{name:'営業時間',exact:true}).count()===0);
+  await p.goto(base+'/laruHP/booking/schedule?siteId='+meta.site);
+  await p.getByRole('heading',{name:'予約一覧',exact:true}).waitFor();
   const noAuth = await fetch(base + `/api/sites/${meta.site}/schedule`);
   check("未ログインは店舗側の予約一覧を読めない", noAuth.status === 401);
   const stranger = await owner.request.get(

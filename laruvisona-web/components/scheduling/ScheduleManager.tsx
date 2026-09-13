@@ -12,6 +12,8 @@ import {
   type ScheduleConfig,
   type Weekly,
 } from "@/lib/scheduling/config";
+import BookingShare from "./BookingShare";
+import { bookingPublicUrl } from "@/lib/scheduling/setup";
 import type { Appointment } from "./PublicBooking";
 import s from "./scheduling.module.css";
 type Site = {
@@ -175,7 +177,11 @@ export default function ScheduleManager() {
     [day, setDay] = useState(jstDay()),
     [appointments, setAppointments] = useState<Appointment[]>([]),
     [events, setEvents] = useState<Event[]>([]);
-  const [tab, setTab] = useState<"agenda" | "settings">("agenda"),
+  const [guided, setGuided] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
+  const [accessFailed, setAccessFailed] = useState(false);
+  const steps = ["営業時間", "担当者", "部屋・設備", "メニュー", "受付ルール"];
+  const [tab, setTab] = useState<"agenda" | "settings" | "share">("agenda"),
     [loaded, setLoaded] = useState(false),
     [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
@@ -197,10 +203,13 @@ export default function ScheduleManager() {
     async (id: string, date: string, includeConfig: boolean) => {
       const gen = ++generation.current;
       setError("");
+      setAccessFailed(false);
+      if (includeConfig) setLoaded(false);
       try {
         const d = await api(`/api/sites/${id}/schedule?day=${date}`);
         if (gen !== generation.current || current.current !== id) return;
         if (includeConfig) {
+          setSites(prev => prev.map(x => x.id === id ? { ...x, ...d.site } : x));
           setConfig(d.config);
           setVersion(d.version);
           setDirty(false);
@@ -211,6 +220,7 @@ export default function ScheduleManager() {
       } catch (e) {
         if (gen === generation.current) {
           setError((e as Error).message);
+          setAccessFailed(true);
           setMigration((e as Error).message.includes("準備中"));
         }
       } finally {
@@ -225,12 +235,18 @@ export default function ScheduleManager() {
       .then((d) => {
         if (!active) return;
         setSites(d.sites || []);
-        if (d.sites?.length) setSiteId(d.sites[0].id);
+        const requested = new URL(window.location.href).searchParams.get("siteId");
+        if (requested && !d.sites?.some((x: Site) => x.id === requested)) {
+          setError("指定したサイトは見つかりません。サイト一覧から開き直してください。");
+          setAccessFailed(true); setLoaded(true); return;
+        }
+        if (d.sites?.length) setSiteId(requested || d.sites[0].id);
         else setLoaded(true);
       })
       .catch((e) => {
         if (active) {
           setError(e.message);
+          setAccessFailed(true);
           setLoaded(true);
         }
       });
@@ -243,6 +259,7 @@ export default function ScheduleManager() {
       setLoaded(false);
       slotSequence.current++;
       setEdit(null);
+      setGuided(false); setGuideStep(0);
       void load(siteId, dayRef.current, true);
     }
   }, [siteId, load]); // day changes reload only the agenda, preserving unsaved settings
@@ -270,8 +287,10 @@ export default function ScheduleManager() {
       setVersion(d.version);
       setDirty(false);
       setMessage("予約設定を保存しました");
+      if (guided) setTab("share");
     } catch (e) {
       setError((e as Error).message);
+      setGuided(false);
     } finally {
       setBusy(false);
     }
@@ -335,7 +354,7 @@ export default function ScheduleManager() {
   }
   const site = sites.find((x) => x.id === siteId),
     bookingUrl = site
-      ? `https://laruvisona.jp/hp/${encodeURIComponent(site.slug)}/reserve`
+      ? bookingPublicUrl(site)
       : "";
   return (
     <main className={s.shell}>
@@ -363,11 +382,13 @@ export default function ScheduleManager() {
                 value={siteId}
                 disabled={busy}
                 onChange={(e) => {
-                  if (
-                    !dirty ||
-                    confirm("未保存の設定を破棄して切り替えますか？")
-                  )
-                    setSiteId(e.target.value);
+                  if (!dirty || confirm("未保存の設定を破棄して切り替えますか？")) {
+                    const next = e.target.value;
+                    setSiteId(next);
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("siteId", next);
+                    window.history.replaceState(null, "", url);
+                  }
                 }}
               >
                 {sites.map((x) => (
@@ -377,7 +398,7 @@ export default function ScheduleManager() {
                 ))}
               </select>
             </label>
-            {bookingUrl && (
+            {bookingUrl && site?.published && loaded && !accessFailed && (
               <a
                 href={bookingUrl}
                 target="_blank"
@@ -403,6 +424,7 @@ export default function ScheduleManager() {
             >
               <Settings2 size={16} /> 受付の設定{dirty ? "・未保存" : ""}
             </button>
+            <button className={s.tab} aria-pressed={tab === "share"} onClick={() => setTab("share")}>サイトに設置・共有</button>
             <Link href="/laruHP/booking" className={s.tab}>
               以前の固定枠・リクエスト
             </Link>
@@ -430,8 +452,16 @@ export default function ScheduleManager() {
               {message}
             </p>
           )}
+          {loaded && site && !accessFailed && !migration && tab !== "share" && (
+            <section className={s.setupIntro}>
+              <div><strong>{version === 0 ? "予約受付を準備しましょう" : "設定からサイトへの設置まで"}</strong><p>営業時間・担当者・設備・メニュー・受付ルールを順番に整えます。設備を使わないお店は登録不要です。</p></div>
+              <button className={s.button} onClick={() => {setTab("settings");setGuided(true);setGuideStep(0);}}>順番に設定する</button>
+            </section>
+          )}
           {!loaded ? (
             <div className={s.loading}>予約を読み込んでいます…</div>
+          ) : accessFailed && !migration ? (
+            <p className={s.notice}>設定を取得できていないため編集はできません。読み直すか、管理するサイトを選び直してください。</p>
           ) : !sites.length ? (
             <section className={s.card}>
               <h2>まずサイトを作成してください</h2>
@@ -446,6 +476,11 @@ export default function ScheduleManager() {
                 これまでの予約は、以前の固定枠・リクエスト画面で確認できます。
               </p>
             </section>
+          ) : tab === "share" && site ? (
+            <BookingShare key={siteId} siteId={siteId} url={bookingUrl} published={!!site.published}
+              enabled={config.enabled} version={version} dirty={dirty}
+              onSettings={() => {setTab("settings"); setGuided(true); setGuideStep(4);}}
+              onRefresh={() => { if (!dirty || confirm("未保存の設定を破棄して読み直しますか？")) void load(siteId, day, true); }}/>
           ) : tab === "agenda" ? (
             <div className={s.grid}>
               <section className={s.card}>
@@ -681,9 +716,14 @@ export default function ScheduleManager() {
               </aside>
             </div>
           ) : (
-            <div className={s.grid}>
-              <div>
-                <section className={s.card}>
+            <>
+            {guided && <nav className={s.setupSteps} aria-label="予約受付の設定手順">
+              {steps.map((label, i) => <button key={label} aria-current={guideStep === i ? "step" : undefined} onClick={() => setGuideStep(i)}><span>{i+1}</span>{label}</button>)}
+              <button onClick={() => setGuided(false)}>すべて表示</button>
+            </nav>}
+            <div className={guided ? s.guidedGrid : s.grid}>
+              <div hidden={guided && guideStep === 4}>
+                <section className={s.card} hidden={guided && guideStep !== 0}>
                   <h2>営業時間</h2>
                   <p className={s.small}>
                     日本時間で設定します。昼休みは時間帯を分けてください。終了00:00は翌日0時です。
@@ -699,7 +739,7 @@ export default function ScheduleManager() {
                     />
                   </div>
                 </section>
-                <section className={s.card}>
+                <section className={s.card} hidden={guided && guideStep !== 1}>
                   <h2>担当者</h2>
                   <p className={s.small}>
                     営業時間と勤務時間が重なる時間だけ予約できます。
@@ -785,7 +825,7 @@ export default function ScheduleManager() {
                     <Plus size={16} /> 担当者を追加
                   </button>
                 </section>
-                <section className={s.card}>
+                <section className={s.card} hidden={guided && guideStep !== 2}>
                   <h2>部屋・設備</h2>
                   <p className={s.small}>
                     施術ベッドや相談室など、同時に使えないものを1つずつ登録します。
@@ -843,7 +883,7 @@ export default function ScheduleManager() {
                     <Plus size={16} /> 設備を追加
                   </button>
                 </section>
-                <section className={s.card}>
+                <section className={s.card} hidden={guided && guideStep !== 3}>
                   <h2>メニュー</h2>
                   {config.services.map((p, i) => (
                     <div key={p.id} className={i ? s.section : undefined}>
@@ -998,7 +1038,7 @@ export default function ScheduleManager() {
                   </button>
                 </section>
               </div>
-              <aside className={`${s.card} ${s.summary}`}>
+              <aside className={`${s.card} ${s.summary}`} hidden={guided && guideStep !== 4}>
                 <h2>受付ルール</h2>
                 <label className={s.check}>
                   <input
@@ -1054,7 +1094,7 @@ export default function ScheduleManager() {
                 </p>
                 <button
                   className={`${s.button} ${s.wide}`}
-                  disabled={busy || !dirty}
+                  disabled={busy || (!dirty && version > 0)}
                   onClick={save}
                 >
                   {busy ? "保存しています…" : "設定を保存"}
@@ -1063,10 +1103,17 @@ export default function ScheduleManager() {
                   {dirty ? "未保存の変更があります" : "保存した設定を表示中"}
                 </p>
                 <p className={s.small}>
-                  予約ページのURLをサイトのボタンに設定するか、予約ブロックの「担当者・設備の本格予約」を選んで公開してください。
+                  保存後は「サイトに設置・共有」から予約ボタンの設置と公開状態を確認できます。
                 </p>
+                <button className={`${s.secondary} ${s.wide}`} disabled={dirty || !version} onClick={() => setTab("share")}>サイトへの設置へ進む</button>
               </aside>
             </div>
+            {guided && <div className={s.setupFooter}>
+              <button className={s.secondary} disabled={guideStep === 0} onClick={() => setGuideStep(i => i-1)}>戻る</button>
+              <span>{guideStep + 1} / {steps.length}・{steps[guideStep]}<small>最後にまとめて保存します</small></span>
+              {guideStep < 4 && <button className={s.button} onClick={() => setGuideStep(i => i+1)}>次へ</button>}
+            </div>}
+            </>
           )}
         </div>
       </fieldset>

@@ -178,6 +178,11 @@ export const BLOCK_DEFS: Record<string, BlockDef> = {
   booking: {
     label: '予約', purpose: '来てほしい日時を受け取る',
     fields: [
+      { key: 'mode', label: '予約モード', type: 'select', options: [
+        { value: 'simple', label: '希望日時を受け取る' },
+        { value: 'schedule', label: '担当者・設備の本格予約' },
+        { value: 'calendar', label: '以前の固定枠カレンダー' },
+      ] },
       { key: 'heading', label: '見出し', type: 'text' },
       { key: 'subtext', label: '案内文', type: 'multiline' },
       { key: 'serviceTypes', label: '選べるメニュー', type: 'list', ofStrings: true },

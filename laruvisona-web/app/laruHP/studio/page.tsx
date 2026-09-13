@@ -18,6 +18,7 @@ import { useSearchParams } from 'next/navigation';
 import { readDesignChoice, saveDesignChoice, clearDesignChoice } from '@/lib/design-handoff';
 import Link from 'next/link';
 import { exportToHTML } from '@/lib/html-export';
+import { installScheduleBlock } from '@/lib/scheduling/setup';
 import { canRecoverStudioDraft } from '@/lib/studio-draft';
 import { makeStarterSite, exampleFor } from '@/lib/studio-start';
 import { StudioIntake, StudioMood } from '@/components/studio/StudioStart';
@@ -997,6 +998,16 @@ function StudioInner() {
         <button className="se-compare-toggle" type="button" disabled={uploads>0||!accountResolved} onClick={comparisonBase?openComparison:keepComparison}>{comparisonBase?'案を見比べる':'いまの案を残す'}<span aria-hidden="true">◫</span></button>
         <button className="se-wide-toggle" type="button" aria-pressed={widePreview} onClick={()=>setWidePreview(v=>!v)}>{widePreview?'編集に戻る':'大きく見る'}<span aria-hidden="true">{widePreview?'↙':'↗'}</span></button>
       </div>
+      {siteId && params.get('booking') === 'schedule' && <div className="se-booking-setup" role="region" aria-label="予約ボタンの設置">
+        <div><strong>サイトから、空き時間の予約へ。</strong><p>{blocks.some(b => b.type === 'booking' && b.data.mode === 'schedule') ? '本格予約の欄があります。保存して公開すると、サイトに反映されます。' : blocks.some(b => b.type === 'booking') ? '今の予約欄を、担当者・設備の空きを選ぶ予約ボタンに切り替えます。取り消しで戻せます。' : '予約ボタンの節を追加します。保存・公開するまでは公開サイトに反映されません。'}</p></div>
+        <button type="button" disabled={uploads > 0 || blocks.some(b => b.type === 'booking' && b.data.mode === 'schedule')} onClick={() => {
+          const next = installScheduleBlock(blocks, `b-${crypto.randomUUID()}`);
+          updateBlocks(next); setSelectedId(next.find(b => b.type === 'booking')!.id);
+          setPanel('block'); setMobileTool('settings'); setCraftTab('content');
+          setHistoryNote('本格予約のボタンを用意しました。保存して公開すると反映されます。');
+        }}>{blocks.some(b => b.type === 'booking' && b.data.mode === 'schedule') ? '予約ボタンを準備済み' : blocks.some(b => b.type === 'booking') ? '予約欄を本格予約に切り替える' : '予約ボタンを追加する'}</button>
+        <Link href={`/laruHP/booking/schedule?siteId=${encodeURIComponent(siteId)}`} onClick={e => { if (saveState.kind !== 'clean') { e.preventDefault(); setHistoryNote('変更を保存してから予約管理へ戻ってください。'); } }}>予約管理へ戻る</Link>
+      </div>}
       <div className="se-workspace flex-1 flex min-h-0">
         {/* 左: 節の一覧 */}
         <aside className="se-blocks w-60 bg-white border-r border-slate-200 overflow-y-auto flex-shrink-0">
@@ -1038,7 +1049,8 @@ function StudioInner() {
                   <div className="sc-tabs" role="group" aria-label="選んだ節の編集方法">{([['content','内容'],['appearance','見せ方'],['assistant','AIに相談']] as const).map(([value,label])=><button type="button" key={value} aria-pressed={craftTab===value} onClick={()=>{setCraftTab(value);setFieldFocus('')}}>{label}</button>)}</div>
                   {craftTab==='appearance'&&<SectionCraft block={selected} globalMotion={site.settings.animLevel} globalLayout={site.settings.heroLayout} ink={site.settings.design?.ink||'#263248'} onChange={(key,value)=>updateBlockData(selected.id,key,value)}/>}
                   {craftTab==='assistant'&&<SectionAssistant key={selected.id} block={selected} siteId={siteId} onApply={adoptProposal}/>}
-                  {craftTab==='content'&&def.fields.map(f => (
+                  {selected.type === 'booking' && <div className="se-booking-note"><p>{selected.data.mode === 'schedule' ? 'メニュー・担当者・営業時間は予約管理で設定します。表示するボタンは「空き時間を見て予約する」です。' : '空き枠・担当者・設備を管理する場合は、予約モードを「本格予約」に変更してください。'}</p>{siteId ? <Link href={`/laruHP/booking/schedule?siteId=${encodeURIComponent(siteId)}`} onClick={e => { if (saveState.kind !== 'clean') { e.preventDefault(); setHistoryNote('変更を保存してから予約管理へ戻ってください。'); } }}>このサイトの予約設定を開く</Link> : <p>一度サイトを保存すると、予約管理を開けます。</p>}</div>}
+                  {craftTab==='content'&&def.fields.filter(f => selected.type !== 'booking' || selected.data.mode !== 'schedule' || !['serviceTypes','timeSlots','buttonText','subtext','stickyCta','stickyCtaText'].includes(f.key)).map(f => (
                     <div key={`${selected.id}:${f.key}`} data-field-key={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
                       value={(selected.data as Record<string, unknown>)[f.key]}
                       onChange={v => updateBlockData(selected.id, f.key, v)} /></div>
