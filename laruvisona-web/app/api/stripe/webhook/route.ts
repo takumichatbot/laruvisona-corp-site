@@ -8,6 +8,7 @@ import type Stripe from 'stripe';
 import { readRequestText } from '@/lib/contact-contract';
 import { commitShopCheckout } from '@/lib/shop-webhook';
 import { syncShopRefund } from '@/lib/shop-refunds';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: 'HP単体 (¥999/月)',
@@ -23,6 +24,22 @@ async function sendEmail(to: string, subject: string, html: string) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({ from: 'LARU HP <noreply@laruvisona.jp>', to, subject, html });
   } catch { /* non-fatal */ }
+}
+
+async function syncMemberSubscription(sub: Stripe.Subscription, supabase: SupabaseClient): Promise<boolean> {
+  const meta = (sub.metadata || {}) as Record<string, string>;
+  if (meta.kind !== 'member') return false;
+  if (!meta.member_id || !meta.site_id) throw Error('member subscription metadata missing');
+  const paid = sub.status === 'active' || sub.status === 'trialing';
+  const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
+  const { data, error } = await supabase.from('hp_members').update({
+    plan: paid ? 'paid' : 'free',
+    status: 'active',
+    stripe_customer_id: customerId || null,
+    stripe_subscription_id: sub.status === 'canceled' ? null : sub.id,
+  }).eq('id', meta.member_id).eq('site_id', meta.site_id).select('id');
+  if (error || data?.length !== 1) throw Error('member subscription could not be synchronized');
+  return true;
 }
 
 export async function POST(req: Request) {
@@ -95,14 +112,14 @@ export async function POST(req: Request) {
       // 有料会員（mode=subscription, kind=member）: 会員を有料・有効化
       if (session.mode === 'subscription' && bmeta.kind === 'member') {
         const memberId = bmeta.member_id;
-        if (memberId) {
-          await supabase.from('hp_members').update({
-            plan: 'paid',
-            status: 'active',
-            stripe_customer_id: typeof session.customer === 'string' ? session.customer : null,
-            stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : null,
-          }).eq('id', memberId);
-        }
+        const siteId = bmeta.site_id;
+        const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+        const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+        if (!memberId || !siteId || !subscriptionId) return NextResponse.json({ error: 'Member checkout metadata missing' }, { status: 400 });
+        const { data: updated, error } = await supabase.from('hp_members').update({
+          plan: 'paid', status: 'active', stripe_customer_id: customerId || null, stripe_subscription_id: subscriptionId,
+        }).eq('id', memberId).eq('site_id', siteId).eq('status', 'active').select('id');
+        if (error || updated?.length !== 1) return NextResponse.json({ error: 'Member checkout could not be saved' }, { status: 500 });
         break;
       }
 
@@ -184,6 +201,11 @@ export async function POST(req: Request) {
       const subId = typeof subRaw === 'string' ? subRaw : (subRaw as { id?: string } | null)?.id ?? (inv['subscription_id'] as string | null);
       if (!subId) break;
 
+      const { data: memberPaid, error: memberError } = await supabase.from('hp_members')
+        .update({ plan: 'paid' }).eq('stripe_subscription_id', subId).eq('status', 'active').select('id');
+      if (memberError) return NextResponse.json({ error: 'Member payment could not be synchronized' }, { status: 500 });
+      if ((memberPaid?.length || 0) > 0) break;
+
       // Update contract_ends_at based on the latest invoice period_end
       const updates: Record<string, unknown> = { subscription_status: 'active' };
       const lines = inv['lines'] as { data?: Array<{ period?: { end?: number } }> } | undefined;
@@ -199,6 +221,11 @@ export async function POST(req: Request) {
       const subRaw2 = inv['subscription'];
       const subId = typeof subRaw2 === 'string' ? subRaw2 : (subRaw2 as { id?: string } | null)?.id ?? (inv['subscription_id'] as string | null);
       if (!subId) break;
+
+      const { data: memberPastDue, error: memberError } = await supabase.from('hp_members')
+        .update({ plan: 'free' }).eq('stripe_subscription_id', subId).select('id');
+      if (memberError) return NextResponse.json({ error: 'Member payment could not be synchronized' }, { status: 500 });
+      if ((memberPastDue?.length || 0) > 0) break;
 
       await supabase.from('profiles')
         .update({ subscription_status: 'past_due' })
@@ -235,6 +262,8 @@ export async function POST(req: Request) {
 
     case 'customer.subscription.updated': {
       const sub = event.data.object as Stripe.Subscription;
+      try { if (await syncMemberSubscription(sub, supabase)) break; }
+      catch { return NextResponse.json({ error: 'Member subscription could not be synchronized' }, { status: 500 }); }
       const subMeta = (sub.metadata || {}) as Record<string, string>;
       const updatedPlan = subMeta['plan'];
       const statusMap: Record<string, string> = {
@@ -288,9 +317,8 @@ export async function POST(req: Request) {
 
       // 有料会員の解約: 会員を無料に戻す
       if ((sub.metadata as Record<string, string> | null)?.kind === 'member') {
-        await supabase.from('hp_members')
-          .update({ plan: 'free', stripe_subscription_id: null })
-          .eq('stripe_subscription_id', sub.id);
+        try { await syncMemberSubscription(sub, supabase); }
+        catch { return NextResponse.json({ error: 'Member subscription could not be synchronized' }, { status: 500 }); }
         break;
       }
 

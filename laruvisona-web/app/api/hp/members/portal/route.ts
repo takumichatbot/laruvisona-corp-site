@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { verifyMemberToken } from '@/lib/member-auth';
 import { safeReturnUrl } from '@/lib/site-origin';
+import { parseHpMemberPortal, readHpMemberBody } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,18 +12,23 @@ function admin() {
 }
 
 export async function POST(req: Request) {
-  const { siteId, token, returnUrl } = await req.json().catch(() => ({}));
-  if (!siteId || !token) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  let input;
+  try { input = parseHpMemberPortal(await readHpMemberBody(req)); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+  const { siteId, token, returnUrl } = input;
   if (!process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: '決済が設定されていません' }, { status: 500 });
 
   const payload = verifyMemberToken(token);
   if (!payload || payload.sid !== siteId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
 
   const supabase = admin();
-  const { data: member } = await supabase.from('hp_members').select('stripe_customer_id').eq('id', payload.mid).eq('site_id', siteId).maybeSingle();
+  const { data: member, error: memberError } = await supabase.from('hp_members').select('stripe_customer_id, status').eq('id', payload.mid).eq('site_id', siteId).maybeSingle();
+  if (memberError) return NextResponse.json({ error: '会員状態を確認できませんでした' }, { status: 500 });
+  if (member?.status !== 'active') return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
   if (!member?.stripe_customer_id) return NextResponse.json({ error: 'お支払い情報がありません' }, { status: 400 });
 
-  const { data: site } = await supabase.from('sites').select('slug, custom_domain').eq('id', siteId).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('slug, custom_domain').eq('id', siteId).eq('published', true).maybeSingle();
+  if (siteError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 500 });
   if (!site) return NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 });
 
   // 戻り先はそのサイトの正当なホストのみ。クライアントの returnUrl を

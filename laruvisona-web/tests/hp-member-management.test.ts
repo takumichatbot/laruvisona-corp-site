@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import {
   hpMemberEmail,
   parseHpMemberLogin,
+  parseHpMemberContent,
+  parseHpMemberPortal,
   parseHpMemberReset,
   parseHpMemberSubscribe,
   parseHpMemberSignup,
@@ -36,6 +38,13 @@ test('月額購読はStripe価格・ログイン情報・戻り先の長さを�
   });
   assert.throws(() => parseHpMemberSubscribe({ siteId, token: 'member-token', priceId: 'prod_123' }));
   assert.throws(() => parseHpMemberSubscribe({ siteId, token: 'member-token', priceId: 'price_123', returnUrl: 'x'.repeat(2049) }));
+});
+
+test('限定本文と支払い管理も同じ入力境界を通る', () => {
+  assert.deepEqual(parseHpMemberContent({ siteId, token: 'member-token', blockId: 'block_1-a' }), { siteId, token: 'member-token', blockId: 'block_1-a' });
+  assert.deepEqual(parseHpMemberPortal({ siteId, token: 'member-token', returnUrl: '/members' }), { siteId, token: 'member-token', returnUrl: '/members' });
+  assert.throws(() => parseHpMemberContent({ siteId, token: 'member-token', blockId: '<script>' }));
+  assert.throws(() => parseHpMemberPortal({ siteId, token: 'member-token', returnUrl: 'x'.repeat(2049) }));
 });
 
 test('本文はContent-Lengthなしの分割送信でも上限で停止する', async () => {
@@ -91,4 +100,26 @@ test('会員表は匿名アクセスと利用者の書き込みを閉じSQL回�
   const runner = fs.readFileSync(new URL('../supabase/run-sql-regression.sh', import.meta.url), 'utf8');
   assert.match(runner, /hp_members\.sql/);
   assert.match(runner, /hp_members_regression\.sql/);
+});
+
+test('会員課金はStripeの各状態をサイトと会員に限定して同期する', () => {
+  const webhook = fs.readFileSync(new URL('../app/api/stripe/webhook/route.ts', import.meta.url), 'utf8');
+  assert.match(webhook, /async function syncMemberSubscription/);
+  assert.match(webhook, /\.eq\('id', meta\.member_id\)\.eq\('site_id', meta\.site_id\)\.select\('id'\)/);
+  assert.match(webhook, /data\?\.length !== 1/);
+  assert.match(webhook, /memberPaid[\s\S]*update\(\{ plan: 'paid' \}\)/);
+  assert.match(webhook, /memberPastDue[\s\S]*update\(\{ plan: 'free' \}\)/);
+  assert.match(webhook, /if \(await syncMemberSubscription\(sub, supabase\)\) break/);
+  assert.match(webhook, /Member checkout could not be saved/);
+});
+
+test('限定本文と支払い管理は停止会員・非公開サイト・DB失敗を通さない', () => {
+  for (const file of ['content', 'portal']) {
+    const route = fs.readFileSync(new URL(`../app/api/hp/members/${file}/route.ts`, import.meta.url), 'utf8');
+    assert.match(route, /readHpMemberBody\(req\)/);
+    assert.match(route, /memberError/);
+    assert.match(route, /member\?\.status !== 'active'|member\.status !== 'active'/);
+    assert.match(route, /\.eq\('published', true\)/);
+    assert.match(route, /siteError/);
+  }
 });

@@ -58,6 +58,22 @@ export function parseHpMemberSubscribe(value: unknown) {
   return { siteId: hpMemberSiteId(item.siteId), token: item.token, priceId: item.priceId, returnUrl: item.returnUrl || undefined };
 }
 
+export function parseHpMemberPortal(value: unknown) {
+  const item = record(value);
+  if (Object.keys(item).some(key => !['siteId', 'token', 'returnUrl'].includes(key))) throw Error('入力を確認してください');
+  if (typeof item.token !== 'string' || !item.token || item.token.length > 4096) throw Error('ログインが必要です');
+  if (item.returnUrl != null && (typeof item.returnUrl !== 'string' || item.returnUrl.length > 2048)) throw Error('戻り先を確認してください');
+  return { siteId: hpMemberSiteId(item.siteId), token: item.token, returnUrl: item.returnUrl || undefined };
+}
+
+export function parseHpMemberContent(value: unknown) {
+  const item = record(value);
+  if (Object.keys(item).some(key => !['siteId', 'token', 'blockId'].includes(key))) throw Error('入力を確認してください');
+  if (typeof item.token !== 'string' || !item.token || item.token.length > 4096) throw Error('ログインが必要です');
+  if (typeof item.blockId !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(item.blockId)) throw Error('コンテンツを確認してください');
+  return { siteId: hpMemberSiteId(item.siteId), token: item.token, blockId: item.blockId };
+}
+
 export async function readHpMemberBody(req: Request, maxBytes = 20_000): Promise<Record<string, unknown>> {
   const declared = Number(req.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBytes) throw Error('入力が長すぎます');
