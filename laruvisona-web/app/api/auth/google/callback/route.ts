@@ -52,11 +52,12 @@ export async function GET(req: Request) {
   if (!tokenRes.ok || !tokens.refresh_token) return fail('no_refresh_token');
 
   const service = createServiceClient();
-  const { error: updateError } = await service
+  const { data: updated, error: updateError } = await service
     .from('profiles')
     .update({ google_refresh_token: tokens.refresh_token })
-    .eq('id', user.id);
-  if (updateError) return fail('save_failed');
+    .eq('id', user.id)
+    .select('id');
+  if (updateError || updated?.length !== 1) return fail('save_failed');
 
   return done('gsc=connected');
 }

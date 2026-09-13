@@ -67,11 +67,12 @@ export default function SettingsPage() {
       try {
         const res = await fetch('/api/search-console/data');
         const d = await res.json();
+        if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : 'load failed');
         setGscConnected(!!d.connected);
         setGscSiteUrl(d.siteUrl ?? null);
         setGscAvailableSites(d.availableSites ?? []);
         setGscSelectVal(d.siteUrl ?? (d.availableSites?.[0] ?? ''));
-      } catch {/* ignore */} finally {
+      } catch { setGscMsg('error:Search Consoleの状態を取得できませんでした。時間をおいて再読み込みしてください。'); } finally {
         setGscLoading(false);
       }
 
@@ -595,12 +596,10 @@ export default function SettingsPage() {
               <button
                 onClick={async () => {
                   setGscSaving(true);
-                  await fetch('/api/search-console/settings', { method: 'DELETE' });
-                  setGscConnected(false);
-                  setGscSiteUrl(null);
-                  setGscAvailableSites([]);
-                  setGscSelectVal('');
-                  setGscMsg('');
+                  const res = await fetch('/api/search-console/settings', { method: 'DELETE' });
+                  if (res.ok) {
+                    setGscConnected(false);setGscSiteUrl(null);setGscAvailableSites([]);setGscSelectVal('');setGscMsg('');
+                  } else setGscMsg('error:連携解除を保存できませんでした。もう一度お試しください。');
                   setGscSaving(false);
                 }}
                 disabled={gscSaving}
