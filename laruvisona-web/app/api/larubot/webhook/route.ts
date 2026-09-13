@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { readRequestText } from '@/lib/contact-contract';
+import { verifySharedSecret } from '@/lib/shared-secret';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PUBLIC_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -7,11 +9,11 @@ const PUBLIC_ID = /^[A-Za-z0-9_-]{1,128}$/;
 // Called by LARUbot to notify LARU HP of a user's public_id assignment
 export async function POST(req: Request) {
   const secret = req.headers.get('x-laru-secret');
-  if (!secret || secret !== process.env.LARU_HP_API_SECRET) {
+  if (!verifySharedSecret(secret, process.env.LARU_HP_API_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => null);
+  const body = await readRequestText(req, 32_000).then(text => JSON.parse(text)).catch(() => null);
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
 
   const { user_id, site_id, larubot_public_id, laruseo_public_id } = body as Record<string, unknown>;

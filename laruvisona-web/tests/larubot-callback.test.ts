@@ -7,7 +7,8 @@ const route = readFileSync(new URL('../app/api/larubot/webhook/route.ts', import
 test('LARUbot callbackは共有鍵確認後にサーバー権限で保存する', () => {
   assert.match(route, /createServiceClient/);
   assert.doesNotMatch(route, /import \{ createClient \}/);
-  assert.ok(route.indexOf("secret !== process.env.LARU_HP_API_SECRET") < route.indexOf('createServiceClient()'));
+  assert.ok(route.indexOf('verifySharedSecret(secret') < route.indexOf('createServiceClient()'));
+  assert.match(route, /readRequestText\(req, 32_000\)/);
 });
 
 test('callbackは利用者・サイト・公開IDの形と所属を検査する', () => {
