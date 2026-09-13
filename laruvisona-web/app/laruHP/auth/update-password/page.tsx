@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 function UpdatePasswordContent() {
@@ -12,25 +12,16 @@ function UpdatePasswordContent() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
-  const [token, setToken] = useState('');
-  const [tokenEmail, setTokenEmail] = useState('');
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
-    const t = searchParams.get('token');
-    if (!t) {
-      setTokenValid(false);
-      setError('リンクが無効です。パスワードリセットをやり直してください。');
-      return;
-    }
-    setToken(t);
-    // URL param から email を直接読む（base64url デコード不要）
-    const emailParam = searchParams.get('email');
-    if (emailParam) setTokenEmail(emailParam);
-    setTokenValid(true);
-  }, [searchParams]);
+    supabase.auth.getSession().then(({ data }) => {
+      const valid = Boolean(data.session);
+      setTokenValid(valid);
+      if (!valid) setError('リンクが無効か期限切れです。パスワードリセットをやり直してください。');
+    });
+  }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,42 +30,14 @@ function UpdatePasswordContent() {
     setLoading(true);
     setError('');
 
-    const res = await fetch('/api/auth/do-password-reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, password }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data.error || 'パスワードの更新に失敗しました');
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) {
+      setError('パスワードの更新に失敗しました。リンクを開き直してお試しください。');
       setLoading(false);
       return;
     }
-
-    // パスワード更新成功 → 既存セッションを消してから新しいパスワードで自動ログイン
-    await supabase.auth.signOut();
-
-    let signedIn = false;
-    if (tokenEmail) {
-      // Supabase の反映を待って最大2回試みる
-      for (let i = 0; i < 2; i++) {
-        if (i > 0) await new Promise(r => setTimeout(r, 800));
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email: tokenEmail, password });
-        if (!signInErr) { signedIn = true; break; }
-      }
-    }
-
     setDone(true);
-    if (signedIn) {
-      // window.location.href でフルリロード → Cookie が確実にサーバーへ届く
-      setTimeout(() => { window.location.href = '/laruHP/dashboard'; }, 1200);
-    } else {
-      // ログイン失敗でも、パスワードは設定済み → 手動ログイン画面へ（メール pre-fill）
-      const loginUrl = tokenEmail
-        ? `/laruHP/auth/login?prefill=${encodeURIComponent(tokenEmail)}`
-        : '/laruHP/auth/login';
-      setTimeout(() => { window.location.href = loginUrl; }, 1500);
-    }
+    setTimeout(() => { router.replace('/laruHP/dashboard'); }, 1200);
   };
 
   return (
@@ -94,7 +57,7 @@ function UpdatePasswordContent() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
               <p className="text-emerald-700 font-bold">パスワードを更新しました</p>
-              <p className="text-gray-600 text-sm mt-2">{tokenEmail} でログイン中... ダッシュボードに移動します</p>
+              <p className="text-gray-600 text-sm mt-2">ダッシュボードに移動します</p>
             </div>
           ) : tokenValid === null ? (
             <div className="text-center py-8 text-gray-500 text-sm">確認中...</div>

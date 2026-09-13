@@ -1,39 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
-import { createHmac } from 'crypto';
-
-function makeToken(email: string): string {
-  const ts = Date.now().toString();
-  const sig = createHmac('sha256', process.env.ADMIN_SECRET ?? 'fallback')
-    .update(`${email}:${ts}:reset`)
-    .digest('hex');
-  return Buffer.from(`${email}:${ts}:${sig}`).toString('base64url');
-}
+import { clientIp, rateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
-  const { email } = await req.json().catch(() => ({}));
-  if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
+  if (!rateLimit(`account-reset:${clientIp(req)}`, 5, 60 * 60 * 1000).ok) return NextResponse.json({ ok: true });
+  const { email: rawEmail } = await req.json().catch(() => ({}));
+  const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return NextResponse.json({ ok: true });
+  }
 
-  // ユーザーが存在するか確認
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp').replace(/\/$/, '');
+  const redirectTo = `${origin}/api/auth/callback?next=${encodeURIComponent('/laruHP/auth/update-password')}`;
   const supabase = await createServiceClient();
-  const { data: { users }, error } = await supabase.auth.admin.listUsers();
-  if (error) return NextResponse.json({ error: 'server error' }, { status: 500 });
-  const exists = users.some(u => u.email?.toLowerCase() === email.toLowerCase());
-  if (!exists) return NextResponse.json({ error: 'このメールアドレスは登録されていません' }, { status: 400 });
-
-  const requestHeaders = Object.fromEntries(req.headers.entries());
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const forwardedHost = requestHeaders['x-forwarded-host'];
-  const forwardedProto = requestHeaders['x-forwarded-proto'] || 'https';
-  const origin = appUrl || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : 'https://laruvisona.jp');
-
-  const token = makeToken(email);
-  // email を URL param にも乗せる（ページ側で atob デコードせずに済む）
-  const link = `${origin}/laruHP/auth/update-password?token=${token}&email=${encodeURIComponent(email)}`;
+  const generated = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
+  const link = generated.data?.properties?.action_link;
+  // 登録有無と外部メール障害を応答から判別できないよう、公開応答は常に同じにする。
+  if (generated.error || !link) {
+    console.warn('[password-reset] recovery link unavailable:', generated.error?.code || 'not_found');
+    return NextResponse.json({ ok: true });
+  }
 
   if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json({ error: 'メール送信が設定されていません（RESEND_API_KEY未設定）' }, { status: 500 });
+    console.warn('[password-reset] RESEND_API_KEY is not configured');
+    return NextResponse.json({ ok: true });
   }
 
   try {
@@ -69,13 +60,9 @@ export async function POST(req: Request) {
 </body>
 </html>`,
     });
-    if (sendResult.error) {
-      console.error('[password-reset] Resend error:', sendResult.error);
-      return NextResponse.json({ error: 'メールの送信に失敗しました。しばらく経ってから再試行してください。' }, { status: 500 });
-    }
+    if (sendResult.error) console.error('[password-reset] Resend rejected:', sendResult.error.name);
   } catch (err) {
-    console.error('[password-reset] Resend exception:', err);
-    return NextResponse.json({ error: 'メールの送信に失敗しました。しばらく経ってから再試行してください。' }, { status: 500 });
+    console.error('[password-reset] Resend exception:', (err as Error)?.message);
   }
 
   return NextResponse.json({ ok: true });
