@@ -6,7 +6,7 @@
 
 - ブランチ: `codex/domain-onboarding-20260914`
 - `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
-- 全単体テスト: 724件通過
+- 全単体テスト: 725件通過
 - `next build`: exit 0
 - SQL回帰: ランナーへ統合済み。ただしこのMacにはPostgreSQL実行環境が無いため未実行
 - push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
