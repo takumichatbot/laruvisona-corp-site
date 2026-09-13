@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getSiteLimit } from '@/lib/plan-limits';
+import { siteCreationAccess } from '@/lib/site-creation-access';
 
 // GET /api/sites — list user's sites
 export async function GET() {
@@ -34,14 +34,16 @@ export async function POST(req: Request) {
   const plan = profile?.plan as string | null;
   const subStatus = profile?.subscription_status as string | null;
 
-  if (!plan || (subStatus && subStatus !== 'active' && subStatus !== 'trialing')) {
+  const access = siteCreationAccess(user.email, plan, subStatus,
+    [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]);
+  if (!access.allowed) {
     return NextResponse.json(
       { error: 'サブスクリプションが必要です。プランを選択してください。', code: 'no_plan' },
       { status: 403 }
     );
   }
 
-  const limit = getSiteLimit(plan);
+  const limit = access.limit;
   const { count } = await supabase
     .from('sites')
     .select('id', { count: 'exact', head: true })
