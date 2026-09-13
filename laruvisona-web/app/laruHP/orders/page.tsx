@@ -23,6 +23,7 @@ interface Site { id: string; name: string }
 
 const STATUS: Record<Order['status'], { label: string; cls: string }> = {
   paid: { label: '入金済', cls: 'bg-blue-100 text-blue-700' },
+  review: { label: '在庫を要確認', cls: 'bg-red-100 text-red-700' },
   shipped: { label: '発送済', cls: 'bg-amber-100 text-amber-700' },
   completed: { label: '完了', cls: 'bg-green-100 text-green-700' },
   canceled: { label: 'キャンセル', cls: 'bg-gray-100 text-gray-500' },

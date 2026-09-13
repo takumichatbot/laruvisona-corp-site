@@ -19,12 +19,16 @@ create table if not exists public.hp_orders (
   amount integer not null default 0,           -- 合計金額（円）
   items jsonb not null default '[]'::jsonb,      -- [{name, variant, quantity, unit}]
   shipping jsonb,                                -- {name, postal_code, state, city, line1, line2, country, phone}
-  status text not null default 'paid' check (status in ('paid','shipped','completed','canceled')),
+  status text not null default 'paid' check (status in ('paid','review','shipped','completed','canceled')),
   note text,
   created_at timestamptz not null default now()
 );
 
 alter table public.hp_orders enable row level security;
+
+alter table public.hp_orders drop constraint if exists hp_orders_status_check;
+alter table public.hp_orders add constraint hp_orders_status_check
+  check (status in ('paid','review','shipped','completed','canceled'));
 
 drop policy if exists "Users see own orders" on public.hp_orders;
 drop policy if exists "Users update own orders" on public.hp_orders;
@@ -42,6 +46,153 @@ create policy "Users update own orders" on public.hp_orders
   );
 
 revoke all on public.hp_orders from anon, authenticated;
-grant select, update on public.hp_orders to authenticated;
+grant select on public.hp_orders to authenticated;
+grant update (status, note) on public.hp_orders to authenticated;
 
 create index if not exists hp_orders_site_idx on public.hp_orders (site_id, created_at desc);
+
+create or replace function public.laruhp_order_status_guard() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.status = old.status then return new; end if;
+  if not (
+    (old.status in ('paid','review') and new.status in ('shipped','completed')) or
+    (old.status = 'shipped' and new.status = 'completed')
+  ) then
+    raise exception 'invalid_order_transition';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists lhp_order_status_guard_trg on public.hp_orders;
+create trigger lhp_order_status_guard_trg
+before update of status on public.hp_orders
+for each row execute function public.laruhp_order_status_guard();
+
+revoke all on function public.laruhp_order_status_guard() from public, anon, authenticated;
+
+-- Stripe Webhookの再送と同時購入を、サイト行のロック内で1回だけ処理する。
+-- 在庫が足りない・商品が編集済みなどの場合も、支払い済み注文自体は review として残す。
+create or replace function public.laruhp_shop_commit_order(
+  p_site_id uuid,
+  p_stripe_session_id text,
+  p_customer_name text,
+  p_customer_email text,
+  p_customer_phone text,
+  p_amount integer,
+  p_items jsonb,
+  p_shipping jsonb,
+  p_cart jsonb
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_site public.sites%rowtype;
+  v_existing public.hp_orders%rowtype;
+  v_order public.hp_orders%rowtype;
+  v_settings jsonb;
+  v_products jsonb;
+  v_cart_item jsonb;
+  v_product jsonb;
+  v_variant jsonb;
+  v_variants jsonb;
+  v_product_pos integer;
+  v_variant_pos integer;
+  v_quantity integer;
+  v_stock integer;
+  v_inventory_ok boolean := true;
+begin
+  if p_stripe_session_id is null or length(p_stripe_session_id) < 3 or p_amount is null or p_amount < 0 then
+    raise exception 'invalid_order';
+  end if;
+  if p_items is null or jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items) < 1 then
+    raise exception 'invalid_items';
+  end if;
+
+  select * into v_site from public.sites where id = p_site_id for update;
+  if not found then raise exception 'site_not_found'; end if;
+
+  select * into v_existing from public.hp_orders where stripe_session_id = p_stripe_session_id;
+  if found then
+    return jsonb_build_object('created', false, 'id', v_existing.id, 'status', v_existing.status);
+  end if;
+
+  v_settings := coalesce(v_site.settings_json, '{}'::jsonb);
+  v_products := coalesce(v_settings->'products', '[]'::jsonb);
+  if p_cart is null or jsonb_typeof(p_cart) is distinct from 'array' or jsonb_array_length(p_cart) < 1
+     or jsonb_array_length(p_cart) <> jsonb_array_length(p_items)
+     or jsonb_typeof(v_products) is distinct from 'array' then
+    v_inventory_ok := false;
+  else
+    for v_cart_item in select value from jsonb_array_elements(p_cart)
+    loop
+      begin
+        v_quantity := (v_cart_item->>'q')::integer;
+      exception when others then
+        v_inventory_ok := false;
+        exit;
+      end;
+      if v_quantity is null or v_quantity < 1 or v_quantity > 99 then v_inventory_ok := false; exit; end if;
+
+      select value, ordinality::integer into v_product, v_product_pos
+        from jsonb_array_elements(v_products) with ordinality
+        where value->>'id' = v_cart_item->>'id' and value->>'active' = 'true'
+        limit 1;
+      if not found then v_inventory_ok := false; exit; end if;
+
+      if coalesce(v_cart_item->>'v', '') <> '' then
+        v_variants := coalesce(v_product->'variants', '[]'::jsonb);
+        select value, ordinality::integer into v_variant, v_variant_pos
+          from jsonb_array_elements(v_variants) with ordinality
+          where value->>'id' = v_cart_item->>'v'
+          limit 1;
+        if not found then v_inventory_ok := false; exit; end if;
+        if v_variant->'stock' is not null and v_variant->'stock' <> 'null'::jsonb then
+          begin v_stock := (v_variant->>'stock')::integer;
+          exception when others then v_inventory_ok := false; exit; end;
+          if v_stock < v_quantity then v_inventory_ok := false; exit; end if;
+          v_variants := jsonb_set(v_variants, array[(v_variant_pos - 1)::text, 'stock'], to_jsonb(v_stock - v_quantity), false);
+          v_product := jsonb_set(v_product, '{variants}', v_variants, false);
+          v_products := jsonb_set(v_products, array[(v_product_pos - 1)::text], v_product, false);
+        end if;
+      elsif v_product->'stock' is not null and v_product->'stock' <> 'null'::jsonb then
+        begin v_stock := (v_product->>'stock')::integer;
+        exception when others then v_inventory_ok := false; exit; end;
+        if v_stock < v_quantity then v_inventory_ok := false; exit; end if;
+        v_products := jsonb_set(v_products, array[(v_product_pos - 1)::text, 'stock'], to_jsonb(v_stock - v_quantity), false);
+      end if;
+    end loop;
+  end if;
+
+  if v_inventory_ok then
+    update public.sites
+      set settings_json = jsonb_set(v_settings, '{products}', v_products, true)
+      where id = p_site_id;
+  end if;
+
+  insert into public.hp_orders (
+    site_id, stripe_session_id, customer_name, customer_email, customer_phone,
+    amount, items, shipping, status, note
+  ) values (
+    p_site_id, p_stripe_session_id, p_customer_name, p_customer_email, p_customer_phone,
+    p_amount, p_items, p_shipping,
+    case when v_inventory_ok then 'paid' else 'review' end,
+    case when v_inventory_ok then null else '決済後の在庫確認が必要です' end
+  ) returning * into v_order;
+
+  return jsonb_build_object(
+    'created', true,
+    'id', v_order.id,
+    'status', v_order.status,
+    'inventoryUpdated', v_inventory_ok
+  );
+end;
+$$;
+
+revoke all on function public.laruhp_shop_commit_order(uuid,text,text,text,text,integer,jsonb,jsonb,jsonb) from public, anon, authenticated;
+grant execute on function public.laruhp_shop_commit_order(uuid,text,text,text,text,integer,jsonb,jsonb,jsonb) to service_role;

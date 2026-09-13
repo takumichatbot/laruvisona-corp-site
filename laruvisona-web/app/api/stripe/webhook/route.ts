@@ -5,6 +5,8 @@ import { finalizeBooking } from '@/lib/booking-finalize';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { Resend } from 'resend';
 import type Stripe from 'stripe';
+import { escapeContactHtml, readRequestText, singleLine } from '@/lib/contact-contract';
+import { cartFromMetadata, snapshotStripeItems } from '@/lib/shop-order';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: 'HP単体 (¥999/月)',
@@ -23,7 +25,12 @@ async function sendEmail(to: string, subject: string, html: string) {
 }
 
 export async function POST(req: Request) {
-  const body = await req.text();
+  let body: string;
+  try {
+    body = await readRequestText(req, 1_000_000);
+  } catch (error) {
+    return NextResponse.json({ error: 'Invalid payload' }, { status: (error as Error).message === 'too_large' ? 413 : 400 });
+  }
   const sig = req.headers.get('stripe-signature')!;
 
   let event: Stripe.Event;
@@ -67,79 +74,79 @@ export async function POST(req: Request) {
         break;
       }
 
-      // ショップ購入（mode=payment, kind=shop）: 在庫を減算しオーナーへ注文通知
+      // ショップ購入（mode=payment, kind=shop）: 注文保存と在庫減算を同じ処理に閉じる
       if (session.mode === 'payment' && bmeta.kind === 'shop') {
         const shopSiteId = bmeta.laru_site_id;
-        if (shopSiteId) {
-          let cart: Array<{ id: string; v?: string; q: number }> = [];
-          try { if (bmeta.laru_cart) cart = JSON.parse(bmeta.laru_cart); } catch {}
-          if (!cart.length && bmeta.laru_product_id) cart = [{ id: bmeta.laru_product_id, q: 1 }];
+        if (!shopSiteId) return NextResponse.json({ error: 'Shop site unavailable' }, { status: 500 });
 
-          const { data: shopSite } = await supabase
-            .from('sites')
-            .select('name, user_id, settings_json')
-            .eq('id', shopSiteId)
-            .single();
-          if (shopSite) {
-            const settings = (shopSite.settings_json as Record<string, unknown>) || {};
-            const products = (settings.products as Array<{ id: string; name: string; price: number; stock: number | null; variants?: Array<{ id: string; name: string; priceDelta?: number; stock: number | null }> }>) || [];
-            const orderLines: string[] = [];
-            const orderItems: Array<{ name: string; variant: string | null; quantity: number; unit: number }> = [];
-            let changed = false;
-            for (const c of cart) {
-              const p = products.find(pp => pp.id === c.id);
-              if (!p) continue;
-              const variant = c.v ? p.variants?.find(vv => vv.id === c.v) : undefined;
-              orderLines.push(`${p.name}${variant ? `（${variant.name}）` : ''} × ${c.q}`);
-              orderItems.push({ name: p.name, variant: variant ? variant.name : null, quantity: c.q, unit: (p.price || 0) + (variant?.priceDelta || 0) });
-              if (variant) {
-                if (variant.stock !== null && variant.stock !== undefined) { variant.stock = Math.max(0, variant.stock - c.q); changed = true; }
-              } else if (p.stock !== null && p.stock !== undefined) {
-                p.stock = Math.max(0, p.stock - c.q); changed = true;
-              }
-            }
-            if (changed) {
-              await supabase.from('sites').update({ settings_json: { ...settings, products } }).eq('id', shopSiteId);
-            }
+        let cart;
+        let orderItems;
+        try {
+          cart = cartFromMetadata(bmeta);
+          const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
+          if (lineItems.has_more) throw new Error('too_many_line_items');
+          orderItems = snapshotStripeItems(cart, lineItems.data);
+          const itemTotal = orderItems.reduce((sum, item) => sum + item.unit * item.quantity, 0);
+          if (itemTotal !== (session.amount_total || 0)) throw new Error('amount_mismatch');
+        } catch {
+          return NextResponse.json({ error: 'Shop order details unavailable' }, { status: 500 });
+        }
 
-            // 注文を保存（配送先も取得。webhook再送に備え session_id で重複防止）
-            const cd = session.customer_details;
-            const sdRaw = (session as unknown as { shipping_details?: { name?: string; address?: Record<string, string> } }).shipping_details;
-            const addr = sdRaw?.address || cd?.address || null;
-            const shipping = addr ? {
-              name: sdRaw?.name || cd?.name || '', phone: cd?.phone || '',
-              postal_code: addr.postal_code || '', state: addr.state || '', city: addr.city || '',
-              line1: addr.line1 || '', line2: addr.line2 || '', country: addr.country || '',
-            } : null;
-            await supabase.from('hp_orders').upsert({
-              site_id: shopSiteId,
-              stripe_session_id: session.id,
-              customer_name: cd?.name || null,
-              customer_email: cd?.email || null,
-              customer_phone: cd?.phone || null,
-              amount: session.amount_total || 0,
-              items: orderItems,
-              shipping,
-              status: 'paid',
-            }, { onConflict: 'stripe_session_id', ignoreDuplicates: true });
-            const { data: { user: owner } } = await supabase.auth.admin.getUserById(shopSite.user_id);
-            const toEmail = (settings.notifyEmail as string) || owner?.email;
-            if (toEmail) {
-              const amount = session.amount_total ? `¥${session.amount_total.toLocaleString()}` : '';
-              await sendEmail(
-                toEmail,
-                `【ご注文】${shopSite.name} — 新しい注文が入りました`,
-                `<div style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px">
-                  <h2 style="color:#0f172a">🛍️ 新しいご注文</h2>
-                  <table style="width:100%;border-collapse:collapse;margin:16px 0">
-                    ${orderLines.map(l => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${l}</td></tr>`).join('')}
-                  </table>
-                  <p style="font-size:18px;font-weight:700;color:#0369a1">合計: ${amount}</p>
-                  <p style="color:#475569;font-size:14px">購入者メール: ${session.customer_details?.email || '—'}</p>
-                </div>`
-              );
-            }
-          }
+        const { data: shopSite, error: shopSiteError } = await supabase
+          .from('sites')
+          .select('name, user_id, settings_json')
+          .eq('id', shopSiteId)
+          .single();
+        if (shopSiteError || !shopSite) return NextResponse.json({ error: 'Shop site unavailable' }, { status: 500 });
+
+        const settings = (shopSite.settings_json as Record<string, unknown>) || {};
+        const cd = session.customer_details;
+        const sdRaw = (session as unknown as { shipping_details?: { name?: string; address?: Record<string, string> } }).shipping_details;
+        const addr = sdRaw?.address || cd?.address || null;
+        const shipping = addr ? {
+          name: sdRaw?.name || cd?.name || '', phone: cd?.phone || '',
+          postal_code: addr.postal_code || '', state: addr.state || '', city: addr.city || '',
+          line1: addr.line1 || '', line2: addr.line2 || '', country: addr.country || '',
+        } : null;
+
+        const { data: committed, error: commitError } = await supabase.rpc('laruhp_shop_commit_order', {
+          p_site_id: shopSiteId,
+          p_stripe_session_id: session.id,
+          p_customer_name: cd?.name || null,
+          p_customer_email: cd?.email || null,
+          p_customer_phone: cd?.phone || null,
+          p_amount: session.amount_total || 0,
+          p_items: orderItems,
+          p_shipping: shipping,
+          p_cart: cart,
+        });
+        if (commitError || !committed || typeof committed !== 'object') {
+          return NextResponse.json({ error: 'Shop order could not be saved' }, { status: 500 });
+        }
+
+        const result = committed as { created?: boolean; status?: string };
+        if (!result.created) break;
+
+        const { data: { user: owner } } = await supabase.auth.admin.getUserById(shopSite.user_id);
+        const toEmail = (settings.notifyEmail as string) || owner?.email;
+        if (toEmail) {
+          const amount = session.amount_total ? `¥${session.amount_total.toLocaleString()}` : '';
+          const review = result.status === 'review'
+            ? '<p style="padding:12px;background:#fff7ed;color:#9a3412">在庫との対応を確認してください。</p>'
+            : '';
+          await sendEmail(
+            toEmail,
+            `【ご注文】${singleLine(shopSite.name)} — 新しい注文が入りました`,
+            `<div style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:24px">
+              <h2 style="color:#0f172a">新しいご注文</h2>
+              ${review}
+              <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                ${orderItems.map(item => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${escapeContactHtml(item.name)} × ${item.quantity}</td></tr>`).join('')}
+              </table>
+              <p style="font-size:18px;font-weight:700;color:#0369a1">合計: ${amount}</p>
+              <p style="color:#475569;font-size:14px">購入者メール: ${escapeContactHtml(session.customer_details?.email || '—')}</p>
+            </div>`,
+          );
         }
         break;
       }

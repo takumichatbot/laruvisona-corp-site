@@ -7,6 +7,7 @@ test('注文状態は発送・完了の一方向だけに進める', () => {
   assert.equal(canMoveOrder('paid', 'shipped'), true);
   assert.equal(canMoveOrder('paid', 'completed'), true);
   assert.equal(canMoveOrder('shipped', 'completed'), true);
+  assert.equal(canMoveOrder('review', 'shipped'), true);
   assert.equal(canMoveOrder('completed', 'paid'), false);
   assert.equal(canMoveOrder('paid', 'canceled'), false);
   assert.deepEqual(nextOrderStatuses('canceled'), []);
@@ -41,5 +42,7 @@ test('注文表は所有者の更新だけを許可し、外部からの追加�
   const sql = readFileSync(new URL('../supabase/hp_orders.sql', import.meta.url), 'utf8');
   assert.match(sql, /for update using[\s\S]*with check/i);
   assert.match(sql, /revoke all on public\.hp_orders from anon, authenticated/i);
-  assert.match(sql, /grant select, update on public\.hp_orders to authenticated/i);
+  assert.match(sql, /grant select on public\.hp_orders to authenticated/i);
+  assert.match(sql, /grant update \(status, note\) on public\.hp_orders to authenticated/i);
+  assert.match(sql, /create trigger lhp_order_status_guard_trg/i);
 });

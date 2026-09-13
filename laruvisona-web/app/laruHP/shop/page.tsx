@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
 
 interface Variant {
   id: string;
@@ -52,7 +52,6 @@ const DEFAULT_FORM = {
 const CATEGORIES = ['その他', 'サービス', '商品', 'デジタルコンテンツ', 'コース・講座', 'チケット'];
 
 export default function ShopPage() {
-  const supabase = createClient();
   const router = useRouter();
 
   const [sites, setSites] = useState<Site[]>([]);
@@ -77,10 +76,8 @@ export default function ShopPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { router.replace('/laruHP/auth/login'); return; }
-
         const res = await fetch('/api/sites');
+        if (res.status === 401) { router.replace('/laruHP/auth/login'); return; }
         if (!res.ok) throw new Error('sites fetch failed');
         const d = await res.json();
         const s: Site[] = (d.sites || []).map((x: Site) => ({ id: x.id, name: x.name, slug: x.slug, published: x.published }));
@@ -104,9 +101,7 @@ export default function ShopPage() {
       if (!res.ok) throw new Error('products fetch failed');
       const d = await res.json();
       setProducts(d.products || []);
-      // ショップ設定（配送先収集）も読み込む
-      const { data: siteRow } = await supabase.from('sites').select('settings_json').eq('id', siteId).single();
-      setCollectShipping(!!(siteRow?.settings_json as Record<string, unknown>)?.shopCollectShipping);
+      setCollectShipping(d.collectShipping === true);
     } catch {
       showMsg('商品の読み込みに失敗しました', 'error');
     }
@@ -115,11 +110,18 @@ export default function ShopPage() {
   const toggleCollectShipping = async (val: boolean) => {
     if (!selectedSite) return;
     setCollectShipping(val);
-    const { data: siteRow } = await supabase.from('sites').select('settings_json').eq('id', selectedSite.id).single();
-    const merged = { ...((siteRow?.settings_json as Record<string, unknown>) || {}), shopCollectShipping: val };
-    const { error } = await supabase.from('sites').update({ settings_json: merged }).eq('id', selectedSite.id);
-    if (error) { showMsg('設定の保存に失敗しました', 'error'); setCollectShipping(!val); }
-    else showMsg('設定を保存しました');
+    try {
+      const response = await fetch(`/api/sites/${selectedSite.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ settings_patch: { shopCollectShipping: val } }),
+      });
+      if (!response.ok) throw new Error('save failed');
+      showMsg('設定を保存しました');
+    } catch {
+      showMsg('設定の保存に失敗しました', 'error');
+      setCollectShipping(!val);
+    }
   };
 
   const handleCreate = async () => {
@@ -214,7 +216,7 @@ export default function ShopPage() {
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4 text-2xl">🗑️</div>
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4"><Trash2 aria-hidden="true" className="h-6 w-6 text-red-600" /></div>
             <h3 className="font-bold text-gray-900 mb-1">商品を削除しますか？</h3>
             <p className="text-sm text-gray-500 mb-5">「{deleteTarget?.name}」を削除します。この操作は取り消せません。</p>
             <div className="flex gap-2">
@@ -269,8 +271,9 @@ export default function ShopPage() {
               </button>
             </div>
             {!selectedSite.published && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
-                ⚠️ このサイトはまだ未公開のため、上記URLは404になります。ダッシュボードから「公開する」を実行するとアクセスできるようになります。
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 flex items-start gap-1.5">
+                <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <span>このサイトはまだ未公開のため、上記URLは404になります。ダッシュボードから「公開する」を実行するとアクセスできるようになります。</span>
               </p>
             )}
           </div>
@@ -344,10 +347,10 @@ export default function ShopPage() {
                       <input type="text" value={v.name} onChange={e => setForm(f => ({ ...f, variants: f.variants.map((x, j) => j === i ? { ...x, name: e.target.value } : x) }))} className={inputCls + ' flex-1'} placeholder="選択肢名（例：M）" />
                       <input type="number" value={v.priceDelta} onChange={e => setForm(f => ({ ...f, variants: f.variants.map((x, j) => j === i ? { ...x, priceDelta: e.target.value } : x) }))} className={inputCls + ' w-24'} placeholder="±円" title="基本価格との差額（円）" />
                       <input type="number" value={v.stock} onChange={e => setForm(f => ({ ...f, variants: f.variants.map((x, j) => j === i ? { ...x, stock: e.target.value } : x) }))} className={inputCls + ' w-20'} placeholder="在庫" min="0" title="在庫（空=無制限）" />
-                      <button onClick={() => setForm(f => ({ ...f, variants: f.variants.filter((_, j) => j !== i) }))} className="text-red-400 hover:text-red-600 px-1 flex-shrink-0" aria-label="削除">✕</button>
+                      <button onClick={() => setForm(f => ({ ...f, variants: f.variants.filter((_, j) => j !== i) }))} className="text-red-400 hover:text-red-600 px-1 flex-shrink-0" aria-label="削除"><X aria-hidden="true" className="h-4 w-4" /></button>
                     </div>
                   ))}
-                  <button onClick={() => setForm(f => ({ ...f, variants: [...f.variants, { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name: '', priceDelta: '', stock: '' }] }))} className="text-xs text-sky-600 font-semibold hover:text-sky-700">＋ 選択肢を追加</button>
+                  <button onClick={() => setForm(f => ({ ...f, variants: [...f.variants, { id: crypto.randomUUID(), name: '', priceDelta: '', stock: '' }] }))} className="text-xs text-sky-600 font-semibold hover:text-sky-700 inline-flex items-center gap-1"><Plus aria-hidden="true" className="h-3.5 w-3.5" />選択肢を追加</button>
                   <p className="text-[11px] text-gray-400 leading-relaxed">±円＝基本価格との差額（例：+500）。在庫は選択肢ごとに管理（空=無制限）。バリエーションありの商品は購入時に選択が必須になります。</p>
                 </div>
               )}
@@ -376,7 +379,7 @@ export default function ShopPage() {
 
           {products.length === 0 ? (
             <div className="text-center py-10">
-              <div className="text-5xl mb-4">🛍️</div>
+              <ShoppingBag aria-hidden="true" className="mx-auto mb-4 h-12 w-12 text-sky-700" />
               <p className="text-sm text-gray-500">まだ商品がありません</p>
               <p className="text-xs text-gray-400 mt-1">「商品・サービスを追加」から登録してください</p>
             </div>

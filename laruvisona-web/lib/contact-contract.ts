@@ -89,7 +89,7 @@ export function singleLine(value: string): string {
   return value.replace(/[\r\n]+/g, ' ').trim();
 }
 
-export async function readContactBody(req: Request, maxBytes = 100000): Promise<Record<string, unknown>> {
+export async function readRequestText(req: Request, maxBytes = 100000): Promise<string> {
   if (Number(req.headers.get('content-length')) > maxBytes) throw Error('too_large');
   const reader = req.body?.getReader();
   if (!reader) throw Error('invalid');
@@ -107,7 +107,11 @@ export async function readContactBody(req: Request, maxBytes = 100000): Promise<
     json += decoder.decode(value, { stream: true });
   }
   json += decoder.decode();
-  const parsed = JSON.parse(json);
+  return json;
+}
+
+export async function readContactBody(req: Request, maxBytes = 100000): Promise<Record<string, unknown>> {
+  const parsed = JSON.parse(await readRequestText(req, maxBytes));
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw Error('invalid');
   return parsed as Record<string, unknown>;
 }

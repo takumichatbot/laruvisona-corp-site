@@ -3,6 +3,9 @@ import { createServiceClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { safeReturnUrl } from '@/lib/site-origin';
+import { cartMetadata, normalizeShopCart } from '@/lib/shop-order';
+import { readContactBody } from '@/lib/contact-contract';
+import { validOrderId } from '@/lib/order-contract';
 
 // POST /api/shop/checkout — カート（複数商品・数量）対応の Stripe Checkout
 // 公開エンドポイント（公開ショップから購入）。単品(productId)も後方互換で受け付ける。
@@ -14,16 +17,24 @@ interface ProductRow {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({})) as {
+  let body: {
     siteId?: string;
     productId?: string;
     items?: Array<{ productId: string; variantId?: string; quantity: number }>;
     successUrl?: string;
     cancelUrl?: string;
   };
+  try {
+    body = await readContactBody(req, 50_000) as typeof body;
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message === 'too_large' ? 'リクエストが大きすぎます' : 'リクエストを確認してください' },
+      { status: (error as Error).message === 'too_large' ? 413 : 400 },
+    );
+  }
   const { siteId, productId, successUrl, cancelUrl } = body;
 
-  if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
+  if (!validOrderId(siteId)) return NextResponse.json({ error: 'サイトを確認してください' }, { status: 400 });
 
   // 決済セッションの大量生成でStripe側を荒らされないように
   const rl = rateLimit(`shop-checkout:${clientIp(req)}`, 20, 60 * 60 * 1000);
@@ -35,30 +46,34 @@ export async function POST(req: Request) {
   }
 
   // 単品 → items 形式に正規化
-  const reqItems = (body.items && body.items.length > 0)
-    ? body.items
-    : (productId ? [{ productId, quantity: 1 }] : []);
-  if (reqItems.length === 0) return NextResponse.json({ error: '商品が指定されていません' }, { status: 400 });
+  let reqItems;
+  try {
+    reqItems = normalizeShopCart((body.items && body.items.length > 0)
+      ? body.items
+      : (productId ? [{ productId, quantity: 1 }] : []));
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+  }
 
   const service = await createServiceClient();
-  const { data: site } = await service.from('sites').select('name, settings_json, slug, custom_domain').eq('id', siteId).single();
+  const { data: site } = await service.from('sites').select('name, settings_json, slug, custom_domain').eq('id', siteId).eq('published', true).single();
   if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
 
   const shopSettings = (site.settings_json as Record<string, unknown>) || {};
-  const products = (shopSettings.products as ProductRow[]) || [];
+  const products = Array.isArray(shopSettings.products) ? shopSettings.products as ProductRow[] : [];
   const collectShipping = !!shopSettings.shopCollectShipping;
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
   const cart: Array<{ id: string; v?: string; q: number }> = [];
   for (const it of reqItems) {
-    const qty = Math.max(1, Math.floor(Number(it.quantity) || 1));
-    const product = products.find(p => p.id === it.productId && p.active);
+    const qty = it.q;
+    const product = products.find(p => p.id === it.id && p.active);
     if (!product) return NextResponse.json({ error: '販売中でない商品が含まれています' }, { status: 404 });
 
     // バリエーションあり商品は選択必須
     let variant: VariantRow | undefined;
     if (product.variants?.length) {
-      variant = product.variants.find(v => v.id === it.variantId);
+      variant = product.variants.find(v => v.id === it.v);
       if (!variant) return NextResponse.json({ error: `「${product.name}」の${product.variantLabel || 'オプション'}を選択してください` }, { status: 400 });
     }
 
@@ -69,6 +84,9 @@ export async function POST(req: Request) {
     }
 
     const unitAmount = product.price + (variant?.priceDelta || 0);
+    if (!Number.isSafeInteger(unitAmount) || unitAmount < 1 || unitAmount > 99_999_999) {
+      return NextResponse.json({ error: '商品の価格を確認してください' }, { status: 409 });
+    }
     const displayName = variant ? `${product.name}（${variant.name}）` : product.name;
     lineItems.push({
       price_data: {
@@ -87,7 +105,7 @@ export async function POST(req: Request) {
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   try {
-    const cartJson = JSON.stringify(cart);
+    const encodedCart = cartMetadata(cart);
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
@@ -103,8 +121,7 @@ export async function POST(req: Request) {
       metadata: {
         kind: 'shop',
         laru_site_id: siteId,
-        // 在庫減算用。Stripeのmetadata上限(500字)を超える場合は省略
-        ...(cartJson.length <= 480 ? { laru_cart: cartJson } : {}),
+        ...encodedCart,
         ...(cart.length === 1 ? { laru_product_id: cart[0].id } : {}),
       },
     });

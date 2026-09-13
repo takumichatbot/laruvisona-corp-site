@@ -1,9 +1,10 @@
-export const ORDER_STATUSES = ['paid', 'shipped', 'completed', 'canceled'] as const;
+export const ORDER_STATUSES = ['paid', 'review', 'shipped', 'completed', 'canceled'] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 const NEXT_STATUS: Record<OrderStatus, readonly OrderStatus[]> = {
   paid: ['shipped', 'completed'],
+  review: ['shipped', 'completed'],
   shipped: ['completed'],
   completed: [],
   canceled: [],
@@ -31,7 +32,7 @@ export function parseOrderUpdate(value: unknown): { id: string; status: OrderSta
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('注文内容を確認してください');
   const input = value as Record<string, unknown>;
   if (!validOrderId(input.id)) throw new Error('注文を確認してください');
-  if (!isOrderStatus(input.status) || input.status === 'paid' || input.status === 'canceled') {
+  if (!isOrderStatus(input.status) || input.status === 'paid' || input.status === 'review' || input.status === 'canceled') {
     throw new Error('変更先の状態を確認してください');
   }
   return { id: input.id, status: input.status };
