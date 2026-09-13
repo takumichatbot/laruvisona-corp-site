@@ -158,7 +158,10 @@ export async function POST(req: Request) {
       // Save customer ID if session has one (e.g. guest checkout)
       if (session.customer) profileUpdates['stripe_customer_id'] = session.customer as string;
 
-      await supabase.from('profiles').update(profileUpdates).eq('id', userId);
+      const profileSaved = await supabase.from('profiles').update(profileUpdates).eq('id', userId).select('id');
+      if (profileSaved.error || profileSaved.data?.length !== 1) {
+        return NextResponse.json({ error: 'Subscription could not be synchronized' }, { status: 500 });
+      }
 
       // サブスク開始メール
       if (adminCheck?.email) {
@@ -212,7 +215,10 @@ export async function POST(req: Request) {
       if (lines?.data?.[0]?.period?.end) {
         updates.contract_ends_at = new Date(lines.data[0].period.end! * 1000).toISOString();
       }
-      await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId);
+      const renewed = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId).select('id');
+      if (renewed.error || renewed.data?.length !== 1) {
+        return NextResponse.json({ error: 'Subscription payment could not be synchronized' }, { status: 500 });
+      }
       break;
     }
 
@@ -227,12 +233,15 @@ export async function POST(req: Request) {
       if (memberError) return NextResponse.json({ error: 'Member payment could not be synchronized' }, { status: 500 });
       if ((memberPastDue?.length || 0) > 0) break;
 
-      await supabase.from('profiles')
+      const failedUpdate = await supabase.from('profiles')
         .update({ subscription_status: 'past_due' })
-        .eq('stripe_subscription_id', subId);
+        .eq('stripe_subscription_id', subId).select('id');
+      if (failedUpdate.error || failedUpdate.data?.length !== 1) {
+        return NextResponse.json({ error: 'Subscription failure could not be synchronized' }, { status: 500 });
+      }
 
       // 支払い失敗メール
-      const { data: failedProfile } = await supabase.from('profiles').select('id').eq('stripe_subscription_id', subId).single();
+      const failedProfile = failedUpdate.data[0];
       if (failedProfile) {
         const { data: { user: failedUser } } = await supabase.auth.admin.getUserById(failedProfile.id);
         if (failedUser?.email) {
@@ -277,11 +286,14 @@ export async function POST(req: Request) {
         subscription_status: statusMap[sub.status] || sub.status,
       };
       if (updatedPlan) updates['plan'] = updatedPlan;
-      await supabase.from('profiles').update(updates).eq('stripe_subscription_id', sub.id);
+      const subscriptionUpdated = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', sub.id).select('id');
+      if (subscriptionUpdated.error || subscriptionUpdated.data?.length !== 1) {
+        return NextResponse.json({ error: 'Subscription could not be synchronized' }, { status: 500 });
+      }
 
       // プラン変更確認メール (アクティブ時のみ)
       if (updatedPlan && (sub.status === 'active' || sub.status === 'trialing')) {
-        const { data: upgProfile } = await supabase.from('profiles').select('id').eq('stripe_subscription_id', sub.id).single();
+        const upgProfile = subscriptionUpdated.data[0];
         if (upgProfile) {
           const { data: { user: upgUser } } = await supabase.auth.admin.getUserById(upgProfile.id);
           if (upgUser?.email) {
@@ -324,13 +336,18 @@ export async function POST(req: Request) {
 
       // stripe_customer_id は変わらないので先に取得
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
-      const { data: canceledProfile } = customerId
-        ? await supabase.from('profiles').select('id').eq('stripe_customer_id', customerId).single()
-        : { data: null };
+      const canceledLookup = customerId
+        ? await supabase.from('profiles').select('id').eq('stripe_customer_id', customerId).maybeSingle()
+        : { data: null, error: null };
+      if (canceledLookup.error) return NextResponse.json({ error: 'Subscription owner could not be read' }, { status: 500 });
+      const canceledProfile = canceledLookup.data;
 
-      await supabase.from('profiles')
+      const canceled = await supabase.from('profiles')
         .update({ subscription_status: 'canceled', stripe_subscription_id: null, plan: null })
-        .eq('stripe_subscription_id', sub.id);
+        .eq('stripe_subscription_id', sub.id).select('id');
+      if (canceled.error || canceled.data?.length !== 1) {
+        return NextResponse.json({ error: 'Subscription cancellation could not be synchronized' }, { status: 500 });
+      }
 
       // 解約メール
       if (canceledProfile) {
