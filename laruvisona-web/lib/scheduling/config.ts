@@ -22,6 +22,7 @@ export interface Service {
 }
 export interface ScheduleConfig {
   enabled: boolean;
+  paymentMode?: "onsite" | "prepay";
   weekly: Weekly;
   daysOff: string[];
   staff: Person[];
@@ -40,6 +41,7 @@ export const defaultWeekly = (): Weekly =>
 export function defaultSchedule(): ScheduleConfig {
   return {
     enabled: false,
+    paymentMode: "onsite",
     weekly: defaultWeekly(),
     daysOff: [],
     staff: [
@@ -170,7 +172,10 @@ export function parseSchedule(input: unknown): ScheduleConfig {
   const step = num(v.step, 5, 60);
   if (![5, 10, 15, 20, 30, 60].includes(step))
     throw Error("予約間隔が正しくありません");
+  if (v.paymentMode !== undefined && !["onsite", "prepay"].includes(String(v.paymentMode))) throw Error("お支払い方法を選び直してください");
+  if (v.paymentMode === "prepay" && services.some(s => s.price > 0 && s.price < 50)) throw Error("事前決済の料金は50円以上にしてください（無料メニューは0円）");
   return {
+    ...(v.paymentMode ? {paymentMode: v.paymentMode as "onsite" | "prepay"} : {}),
     enabled: v.enabled,
     weekly: weekly(v.weekly),
     daysOff: days(v.daysOff),

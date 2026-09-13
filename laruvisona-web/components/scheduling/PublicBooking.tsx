@@ -15,6 +15,7 @@ type Config = {
   staff: { id: string; name: string }[];
   advanceDays: number;
   cancelHours: number;
+  paymentMode?: "onsite" | "prepay";
 };
 export type Appointment = {
   id: string;
@@ -31,12 +32,15 @@ export type Appointment = {
   phone: string;
   status: string;
   revision: number;
+  payment_status?: "onsite" | "pending" | "paid" | "refund_pending" | "refunded" | "review";
+  hold_until?: string | null;
 };
 type Result = {
   notified?: boolean;
   config?: Config;
   slots?: { startsAt: string; endsAt: string }[];
   appointment?: Appointment;
+  url?: string | null;
   error?: string;
 };
 async function request(url: string, options?: RequestInit): Promise<Result> {
@@ -137,7 +141,7 @@ export default function PublicBooking({
               setUncertain(false);
               pending.current = false;
             }
-            sessionStorage.removeItem(storageKey);
+            if (restored.appointment.status !== "pending_payment") sessionStorage.removeItem(storageKey);
           } else {
             const f = JSON.parse(saved.fingerprint);
             if (active) {
@@ -296,6 +300,14 @@ export default function PublicBooking({
             new URLSearchParams({ booking: key.id, key: key.token }),
         );
       }
+      if (data.appointment?.status === "pending_payment" && intent.current) {
+        const paid = await request(base, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + intent.current.token },
+          body: JSON.stringify({ siteId, id: data.appointment.id, action: "checkout" }),
+        });
+        if (paid.url) { location.assign(paid.url); return; }
+      }
       sessionStorage.removeItem(storageKey);
       pending.current = false;
       setAppointment(data.appointment!);
@@ -377,7 +389,13 @@ export default function PublicBooking({
           <section className={`${s.card} ${s.success}`}>
             <Check size={32} />
             <h2>
-              {appointment.status === "canceled"
+              {appointment.payment_status === "review"
+                ? "決済状況をお店で確認しています"
+                : appointment.status === "pending_payment"
+                ? "お支払いを完了してください"
+                : appointment.status === "expired"
+                  ? "支払い期限が切れました"
+                : appointment.status === "canceled"
                 ? "キャンセルしました"
                 : "ご予約が確定しています"}
             </h2>
@@ -387,9 +405,20 @@ export default function PublicBooking({
             </p>
             <p>{appointment.name} 様</p>
             <p className={s.small}>
-              料金 {appointment.price.toLocaleString()}
-              円・お支払いはご来店時です。
+              料金 {appointment.price.toLocaleString()}円・
+              {appointment.payment_status === "paid" ? "お支払い済みです。" : appointment.payment_status === "refund_pending" ? "返金を確認しています。予約枠は確認完了まで保持します。" : appointment.payment_status === "refunded" ? "返金が完了しました。" : appointment.payment_status === "review" ? "返金状況をお店で確認しています。" : appointment.status === "pending_payment" ? "お支払い完了後に予約が確定します。" : "お支払いはご来店時です。"}
             </p>
+            {appointment.status === "pending_payment" && appointment.payment_status !== "review" && manage && <div className={s.section}>
+              <button className={`${s.button} ${s.wide}`} disabled={busy} onClick={async()=>{
+                setBusy(true);setError("");
+                try { const d=await request(base,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+manage.token},body:JSON.stringify({siteId,id:manage.id,action:"checkout"})}); if(d.url)location.assign(d.url); else { const r=await request(base,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+manage.token},body:JSON.stringify({siteId,id:manage.id,action:"payment-refresh"})}); setAppointment(r.appointment!); } } catch(e){setError((e as Error).message)} finally{setBusy(false)}
+              }}>Stripeで支払う</button>
+              <button className={`${s.secondary} ${s.wide}`} style={{marginTop:12}} disabled={busy} onClick={async()=>{
+                if(!confirm("支払い待ちを取り消して、この時間を空き枠に戻しますか？"))return;
+                setBusy(true);try{const d=await request(base,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+manage.token},body:JSON.stringify({siteId,id:manage.id,action:"payment-cancel"})});setAppointment(d.appointment!);sessionStorage.removeItem(storageKey)}catch(e){setError((e as Error).message)}finally{setBusy(false)}
+              }}>支払い待ちを取り消す</button>
+              <p className={s.small}>支払い画面を閉じた場合も、ここから同じ決済を再開できます。二重には作成しません。</p>
+            </div>}
             {notifyFailed && (
               <p role="status" className={s.notice}>
                 予約は確定しましたが、確認メールの送信は確認できていません。この確認リンクを必ず保存してください。
@@ -413,7 +442,7 @@ export default function PublicBooking({
             >
               {copied ? "コピーしました" : "確認リンクをコピー"}
             </button>
-            {appointment.status === "confirmed" && (
+            {appointment.status === "confirmed" && !["refund_pending", "review"].includes(appointment.payment_status || "") && (
               <div className={`${s.row} ${s.section}`}>
                 <button
                   className={s.button}
@@ -598,7 +627,7 @@ export default function PublicBooking({
                 <dd>
                   {(appointment?.price ?? service?.price ?? 0).toLocaleString()}
                   円<br />
-                  <small>来店時のお支払い</small>
+                  <small>{config.paymentMode === "prepay" && (service?.price||0)>0 ? "予約時にStripeでお支払い" : "来店時のお支払い"}</small>
                 </dd>
               </dl>
               <p className={s.small}>
@@ -615,7 +644,9 @@ export default function PublicBooking({
                     ? "同じ内容で予約結果を確認"
                     : changing
                       ? "この日時に変更する"
-                      : "この内容で予約を確定"}
+                      : config.paymentMode === "prepay" && (service?.price||0)>0
+                        ? "この時間を確保して支払いへ"
+                        : "この内容で予約を確定"}
               </button>
               {changing && (
                 <button

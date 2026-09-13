@@ -14,6 +14,11 @@ export function reply(body: unknown, status = 200) {
 export function fail(error: { code?: string; message?: string } | null) {
   const message = error?.message || "";
   const names: Record<string, [number, string]> = {
+    payment_pending: [409, "お支払い待ちです。決済または支払い待ちの取り消しへ進んでください"],
+    refund_in_progress: [409, "返金状態を確認しています。完了するまで予約枠を保持します"],
+    payment_unavailable: [409, "事前決済を利用できません。お店へお問い合わせください"],
+    payment_amount_invalid: [400, "事前決済の金額を確認してください"],
+    payment_expired: [409, "決済を開始できる時間を過ぎました。支払い待ちを取り消して予約し直してください"],
     quote_changed: [
       409,
       "メニューや料金の設定が変わりました。ページを読み直して内容をご確認ください",

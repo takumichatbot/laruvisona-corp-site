@@ -180,6 +180,7 @@ export default function ScheduleManager() {
   const [guided, setGuided] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
   const [accessFailed, setAccessFailed] = useState(false);
+  const [payments, setPayments] = useState<{available:boolean;connected:boolean;ready:boolean}|null>(null);
   const steps = ["営業時間", "担当者", "部屋・設備", "メニュー", "受付ルール"];
   const [tab, setTab] = useState<"agenda" | "settings" | "share">("agenda"),
     [loaded, setLoaded] = useState(false),
@@ -263,6 +264,22 @@ export default function ScheduleManager() {
       void load(siteId, dayRef.current, true);
     }
   }, [siteId, load]); // day changes reload only the agenda, preserving unsaved settings
+  useEffect(() => {
+    if (!siteId) return;
+    let active = true;
+    api(`/api/sites/${siteId}/schedule/payments`).then(x => { if(active)setPayments(x); }).catch(() => { if(active)setPayments(null); });
+    const result = new URL(window.location.href).searchParams.get("paymentConnect");
+    if (result) {
+      setMessage(result === "connected" ? "Stripeの接続を受け付けました。状態を確認しています。" : result === "canceled" ? "Stripeとの接続を取り消しました" : "Stripeとの接続を完了できませんでした");
+      const url = new URL(window.location.href); url.searchParams.delete("paymentConnect"); window.history.replaceState(null,"",url);
+    }
+    return () => { active=false; };
+  }, [siteId]);
+  async function connectStripe() {
+    setBusy(true);setError("");
+    try { const d=await api(`/api/sites/${siteId}/schedule/payments`,{method:"POST"}); if(d.url)location.assign(d.url); else throw Error("接続先を開けませんでした"); }
+    catch(e){setError((e as Error).message)} finally{setBusy(false)}
+  }
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -522,13 +539,14 @@ export default function ScheduleManager() {
                       <div>
                         <strong>{a.name} 様</strong>{" "}
                         <span className={s.status}>
-                          {a.status === "canceled" ? "キャンセル" : "確定"}
+                          {a.status === "canceled" ? "キャンセル" : a.status === "expired" ? "期限切れ" : a.status === "pending_payment" ? "支払い待ち" : "確定"}
                         </span>
                         <p>
                           {a.service_name}・{a.price.toLocaleString()}円<br />
                           {a.staff_name}
                           {a.resource_name ? " ／ " + a.resource_name : ""}
                         </p>
+                        {a.payment_status && a.payment_status !== "onsite" && <p>決済：{a.payment_status === "paid" ? "支払い済み" : a.payment_status === "refunded" ? "返金済み" : a.payment_status === "refund_pending" ? "返金処理中" : a.payment_status === "review" ? "Stripeで要確認" : "支払い待ち"}</p>}
                         <p>
                           <a href={"mailto:" + a.email}>{a.email}</a>
                           {a.phone && (
@@ -538,7 +556,7 @@ export default function ScheduleManager() {
                             </>
                           )}
                         </p>
-                        {a.status === "confirmed" && (
+                        {a.status === "confirmed" && !["refund_pending", "review"].includes(a.payment_status || "") && (
                           <div className={s.row}>
                             <button
                               className={s.secondary}
@@ -1049,6 +1067,12 @@ export default function ScheduleManager() {
                   オンライン予約を受け付ける
                 </label>
                 <div className={s.section}>
+                  {(payments?.available || config.paymentMode === "prepay") && <fieldset className={s.card}>
+                    <legend><strong>お支払い方法</strong></legend>
+                    <label className={s.check}><input type="radio" name="paymentMode" value="onsite" checked={(config.paymentMode||"onsite")==="onsite"} onChange={()=>patch({paymentMode:"onsite"})}/>来店時に支払う</label>
+                    <label className={s.check}><input type="radio" name="paymentMode" value="prepay" checked={config.paymentMode==="prepay"} disabled={!payments?.ready} onChange={()=>patch({paymentMode:"prepay"})}/>予約時にStripeで支払う</label>
+                    {!payments?.available ? <p className={s.small}>事前決済を現在確認できません。来店時払いへ変更できます。</p> : payments.ready ? <p className={s.small}>Stripeへの入金先を確認済みです。無料メニューは決済なしで確定します。</p> : <div><p className={s.small}>{payments.connected ? "Stripe側の本人確認または入金設定を完了してください。" : "売上を受け取るStripe口座を接続してください。"}</p><button type="button" className={s.secondary} disabled={busy} onClick={connectStripe}>{payments.connected ? "Stripeの設定を続ける" : "Stripeを接続する"}</button></div>}
+                  </fieldset>}
                   <label className={s.field}>
                     開始時刻の間隔
                     <select
@@ -1090,7 +1114,7 @@ export default function ScheduleManager() {
                   )}
                 </div>
                 <p className={s.small}>
-                  予約は即時確定・来店時のお支払いです。設定変更で既存の予約は変更されません。今後の予約がある担当者・設備・メニューは削除できません。
+                  {config.paymentMode === "prepay" ? "有料メニューはStripeでの支払い完了後に確定します。キャンセル時は返金状態を確認してから枠を解放します。" : "予約は即時確定・来店時のお支払いです。"} 設定変更で既存の予約は変更されません。今後の予約がある担当者・設備・メニューは削除できません。
                 </p>
                 <button
                   className={`${s.button} ${s.wide}`}

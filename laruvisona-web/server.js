@@ -168,6 +168,23 @@ app.prepare().then(() => {
     }
   });
 
+  // Durable payment holds/refunds: bounded reconciliation, never overlapping per process.
+  // Other instances are safe through database locks and provider idempotency keys.
+  let bookingPaymentRunning = false;
+  async function reconcileBookingPayments() {
+    if (dev || process.env.HP_BOOKING_PREPAY_ENABLED !== '1' || !process.env.ADMIN_SECRET || bookingPaymentRunning) return;
+    bookingPaymentRunning = true;
+    try {
+      const r = await fetch(`http://127.0.0.1:${port}/api/cron/booking-payments`, {
+        method:'POST', headers:{Authorization:`Bearer ${process.env.ADMIN_SECRET}`},
+        signal:AbortSignal.timeout(55000),
+      });
+      if (!r.ok) console.warn('[booking-payments] reconciliation incomplete:',r.status);
+    } catch {console.warn('[booking-payments] reconciliation unavailable');}
+    finally {bookingPaymentRunning=false;}
+  }
+  setInterval(reconcileBookingPayments,60000).unref();
+
   // 30秒ごとに全接続へ ping。前回 pong が無ければ切断（死んだ接続を掃除）。
   // 猶予は最大60秒なので Cloudflare 経由の pong 遅延では誤切断しない。
   const hbInterval = setInterval(() => {

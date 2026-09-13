@@ -35,15 +35,17 @@ export async function notifyAppointment(
         ? "予約確定"
         : event.action === "cancel"
           ? "予約キャンセル"
+          : event.action === "refund"
+            ? "予約キャンセル・返金完了"
           : "予約日時変更";
     const text = [
       `${site.name} — ${label}`,
       `${a.name} 様`,
       dateLabel(a.starts_at),
       `${a.service_name} ／ ${a.staff_name}`,
-      `料金 ${Number(a.price).toLocaleString()}円（来店時のお支払い）`,
+      `料金 ${Number(a.price).toLocaleString()}円（${a.payment_status === "paid" ? "お支払い済み" : a.payment_status === "refunded" ? "返金済み" : "来店時のお支払い"}）`,
       `予約番号 ${a.id}`,
-      event.action === "cancel"
+      event.action === "cancel" || event.action === "refund"
         ? "この予約はキャンセルされました。"
         : "ご予約が確定しています。変更・キャンセルは予約完了画面の確認リンクから行えます。リンクをお持ちでない場合はお店へ直接お問い合わせください。",
     ].join("\n");
