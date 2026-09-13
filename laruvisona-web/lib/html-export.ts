@@ -7,7 +7,18 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 15;
+export const EXPORT_VERSION = 16;
+
+
+function renderEditorialMark(value: unknown, index: number): string {
+  const text = String(value ?? '').trim();
+  // 既存テンプレートの絵文字は端末ごとに形が変わり、サイト全体の造形を崩す。
+  // 顧客が入力した短い文字記号は残し、絵文字・空欄だけを静かな連番へ置き換える。
+  if (!text || /\p{Extended_Pictographic}/u.test(text)) {
+    return `<span class="lhp-editorial-mark" aria-hidden="true">${String(index).padStart(2, '0')}</span>`;
+  }
+  return `<span class="lhp-editorial-mark lhp-editorial-mark-text">${escapeHtml(text)}</span>`;
+}
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string }): string {
   const d = block.data;
@@ -162,7 +173,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       return `
 <section data-lhp-anim class="lhp-section">
   <div class="lhp-three-col">
-    ${[1,2,3].map(n => `<div class="lhp-col lhp-col-card"><div class="lhp-col-icon">${raw(`col${n}Icon`)}</div><h3>${str(`col${n}Title`)}</h3><p>${str(`col${n}Text`)}</p></div>`).join('')}
+    ${[1,2,3].map(n => `<div class="lhp-col lhp-col-card"><div class="lhp-col-icon">${renderEditorialMark(d[`col${n}Icon`], n)}</div><h3>${str(`col${n}Title`)}</h3><p>${str(`col${n}Text`)}</p></div>`).join('')}
   </div>
 </section>`;
 
@@ -189,9 +200,9 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
   ${d['subtext'] ? `<p class="lhp-section-sub" style="text-align:center">${str('subtext')}</p>` : ''}
   <div class="lhp-grid lhp-grid-${cols}">
-    ${items.map(item => `
+    ${items.map((item, index) => `
     <div class="lhp-card">
-      <div class="lhp-card-icon">${escapeHtml(item.icon)}</div>
+      <div class="lhp-card-icon">${renderEditorialMark(item.icon, index + 1)}</div>
       <h3>${escapeHtml(item.title)}</h3>
       <p>${escapeHtml(item.description)}</p>
       ${item.price ? `<span class="lhp-price">${escapeHtml(item.price)}</span>` : ''}
@@ -324,7 +335,6 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   var KEY='laru_cart_'+sid, QB='width:36px;height:36px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:18px;font-weight:700;cursor:pointer;color:#0f172a';
   var products=[], chosen={}, cart={};
   try{cart=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
-  var EMO={'サービス':'⚙️','コース・講座':'📚','チケット':'🎟️','デジタルコンテンツ':'💾','その他':'📦'};
   function save(){try{localStorage.setItem(KEY,JSON.stringify(cart))}catch(e){}}
   function keyOf(p,v){return v?p+'::'+v:p;}
   function findP(id){for(var i=0;i<products.length;i++)if(products[i].id===id)return products[i];return null;}
@@ -344,7 +354,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       var hv=p.variants&&p.variants.length, vid=hv?chosen[p.id]:null, v=variant(p,vid);
       var pr=price(p,v), st=stock(p,v), inc=cart[keyOf(p.id,vid)]||0, sold=st<=0;
       var vhtml=hv?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+p.variants.map(function(o){var os=(o.stock!==null&&o.stock!==undefined&&o.stock<=0),sel=vid===o.id;return '<button data-v="'+p.id+'|'+o.id+'" '+(os?'disabled':'')+' style="font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:'+(os?'not-allowed':'pointer')+';border:'+(sel?'2px solid #0369a1':'1px solid #cbd5e1')+';background:'+(os?'#f1f5f9':sel?'#eff6ff':'#fff')+';color:'+(os?'#cbd5e1':sel?'#0369a1':'#334155')+'">'+esc(o.name)+(o.priceDelta?'（'+(o.priceDelta>0?'+':'')+yen(o.priceDelta)+'）':'')+'</button>';}).join('')+'</div>':'';
-      var img=(p.images&&p.images[0])?'<img src="'+esc(p.images[0])+'" alt="" style="width:100%;height:100%;object-fit:cover"/>':(EMO[p.category]||'📦');
+      var img=(p.images&&p.images[0])?'<img src="'+esc(p.images[0])+'" alt="" style="width:100%;height:100%;object-fit:cover"/>':'<span style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#64748b">商品画像</span>';
       var ctrl=sold?'<button disabled style="width:100%;background:#e2e8f0;color:#94a3b8;border:none;border-radius:12px;padding:12px;font-weight:700">売り切れ</button>':inc>0?'<div style="display:flex;align-items:center;justify-content:center;gap:14px"><button data-m="'+p.id+'" style="'+QB+'">−</button><span style="font-weight:800;font-size:18px;min-width:22px;text-align:center">'+inc+'</span><button data-p="'+p.id+'" style="'+QB+'">＋</button></div>':'<button data-add="'+p.id+'" style="width:100%;background:#0369a1;color:#fff;border:none;border-radius:12px;padding:12px;font-weight:700;cursor:pointer">カートに追加</button>';
       return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;display:flex;flex-direction:column"><div style="height:150px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden">'+img+'</div><div style="padding:16px;flex:1;display:flex;flex-direction:column"><span style="font-size:11px;background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:100px;font-weight:700;border:1px solid #bae6fd;align-self:flex-start;margin-bottom:8px">'+esc(p.category)+'</span><h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0 0 6px">'+esc(p.name)+'</h3>'+(p.description?'<p style="font-size:12px;color:#475569;margin:0 0 12px;flex:1">'+esc(p.description)+'</p>':'<div style="flex:1"></div>')+vhtml+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:20px;font-weight:800;color:#0369a1">'+yen(pr)+'</span>'+(st!==Infinity?'<span style="font-size:12px;color:'+(st<=5?'#dc2626':'#64748b')+';font-weight:600">残り'+st+'件</span>':'')+'</div>'+ctrl+'</div></div>';
     }).join('');
@@ -362,7 +372,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     if(!bar){bar=document.createElement('div');bar.id='lhp-shopbar-${bid}';bar.style.cssText='position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -2px 12px rgba(0,0,0,.08);padding:12px 24px;z-index:60;display:none';document.body.appendChild(bar);}
     if(tq<=0){bar.style.display='none';return;}
     bar.style.display='block';
-    bar.innerHTML='<div style="max-width:960px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap"><span style="font-weight:700;color:#0f172a">🛒 カート '+tq+'点</span><span style="font-size:20px;font-weight:800;color:#0369a1;margin-left:auto">'+yen(tp)+'</span><button id="lhp-co-${bid}" style="background:#0f172a;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-weight:700;cursor:pointer">レジに進む</button></div>';
+    bar.innerHTML='<div style="max-width:960px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap"><span style="font-weight:700;color:#0f172a">カート '+tq+'点</span><span style="font-size:20px;font-weight:800;color:#0369a1;margin-left:auto">'+yen(tp)+'</span><button id="lhp-co-${bid}" style="background:#0f172a;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-weight:700;cursor:pointer">レジに進む</button></div>';
     document.getElementById('lhp-co-${bid}').onclick=function(){var btn=this;btn.disabled=true;btn.textContent='処理中...';fetch('/api/shop/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,items:it.map(function(x){return{productId:x.p.id,variantId:x.v?x.v.id:undefined,quantity:x.q}}),successUrl:location.href.split('?')[0]+'?payment=success',cancelUrl:location.href.split('?')[0]})}).then(function(r){return r.json()}).then(function(d){if(d.url){try{localStorage.removeItem(KEY)}catch(e){}location.href=d.url;}else{btn.disabled=false;btn.textContent='レジに進む';alert(d.error||'決済を開始できませんでした');}}).catch(function(){btn.disabled=false;btn.textContent='レジに進む';alert('通信エラー');});};
   }
 })();
@@ -383,7 +393,6 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   var box=document.getElementById('lhp-item-box-${bid}'); if(!box)return;
   var PID=${js(pid)}, BUY=${js(rawValue('buyText') || '購入する')}, QB='width:40px;height:40px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:20px;font-weight:700;cursor:pointer;color:#0f172a';
   var p=null,vid=null,qty=1;
-  var EMO={'サービス':'⚙️','コース・講座':'📚','チケット':'🎟️','デジタルコンテンツ':'💾','その他':'📦'};
   function yen(n){return '¥'+n.toLocaleString();}
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function variant(){if(!p.variants)return null;for(var i=0;i<p.variants.length;i++)if(p.variants[i].id===vid)return p.variants[i];return null;}
@@ -398,7 +407,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   function render(){
     var v=variant(),pr=price(),st=stock(),sold=st<=0,hv=p.variants&&p.variants.length;
     var vhtml=hv?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px">'+p.variants.map(function(o){var os=(o.stock!==null&&o.stock!==undefined&&o.stock<=0),sel=vid===o.id;return '<button data-v="'+o.id+'" '+(os?'disabled':'')+' style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:'+(os?'not-allowed':'pointer')+';border:'+(sel?'2px solid #0369a1':'1px solid #cbd5e1')+';background:'+(os?'#f1f5f9':sel?'#eff6ff':'#fff')+';color:'+(os?'#cbd5e1':sel?'#0369a1':'#334155')+'">'+esc(o.name)+(o.priceDelta?'（'+(o.priceDelta>0?'+':'')+yen(o.priceDelta)+'）':'')+'</button>';}).join('')+'</div>':'';
-    var img=(p.images&&p.images[0])?'<img src="'+esc(p.images[0])+'" alt="" style="width:100%;height:100%;object-fit:cover"/>':(EMO[p.category]||'📦');
+    var img=(p.images&&p.images[0])?'<img src="'+esc(p.images[0])+'" alt="" style="width:100%;height:100%;object-fit:cover"/>':'<span style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#64748b">商品画像</span>';
     box.innerHTML='<div style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:#fff"><div style="height:200px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);display:flex;align-items:center;justify-content:center;font-size:56px;overflow:hidden">'+img+'</div><div style="padding:24px"><h3 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 8px">'+esc(p.name)+'</h3>'+(p.description?'<p style="font-size:14px;color:#475569;margin:0 0 16px;line-height:1.6">'+esc(p.description)+'</p>':'')+vhtml+'<div style="font-size:28px;font-weight:800;color:#0369a1;margin-bottom:8px">'+yen(pr)+'</div>'+(st!==Infinity?'<p style="font-size:13px;color:'+(st<=5?'#dc2626':'#64748b')+';margin:0 0 16px">残り'+st+'件</p>':'<div style="height:8px"></div>')+(sold?'<button disabled style="width:100%;background:#e2e8f0;color:#94a3b8;border:none;border-radius:12px;padding:14px;font-weight:700">売り切れ</button>':'<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><button id="qm-${bid}" style="'+QB+'">−</button><span style="font-weight:800;font-size:18px;min-width:24px;text-align:center">'+qty+'</span><button id="qp-${bid}" style="'+QB+'">＋</button></div><button id="buy-${bid}" style="width:100%;background:#0369a1;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;cursor:pointer">'+esc(BUY)+'</button>')+'</div></div>';
     box.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){vid=b.getAttribute('data-v');qty=1;render();};});
     var qm=document.getElementById('qm-${bid}'),qp=document.getElementById('qp-${bid}'),buy=document.getElementById('buy-${bid}');
@@ -422,7 +431,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     <div id="lhp-mg-content-${bid}" style="display:none"></div>
     <!-- 認証UI（非会員） -->
     <div id="lhp-mg-auth-${bid}" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;text-align:center">
-      <div style="font-size:32px;margin-bottom:8px">🔒</div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.18em;color:#64748b;margin-bottom:12px">会員限定</div>
       <p style="color:#475569;font-size:14px;margin:0 0 16px">${str('teaser')}</p>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
         <button type="button" id="lhp-mg-tab-login-${bid}" style="padding:8px 16px;border-radius:10px;border:none;background:#0369a1;color:#fff;font-weight:700;font-size:13px;cursor:pointer">ログイン</button>
@@ -590,7 +599,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     try{
       var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:v('lhp-mf-name'),email:v('lhp-mf-email'),phone:v('lhp-mf-phone'),message:v('lhp-mf-message')})});
       var res=await r.json();
-      if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。'}</div>';${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${js(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}}
+      if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '送信が完了しました。2営業日以内にご連絡いたします。'}</div>';${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${js(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}}
       else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
     }catch(e){btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
   };
@@ -655,7 +664,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:nm,email:em,phone:cv('phone'),message:ms})});
       var d=await r.json();
       if(d.ok){
-        f.innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '✅ 送信完了！2営業日以内にご連絡いたします。'}</div>';
+        f.innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '送信が完了しました。2営業日以内にご連絡いたします。'}</div>';
         ${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${js(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}
       }
       else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。再度お試しください。';}
@@ -705,7 +714,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   var s=document.createElement('div');
   s.id='larubot-widget';
   s.style='position:fixed;bottom:24px;${raw('position')==='bottom-left'?'left':'right'}:24px;z-index:9999;';
-  s.innerHTML='<div style="width:56px;height:56px;border-radius:50%;background:${raw('primaryColor')};display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.2);">🤖</div>';
+  s.innerHTML='<div role="button" aria-label="チャットで相談する" tabindex="0" style="width:56px;height:56px;border-radius:50%;background:${raw('primaryColor')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;letter-spacing:.08em;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.2);">相談</div>';
   document.body.appendChild(s);
 })();
 </script>`;
@@ -825,7 +834,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       </div>
     </div>
     <div id="lhp-bk-empty-${bkid}" style="display:none;text-align:center;color:#94a3b8;padding:24px">現在予約可能な枠がありません</div>
-    <div id="lhp-bk-success-${bkid}" style="display:none" class="lhp-form-success">✅ ご予約を受け付けました！確認メールをお送りします。<br><a id="lhp-bk-gcal-${bkid}" href="#" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:.875rem;color:#1d4ed8;font-weight:700;text-decoration:underline">📅 Googleカレンダーに追加</a></div>
+    <div id="lhp-bk-success-${bkid}" style="display:none" class="lhp-form-success">ご予約を受け付けました。確認メールをお送りします。<br><a id="lhp-bk-gcal-${bkid}" href="#" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-size:.875rem;color:#1d4ed8;font-weight:700;text-decoration:underline">Googleカレンダーに追加</a></div>
   </div>
 </section>
 <script>
@@ -882,7 +891,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     btn.classList.add('lhp-bk-sel');
     state.sel=s;
     var cf=$id('lhp-bk-confirm');
-    if(cf)cf.textContent='📅 '+dateLabel(dateKey(s.datetime))+' '+timeLabel(s.datetime)+(s.label?' — '+s.label:'')+' で予約します';
+    if(cf)cf.textContent=dateLabel(dateKey(s.datetime))+' '+timeLabel(s.datetime)+(s.label?' — '+s.label:'')+' で予約します';
     show('lhp-bk-form',true);
   }
   $id('lhp-bk-submit').addEventListener('click',function(){
@@ -1030,7 +1039,7 @@ ${d['stickyCta'] ? `
         message:val('service')+'\\n'+val('date')+' '+val('time')
       })});
       var d=await r.json();
-      if(r.ok&&d.ok){f.innerHTML='<div class="lhp-form-success">✅ 予約リクエストを受け付けました。折り返しご連絡します。</div>';}
+      if(r.ok&&d.ok){f.innerHTML='<div class="lhp-form-success">予約リクエストを受け付けました。折り返しご連絡します。</div>';}
       else{btn.textContent=label;btn.disabled=false;note.textContent=(d&&d.error)?d.error:'送信に失敗しました。時間をおいて、もう一度お試しください。';}
     }catch(err){btn.textContent=label;btn.disabled=false;note.textContent='送信に失敗しました。通信状況をご確認のうえ、もう一度お試しください。';}
   });
@@ -1114,7 +1123,7 @@ ${d['stickyCta'] ? `
     try{
       var r=await fetch('/api/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',email:f.email.value})});
       var d=await r.json();
-      if(d.ok){f.innerHTML='<div class="lhp-form-success">✅ 登録完了！メールをご確認ください。</div>';}
+      if(d.ok){f.innerHTML='<div class="lhp-form-success">登録が完了しました。メールをご確認ください。</div>';}
       else{btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent=d.error||'エラーが発生しました。';}
     }catch(err){btn.textContent='${str('buttonText')}';btn.disabled=false;note.textContent='送信に失敗しました。';}
   });
@@ -1444,7 +1453,7 @@ a{color:inherit;text-decoration:none}
 .lhp-col h3{font-size:1.1rem;font-weight:700;margin-bottom:8px}
 .lhp-col p{color:#555;font-size:.9rem;white-space:pre-line}
 .lhp-col-card{text-align:center}
-.lhp-col-icon{font-size:2.5rem;margin-bottom:12px}
+.lhp-col-icon{margin-bottom:18px}
 .lhp-divider{padding:16px 24px;max-width:1100px;margin:0 auto}
 .lhp-divider-label{display:flex;align-items:center;gap:16px;color:#888;font-size:.85rem}
 .lhp-divider-label::before,.lhp-divider-label::after{content:'';flex:1;height:1px;background:#e5e7eb}
@@ -1458,7 +1467,9 @@ a{color:inherit;text-decoration:none}
 @media(max-width:768px){.lhp-grid-2,.lhp-grid-3{grid-template-columns:1fr}}
 .lhp-card{border:var(--lhp-card-bd);border-radius:var(--lhp-r);padding:var(--lhp-card-pd);text-align:center;transition:box-shadow .2s;background:var(--lhp-card-bg,#fff)}
 .lhp-card:hover{box-shadow:var(--lhp-card-sh)}
-.lhp-card-icon{font-size:2rem;margin-bottom:12px}
+.lhp-card-icon{margin-bottom:18px}
+.lhp-editorial-mark{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:24px;padding:0 8px;border:1px solid color-mix(in srgb,var(--lhp-accent,#2563eb) 38%,transparent);border-radius:999px;color:var(--lhp-accent,#2563eb);font-size:.68rem;font-weight:800;letter-spacing:.12em;line-height:1}
+.lhp-editorial-mark-text{letter-spacing:.04em}
 .lhp-card h3{font-size:1.1rem;font-weight:700;margin-bottom:8px}
 .lhp-card p{color:#555;font-size:.875rem;margin-bottom:12px}
 .lhp-price{background:#eff6ff;color:#1d4ed8;padding:4px 12px;border-radius:9999px;font-size:.875rem;font-weight:700}
@@ -1839,7 +1850,7 @@ window.addEventListener('popstate',function(){
   if(sessionStorage.getItem(key)===pw)return;
   var ov=document.createElement('div');
   ov.style.cssText='position:fixed;inset:0;background:#0f172a;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
-  ov.innerHTML='<div style="background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:40px 32px;max-width:360px;width:90%;text-align:center"><div style="font-size:2rem;margin-bottom:12px">🔒</div><h2 style="color:#fff;font-size:1.25rem;font-weight:700;margin:0 0 8px">このサイトはパスワード保護されています</h2><p style="color:#94a3b8;font-size:.875rem;margin:0 0 24px">パスワードを入力してください</p><input id="lhp-pw-in" type="password" placeholder="パスワード" style="width:100%;box-sizing:border-box;background:#0f172a;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:12px 16px;color:#fff;font-size:1rem;outline:none;margin-bottom:12px"><button id="lhp-pw-btn" style="width:100%;background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px;font-size:1rem;font-weight:700;cursor:pointer">入る</button><p id="lhp-pw-err" style="color:#f87171;font-size:.8rem;margin:8px 0 0;display:none">パスワードが違います</p></div>';
+  ov.innerHTML='<div style="background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:40px 32px;max-width:360px;width:90%;text-align:center"><div style="font-size:.68rem;font-weight:800;letter-spacing:.18em;color:#94a3b8;margin-bottom:14px">閲覧制限</div><h2 style="color:#fff;font-size:1.25rem;font-weight:700;margin:0 0 8px">このサイトはパスワード保護されています</h2><p style="color:#94a3b8;font-size:.875rem;margin:0 0 24px">パスワードを入力してください</p><input id="lhp-pw-in" type="password" placeholder="パスワード" style="width:100%;box-sizing:border-box;background:#0f172a;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:12px 16px;color:#fff;font-size:1rem;outline:none;margin-bottom:12px"><button id="lhp-pw-btn" style="width:100%;background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px;font-size:1rem;font-weight:700;cursor:pointer">入る</button><p id="lhp-pw-err" style="color:#f87171;font-size:.8rem;margin:8px 0 0;display:none">パスワードが違います</p></div>';
   document.body.appendChild(ov);
   document.getElementById('lhp-pw-btn').onclick=check;
   document.getElementById('lhp-pw-in').addEventListener('keydown',function(e){if(e.key==='Enter')check();});

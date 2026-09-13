@@ -57,7 +57,7 @@ export default function PublishedSite({ html, style }: { html: string; style?: R
       const bar = document.createElement('div');
       bar.setAttribute('role', 'status');
       bar.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#059669;color:#fff;padding:12px 24px;border-radius:12px;font-weight:700;font-size:.95rem;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:90vw';
-      bar.textContent = '✅ ご購入ありがとうございます！確認メールをお送りしました。';
+      bar.textContent = 'ご購入ありがとうございます。確認メールをお送りしました。';
       document.body.appendChild(bar);
       setTimeout(() => bar.remove(), 8000);
     }
