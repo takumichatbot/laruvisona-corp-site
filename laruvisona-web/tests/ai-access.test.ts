@@ -23,6 +23,11 @@ test('AI入力は実バイト上限とJSONオブジェクト形を確認する',
   assert.equal((await readAiJson(new Request('https://example.test',{method:'POST',body:'[]'}))).ok,false);
   const parsed=await readAiJson(new Request('https://example.test',{method:'POST',body:'{"message":"ok"}'}));
   assert.equal(parsed.ok&&parsed.data.message,'ok');
+  const stream=new ReadableStream<Uint8Array>({start(c){c.enqueue(new TextEncoder().encode('{"message":"'));c.enqueue(new TextEncoder().encode('長'.repeat(20)));c.close();}});
+  const chunked=new Request('https://example.test',{method:'POST',body:stream,duplex:'half'} as RequestInit&{duplex:string});
+  const limited=await readAiJson(chunked,20);
+  assert.equal(limited.ok,false);
+  assert.equal(!limited.ok&&limited.response.status,413);
 });
 
 test('外部AIを呼ぶ利用者APIは共有利用枠を通る',()=>{
