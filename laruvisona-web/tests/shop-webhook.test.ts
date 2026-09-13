@@ -7,7 +7,7 @@ import { cartMetadata } from '../lib/shop-order.ts';
 
 const session = {
   id: 'cs_shop_1', mode: 'payment', payment_status: 'paid', amount_total: 2400,
-  currency: 'jpy', livemode: false, customer_details: { name: '購入者', email: 'buyer@example.invalid' },
+  currency: 'jpy', livemode: false, payment_intent: 'pi_shop_1', customer_details: { name: '購入者', email: 'buyer@example.invalid' },
   metadata: { kind: 'shop', laru_site_id: 'site-1', ...cartMetadata([{ id: 'p-1', q: 2 }]) },
 } as unknown as Stripe.Checkout.Session;
 
@@ -31,6 +31,9 @@ function fixture(account = 'acct_owner') {
           };
           return chain;
         },
+      };
+      if (table === 'hp_orders') return {
+        update() { return { eq() { return this; }, select: async () => ({ data: [{ id: 'order-1' }], error: null }) }; },
       };
       throw new Error(`unexpected table: ${table}`);
     },

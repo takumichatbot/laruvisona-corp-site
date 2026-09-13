@@ -27,7 +27,11 @@ const STATUS: Record<Order['status'], { label: string; cls: string }> = {
   shipped: { label: '発送済', cls: 'bg-amber-100 text-amber-700' },
   completed: { label: '完了', cls: 'bg-green-100 text-green-700' },
   canceled: { label: 'キャンセル', cls: 'bg-gray-100 text-gray-500' },
+  refund_pending: { label: '返金確認中', cls: 'bg-amber-100 text-amber-800' },
+  refunded: { label: '返金済', cls: 'bg-gray-100 text-gray-600' },
+  refund_review: { label: '返金を要確認', cls: 'bg-red-100 text-red-700' },
 };
+const REFUNDABLE = new Set<OrderStatus>(['paid','review','shipped','completed','refund_pending','refund_review']);
 
 function fmt(iso: string) {
   const d = new Date(iso);
@@ -43,6 +47,7 @@ export default function OrdersPage() {
   const [loaded, setLoaded] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [savingId, setSavingId] = useState('');
+  const [refundConfirmId, setRefundConfirmId] = useState('');
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
@@ -98,12 +103,37 @@ export default function OrdersPage() {
     }
   };
 
+  const refundOrder = async () => {
+    const id=refundConfirmId;
+    if(!id)return;
+    setSavingId(id);setRefundConfirmId('');setErr('');
+    try{
+      const response=await fetch('/api/orders/refund',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
+      const body=await response.json().catch(()=>({})) as {order?:{id:string;status:OrderStatus};error?:string};
+      if(!response.ok||!body.order)throw Error(body.error||'返金を開始できませんでした');
+      setOrders(prev=>prev.map(order=>order.id===body.order?.id?{...order,status:body.order.status}:order));
+    }catch(error){setErr((error as Error).message||'返金を開始できませんでした');}
+    finally{setSavingId('');}
+  };
+
   const addr = (s: Shipping) => [s.postal_code && `〒${s.postal_code}`, s.state, s.city, s.line1, s.line2].filter(Boolean).join(' ');
 
   if (!loaded) return <div className="min-h-screen bg-sky-50 flex items-center justify-center"><div className="text-gray-500 text-sm">読み込み中...</div></div>;
 
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
+      {refundConfirmId&&(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="refund-title">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 id="refund-title" className="font-bold text-gray-900">全額返金しますか？</h2>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">Stripeへ全額返金を依頼します。発送済み商品の在庫は自動では戻りません。</p>
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={()=>setRefundConfirmId('')} className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-bold text-gray-600">戻る</button>
+              <button type="button" onClick={refundOrder} className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white">全額返金する</button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-screen-lg mx-auto px-4 py-3 flex items-center gap-4">
           <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-800 text-sm">← ダッシュボード</Link>
@@ -164,6 +194,11 @@ export default function OrdersPage() {
                     {nextOrderStatuses(o.status).map(status => <option key={status} value={status}>{STATUS[status].label}</option>)}
                   </select>
                   {savingId === o.id && <span role="status" className="text-xs text-gray-500">保存しています</span>}
+                  {REFUNDABLE.has(o.status)&&savingId!==o.id&&(
+                    <button type="button" onClick={()=>setRefundConfirmId(o.id)} className="ml-auto rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-50">
+                      {o.status==='refund_pending'||o.status==='refund_review'?'返金状態を確認':'全額返金'}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

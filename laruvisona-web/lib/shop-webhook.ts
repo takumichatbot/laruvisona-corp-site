@@ -70,6 +70,13 @@ export async function commitShopCheckout(
   });
   if (commitError || !committed || typeof committed !== 'object') throw new Error('shop_database');
   const result = committed as { created?: boolean; status?: string; id?: string };
+  const intentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+  if (!result.id || !intentId) throw new Error('shop_intent');
+  const linked = await db.from('hp_orders').update({
+    stripe_account_id: accountId,
+    stripe_payment_intent_id: intentId,
+  }).eq('id', result.id).eq('site_id', siteId).select('id');
+  if (linked.error || !linked.data || linked.data.length !== 1) throw new Error('shop_database');
   if (!result.created) return result;
 
   const settings = (site.settings_json as Record<string, unknown>) || {};

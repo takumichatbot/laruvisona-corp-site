@@ -13,22 +13,31 @@ create table if not exists public.hp_orders (
   id uuid default gen_random_uuid() primary key,
   site_id uuid references public.sites(id) on delete cascade not null,
   stripe_session_id text unique,
+  stripe_account_id text,
+  stripe_payment_intent_id text,
+  refund_id text,
+  refund_started_at timestamptz,
   customer_name text,
   customer_email text,
   customer_phone text,
   amount integer not null default 0,           -- 合計金額（円）
   items jsonb not null default '[]'::jsonb,      -- [{name, variant, quantity, unit}]
   shipping jsonb,                                -- {name, postal_code, state, city, line1, line2, country, phone}
-  status text not null default 'paid' check (status in ('paid','review','shipped','completed','canceled')),
+  status text not null default 'paid' check (status in ('paid','review','shipped','completed','canceled','refund_pending','refunded','refund_review')),
   note text,
   created_at timestamptz not null default now()
 );
+
+alter table public.hp_orders add column if not exists stripe_account_id text;
+alter table public.hp_orders add column if not exists stripe_payment_intent_id text;
+alter table public.hp_orders add column if not exists refund_id text;
+alter table public.hp_orders add column if not exists refund_started_at timestamptz;
 
 alter table public.hp_orders enable row level security;
 
 alter table public.hp_orders drop constraint if exists hp_orders_status_check;
 alter table public.hp_orders add constraint hp_orders_status_check
-  check (status in ('paid','review','shipped','completed','canceled'));
+  check (status in ('paid','review','shipped','completed','canceled','refund_pending','refunded','refund_review'));
 
 drop policy if exists "Users see own orders" on public.hp_orders;
 drop policy if exists "Users update own orders" on public.hp_orders;
@@ -57,9 +66,16 @@ set search_path = public
 as $$
 begin
   if new.status = old.status then return new; end if;
+  if (new.status in ('refund_pending','refunded','refund_review') or old.status in ('refund_pending','refund_review'))
+     and coalesce(auth.role(), '') <> 'service_role' then
+    raise exception 'refund_requires_service_role';
+  end if;
   if not (
-    (old.status in ('paid','review') and new.status in ('shipped','completed')) or
-    (old.status = 'shipped' and new.status = 'completed')
+    (old.status in ('paid','review') and new.status in ('shipped','completed','refund_pending')) or
+    (old.status = 'shipped' and new.status in ('completed','refund_pending')) or
+    (old.status = 'completed' and new.status = 'refund_pending') or
+    (old.status = 'refund_pending' and new.status in ('refunded','refund_review')) or
+    (old.status = 'refund_review' and new.status in ('refund_pending','refunded'))
   ) then
     raise exception 'invalid_order_transition';
   end if;

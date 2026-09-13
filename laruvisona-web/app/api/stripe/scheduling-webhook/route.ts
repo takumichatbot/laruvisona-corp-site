@@ -6,6 +6,7 @@ import { merchantAccountEvent } from '@/lib/scheduling/merchant';
 import type Stripe from 'stripe';
 import { commitShopCheckout } from '@/lib/shop-webhook';
 import { readRequestText } from '@/lib/contact-contract';
+import { syncShopRefund } from '@/lib/shop-refunds';
 export const dynamic='force-dynamic';
 export async function POST(req:Request){
  const secret=process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
@@ -25,6 +26,10 @@ export async function POST(req:Request){
    try{await commitShopCheckout(session,e.account,db,getStripe());return reply({received:true});}
    catch{return reply({error:'Shop order could not be saved'},503);}
   }
+ }
+ if(['refund.created','refund.updated','refund.failed'].includes(e.type)){
+  try{if(await syncShopRefund(e.data.object as Stripe.Refund,e.account,db,getStripe()))return reply({received:true});}
+  catch{return reply({error:'Shop refund could not be saved'},503);}
  }
  let query=db.from('hp_booking_payments').select('site_id,appointment_id').eq('account_id',e.account);
  if(e.type==='checkout.session.completed'||e.type==='checkout.session.expired'){

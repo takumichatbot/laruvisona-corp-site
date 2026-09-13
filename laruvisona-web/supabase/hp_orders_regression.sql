@@ -72,6 +72,12 @@ begin
   exception when raise_exception then
     if sqlerrm <> 'invalid_order_transition' then raise; end if;
   end;
+  begin
+    update public.hp_orders set status='refund_pending' where stripe_session_id='cs_first';
+    raise exception 'owner marked refund pending without Stripe';
+  exception when raise_exception then
+    if sqlerrm <> 'refund_requires_service_role' then raise; end if;
+  end;
 end $$;
 reset role;
-\echo 'ショップ注文: 10項目 OK'
+\echo 'ショップ注文: 11項目 OK'

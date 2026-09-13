@@ -7,6 +7,7 @@ import { Resend } from 'resend';
 import type Stripe from 'stripe';
 import { readRequestText } from '@/lib/contact-contract';
 import { commitShopCheckout } from '@/lib/shop-webhook';
+import { syncShopRefund } from '@/lib/shop-refunds';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: 'HP単体 (¥999/月)',
@@ -41,6 +42,16 @@ export async function POST(req: Request) {
   }
 
   const supabase = await createServiceClient();
+
+  if (['refund.created', 'refund.updated', 'refund.failed'].includes(event.type)) {
+    try {
+      if (await syncShopRefund(event.data.object as Stripe.Refund, null, supabase, stripe)) {
+        return NextResponse.json({ received: true });
+      }
+    } catch {
+      return NextResponse.json({ error: 'Shop refund could not be saved' }, { status: 500 });
+    }
+  }
 
   switch (event.type) {
     case 'checkout.session.completed': {
