@@ -36,7 +36,7 @@ test('OGP画像も専用ドメインから配信する', async () => {
   assert.equal(res.headers.get('x-middleware-rewrite'), 'https://laruhp.com/laruHP/opengraph-image');
 });
 test('素材は配信し、サイトマップはサービスのURLだけを載せる', async () => {
-  for (const path of ['/lp/film/flow-mobile.mp4', '/studio/references/cafe-v1.webp', '/salon/hero-900.avif', '/_next/image']) assert.equal((await proxy(req(path))).headers.get('x-middleware-next'), '1');
+  for (const path of ['/lp/film/flow-mobile.mp4', '/studio/references/cafe-v1.webp', '/salon/hero-900.avif', '/indexnow-key.txt', '/_next/image']) assert.equal((await proxy(req(path))).headers.get('x-middleware-next'), '1');
   const sitemap = await (await proxy(req('/sitemap.xml'))).text();
   for (const path of LARUHP_PUBLIC_PATHS) assert.match(sitemap, new RegExp(`<loc>https://laruhp\\.com${path.replaceAll('/', '\\/')}</loc>`));
   assert.doesNotMatch(sitemap, /opengraph-image/);
