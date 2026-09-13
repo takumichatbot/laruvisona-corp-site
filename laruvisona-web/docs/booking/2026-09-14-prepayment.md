@@ -62,6 +62,6 @@ SQLだけを戻すと新しいコードが参照する表・列を失うため�
 - `supabase/hp_scheduling_payments.sql` を本番へ適用し、`hp_scheduling_payments_state_check.sql` の最終行99が `true` であることを確認した。
 - 本番StripeにConnect webhookを登録し、上記8イベントを購読した。署名付きの非更新プローブは本番URLからHTTP 200を返した。署名シークレットの値は記録していない。
 - Render Cron `laru-hp-booking-payment-reconcile` を毎分実行に設定した。手動実行と自動実行はいずれも `checked: 0, failed: 0` で完了した。RenderのCronには月額最低1ドルの料金がかかる。
-- `HP_BOOKING_PREPAY_ENABLED=1` を設定した。既存店舗の支払方法は `onsite` のままで、店舗がStripe接続と事前決済を明示的に選んだ場合だけ切り替わる。
+- 利用者向けの `HP_BOOKING_PREPAY_ENABLED` は無効のままにした。実店舗の接続、実カード、返金、通知までを管理下で完走してから有効にする。既存店舗の支払方法は `onsite` のままである。
 
 ここまででコード、DB、Webhook、定期照合の本番基盤は稼働している。実店舗の接続口座、実カードでの支払い、Checkout中断・期限切れ、キャンセル、実返金、通知Webhook再送は未確認である。最初の店舗でこれらを通し、入金先と通知を確認するまで一般提供完了とは扱わない。
