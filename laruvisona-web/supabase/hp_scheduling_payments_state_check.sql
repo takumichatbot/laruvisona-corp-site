@@ -66,6 +66,7 @@ constraints as (
     count(*) filter (where c.conrelid=o.appointments and c.contype='c' and pg_get_constraintdef(c.oid) like '%refund_pending%' and pg_get_constraintdef(c.oid) like '%refunded%' and pg_get_constraintdef(c.oid) like '%review%') as payment_status,
     count(*) filter (where c.conrelid=o.accounts and c.contype='p' and pg_get_constraintdef(c.oid)='PRIMARY KEY (user_id)') as account_pk,
     count(*) filter (where c.conrelid=o.accounts and c.contype='u' and pg_get_constraintdef(c.oid)='UNIQUE (account_id)') as account_unique,
+    count(*) filter (where c.conrelid=o.accounts and c.contype='f' and c.confrelid=to_regclass('auth.users') and c.confdeltype='c' and pg_get_constraintdef(c.oid) like 'FOREIGN KEY (user_id)%') as account_user_fk,
     count(*) filter (where c.conrelid=o.payments and c.contype='p' and pg_get_constraintdef(c.oid)='PRIMARY KEY (appointment_id)') as payment_pk,
     count(*) filter (where c.conrelid=o.payments and c.contype='u' and pg_get_constraintdef(c.oid) in ('UNIQUE (session_id)','UNIQUE (intent_id)')) as payment_unique,
     count(*) filter (where c.conrelid=o.payments and c.contype='f' and c.confrelid=o.appointments and c.confdeltype='c' and pg_get_constraintdef(c.oid) like 'FOREIGN KEY (site_id, appointment_id)%') as tenant_fk
@@ -109,7 +110,7 @@ checks as (
     (6,'列','hp_payment_accounts の列と型','7',(select account_columns::text from colchk),(select account_columns=7 from colchk)),
     (7,'列','hp_booking_payments の列と型','13',(select payment_columns::text from colchk),(select payment_columns=13 from colchk)),
     (8,'制約','予約状態と決済状態のCHECK','2',(select (appointment_status+payment_status)::text from constraints),(select appointment_status=1 and payment_status=1 from constraints)),
-    (9,'制約','口座の主キーとaccount_id一意','2',(select (account_pk+account_unique)::text from constraints),(select account_pk=1 and account_unique=1 from constraints)),
+    (9,'制約','口座の主キー・account_id一意・退会時削除','3',(select (account_pk+account_unique+account_user_fk)::text from constraints),(select account_pk=1 and account_unique=1 and account_user_fk=1 from constraints)),
     (10,'制約','決済の主キー・session/intent一意','3',(select (payment_pk+payment_unique)::text from constraints),(select payment_pk=1 and payment_unique=2 from constraints)),
     (11,'境界','決済はsite_id+appointment_idで予約に従属','1',(select tenant_fk::text from constraints),(select tenant_fk=1 from constraints)),
     (12,'索引','active行をlast_checked_at順に拾う部分索引','1',(select ok::text from idx),(select ok=1 from idx)),

@@ -171,6 +171,9 @@ try:
  subprocess.run([binary('psql'),'-X','-h',str(WORK),'-d','postgres','-v','ON_ERROR_STOP=1','-q','-f',str(ROOT/'supabase/hp_scheduling_payments.sql')],check=True,stdout=subprocess.DEVNULL)
  state=payment_state_check()
  check('決済SQLの読み取り確認が全項目一致',state_row(state,99)=='t')
+ retiring='66666666-6666-4666-8666-666666666666'
+ sql(f"insert into auth.users(id) values('{retiring}');insert into hp_payment_accounts(user_id,account_id,livemode) values('{retiring}','acct_retiring',false);delete from auth.users where id='{retiring}'")
+ check('退会した利用者のStripe接続情報が残らない',sql(f"select count(*) from hp_payment_accounts where user_id='{retiring}'")=='0')
  check('既存の来店時払い予約を保ったまま決済機能を追加',sql(f"select status||':'||payment_status from hp_appointments where id='{before['id']}'")=='confirmed:onsite')
  sql('truncate hp_booking_events,hp_booking_allocations,hp_appointments,hp_booking_calendars cascade;')
  run()

@@ -5,7 +5,7 @@ alter table public.hp_appointments add constraint hp_appointments_status_check c
 alter table public.hp_appointments add column if not exists payment_status text not null default 'onsite' check(payment_status in ('onsite','pending','paid','refund_pending','refunded','review'));
 alter table public.hp_appointments add column if not exists hold_until timestamptz;
 create table if not exists public.hp_payment_accounts (
- user_id uuid primary key references auth.users(id), account_id text unique,
+ user_id uuid primary key references auth.users(id) on delete cascade, account_id text unique,
  livemode boolean, state_hash text, state_expires timestamptz, state_site uuid,
  updated_at timestamptz not null default now()
 );
