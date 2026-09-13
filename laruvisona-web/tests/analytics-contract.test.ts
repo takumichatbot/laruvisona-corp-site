@@ -41,7 +41,7 @@ test('クリックはページ全体比率、スクロールは同じ閲覧の�
 test('APIは署名・公開サイト・端末絞り込み・DB失敗を扱う',()=>{
   const heatmap=fs.readFileSync(new URL('../app/api/heatmap/route.ts',import.meta.url),'utf8');const pageview=fs.readFileSync(new URL('../app/api/pageview/route.ts',import.meta.url),'utf8');
   assert.match(heatmap,/verifyAnalyticsSite/);assert.match(heatmap,/\.eq\('published',true\)/);assert.match(heatmap,/viewport_w',768/);assert.match(heatmap,/result\.error/);assert.match(heatmap,/session_id/);
-  assert.match(pageview,/parsePageview/);assert.match(pageview,/result\.error/);assert.match(pageview,/rateLimit/);
+  assert.match(pageview,/parsePageview/);assert.match(pageview,/result\.error/);assert.match(pageview,/claimPublicRate/);
 });
 
 test('SQLは公開ロールから計測表と加算RPCを閉じる',()=>{

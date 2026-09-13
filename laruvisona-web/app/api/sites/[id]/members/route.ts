@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import crypto from 'crypto';
-import { rateLimit } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 import { escapeInviteHtml, readSiteMemberBody, siteMemberEmail, siteMemberSiteId } from '@/lib/site-member-contract';
 
 type Params = { params: Promise<{ id: string }> };
@@ -37,9 +37,12 @@ export async function POST(req: Request, { params }: Params) {
   catch { return NextResponse.json({ error: 'サイトを確認してください' }, { status: 400 }); }
   if ('error' in access) return access.error;
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: '招待メールが設定されていません' }, { status: 503 });
-  if (!rateLimit(`site-member-invite:${access.user.id}`, 20, 60 * 60 * 1000).ok) {
+  const service = await createServiceClient();
+  const rate = await claimPublicRate(service, 'site-member-invite', access.user.id, 20);
+  if (rate === 'limited') {
     return NextResponse.json({ error: '招待回数が多すぎます。しばらくしてからお試しください。' }, { status: 429 });
   }
+  if (rate === 'unavailable') return NextResponse.json({ error: '招待受付を確認できません' }, { status: 503 });
 
   let email: string;
   try {
@@ -49,7 +52,6 @@ export async function POST(req: Request, { params }: Params) {
   } catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
   if (email === access.user.email?.trim().toLowerCase()) return NextResponse.json({ error: '所有者自身は招待できません' }, { status: 409 });
 
-  const service = await createServiceClient();
   const { data: existing, error: existingError } = await service.from('site_members')
     .select('id, status').eq('site_id', access.siteId).eq('invited_email', email).maybeSingle();
   if (existingError) return NextResponse.json({ error: '招待状態を確認できませんでした' }, { status: 500 });

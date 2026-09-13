@@ -20,21 +20,22 @@ test('rateLimit は上限を超えたら止める', () => {
 
 test('会員ログインはIP単位とアカウント単位の両方で絞っている', () => {
   const src = read('app/api/hp/members/login/route.ts');
-  assert.match(src, /member-login-ip:/);
-  assert.match(src, /member-login-acct:/);
+  assert.match(src, /claimPublicRate\(supabase, 'member-login-ip'/);
+  assert.match(src, /claimPublicRate\(supabase, 'member-login-account'/);
   assert.match(src, /status: 429/);
-  assert.match(src, /resetRateLimit/, 'ログイン成功でカウントを戻すこと');
+  assert.match(src, /rate === 'unavailable'|ipRate === 'unavailable'/, '共有制限を読めないとき通さないこと');
 });
 
 test('会員登録・パスワード再設定にもレート制限がある', () => {
-  assert.match(read('app/api/hp/members/signup/route.ts'), /rateLimit\(`member-signup:/);
-  assert.match(read('app/api/hp/members/reset/route.ts'), /rateLimit\(`member-reset-submit:/);
+  assert.match(read('app/api/hp/members/signup/route.ts'), /claimPublicRate\(supabase, 'member-signup'/);
+  assert.match(read('app/api/hp/members/reset/route.ts'), /claimPublicRate\(supabase, 'member-reset-submit'/);
 });
 
 test('決済と予約のエンドポイントにもレート制限がある', () => {
-  assert.match(read('app/api/shop/checkout/route.ts'), /rateLimit\(`shop-checkout:/);
-  assert.match(read('app/api/stripe/buy/route.ts'), /rateLimit\(`stripe-buy:/);
-  assert.match(read('app/api/hp/booking/reserve/route.ts'), /rateLimit\(`booking-reserve:/);
+  assert.match(read('app/api/shop/checkout/route.ts'), /claimPublicRate\(service, 'shop-checkout'/);
+  assert.match(read('app/api/stripe/buy/route.ts'), /claimPublicRate\(createServiceClient\(\), 'stripe-buy'/);
+  assert.match(read('app/api/hp/booking/reserve/route.ts'), /claimPublicRate\(supabase, 'booking-reserve'/);
+  assert.match(read('app/api/hp/scheduling/route.ts'), /claimPublicRate\(db,"schedule-write"/);
 });
 
 test('決済の戻り先はクライアントの言い値をそのまま使わない', () => {

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { signResetToken } from '@/lib/member-auth';
-import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 import { hpMemberEmail, hpMemberSiteId, readHpMemberBody } from '@/lib/hp-member-contract';
 import { singleLine } from '@/lib/contact-contract';
 
@@ -13,11 +14,6 @@ function admin() {
 }
 
 export async function POST(req: Request) {
-  // 送信の乱発・メール列挙を防ぐ（応答は常に ok なので回数だけ制限する）
-  if (!rateLimit(`member-reset:${clientIp(req)}`, 5, 60 * 60 * 1000).ok) {
-    return NextResponse.json({ ok: true });
-  }
-
   let siteId: string, emailNorm: string;
   try {
     const body = await readHpMemberBody(req);
@@ -26,6 +22,8 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ ok: true }); }
 
   const supabase = admin();
+  const rate = await claimPublicRate(supabase, 'member-reset-mail', `${siteId}:${clientIp(req)}`, 5);
+  if (rate !== 'allowed') return NextResponse.json({ ok: true });
   const { data: member } = await supabase
     .from('hp_members')
     .select('id, password_hash')

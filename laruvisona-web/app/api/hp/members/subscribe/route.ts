@@ -5,6 +5,8 @@ import { verifyMemberToken } from '@/lib/member-auth';
 import { collectPriceIds } from '@/lib/site-blocks';
 import { safeReturnUrl } from '@/lib/site-origin';
 import { parseHpMemberSubscribe, readHpMemberBody } from '@/lib/hp-member-contract';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +25,9 @@ export async function POST(req: Request) {
   if (!payload || payload.sid !== siteId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
 
   const supabase = admin();
+  const rate = await claimPublicRate(supabase, 'member-subscribe', `${payload.mid}:${clientIp(req)}`, 10);
+  if (rate === 'limited') return NextResponse.json({ error: '少し待ってからお試しください' }, { status: 429 });
+  if (rate === 'unavailable') return NextResponse.json({ error: '決済受付を確認できません' }, { status: 503 });
   const { data: member, error: memberError } = await supabase.from('hp_members').select('id, email, stripe_customer_id, status').eq('id', payload.mid).eq('site_id', siteId).maybeSingle();
   if (memberError) return NextResponse.json({ error: '会員状態を確認できませんでした' }, { status: 500 });
   if (!member || member.status !== 'active') return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });

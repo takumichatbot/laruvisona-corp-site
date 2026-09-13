@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient,createServiceClient } from '@/lib/supabase/server';
 import { aggregateScrollSessions,normalizeHeatmapClicks,parseHeatmapEvents,readAnalyticsJson,verifyAnalyticsSite } from '@/lib/analytics-contract';
-import { clientIp,rateLimit } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 
 export async function POST(req:Request){
   const {searchParams}=new URL(req.url);const slug=searchParams.get('slug')||'';const token=req.headers.get('x-laruhp-analytics')||'';
   if(!slug||slug.length>160||!verifyAnalyticsSite(slug,token))return NextResponse.json({error:'Invalid request'},{status:400});
-  if(!rateLimit(`heatmap:${slug}:${clientIp(req)}`,120,3600000).ok)return NextResponse.json({error:'Too many requests'},{status:429});
   let events;try{events=parseHeatmapEvents(await readAnalyticsJson(req));}catch{return NextResponse.json({error:'Invalid body'},{status:400});}
   const db=createServiceClient();
+  const rate=await claimPublicRate(db,'heatmap',`${slug}:${clientIp(req)}`,120);
+  if(rate==='limited')return NextResponse.json({error:'Too many requests'},{status:429});
+  if(rate==='unavailable')return NextResponse.json({error:'Analytics unavailable'},{status:503});
   const site=await db.from('sites').select('id').eq('slug',slug).eq('published',true).single();
   if(site.error||!site.data)return NextResponse.json({error:'Site not found'},{status:404});
   const now=new Date().toISOString();const saved=await db.from('heatmap_events').insert(events.map(e=>({site_id:site.data.id,...e,created_at:now})));

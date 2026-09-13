@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import type Stripe from 'stripe';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 import { safeReturnUrl } from '@/lib/site-origin';
 import { cartMetadata, normalizeShopCart } from '@/lib/shop-order';
 import { readContactBody } from '@/lib/contact-contract';
@@ -39,13 +40,15 @@ export async function POST(req: Request) {
   if (!validOrderId(siteId)) return NextResponse.json({ error: 'サイトを確認してください' }, { status: 400 });
 
   // 決済セッションの大量生成でStripe側を荒らされないように
-  const rl = rateLimit(`shop-checkout:${clientIp(req)}`, 20, 60 * 60 * 1000);
-  if (!rl.ok) {
+  const service = await createServiceClient();
+  const rate = await claimPublicRate(service, 'shop-checkout', `${siteId}:${clientIp(req)}`, 20);
+  if (rate === 'limited') {
     return NextResponse.json(
       { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+      { status: 429 },
     );
   }
+  if (rate === 'unavailable') return NextResponse.json({ error: '購入受付を確認できません' }, { status: 503 });
 
   // 単品 → items 形式に正規化
   let reqItems;
@@ -57,7 +60,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }
 
-  const service = await createServiceClient();
   if (process.env.HP_SHOP_PAYMENTS_ENABLED !== '1' || !stripeConnectAvailable()) {
     return NextResponse.json({ error: 'オンライン決済は現在準備中です' }, { status: 503 });
   }

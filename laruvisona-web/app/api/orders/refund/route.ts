@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { validOrderId } from '@/lib/order-contract';
 import { readContactBody } from '@/lib/contact-contract';
-import { rateLimit } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 import { getStripe } from '@/lib/stripe';
 import { refundShopOrder } from '@/lib/shop-refunds';
 
@@ -13,8 +13,10 @@ export async function POST(req:Request){
   let id='';
   try{id=String((await readContactBody(req,10_000) as {id?:unknown}).id||'');}catch{return NextResponse.json({error:'注文を確認してください'},{status:400});}
   if(!validOrderId(id))return NextResponse.json({error:'注文を確認してください'},{status:400});
-  if(!rateLimit(`shop-refund:${user.id}`,10,60_000).ok)return NextResponse.json({error:'少し待ってからお試しください'},{status:429});
   const db=createServiceClient();
+  const rate=await claimPublicRate(db,'shop-refund',user.id,10,60);
+  if(rate==='limited')return NextResponse.json({error:'少し待ってからお試しください'},{status:429});
+  if(rate==='unavailable')return NextResponse.json({error:'返金受付を確認できません'},{status:503});
   const found=await db.from('hp_orders').select('id,site_id,stripe_session_id,stripe_account_id,stripe_payment_intent_id,amount,status,refund_started_at,sites!inner(user_id)').eq('id',id).eq('sites.user_id',user.id).maybeSingle();
   if(found.error)return NextResponse.json({error:'注文情報を確認できませんでした'},{status:503});
   if(!found.data)return NextResponse.json({error:'注文が見つかりません'},{status:404});

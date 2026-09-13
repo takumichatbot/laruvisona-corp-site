@@ -2,7 +2,8 @@ import { bookingReturnUrl, paymentService, paymentsAvailable } from "@/lib/sched
 import { merchantStatus } from "@/lib/scheduling/merchant";
 import { notifyAppointment } from "@/lib/scheduling/notify";
 import { createServiceClient } from "@/lib/supabase/server";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/rate-limit";
+import { claimPublicRate } from "@/lib/public-rate-limit";
 import {
   parseSchedule,
   uuidPattern,
@@ -25,9 +26,10 @@ export async function GET(req: Request) {
     service = q.get("serviceId");
   if (!uuidPattern.test(siteId) || (day !== null && !validDay(day)))
     return reply({ error: "日時・サイトを確認してください" }, 400);
-  const limit = rateLimit("schedule-read:" + clientIp(req), 120, 60000);
-  if (!limit.ok) return reply({ error: "少し待ってからお試しください" }, 429);
   const db = createServiceClient();
+  const limit = await claimPublicRate(db,"schedule-read",`${siteId}:${clientIp(req)}`,120,60);
+  if (limit === "limited") return reply({ error: "少し待ってからお試しください" }, 429);
+  if (limit === "unavailable") return reply({ error: "予約受付を確認できません" }, 503);
   const { data: site, error: se } = await db
     .from("sites")
     .select("name,published")
@@ -103,12 +105,6 @@ export async function GET(req: Request) {
   });
 }
 export async function POST(req: Request) {
-  const limit = rateLimit("schedule-write:" + clientIp(req), 30, 3600000);
-  if (!limit.ok)
-    return reply(
-      { error: "送信が続いています。時間をおいてお試しください" },
-      429,
-    );
   let b;
   try {
     b = await readBody(req);
@@ -118,6 +114,9 @@ export async function POST(req: Request) {
   if (typeof b.siteId !== "string" || !uuidPattern.test(b.siteId))
     return reply({ error: "サイトを確認してください" }, 400);
   const db = createServiceClient();
+  const limit = await claimPublicRate(db,"schedule-write",`${b.siteId}:${clientIp(req)}`,30);
+  if (limit === "limited") return reply({ error: "送信が続いています。時間をおいてお試しください" },429);
+  if (limit === "unavailable") return reply({ error: "予約受付を確認できません" },503);
   if (b.action === "recover") {
     if (
       typeof b.clientKey !== "string" ||

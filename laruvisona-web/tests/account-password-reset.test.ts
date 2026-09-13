@@ -14,7 +14,9 @@ test('再設定リンクはSupabase Authが発行し固定鍵や全利用者列�
 });
 
 test('登録有無を公開応答で区別せず回数と入力を制限する', () => {
-  assert.match(request, /account-reset:/);
+  assert.match(request, /'account-reset'/);
+  assert.match(request, /claimPublicRate/);
+  assert.match(request, /readContactBody\(req, 4096\)/);
   assert.match(request, /return NextResponse\.json\(\{ ok: true \}\)/);
   assert.doesNotMatch(request, /登録されていません/);
 });

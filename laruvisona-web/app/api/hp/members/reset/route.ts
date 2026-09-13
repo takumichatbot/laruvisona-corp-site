@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyResetToken, hashPassword, signMemberToken, passwordFingerprint } from '@/lib/member-auth';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 import { parseHpMemberReset, readHpMemberBody } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
@@ -17,18 +18,18 @@ export async function POST(req: Request) {
   const { token, password } = input;
 
   // 再設定トークンの総当たり対策
-  const rl = rateLimit(`member-reset-submit:${clientIp(req)}`, 10, 60 * 60 * 1000);
-  if (!rl.ok) {
+  const supabase = admin();
+  const rate = await claimPublicRate(supabase, 'member-reset-submit', clientIp(req), 10);
+  if (rate === 'limited') {
     return NextResponse.json(
       { error: '試行回数が多すぎます。しばらくしてからお試しください。' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+      { status: 429 },
     );
   }
+  if (rate === 'unavailable') return NextResponse.json({ error: '再設定を確認できませんでした' }, { status: 503 });
 
   const payload = verifyResetToken(token);
   if (!payload) return NextResponse.json({ error: 'リンクが無効か期限切れです。もう一度お試しください。' }, { status: 400 });
-
-  const supabase = admin();
 
   // 現在のパスワードハッシュと突き合わせる。既に再設定済みならトークンは無効
   // （＝リンクは一度きり。期限内でも使い回せない）。

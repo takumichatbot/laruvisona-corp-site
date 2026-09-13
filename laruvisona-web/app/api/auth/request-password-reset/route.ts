@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
-import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
+import { readContactBody } from '@/lib/contact-contract';
 
 export async function POST(req: Request) {
-  if (!rateLimit(`account-reset:${clientIp(req)}`, 5, 60 * 60 * 1000).ok) return NextResponse.json({ ok: true });
-  const { email: rawEmail } = await req.json().catch(() => ({}));
+  const supabase = await createServiceClient();
+  const rate = await claimPublicRate(supabase, 'account-reset', clientIp(req), 5);
+  if (rate !== 'allowed') return NextResponse.json({ ok: true });
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 4096); }
+  catch { return NextResponse.json({ ok: true }); }
+  const rawEmail = body.email;
   const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return NextResponse.json({ ok: true });
@@ -13,7 +20,6 @@ export async function POST(req: Request) {
 
   const origin = (process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp').replace(/\/$/, '');
   const redirectTo = `${origin}/api/auth/callback?next=${encodeURIComponent('/laruHP/auth/update-password')}`;
-  const supabase = await createServiceClient();
   const generated = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
   const link = generated.data?.properties?.action_link;
   // 登録有無と外部メール障害を応答から判別できないよう、公開応答は常に同じにする。

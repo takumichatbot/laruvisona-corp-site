@@ -8,9 +8,11 @@ export async function claimPublicRate(
   scope: string,
   identity: string,
   limit: number,
+  windowSeconds = 3600,
 ): Promise<PublicRateResult> {
   const secret = process.env.PUBLIC_RATE_LIMIT_SECRET || process.env.ADMIN_SECRET || '';
-  if (!secret || !/^[a-z0-9-]{1,40}$/.test(scope) || !identity || limit < 1 || limit > 1000) {
+  if (!secret || !/^[a-z0-9-]{1,40}$/.test(scope) || !identity || limit < 1 || limit > 1000
+    || windowSeconds < 60 || windowSeconds > 86_400) {
     return 'unavailable';
   }
   const keyHash = createHmac('sha256', secret).update(`${scope}\0${identity}`).digest('hex');
@@ -18,6 +20,7 @@ export async function claimPublicRate(
     p_key_hash: keyHash,
     p_scope: scope,
     p_limit: limit,
+    p_window_seconds: windowSeconds,
   });
   if (result.error || typeof result.data !== 'boolean') return 'unavailable';
   return result.data ? 'allowed' : 'limited';

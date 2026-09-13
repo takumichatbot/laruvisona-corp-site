@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { billingAppOrigin } from '@/lib/billing-url';
+import { claimPublicRate } from '@/lib/public-rate-limit';
+import { readContactBody } from '@/lib/contact-contract';
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   hp: process.env.STRIPE_PRICE_ID,
@@ -31,7 +33,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { siteId, plan = 'hp', billing = 'monthly' } = await req.json().catch(() => ({}));
+  let input: Record<string, unknown>;
+  try { input = await readContactBody(req, 10_000); }
+  catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  const { siteId, plan: rawPlan = 'hp', billing: rawBilling = 'monthly' } = input;
+  if (typeof rawPlan !== 'string' || typeof rawBilling !== 'string') return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+  const plan = rawPlan;
+  const billing = rawBilling;
+  if (billing !== 'monthly' && billing !== 'annual') return NextResponse.json({ error: 'Invalid billing' }, { status: 400 });
   const isAnnual = billing === 'annual';
   const origin = billingAppOrigin();
 
@@ -45,6 +54,10 @@ export async function POST(req: Request) {
     if (!owned.data) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     ownedSiteId = owned.data.id;
   }
+
+  const rate = await claimPublicRate(createServiceClient(), 'plan-checkout', user.id, 10);
+  if (rate === 'limited') return NextResponse.json({ error: '少し待ってからお試しください' }, { status: 429 });
+  if (rate === 'unavailable') return NextResponse.json({ error: '決済受付を確認できません' }, { status: 503 });
 
   const resolvedPriceId = isAnnual ? PLAN_ANNUAL_PRICE_MAP[plan] : PLAN_PRICE_MAP[plan];
   // 月払い価格へのフォールバックはしない（表示と請求の食い違い＝誤課金を防ぐ）

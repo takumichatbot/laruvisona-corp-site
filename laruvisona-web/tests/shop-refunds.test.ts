@@ -49,7 +49,7 @@ test('返金APIは所有者境界をサービス側でも絞り、画面はAPI�
   const page=readFileSync(new URL('../app/laruHP/orders/page.tsx',import.meta.url),'utf8');
   assert.match(api,/sites!inner\(user_id\)/);
   assert.match(api,/\.eq\('sites\.user_id',user\.id\)/);
-  assert.match(api,/rateLimit\(`shop-refund:/);
+  assert.match(api,/claimPublicRate\(db,'shop-refund'/);
   assert.match(page,/fetch\('\/api\/orders\/refund'/);
   assert.match(page,/if\(!response\.ok\|\|!body\.order\)throw/);
   assert.match(page,/発送済み商品の在庫は自動では戻りません/);

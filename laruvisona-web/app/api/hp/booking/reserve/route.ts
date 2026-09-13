@@ -4,7 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe';
 import { finalizeBooking } from '@/lib/booking-finalize';
 import { safeOrigin } from '@/lib/site-origin';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
+import { readContactBody } from '@/lib/contact-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,23 +24,30 @@ interface Slot { id: string; datetime: string; duration: number; label: string; 
 interface BookingConfig { slots?: Slot[]; prepayEnabled?: boolean; prepayAmount?: number }
 
 export async function POST(req: Request) {
-  const { siteId, slotId, name, email, phone, service, _hp } = await req.json().catch(() => ({}));
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 20_000); }
+  catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  const { siteId, slotId, name, email, phone, service, _hp } = body;
 
   if (_hp) return NextResponse.json({ ok: true }); // ハニーポット
-  if (!siteId || !slotId || !name || !email) {
+  if (typeof siteId !== 'string' || typeof slotId !== 'string' || typeof name !== 'string'
+    || typeof email !== 'string' || name.length > 100 || email.length > 254
+    || (phone != null && (typeof phone !== 'string' || phone.length > 40))
+    || (service != null && (typeof service !== 'string' || service.length > 200))) {
     return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
   }
 
   // 予約枠を荒らされない/通知メールを大量に飛ばされないように
-  const rl = rateLimit(`booking-reserve:${clientIp(req)}`, 10, 60 * 60 * 1000);
-  if (!rl.ok) {
+  const supabase = admin();
+  const rate = await claimPublicRate(supabase, 'booking-reserve', `${siteId}:${clientIp(req)}`, 10);
+  if (rate === 'limited') {
     return NextResponse.json(
       { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+      { status: 429 },
     );
   }
+  if (rate === 'unavailable') return NextResponse.json({ error: '予約受付を確認できません' }, { status: 503 });
 
-  const supabase = admin();
   const { data: site } = await supabase
     .from('sites')
     .select('name, data, slug, custom_domain')

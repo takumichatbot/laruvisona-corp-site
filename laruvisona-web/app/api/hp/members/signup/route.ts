@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { hashPassword, signMemberToken } from '@/lib/member-auth';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 import { parseHpMemberSignup, readHpMemberBody } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
@@ -18,14 +19,15 @@ export async function POST(req: Request) {
   const { siteId, email, password, name } = input;
 
   // 大量の会員アカウント作成でDBを埋められないように
-  const rl = rateLimit(`member-signup:${clientIp(req)}`, 5, 60 * 60 * 1000);
-  if (!rl.ok) {
+  const supabase = admin();
+  const rate = await claimPublicRate(supabase, 'member-signup', `${siteId}:${clientIp(req)}`, 5);
+  if (rate === 'limited') {
     return NextResponse.json(
       { error: '登録の試行が多すぎます。しばらくしてからお試しください。' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+      { status: 429 },
     );
   }
-  const supabase = admin();
+  if (rate === 'unavailable') return NextResponse.json({ error: '登録受付を確認できませんでした' }, { status: 503 });
   const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', siteId).eq('published', true).maybeSingle();
   if (siteError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 500 });
   if (!site) return NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 });

@@ -1,19 +1,26 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/rate-limit';
 import { safeReturnUrl } from '@/lib/site-origin';
+import { readContactBody } from '@/lib/contact-contract';
+import { createServiceClient } from '@/lib/supabase/server';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 
 export async function POST(req: Request) {
-  const { priceId, siteUrl } = await req.json().catch(() => ({})) as { priceId?: string; siteUrl?: string };
-  if (!priceId) return NextResponse.json({ error: 'priceId required' }, { status: 400 });
+  let input: { priceId?: string; siteUrl?: string };
+  try { input = await readContactBody(req, 10_000) as typeof input; }
+  catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  const { priceId, siteUrl } = input;
+  if (!priceId || !/^price_[A-Za-z0-9]+$/.test(priceId)) return NextResponse.json({ error: 'priceId required' }, { status: 400 });
 
-  const rl = rateLimit(`stripe-buy:${clientIp(req)}`, 20, 60 * 60 * 1000);
-  if (!rl.ok) {
+  const rate = await claimPublicRate(createServiceClient(), 'stripe-buy', clientIp(req), 20);
+  if (rate === 'limited') {
     return NextResponse.json(
       { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+      { status: 429 },
     );
   }
+  if (rate === 'unavailable') return NextResponse.json({ error: '購入受付を確認できません' }, { status: 503 });
 
   if (!process.env.STRIPE_SECRET_KEY) {
     console.error('[stripe/buy] STRIPE_SECRET_KEY is not set');
