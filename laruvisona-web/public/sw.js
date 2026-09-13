@@ -37,12 +37,12 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   const data = e.data?.json() ?? {};
   e.waitUntil(
-    self.registration.showNotification(data.title || 'Bridge', {
+    self.registration.showNotification(data.title || 'LARU HP', {
       body: data.body || 'タスクが完了しました',
       icon: '/laruhp-icon-192.png',
       badge: '/laruhp-icon-192.png',
-      tag: data.tag || 'bridge',
-      data: { url: data.url || '/laruHP/bridge' },
+      tag: data.tag || 'laruhp',
+      data: { url: data.url || '/laruHP/dashboard' },
       vibrate: [100, 50, 200],
     })
   );
@@ -50,11 +50,14 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = e.notification.data?.url || '/laruHP/bridge';
+  const url = e.notification.data?.url || '/laruHP/dashboard';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(wins => {
       const match = wins.find(w => w.url.includes('/laruHP'));
-      if (match) { match.focus(); match.postMessage({ type: 'notification_click', url }); }
+      if (match) {
+        return (typeof match.navigate === 'function' ? match.navigate(url) : Promise.resolve(match))
+          .then(client => (client || match).focus());
+      }
       else self.clients.openWindow(url);
     })
   );

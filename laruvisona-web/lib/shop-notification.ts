@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceClient } from '@/lib/supabase/server';
 import { escapeContactHtml, singleLine } from './contact-contract';
+import { sendUserPush } from './push-notification';
 
 type OrderItem = { name?: unknown; quantity?: unknown };
 
@@ -49,7 +50,14 @@ export async function deliverShopOrderNotification(
     const saved = await db.from('hp_orders').update({ notified_at: new Date().toISOString(), notification_last_error: null })
       .eq('id', order.id).is('notified_at', null).select('id');
     // 別の処理が先に同じ注文を完了していても成功として扱う。
-    if (!saved.error && saved.data?.length === 1) return true;
+    if (!saved.error && saved.data?.length === 1) {
+      await sendUserPush(site.user_id, {
+        title: `${site.name}に新しい注文`,
+        body: `${items.length}種類・合計${Number(order.amount || 0).toLocaleString()}円の注文を確認してください。`,
+        url: '/laruHP/orders', tag: `order-${order.id}`,
+      }, db);
+      return true;
+    }
     const current = await db.from('hp_orders').select('notified_at').eq('id', order.id).maybeSingle();
     return !current.error && Boolean(current.data?.notified_at);
   } catch {

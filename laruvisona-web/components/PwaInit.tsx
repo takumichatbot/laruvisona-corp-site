@@ -30,7 +30,7 @@ export default function PwaInit() {
  * 通知の購読。必ず利用者の操作（ボタン押下）から呼ぶこと。
  * 勝手に呼ばない。
  */
-export async function requestPushPermission(): Promise<'granted' | 'denied' | 'unsupported'> {
+export async function requestPushPermission(): Promise<'granted' | 'denied' | 'unsupported' | 'failed'> {
   if (!('serviceWorker' in navigator) || !('Notification' in window) || !('PushManager' in window)) {
     return 'unsupported';
   }
@@ -42,13 +42,32 @@ export async function requestPushPermission(): Promise<'granted' | 'denied' | 'u
       userVisibleOnly: true,
       applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     });
-    await fetch('/api/pwa', {
+    const response = await fetch('/api/pwa', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription: sub }),
     });
+    if (!response.ok) {
+      await sub.unsubscribe().catch(() => false);
+      return 'failed';
+    }
     return 'granted';
   } catch {
-    return 'denied';
+    return 'failed';
   }
+}
+
+export async function disablePushNotifications(): Promise<boolean> {
+  if (!('serviceWorker' in navigator)) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    const response = await fetch('/api/pwa', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub?.endpoint || '' }),
+    });
+    if (!response.ok) return false;
+    if (sub) await sub.unsubscribe();
+    return true;
+  } catch { return false; }
 }

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { safeFetch } from '@/lib/safe-fetch';
 import { escapeContactHtml, parseContactSubmission, readContactBody, singleLine } from '@/lib/contact-contract';
+import { sendUserPush } from '@/lib/push-notification';
 
 function getAdminClient() {
   return createClient(
@@ -320,5 +321,10 @@ export async function POST(req: Request) {
     await supabase.from('contacts').update({ extra_fields: notificationFields }).eq('id', contactRow.id);
   }
 
+  await sendUserPush(site.user_id, {
+    title: `${site.name}に${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}`,
+    body: `${name} 様から届きました。内容を確認してください。`,
+    url: '/laruHP/contacts', tag: `contact-${contactRow.id}`,
+  }, supabase);
   return NextResponse.json({ ok: true, notified: deliveryState.owner_email === 'success' });
 }

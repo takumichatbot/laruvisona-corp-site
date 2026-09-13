@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { createServiceClient } from "@/lib/supabase/server";
 import { dateLabel } from "./config";
+import { sendUserPush } from "../push-notification";
 /** Saved events retain the exact booking revision. Separate receipts avoid resending to a successful recipient. */
 export async function notifyAppointment(
   siteId: string,
@@ -81,7 +82,13 @@ export async function notifyAppointment(
       .eq("id", event.id)
       .eq("site_id", siteId)
       .select("id");
-    return !marked.error && marked.data?.length === 1;
+    const completed = !marked.error && marked.data?.length === 1;
+    if (completed) await sendUserPush(site.user_id, {
+      title: `${site.name} — ${label}`,
+      body: `${a.name} 様・${dateLabel(a.starts_at)}`,
+      url: '/laruHP/scheduling', tag: `booking-${event.id}`,
+    }, db);
+    return completed;
   } catch {
     return false;
   }

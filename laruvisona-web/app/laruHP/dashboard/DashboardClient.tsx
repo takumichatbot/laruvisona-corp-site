@@ -10,6 +10,7 @@ import CommandPalette from '@/components/CommandPalette';
 import OnboardingTour from '@/components/OnboardingTour';
 import { getSiteLimit } from '@/lib/plan-limits';
 import { track } from '@/lib/analytics';
+import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
 
 interface SiteSettings {
   larubot?: boolean;
@@ -339,6 +340,8 @@ export default function DashboardPage() {
   const [showSiteLimitModal, setShowSiteLimitModal] = useState<{ limit: number; current: number } | null>(null);
   const [planModalAnnual, setPlanModalAnnual] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [slugInput, setSlugInput] = useState('');
   const [slugError, setSlugError] = useState('');
@@ -660,6 +663,27 @@ export default function DashboardPage() {
   );
   const soundEnabledRef = useRef(soundEnabled);
   useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription())
+      .then(sub => setPushEnabled(Boolean(sub))).catch(() => setPushEnabled(false));
+  }, []);
+
+  const togglePush = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    if (pushEnabled) {
+      if (await disablePushNotifications()) setPushEnabled(false);
+    } else {
+      const result = await requestPushPermission();
+      if (result === 'granted') setPushEnabled(true);
+      else setPublishToast({
+        message: result === 'unsupported' ? 'この端末は通知に対応していません' : result === 'denied' ? 'ブラウザの設定で通知が許可されていません' : '通知を登録できませんでした',
+        type: 'warn',
+      });
+    }
+    setPushBusy(false);
+  };
 
   const handleUpgrade = async (plan: string) => {
     setUpgradeLoading(plan);
@@ -954,6 +978,16 @@ export default function DashboardPage() {
                     className={`text-sm p-2.5 rounded-lg border transition-all min-w-[40px] min-h-[40px] flex items-center justify-center ${soundEnabled ? 'border-sky-200 text-sky-600 bg-sky-50' : 'border-gray-200 text-gray-400 hover:text-gray-600'}`}
                   >
                     {soundEnabled ? <IcBell /> : <IcBellOff />}
+                  </button>
+                  <button
+                    onClick={togglePush}
+                    disabled={pushBusy}
+                    title={pushEnabled ? '端末通知を解除' : 'この端末で通知を受け取る'}
+                    aria-label={pushEnabled ? '端末通知を解除' : 'この端末で通知を受け取る'}
+                    aria-pressed={pushEnabled}
+                    className={`text-sm p-2.5 rounded-lg border transition-all min-w-[40px] min-h-[40px] flex items-center justify-center disabled:opacity-50 ${pushEnabled ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-400 hover:text-gray-600'}`}
+                  >
+                    {pushEnabled ? <IcBell /> : <IcBellOff />}
                   </button>
                   <button
                     onClick={() => setShowNotifications(v => !v)}
