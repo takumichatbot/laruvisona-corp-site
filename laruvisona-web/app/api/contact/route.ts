@@ -194,16 +194,13 @@ export async function POST(req: Request) {
   const settings = site.settings_json as Record<string, unknown> | null;
   const toEmail = (settings?.notifyEmail as string) || userData?.user?.email;
 
-  if (!toEmail) {
-    return NextResponse.json({ ok: true, notified: false });
-  }
-
   // Send email via Resend
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    // Dev fallback: just log and return ok
-    console.log('[Contact form]', { siteId, name, email, phone, message });
-    return NextResponse.json({ ok: true });
+    await supabase.from('contacts').update({
+      extra_fields: { ...(extraFields || {}), notification_at: new Date().toISOString(), owner_email_status: 'not_configured', customer_email_status: 'not_configured' },
+    }).eq('id', contactRow.id);
+    return NextResponse.json({ ok: true, notified: false });
   }
 
   const resend = new Resend(apiKey);
@@ -258,14 +255,15 @@ export async function POST(req: Request) {
   const webhookUrl = (settings?.webhookUrl as string) || '';
   const lineMessage = `【${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}】${site.name}\nお名前: ${name}\nメール: ${email}${phone ? `\nTEL: ${phone}` : ''}${message ? `\nメッセージ: ${message.slice(0, 200)}` : ''}`;
 
-  await Promise.all([
-    resend.emails.send({
+  const deliveryResults = await Promise.all([
+    ...(toEmail ? [resend.emails.send({
       from: 'LARU HP <noreply@laruvisona.jp>',
       to: toEmail,
       replyTo: email,
       subject,
       html,
-    }).catch(err => { console.error('[Contact] owner email failed:', err); }),
+    }).then(result => ({ ok: !result.error, channel: 'owner_email' as const }))
+      .catch(() => ({ ok: false, channel: 'owner_email' as const }))] : []),
     resend.emails.send({
       from: 'LARU HP <noreply@laruvisona.jp>',
       to: email,
@@ -273,7 +271,8 @@ export async function POST(req: Request) {
         ? `【受付完了】ご予約リクエストを承りました — ${site.name}`
         : `【受付完了】お問い合わせを承りました — ${site.name}`,
       html: autoReplyHtml,
-    }).catch(err => { console.error('[Contact] auto-reply email failed:', err); }),
+    }).then(result => ({ ok: !result.error, channel: 'customer_email' as const }))
+      .catch(() => ({ ok: false, channel: 'customer_email' as const })),
     ...(lineChannelToken && lineTarget ? [
       fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
@@ -282,9 +281,20 @@ export async function POST(req: Request) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ to: lineTarget, messages: [{ type: 'text', text: lineMessage }] }),
-      }).catch(() => {}),
+      }).then(result => ({ ok: result.ok, channel: 'line' as const }))
+        .catch(() => ({ ok: false, channel: 'line' as const })),
     ] : []),
   ]);
+
+  const deliveryState = Object.fromEntries(deliveryResults.map(result => [result.channel, result.ok ? 'success' : 'failed']));
+  const deliveryAt = new Date().toISOString();
+  const notificationFields = {
+    ...(extraFields || {}),
+    notification_at: deliveryAt,
+    owner_email_status: deliveryState.owner_email || 'not_configured',
+    customer_email_status: deliveryState.customer_email || 'not_configured',
+    line_status: deliveryState.line || (lineChannelToken && lineTarget ? 'failed' : 'not_configured'),
+  };
 
   // Fire webhook and record delivery result in contact's extra_fields
   if (webhookUrl && contactRow?.id) {
@@ -299,14 +309,16 @@ export async function POST(req: Request) {
       }, { timeoutMs: 8000, maxRedirects: 2 });
       const whStatus = whRes.ok ? 'success' : 'failed';
       await supabase.from('contacts').update({
-        extra_fields: { ...(extraFields || {}), webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },
+        extra_fields: { ...notificationFields, webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },
       }).eq('id', contactRow.id);
     } catch {
       await supabase.from('contacts').update({
-        extra_fields: { ...(extraFields || {}), webhook_status: 'failed', webhook_at: webhookAt, webhook_code: 'error' },
+        extra_fields: { ...notificationFields, webhook_status: 'failed', webhook_at: webhookAt, webhook_code: 'error' },
       }).eq('id', contactRow.id);
     }
+  } else {
+    await supabase.from('contacts').update({ extra_fields: notificationFields }).eq('id', contactRow.id);
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, notified: deliveryState.owner_email === 'success' });
 }
