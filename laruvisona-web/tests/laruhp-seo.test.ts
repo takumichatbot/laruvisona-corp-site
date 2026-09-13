@@ -29,6 +29,14 @@ test('会社サイトのsitemapに別originのLARU HPページを混ぜない', 
   }
 });
 
+test('OGP画像は会社サイトではなくLARU HP専用ドメインを使う', () => {
+  const layout = read('app/laruHP/layout.tsx');
+  const page = read('app/laruHP/page.tsx');
+  assert.match(layout, /https:\/\/laruhp\.com\/opengraph-image/);
+  assert.match(page, /https:\/\/laruhp\.com\/opengraph-image/);
+  assert.doesNotMatch(`${layout}\n${page}`, /laruvisona\.jp\/laruHP\/opengraph-image/);
+});
+
 test('検索へ出す記事と業種ページに未検証の成果断定や絵文字を残さない', () => {
   const articles = read('app/laruHP/articles/articles-data.ts');
   const industry = read('app/laruHP/[industry]/page.tsx');
