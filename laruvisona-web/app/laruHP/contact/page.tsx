@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'お問い合わせ | LARU HP',
   description: 'LARU HP（AIホームページビルダー）に関するご質問・ご相談はこちらのフォームからお気軽にお問い合わせください。',
   alternates: {
-    canonical: 'https://laruvisona.jp/laruHP/contact',
+    canonical: 'https://laruhp.com/contact',
   },
 };
 

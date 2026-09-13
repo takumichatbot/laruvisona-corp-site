@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { jsonForScript } from '@/lib/safe-markup';
 import PwaInit from '@/components/PwaInit';
+import { PLANS, TERMS } from '@/lib/laruhp-facts';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,12 +12,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'LARU HP | AIでホームページを最短完成 | 月額999円〜',
-  description: '業種別AIテンプレートで5分でHP完成。SEO自動最適化・LARUbot連携・ビジュアルエディタ搭載。個人は月額999円から、代理店向けエージェンシープラン¥19,800/月も。初月無料。',
-  keywords: 'ホームページ作成,HP制作,AI,月額,格安,SEO,LARUbot,ホームページビルダー,代理店,エージェンシー',
+  title: 'LARU HP | 完成像を見ながら作るホームページ制作サービス',
+  description: '業種と目的から下書きを作り、写真・文章・配色を完成像で確認しながら編集。問い合わせ、独自ドメイン、ショップ・決済、SEO基本設定に対応します。月額999円から。',
+  keywords: 'ホームページ作成,HP制作,AI,SEO,LARUbot,ホームページビルダー,独自ドメイン',
   openGraph: {
-    title: 'LARU HP — AIで最高のHPを最短で',
-    description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月無料）。代理店向けエージェンシープランも提供中。',
+    title: 'LARU HP — 完成像を見ながら作るホームページ',
+    description: '写真と言葉を整え、問い合わせや独自ドメインまで。月額999円から始められます。',
     type: 'website',
     url: 'https://laruhp.com/',
     siteName: 'LARU HP',
@@ -24,8 +25,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'LARU HP — AIで最高のHPを最短で',
-    description: '業種別テンプレート × AI自動生成 × ビジュアルエディタ。月額999円〜（初月無料）。',
+    title: 'LARU HP — 完成像を見ながら作るホームページ',
+    description: '写真と言葉を整え、問い合わせや独自ドメインまで。月額999円から始められます。',
     images: ['/laruHP/opengraph-image'],
   },
   alternates: {
@@ -52,18 +53,16 @@ const jsonLd = {
   operatingSystem: 'Web',
   offers: {
     '@type': 'AggregateOffer',
-    lowPrice: '999',
-    highPrice: '19800',
+    lowPrice: String(PLANS[0].monthly),
+    highPrice: String(PLANS[PLANS.length - 1].monthly),
     priceCurrency: 'JPY',
-    offerCount: 4,
-    offers: [
-      { '@type': 'Offer', name: 'HP プラン', price: '999', priceCurrency: 'JPY', description: 'AIホームページ作成・ビジュアルエディタ' },
-      { '@type': 'Offer', name: 'HP + Bot Standard', price: '4980', priceCurrency: 'JPY', description: 'HP + AIチャットボット' },
-      { '@type': 'Offer', name: 'HP + Bot + SEO', price: '9800', priceCurrency: 'JPY', description: 'HP + AIチャットボット + SEO自動最適化' },
-      { '@type': 'Offer', name: 'エージェンシー', price: '19800', priceCurrency: 'JPY', description: 'クライアント数無制限・全機能込み代理店プラン' },
-    ],
+    offerCount: PLANS.length,
+    offers: PLANS.map(plan => ({
+      '@type': 'Offer', name: plan.name, price: String(plan.monthly), priceCurrency: 'JPY',
+      description: `${plan.lead}。${TERMS.firstMonthFree}。`,
+    })),
   },
-  description: 'AIで業種別ホームページを自動生成するSaaSサービス。個人は月額999円から、代理店向けエージェンシープランは¥19,800/月。初月無料。',
+  description: '業種と目的からホームページの下書きを作り、完成像を見ながら写真・文章・配色を編集して公開できるサービス。月額999円から。',
   url: 'https://laruhp.com/',
   publisher: {
     '@type': 'Organization',

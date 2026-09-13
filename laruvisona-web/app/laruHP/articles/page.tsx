@@ -6,6 +6,13 @@ import { ARTICLES } from './articles-data';
 export const metadata: Metadata = {
   title: 'ホームページ作成・HP運用ガイド | LARU HP',
   description: '中小企業・個人事業主向けホームページ作成のノウハウ、SEO・集客・AI活用術を発信するブログです。',
+  alternates: { canonical: 'https://laruhp.com/articles' },
+  openGraph: {
+    title: 'ホームページ作成・HP運用ガイド | LARU HP',
+    description: '中小企業・個人事業主向けホームページ作成のノウハウ、SEO・集客・AI活用術。',
+    url: 'https://laruhp.com/articles',
+    type: 'website',
+  },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -32,8 +39,8 @@ export default function ArticlesPage() {
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
-          <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
-            無料で始める →
+          <Link href="https://laruvisona.jp/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
+            制作を試す
           </Link>
         </div>
       </header>
@@ -42,13 +49,13 @@ export default function ArticlesPage() {
         <div className="max-w-4xl mx-auto">
 
           <div className="text-center mb-12">
-            <span className="inline-block bg-sky-100 text-sky-600 text-xs font-bold px-4 py-1.5 rounded-full mb-4 tracking-wider">BLOG</span>
+            <span className="inline-block bg-sky-100 text-sky-600 text-xs font-bold px-4 py-1.5 rounded-full mb-4 tracking-wider">読みもの</span>
             <h1 className="text-4xl font-black text-gray-900 mb-3">HP作成・集客ガイド</h1>
             <p className="text-gray-500 text-sm max-w-xl mx-auto">中小企業・個人事業主向けのHP作成ノウハウ・SEO・AI活用術</p>
           </div>
 
           {/* Featured */}
-          <Link href={`/laruHP/articles/${featured.slug}`} className="block mb-10 group">
+          <Link href={`https://laruhp.com/articles/${featured.slug}`} className="block mb-10 group">
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:border-sky-200 hover:shadow-md transition-all">
               <div className="bg-gradient-to-br from-sky-500 to-indigo-600 h-44 flex items-center justify-center px-10">
                 <h2 className="text-white text-xl font-black leading-snug text-center">{featured.title}</h2>
@@ -59,6 +66,7 @@ export default function ArticlesPage() {
                     {featured.category}
                   </span>
                   <span className="text-xs text-gray-400">{formatDate(featured.publishedAt)}</span>
+                  <span className="text-xs text-gray-400">更新 {formatDate(featured.updatedAt)}</span>
                   <span className="text-xs text-gray-400">約{featured.readingTime}分</span>
                 </div>
                 <p className="text-gray-600 text-sm leading-relaxed mb-4">{featured.description}</p>
@@ -70,7 +78,7 @@ export default function ArticlesPage() {
           {/* Article grid */}
           <div className="grid sm:grid-cols-2 gap-5">
             {rest.map(article => (
-              <Link key={article.slug} href={`/laruHP/articles/${article.slug}`} className="group block">
+              <Link key={article.slug} href={`https://laruhp.com/articles/${article.slug}`} className="group block">
                 <div className="bg-white rounded-xl border border-gray-200 p-5 hover:border-sky-200 hover:shadow-md transition-all h-full flex flex-col">
                   <div className="flex items-center gap-2 mb-3">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${CATEGORY_COLORS[article.category] ?? 'bg-gray-100 text-gray-600'}`}>

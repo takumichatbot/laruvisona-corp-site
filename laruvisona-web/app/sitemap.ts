@@ -1,21 +1,8 @@
 import { MetadataRoute } from 'next';
 
-const INDUSTRY_IDS = [
-  'restaurant', 'beauty', 'clinic', 'legal', 'construction',
-  'realestate', 'retail', 'fitness', 'hotel', 'education',
-  'wedding', 'pet', 'dental', 'photo', 'accounting',
-];
-
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = 'https://laruvisona.jp';
   const now = new Date();
-
-  const industryEntries: MetadataRoute.Sitemap = INDUSTRY_IDS.map(id => ({
-    url: `${base}/laruHP/${id}`,
-    lastModified: now,
-    changeFrequency: 'monthly',
-    priority: 0.8,
-  }));
 
   return [
     // 会社サイト
@@ -30,17 +17,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // ブログ（LARU SEO 記事一覧）
     { url: `${base}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
 
-    // LARU HP メイン
-    { url: `https://laruhp.com/`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-
-    // 業種特化LP（15業種）
-    ...industryEntries,
-
-    // 認証・法的ページ
-    { url: `${base}/laruHP/auth/signup`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
-    { url: `${base}/laruHP/auth/login`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${base}/laruHP/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${base}/laruHP/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${base}/laruHP/tokusho`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${base}/contact`, lastModified: now, changeFrequency: 'yearly', priority: 0.6 },
+    { url: `${base}/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${base}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
   ];
 }

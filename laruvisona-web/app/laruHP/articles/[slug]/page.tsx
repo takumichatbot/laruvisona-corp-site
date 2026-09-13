@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { ARTICLES, getArticle } from '../articles-data';
+import { jsonForScript } from '@/lib/safe-markup';
 
 export async function generateStaticParams() {
   return ARTICLES.map(a => ({ slug: a.slug }));
@@ -15,7 +16,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${article.title} | LARU HP`,
     description: article.description,
-    openGraph: { title: article.title, description: article.description },
+    alternates: { canonical: `https://laruhp.com/articles/${article.slug}` },
+    openGraph: {
+      title: article.title,
+      description: article.description,
+      url: `https://laruhp.com/articles/${article.slug}`,
+      type: 'article',
+      publishedTime: article.publishedAt,
+      modifiedTime: article.updatedAt,
+      authors: [article.author],
+    },
   };
 }
 
@@ -105,16 +115,29 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   if (!article) notFound();
 
   const related = ARTICLES.filter(a => a.slug !== slug && a.tags.some(t => article.tags.includes(t))).slice(0, 3);
+  const canonical = `https://laruhp.com/articles/${article.slug}`;
+  const articleJsonLd = jsonForScript({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.description,
+    datePublished: article.publishedAt,
+    dateModified: article.updatedAt,
+    mainEntityOfPage: canonical,
+    author: { '@type': 'Organization', name: article.author, url: 'https://laruvisona.jp/' },
+    publisher: { '@type': 'Organization', name: '株式会社LaruVisona', url: 'https://laruvisona.jp/' },
+  });
 
   return (
     <div className="min-h-screen bg-sky-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: articleJsonLd }} />
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
-          <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
-            無料で始める →
+          <Link href="https://laruvisona.jp/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
+            制作を試す
           </Link>
         </div>
       </header>
@@ -126,7 +149,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <nav className="flex items-center gap-2 text-xs text-gray-400 mb-6">
             <Link href="https://laruhp.com/" className="hover:text-gray-600">LARU HP</Link>
             <span>/</span>
-            <Link href="/laruHP/articles" className="hover:text-gray-600">ブログ</Link>
+            <Link href="https://laruhp.com/articles" className="hover:text-gray-600">ブログ</Link>
             <span>/</span>
             <span className="text-gray-600 truncate max-w-xs">{article.title}</span>
           </nav>
@@ -136,11 +159,28 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-sky-100 text-sky-700">{article.category}</span>
               <span className="text-xs text-gray-400">{formatDate(article.publishedAt)}</span>
+              {article.updatedAt !== article.publishedAt && <span className="text-xs text-gray-400">更新 {formatDate(article.updatedAt)}</span>}
               <span className="text-xs text-gray-400">約{article.readingTime}分で読める</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight mb-4">{article.title}</h1>
             <p className="text-gray-600 text-sm leading-relaxed bg-white border border-gray-200 rounded-xl p-4">{article.description}</p>
+            <p className="mt-3 text-xs text-gray-500">執筆・確認：{article.author}</p>
           </div>
+
+          {article.sources.length > 0 && (
+            <aside className="bg-white rounded-2xl border border-gray-200 p-7 mb-10" aria-labelledby="article-sources">
+              <h2 id="article-sources" className="text-sm font-bold text-gray-900 mb-3">参照した公式情報</h2>
+              <ul className="space-y-2">
+                {article.sources.map(source => (
+                  <li key={source.url}>
+                    <a href={source.url} target="_blank" rel="noreferrer" className="text-sm text-sky-700 underline underline-offset-4">
+                      {source.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )}
 
           {/* Article body */}
           <div className="bg-white rounded-2xl border border-gray-200 p-7 mb-10 shadow-sm">
@@ -156,13 +196,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
           {/* CTA */}
           <div className="bg-gradient-to-br from-sky-600 to-indigo-600 rounded-2xl p-8 text-center text-white mb-10">
-            <div className="text-lg font-black mb-2">LARU HPで無料お試し</div>
-            <p className="text-sky-100 text-xs mb-6">初月完全無料 · 最短5分で公開 · AIコンテンツ自動生成</p>
+            <div className="text-lg font-black mb-2">自分の事業で、完成像を試す</div>
+            <p className="text-sky-100 text-xs mb-6">制作の試作はログイン前から。保存・公開にはご契約が必要です。</p>
             <Link
-              href="/laruHP/onboarding"
+              href="https://laruvisona.jp/laruHP/studio"
               className="inline-block bg-white text-sky-600 font-black text-sm px-8 py-3 rounded-xl hover:bg-sky-50 transition-colors shadow"
             >
-              無料でサイトを作る →
+              制作スタジオを開く
             </Link>
           </div>
 
@@ -172,7 +212,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <h2 className="text-sm font-bold text-gray-700 mb-4">関連記事</h2>
               <div className="space-y-3">
                 {related.map(a => (
-                  <Link key={a.slug} href={`/laruHP/articles/${a.slug}`} className="block group">
+                  <Link key={a.slug} href={`https://laruhp.com/articles/${a.slug}`} className="block group">
                     <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-sky-200 transition-all flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-semibold text-sky-600 mb-0.5">{a.category}</div>
@@ -187,7 +227,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           )}
 
           <div className="mt-8 text-center">
-            <Link href="/laruHP/articles" className="text-sm text-sky-600 hover:underline">← 記事一覧に戻る</Link>
+            <Link href="https://laruhp.com/articles" className="text-sm text-sky-600 hover:underline">← 記事一覧に戻る</Link>
           </div>
         </div>
       </main>

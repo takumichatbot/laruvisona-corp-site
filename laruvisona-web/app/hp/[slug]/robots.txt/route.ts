@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { canonicalBase, siteUrl, decodeSlug } from '@/lib/public-site-url';
 
+// 顧客ごとの公開設定をDBから読むため、要求時に生成する。
+export const dynamic = 'force-dynamic';
+
 function getAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
