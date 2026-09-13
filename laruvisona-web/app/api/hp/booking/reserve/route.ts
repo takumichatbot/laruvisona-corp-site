@@ -1,3 +1,4 @@
+import { scheduledBookingLink } from '@/lib/scheduling/legacy';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe';
@@ -47,6 +48,11 @@ export async function POST(req: Request) {
   if (!site) return NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 });
 
   const origin = safeOrigin(req.headers.get('origin'), site);
+  try {
+    const scheduleUrl = await scheduledBookingLink(supabase, siteId);
+    if (scheduleUrl) return NextResponse.json({ error: '予約方式が変わりました。予約ページを開き直してください', scheduleUrl }, { status: 409 });
+  } catch { return NextResponse.json({ error: '予約設定を確認できません' }, { status: 503 }); }
+
   const cfg = ((site.data as Record<string, unknown>)?.bookingConfig as BookingConfig) || {};
   const slot = (cfg.slots || []).find(s => s.id === slotId);
   if (!slot || !slot.available) {

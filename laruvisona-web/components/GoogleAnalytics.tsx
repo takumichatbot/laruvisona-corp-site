@@ -1,9 +1,13 @@
+'use client';
+import { usePathname } from 'next/navigation';
 import Script from 'next/script';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export default function GoogleAnalytics() {
-  if (!GA_ID) return null;
+  const path = usePathname();
+  // 確認URLには予約を変更できるキーがある。解析タグへURLや入力を渡さない。
+  if (!GA_ID || path?.endsWith('/reserve') || path?.startsWith('/laruHP/booking')) return null;
   return (
     <>
       <Script

@@ -198,7 +198,7 @@ try {
   const row = await load();
   check(
     'published HTML version14 and media',
-    row.published_html.includes('<!--lhpv:14-->') &&
+    row.published_html.includes('<!--lhpv:15-->') &&
       row.published_html.includes('lhp-gallery-stack') &&
       row.published_html.includes('/local-craft-video.mp4'),
   );

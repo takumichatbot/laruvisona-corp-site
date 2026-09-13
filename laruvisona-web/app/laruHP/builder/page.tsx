@@ -1182,8 +1182,9 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
           <div className="px-8 py-12" style={{ backgroundColor: d.bgColor as string }}>
             {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-2')}
             {editable('subtext', 'p', 'text-gray-500 text-center block mb-8')}
+            {d.mode === 'schedule' && <p className="text-center text-sm py-4">担当者・設備の空きに合わせた予約ページへつながります。営業時間・メニューは「予約管理 → 受付の設定」で保存してください。</p>}
             {((d.mode as string) || 'simple') === 'calendar' && (
-              <p className="text-center text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-4 max-w-md mx-auto">📅 カレンダーモード：公開サイトでは「予約枠管理」で設定した空き枠が表示されます</p>
+              <p className="text-center text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-4 max-w-md mx-auto">固定枠カレンダー：公開サイトでは「予約枠管理」で設定した空き枠が表示されます</p>
             )}
             <div className="max-w-md mx-auto bg-white rounded-2xl border border-gray-200 p-6 space-y-4 shadow-sm">
               <div>
@@ -2644,7 +2645,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     onChange={e => onDataChange(block.id, { ...d, mode: e.target.value })}
                     className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
                     <option value="simple">シンプル（リクエスト送信）</option>
-                    <option value="calendar">カレンダー（空き枠から予約）</option>
+                    <option value="calendar">固定枠カレンダー</option>
+                    <option value="schedule">担当者・設備の本格予約</option>
                   </select>
                 </label>
                 {((d.mode as string) || 'simple') === 'calendar' && (

@@ -7,9 +7,9 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 14;
+export const EXPORT_VERSION = 15;
 
-function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
+function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string }): string {
   const d = block.data;
   const str = (key: string) => escapeHtml(String(d[key] ?? ''));
   /* 属性・style に入れる値。エスケープしてから出す。
@@ -786,6 +786,13 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     }
 
     case 'booking': {
+      if (raw('mode') === 'schedule') {
+        return `<section data-lhp-anim class="lhp-contact" id="booking" style="background-color:${raw('bgColor')}">
+          <h2 class="lhp-section-title" style="text-align:center">${str('heading')}</h2>
+          <p class="lhp-section-sub" style="text-align:center">メニュー・担当者・空き時間を選んで予約できます。</p>
+          <div style="text-align:center"><a href="${escapeHtml(ctx?.bookingUrl || '#booking')}" class="lhp-sticky-cta-btn" style="display:inline-flex;min-height:48px;padding:14px 28px;border-radius:10px;background:${raw('buttonColor')};color:white;text-decoration:none">空き時間を見て予約する</a></div>
+        </section>`;
+      }
       if ((raw('mode') || 'simple') === 'calendar') {
         // 同一ページに複数の予約ブロックがあっても衝突しないよう、IDはブロックごとに一意にする
         const bkid = block.id.replace(/[^a-zA-Z0-9_-]/g, '');
@@ -836,6 +843,8 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   function show(id,v){var e=$id(id);if(e)e.style.display=v?'':'none';}
   fetch('/api/hp/booking/availability?siteId='+encodeURIComponent(sid)).then(function(r){return r.json();}).then(function(data){
     show('lhp-bk-loading',false);
+    if(data.scheduleUrl){var link=document.createElement('a');link.href='/api/hp/scheduling/link?siteId='+encodeURIComponent(sid);link.textContent='空き時間を見て予約する';link.style.cssText='display:inline-block;padding:16px;border:1px solid currentColor;border-radius:10px';document.getElementById('lhp-bk-${bkid}').appendChild(link);return;}
+    if(data.error){var note=$id('lhp-bk-empty');note.textContent=data.error;show('lhp-bk-empty',true);return;}
     state.slots=data.slots||[];state.prepay=!!data.prepay;state.prepayAmount=data.prepayAmount||0;
     if(!state.slots.length){show('lhp-bk-empty',true);return;}
     show('lhp-bk-main',true);
@@ -1210,7 +1219,7 @@ async function lhpBuy(btn, priceId) {
   }
 }
 
-function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
+function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string }): string {
   const html = renderBlockInner(block, ctx);
   if (!html) return '';
   const d = block.data;
@@ -1784,7 +1793,7 @@ window.addEventListener('popstate',function(){
 
   const pagesHtml = pages.map((page, idx) => {
     const blocksHtml = decoratePage(
-      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor })).filter(Boolean).join('\n'),
+      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor, bookingUrl: businessInfo?.siteId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/hp/scheduling/link?siteId=${encodeURIComponent(businessInfo.siteId)}` : undefined })).filter(Boolean).join('\n'),
       idx === 0,
     );
     return multiPage

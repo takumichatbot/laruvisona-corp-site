@@ -800,7 +800,16 @@ test('settings.design を持たない古いサイトは、スタッフ写真96px
   assert.match(split, /aspect-ratio:var\(--lhp-hero-split-ar-sp,4\/3\)/, '設定を持たない古いサイトの分割ヒーロー比率が変わっている');
 });
 
-test('生成HTMLの版数が13になっている', () => {
-  assert.equal(EXPORT_VERSION, 14);
-  assert.match(basic, /<!--lhpv:14-->$/);
+test('生成HTMLの版数が15になっている', () => {
+  assert.equal(EXPORT_VERSION, 15);
+  assert.match(basic, /<!--lhpv:15-->$/);
+});
+
+
+test('本格予約ブロックはサイトIDを持つ実予約ページへつながる', () => {
+ const page={id:'home',name:'ホーム',path:'/',seo,blocks:[{id:'bk',type:'booking' as const,data:{mode:'schedule',heading:'ご予約',buttonColor:'#176b60',bgColor:'#fff'}}]};
+ const html=exportToHTML([page],seo,settings,'相談室',{siteId:'11111111-1111-4111-8111-111111111111'});
+ assert.match(html,/href="https:\/\/laruvisona.jp\/api\/hp\/scheduling\/link\?siteId=11111111-1111-4111-8111-111111111111"/);
+ assert.match(html,/空き時間を見て予約する/);
+ assert.doesNotMatch(html,/id="lhp-form-booking"/);
 });

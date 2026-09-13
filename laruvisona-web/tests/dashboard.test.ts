@@ -14,7 +14,7 @@ const src = readFileSync(new URL('../app/laruHP/dashboard/DashboardClient.tsx', 
 
 // 帯にあった21機能。1つでも欠けたら気づけるように列挙で固定する。
 const FEATURES = [
-  '/laruHP/contacts', '/laruHP/crm', '/laruHP/booking', '/laruHP/newsletter', '/laruHP/blog',
+  '/laruHP/contacts', '/laruHP/crm', '/laruHP/booking/schedule', '/laruHP/newsletter', '/laruHP/blog',
   '/laruHP/larubot-logs', '/laruHP/agency', '/laruHP/calendar', '/laruHP/payments', '/laruHP/popups',
   '/laruHP/loyalty', '/laruHP/onboarding', '/laruHP/shop', '/laruHP/orders', '/laruHP/members',
   '/laruHP/translate', '/laruHP/analytics', '/laruHP/sequences', '/laruHP/seo', '/laruHP/ab-test',

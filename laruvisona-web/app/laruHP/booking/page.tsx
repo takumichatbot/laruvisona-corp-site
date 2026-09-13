@@ -206,7 +206,8 @@ export default function BookingPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             ダッシュボード
           </Link>
-          <h1 className="font-bold text-white">予約枠管理</h1>
+          <Link href="/laruHP/booking/schedule" className="text-sm text-sky-700 underline">担当者・設備の本格予約へ</Link>
+        <h1 className="font-bold text-white">予約枠管理</h1>
           {saving && <span className="text-slate-500 text-xs">保存中...</span>}
           <div className="ml-auto flex items-center gap-3">
             <select value={siteId} onChange={e => setSiteId(e.target.value)}

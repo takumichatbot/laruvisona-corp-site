@@ -1,3 +1,4 @@
+import { scheduledBookingLink } from '@/lib/scheduling/legacy';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -29,6 +30,11 @@ export async function GET(req: Request) {
     .eq('published', true)
     .single();
   if (!site) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+  try {
+    const scheduleUrl = await scheduledBookingLink(supabase, siteId);
+    if (scheduleUrl) return NextResponse.json({ slots: [], scheduleUrl });
+  } catch { return NextResponse.json({ error: '予約設定を確認できません' }, { status: 503 }); }
 
   const cfg = ((site.data as Record<string, unknown>)?.bookingConfig as BookingConfig) || {};
   const now = Date.now();

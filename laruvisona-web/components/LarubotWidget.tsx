@@ -37,7 +37,7 @@ export default function LarubotWidget() {
 
     // 別プロダクト領域には出さない（/laruHP は独自UI、/hp は各サイト固有のbotを埋め込み済み）
     const path = window.location.pathname;
-    if (path.startsWith('/laruHP') || path.startsWith('/hp')) return;
+    if (path.startsWith('/laruHP') || path.startsWith('/hp') || path.endsWith('/reserve')) return;
 
     // 二重ロード防止
     if (document.getElementById('larubot-embed-script')) return;
