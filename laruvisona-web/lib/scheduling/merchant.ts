@@ -30,13 +30,14 @@ export async function merchantStatus(userId:string,db:SupabaseClient=createServi
   }catch {return {available:true,connected:true,ready:false};}
 }
 
-export async function merchantOnboarding(user:{id:string;email?:string|null},siteId:string,db:SupabaseClient=createServiceClient(),stripe:Stripe=getStripe()) {
+export async function merchantOnboarding(user:{id:string},siteId:string,db:SupabaseClient=createServiceClient(),stripe:Stripe=getStripe()) {
   if(!paymentsAvailable())throw Error('payment_unavailable');
   checked(await db.from('hp_payment_accounts').upsert({user_id:user.id},{onConflict:'user_id',ignoreDuplicates:true}));
   const current=checked(await db.from('hp_payment_accounts').select('account_id,livemode').eq('user_id',user.id).single()) as {account_id:string|null;livemode:boolean|null};
   let accountId=current.account_id;
   if(!accountId){
-    const account=await stripe.accounts.create({type:'standard',country:'JP',...(user.email?{email:user.email}:{})},{idempotencyKey:'hp-booking-account-'+user.id});
+    // Keep every parameter stable for this idempotency key. Stripe-hosted onboarding collects current contact details.
+    const account=await stripe.accounts.create({type:'standard',country:'JP'},{idempotencyKey:'hp-booking-account-'+user.id});
     const live=process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')===true;
     const saved=checked(await db.from('hp_payment_accounts').update({account_id:account.id,livemode:live,updated_at:new Date().toISOString()}).eq('user_id',user.id).is('account_id',null).select('account_id').maybeSingle()) as {account_id:string}|null;
     if(!saved?.account_id){

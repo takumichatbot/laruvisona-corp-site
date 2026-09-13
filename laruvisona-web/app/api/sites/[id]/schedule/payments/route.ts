@@ -12,6 +12,6 @@ export async function POST(_req:Request,{params}:Context){
  const a=await owner((await params).id);if(a.response)return a.response;
  if(!paymentsAvailable())return reply({error:'Stripeとの接続を準備中です。来店時払いは引き続き利用できます'},503);
  if(!rateLimit('booking-connect:'+a.user.id,5,60000).ok)return reply({error:'少し待ってからお試しください'},429);
- try{return reply(await merchantOnboarding({id:a.user.id,email:a.user.email},a.site.id,a.db));}
+ try{return reply(await merchantOnboarding({id:a.user.id},a.site.id,a.db));}
  catch{return reply({error:'接続の準備に失敗しました'},503);}
 }

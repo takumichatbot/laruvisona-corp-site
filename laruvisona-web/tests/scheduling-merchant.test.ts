@@ -66,10 +66,12 @@ test("Stripe-hosted onboardingは同じ利用者に口座を重複作成しな�
     },
   } as unknown as SupabaseClient;
   const accountKeys: string[] = [];
+  const accountBodies: Stripe.AccountCreateParams[] = [];
   const links: Stripe.AccountLinkCreateParams[] = [];
   const stripe = {
     accounts: {
       create: async (_body: Stripe.AccountCreateParams, options: { idempotencyKey: string }) => {
+        accountBodies.push(_body);
         accountKeys.push(options.idempotencyKey);
         return { id: "acct_shop" };
       },
@@ -89,6 +91,7 @@ test("Stripe-hosted onboardingは同じ利用者に口座を重複作成しな�
     });
     await merchantOnboarding(user, "site-1", db, stripe);
     assert.deepEqual(accountKeys, ["hp-booking-account-user-1"]);
+    assert.deepEqual(accountBodies, [{ type: "standard", country: "JP" }], "メール変更でも固定キーの引数を変えない");
     assert.equal(links.length, 2, "期限切れ時はAccount Linkだけを作り直す");
     assert.equal(links[0].account, "acct_shop");
     assert.equal(links[0].type, "account_onboarding");

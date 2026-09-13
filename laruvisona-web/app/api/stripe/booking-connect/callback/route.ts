@@ -14,7 +14,7 @@ export async function GET(req:Request){
  const {data:site}=await auth.from('sites').select('id').eq('id',siteId).eq('user_id',user.id).maybeSingle();
  if(!site)return redirect('invalid');
  try{
-  if(q.get('refresh')==='1')return NextResponse.redirect((await merchantOnboarding({id:user.id,email:user.email},siteId)).url,{status:303,headers:privateHeaders});
+  if(q.get('refresh')==='1')return NextResponse.redirect((await merchantOnboarding({id:user.id},siteId)).url,{status:303,headers:privateHeaders});
   const status=await merchantStatus(user.id);
   return redirect(status.ready?'connected':'requirements');
  }catch{return redirect('failed');}
