@@ -499,7 +499,7 @@ export default function AbTestPage() {
                 <p className="font-bold text-gray-700 mb-1">A/Bテストを実施していません</p>
                 <p className="text-xs text-gray-500 mb-5">ビルダーでバリアントBのHTMLを設定し、A/Bテストを開始できます。</p>
                 <Link
-                  href="/laruHP/builder"
+                  href="/laruHP/studio"
                   className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-colors"
                 >
                   ビルダーを開く

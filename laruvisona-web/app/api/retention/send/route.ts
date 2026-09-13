@@ -29,8 +29,8 @@ function emailDay1(plan: string) {
       <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px">${planLabel}へのご契約ありがとうございます。<br>まずはサイトを公開しましょう。</p>
       <div style="space-y:12px">
         ${[
-          ['1', 'AIウィザードで業種・店名を入力', `${APP_URL}/laruHP/onboarding`],
-          ['2', 'ビジュアルエディタでデザインを調整', `${APP_URL}/laruHP/builder`],
+          ['1', '制作スタジオで4つの質問に答える', `${APP_URL}/laruHP/studio`],
+          ['2', '実際の完成像を見ながら内容を整える', `${APP_URL}/laruHP/studio`],
           ['3', '「公開する」ボタンを押す', `${APP_URL}/laruHP/dashboard`],
         ].map(([n, label, url]) => `
         <a href="${url}" style="display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none">
@@ -64,7 +64,7 @@ function emailDay7() {
         <div style="font-weight:700;color:#0369a1;margin-bottom:12px;font-size:14px">おすすめの次のステップ</div>
         ${[
           ['独自ドメインを設定する', '信頼感がアップし、SEOにも有利です', `${APP_URL}/laruHP/dashboard`],
-          ['Google Analyticsを連携する', 'どこからの流入が多いか把握しましょう', `${APP_URL}/laruHP/builder`],
+          ['アクセス解析を確認する', 'どこからの流入が多いか把握しましょう', `${APP_URL}/laruHP/analytics`],
           ['メルマガ読者を集める', '訪問者にメール登録を促しましょう', `${APP_URL}/laruHP/newsletter`],
         ].map(([title, desc, url]) => `
         <a href="${url}" style="display:block;margin-bottom:10px;text-decoration:none">

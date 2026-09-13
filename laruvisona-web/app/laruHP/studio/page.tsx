@@ -387,6 +387,11 @@ function StudioInner() {
      引き継ぐのは見せ方の名前だけ。既にあるサイトを開いたときは読まない
      （別のサイト・別のアカウントの設定が混ざらないようにするため）。 */
   const designParam = params.get('mood') || params.get('design') || '';
+  const referralParam = params.get('ref') || '';
+  useEffect(() => {
+    if (!referralParam || referralParam.length > 200) return;
+    try { sessionStorage.setItem('laruHP_ref', referralParam); } catch { /* 紹介情報が保存できなくても制作は続ける */ }
+  }, [referralParam]);
   const [handoff, setHandoff] = useState('');
   useEffect(() => {
     if (siteIdParam) return;

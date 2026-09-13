@@ -42,7 +42,7 @@ export default function CommandPalette({ siteId }: Props) {
       label: 'ビルダーを開く',
       description: siteId ? 'サイトを編集' : '編集画面へ',
       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-      action: () => router.push(siteId ? `/laruHP/builder?siteId=${siteId}` : '/laruHP/builder'),
+      action: () => router.push(siteId ? `/laruHP/studio?siteId=${siteId}` : '/laruHP/studio'),
       keywords: ['edit', '編集', 'エディタ'],
     },
     {
@@ -106,7 +106,7 @@ export default function CommandPalette({ siteId }: Props) {
       label: '新しいサイトを作成',
       description: 'AIでHP作成を開始',
       icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
-      action: () => router.push('/laruHP/onboarding'),
+      action: () => router.push('/laruHP/studio'),
       keywords: ['new', 'create', '新規', '作成', 'start'],
     },
   ];
@@ -147,8 +147,6 @@ export default function CommandPalette({ siteId }: Props) {
     return () => window.removeEventListener('keydown', down);
   }, [open, close, filtered, selected]);
 
-  useEffect(() => { setSelected(0); }, [query]);
-
   if (!open) return null;
 
   return (
@@ -167,7 +165,7 @@ export default function CommandPalette({ siteId }: Props) {
             autoFocus
             type="text"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => { setQuery(e.target.value); setSelected(0); }}
             placeholder="コマンドを検索..."
             className="flex-1 text-sm text-gray-900 placeholder-gray-400 outline-none bg-transparent"
           />

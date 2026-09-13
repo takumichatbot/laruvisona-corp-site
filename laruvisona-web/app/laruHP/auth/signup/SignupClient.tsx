@@ -15,12 +15,12 @@ function SignupForm() {
   const [fieldErrors, setFieldErrors] = useState<{ businessName?: string; email?: string; password?: string }>({});
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/laruHP/onboarding';
+  const redirectTo = searchParams.get('redirectTo') || '/laruHP/studio';
   const supabase = createClient();
 
   const handleGoogleSignup = async () => {
     setError('');
-    const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/onboarding';
+    const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/studio';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

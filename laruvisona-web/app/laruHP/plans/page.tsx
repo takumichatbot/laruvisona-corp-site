@@ -234,7 +234,7 @@ export default function PlansPage() {
             <Link href="/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">
               ログイン
             </Link>
-            <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
+            <Link href="/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
               無料で始める →
             </Link>
           </div>

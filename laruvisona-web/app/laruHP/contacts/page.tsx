@@ -562,7 +562,7 @@ export default function ContactsPage() {
                 {!searchQ && !statusFilter && !siteFilter && !typeFilter && (
                   <div className="mt-3 space-y-1">
                     <p className="text-xs text-gray-400">HPにお問い合わせフォームを設置しましょう</p>
-                    <Link href="/laruHP/builder" className="text-xs text-sky-500 hover:text-sky-400 underline underline-offset-2">
+                    <Link href="/laruHP/studio" className="text-xs text-sky-500 hover:text-sky-400 underline underline-offset-2">
                       ビルダーでフォームを追加 →
                     </Link>
                   </div>

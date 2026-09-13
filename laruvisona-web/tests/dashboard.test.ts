@@ -16,7 +16,7 @@ const src = readFileSync(new URL('../app/laruHP/dashboard/DashboardClient.tsx', 
 const FEATURES = [
   '/laruHP/contacts', '/laruHP/crm', '/laruHP/booking/schedule', '/laruHP/newsletter', '/laruHP/blog',
   '/laruHP/larubot-logs', '/laruHP/agency', '/laruHP/calendar', '/laruHP/payments', '/laruHP/popups',
-  '/laruHP/loyalty', '/laruHP/onboarding', '/laruHP/shop', '/laruHP/orders', '/laruHP/members',
+  '/laruHP/loyalty', '/laruHP/studio', '/laruHP/shop', '/laruHP/orders', '/laruHP/members',
   '/laruHP/translate', '/laruHP/analytics', '/laruHP/sequences', '/laruHP/seo', '/laruHP/ab-test',
   '/laruHP/heatmap',
 ];

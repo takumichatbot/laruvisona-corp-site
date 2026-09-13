@@ -105,7 +105,7 @@ function buildDigestHtml({
       <!-- Quick links -->
       <div style="border-top:1px solid #f1f5f9;padding-top:20px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
         ${[
-          ['✏️ サイトを編集', `${APP_URL}/laruHP/builder`],
+          ['✏️ サイトを編集', `${APP_URL}/laruHP/studio`],
           ['📊 アクセス解析', `${APP_URL}/laruHP/settings?section=gsc`],
           ['📣 メルマガ', `${APP_URL}/laruHP/newsletter`],
         ].map(([label, url]) =>

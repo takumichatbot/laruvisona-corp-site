@@ -17,12 +17,12 @@ export default async function ReferralPage({ params }: { params: Promise<{ code:
     .limit(1);
 
   if (!profiles?.length) {
-    redirect('/laruHP/onboarding');
+    redirect('/laruHP/studio');
   }
 
   const referrerId = profiles[0].id;
 
   // Redirect to onboarding with referrer info in query string
   // The signup page will read this and store it
-  redirect(`/laruHP/onboarding?ref=${referrerId}`);
+  redirect(`/laruHP/studio?ref=${referrerId}`);
 }

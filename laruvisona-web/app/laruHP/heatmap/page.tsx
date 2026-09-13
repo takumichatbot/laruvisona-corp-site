@@ -225,7 +225,7 @@ export default function HeatmapPage() {
                 <div className="text-5xl mb-4">📊</div>
                 <p className="font-bold text-gray-600">データがまだありません</p>
                 <p className="text-xs text-gray-400 mt-1 mb-4">サイトが訪問されると自動的に計測されます</p>
-                <Link href="/laruHP/builder" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-4 py-2 rounded-lg transition-colors font-semibold">
+                <Link href="/laruHP/studio" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-4 py-2 rounded-lg transition-colors font-semibold">
                   サイトを確認・公開する →
                 </Link>
               </div>

@@ -33,7 +33,7 @@ export default function DemoPage() {
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
-          <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
+          <Link href="/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
             無料で始める →
           </Link>
         </div>
@@ -165,7 +165,7 @@ export default function DemoPage() {
                   </div>
 
                   <Link
-                    href={`/laruHP/onboarding?industry=${selected.id}`}
+                    href={`/laruHP/studio?industry=${selected.id}`}
                     className="flex items-center justify-center gap-2 w-full bg-sky-600 text-white font-black text-base py-4 rounded-2xl hover:bg-sky-500 transition-all shadow-md"
                   >
                     {selected.emoji} この業種でサイトを作る →

@@ -208,7 +208,7 @@ export default function AgencyPage() {
           </Link>
           <h1 className="font-bold text-white">エージェンシー管理</h1>
           <div className="ml-auto flex items-center gap-3">
-            <Link href="/laruHP/onboarding"
+            <Link href="/laruHP/studio"
               className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition-all">
               + 新規クライアントサイト
             </Link>
@@ -360,7 +360,7 @@ export default function AgencyPage() {
 
                   {/* Actions */}
                   <div className="border-t border-white/5 px-5 py-3 flex items-center gap-2 flex-wrap">
-                    <Link href={`/laruHP/builder?siteId=${site.id}`}
+                    <Link href={`/laruHP/studio?siteId=${site.id}`}
                       className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all flex items-center gap-1">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       編集
@@ -537,7 +537,7 @@ export default function AgencyPage() {
 
             {!editMode && (
               <div className="border-t border-white/10 pt-4 flex gap-2 flex-wrap">
-                <Link href={`/laruHP/builder?siteId=${selected.id}`}
+                <Link href={`/laruHP/studio?siteId=${selected.id}`}
                   className="flex-1 text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
                   サイトを編集
                 </Link>

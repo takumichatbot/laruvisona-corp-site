@@ -290,7 +290,7 @@ const TOOL_GROUPS: { title: string; caption: string; items: { href: string; labe
       { href: '/laruHP/analytics', label: 'BI分析', accent: 'purple', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
       { href: '/laruHP/heatmap', label: 'ヒートマップ', accent: 'rose', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/><path d="M12 6v6l4 2"/></svg> },
       { href: '/laruHP/agency', label: 'エージェンシー', accent: 'purple', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
-      { href: '/laruHP/onboarding', label: 'AIウィザード', accent: 'sky', icon: <IcSparkle /> },
+      { href: '/laruHP/studio', label: '制作スタジオ', accent: 'sky', icon: <IcSparkle /> },
     ],
   },
 ];
@@ -990,7 +990,7 @@ export default function DashboardPage() {
             {effectivePlan && effectivePlan !== 'hp' && (
               <div className="flex flex-wrap gap-2">
                 {['lite','hp-bot-seo','agency'].includes(effectivePlan) && (
-                  <Link href="/laruHP/builder" className="text-[11px] bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition-colors">
+                  <Link href="/laruHP/studio" className="text-[11px] bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition-colors">
                     ビルダーを開く →
                   </Link>
                 )}
@@ -1171,7 +1171,7 @@ export default function DashboardPage() {
               icon: '🚀',
               title: 'サイトを公開しましょう',
               body: `「${unpublishedSites[0].name}」がまだ非公開です。公開するとGoogleに認識されSEO効果が始まります。`,
-              href: `/laruHP/builder?siteId=${unpublishedSites[0].id}`,
+              href: `/laruHP/studio?siteId=${unpublishedSites[0].id}`,
               cta: 'ビルダーを開く',
             });
           }
@@ -1201,7 +1201,7 @@ export default function DashboardPage() {
               icon: '📣',
               title: 'CTAボタンのテキストを見直す',
               body: '「お気軽にご相談ください」より「無料で相談する」の方が問い合わせが2〜3倍になる傾向があります。',
-              href: `/laruHP/builder?siteId=${publishedSites[0].id}`,
+              href: `/laruHP/studio?siteId=${publishedSites[0].id}`,
               cta: 'ビルダーを開く',
             });
           }
@@ -1266,7 +1266,7 @@ export default function DashboardPage() {
         {/* ── Getting Started ── */}
         {!loading && !startGuideDismissed && (() => {
           const steps = [
-            { label: 'サイトを作成', done: sites.length > 0, href: sites.length === 0 ? undefined : `/laruHP/builder?siteId=${sites[0]?.id}` },
+            { label: 'サイトを作成', done: sites.length > 0, href: sites.length === 0 ? undefined : `/laruHP/studio?siteId=${sites[0]?.id}` },
             { label: 'サイトを公開', done: sites.some(s => s.published), href: '/laruHP/dashboard' },
             { label: 'プランを契約', done: effectiveStatus === 'active', href: '/laruHP/plans' },
             { label: '独自ドメインを設定', done: sites.some(s => s.custom_domain), href: '/laruHP/dashboard' },
@@ -1317,7 +1317,7 @@ export default function DashboardPage() {
                 <div className="text-sm font-bold text-amber-800 mb-0.5">「{stale[0].name}」を作成してから{daysSince}日が経ちました</div>
                 <p className="text-xs text-amber-700 leading-relaxed">サイトがまだ非公開です。公開するとGoogleに認識されSEO効果が始まります。不明な点があればサポートへご連絡ください。</p>
               </div>
-              <a href={`/laruHP/builder?siteId=${stale[0].id}`}
+              <a href={`/laruHP/studio?siteId=${stale[0].id}`}
                 className="flex-shrink-0 text-xs font-bold text-amber-700 hover:text-amber-600 border border-amber-300 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
                 公開する →
               </a>
@@ -1401,7 +1401,7 @@ export default function DashboardPage() {
                 title: 'ビルダー',
                 desc: 'AIでサイトを作成・編集',
                 cta: 'ビルダーはこちら',
-                href: sites.length > 0 ? `/laruHP/builder?siteId=${sites[0]?.id}` : '/laruHP/onboarding',
+                href: sites.length > 0 ? `/laruHP/studio?siteId=${sites[0]?.id}` : '/laruHP/studio',
                 iconColor: 'bg-sky-50 text-sky-600',
                 borderHover: 'hover:border-sky-300',
                 ctaColor: 'text-sky-600',
@@ -1603,7 +1603,7 @@ export default function DashboardPage() {
               4つの質問から作りはじめる
             </Link>
             <div className="mt-3">
-              <Link href="/laruHP/onboarding" className="text-[12px] text-gray-500 underline hover:text-gray-800">
+              <Link href="/laruHP/studio" className="text-[12px] text-gray-500 underline hover:text-gray-800">
                 業種や特徴を細かく入力して、AIに下書きを作らせる
               </Link>
             </div>
@@ -1839,7 +1839,7 @@ export default function DashboardPage() {
                     {/* LARUbot未連携バナー */}
                     {site.settings_json?.larubot && !site.settings_json?.larubotPublicId && (
                       <Link
-                        href={`/laruHP/builder?siteId=${site.id}`}
+                        href={`/laruHP/studio?siteId=${site.id}`}
                         className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 hover:bg-indigo-100 transition-all"
                       >
                         <div className="w-5 h-5 rounded bg-indigo-100 flex items-center justify-center text-indigo-700 text-[9px] font-bold flex-shrink-0">LB</div>
@@ -1852,7 +1852,7 @@ export default function DashboardPage() {
                     )}
                     {site.settings_json?.laruseo && !site.settings_json?.laruseoPublicId && (
                       <Link
-                        href={`/laruHP/builder?siteId=${site.id}`}
+                        href={`/laruHP/studio?siteId=${site.id}`}
                         className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 hover:bg-emerald-100 transition-all"
                       >
                         <div className="w-5 h-5 rounded bg-emerald-100 flex items-center justify-center text-emerald-700 text-[9px] font-bold flex-shrink-0">SEO</div>
@@ -2187,7 +2187,7 @@ export default function DashboardPage() {
                     {/* Actions */}
                     <div className="flex flex-col gap-1.5 mt-auto">
                       <Link
-                        href={`/laruHP/builder?siteId=${site.id}`}
+                        href={`/laruHP/studio?siteId=${site.id}`}
                         className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold bg-sky-600 text-white py-2.5 rounded-lg hover:bg-sky-500 transition-all"
                       >
                         <IcEdit />

@@ -160,13 +160,13 @@ export default function Estimator({ onConsult }: EstimatorProps) {
               <div className="text-4xl font-black text-white mb-1">¥999<span className="text-lg text-slate-400">/月</span></div>
               <div className="text-cyan-400 text-xs font-bold mb-6">初月1円キャンペーン中</div>
               <Link
-                href="/laruHP/onboarding"
+                href="/laruHP/studio"
                 className="block w-full py-4 bg-cyan-500 text-white font-black rounded-xl hover:scale-105 transition-transform text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] mb-3"
               >
                 無料で始める →
               </Link>
               <Link
-                href="/laruHP/builder"
+                href="/laruHP/studio"
                 className="block w-full py-3 border border-white/10 text-slate-400 hover:text-white rounded-xl text-sm transition-all"
               >
                 ▶ デモを体験

@@ -89,7 +89,7 @@ export default async function VsPage({ params }: { params: Promise<{ competitor:
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
-          <Link href="/laruHP/onboarding" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
+          <Link href="/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
             無料で始める →
           </Link>
         </div>
@@ -187,7 +187,7 @@ export default async function VsPage({ params }: { params: Promise<{ competitor:
             <h2 className="text-2xl md:text-3xl font-black mb-3">まずは初月無料で試す</h2>
             <p className="text-sky-100 text-sm mb-8">クレジットカード登録のみ。初月は完全無料。最低6ヶ月契約・7ヶ月目以降いつでも解約可。</p>
             <Link
-              href="/laruHP/onboarding"
+              href="/laruHP/studio"
               className="inline-block bg-white text-sky-600 font-black text-base px-10 py-4 rounded-2xl hover:bg-sky-50 transition-colors shadow-lg"
             >
               無料でサイトを作る →
