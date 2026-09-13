@@ -19,7 +19,8 @@ import BrandFonts from '@/components/BrandFonts';
 import CreationLab from '@/components/lp/CreationLab';
 import HeroExperience from '@/components/lp/HeroExperience';
 import { jsonForScript } from '@/lib/safe-markup';
-import { PLANS, TERMS, PRIMARY_CTA, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
+import { PLANS, TERMS, PRIMARY_CTA, INDUSTRIES, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
+import { ARTICLES } from './articles/articles-data';
 import './landing.css';
 
 export const metadata: Metadata = {
@@ -385,10 +386,37 @@ export default function LaruHPLandingPage() {
           </div>
         </section>
 
+        <section className="lp-discover lp-container" aria-labelledby="lp-discover-title">
+          <div className="lp-section-heading">
+            <div>
+              <p className="lp-section-label"><span>06</span>仕事に合わせた設計から。</p>
+              <h2 id="lp-discover-title">業種ごとの伝え方を、<br /><em>具体的に見る。</em></h2>
+            </div>
+            <p>載せる内容、公開前に確かめること、相談や予約へのつなぎ方を業種別に整理しました。</p>
+          </div>
+          <nav className="lp-industry-links" aria-label="業種別ホームページ作成">
+            {INDUSTRIES.map(industry => <Link key={industry.id} href={`https://laruhp.com/${industry.id}`}>{industry.name}<ArrowUpRight size={14} /></Link>)}
+          </nav>
+          <div className="lp-guide-links">
+            <div>
+              <p className="lp-section-label">ホームページ作成ガイド</p>
+              <h3>作る前と、公開した後に読む。</h3>
+            </div>
+            <div>
+              {ARTICLES.slice(0, 3).map(article => (
+                <Link key={article.slug} href={`https://laruhp.com/articles/${article.slug}`}>
+                  <span>{article.category}</span>{article.title}<ArrowUpRight size={15} />
+                </Link>
+              ))}
+              <Link className="lp-guide-all" href="https://laruhp.com/articles">すべての記事を見る<ArrowUpRight size={15} /></Link>
+            </div>
+          </div>
+        </section>
+
         <section className="lp-faq lp-container">
           <div>
             <p className="lp-section-label">
-              <span>06</span>気になることを、先に。
+              <span>07</span>気になることを、先に。
             </p>
             <h2>よくある質問</h2>
             <p>
@@ -445,10 +473,11 @@ export default function LaruHPLandingPage() {
         </div>
         <nav aria-label="フッター">
           <Link href="https://laruvisona.jp/">運営会社</Link>
-          <Link href="https://laruvisona.jp/contact">お問い合わせ</Link>
-          <Link href="https://laruvisona.jp/laruHP/terms">利用規約</Link>
-          <Link href="https://laruvisona.jp/laruHP/privacy">プライバシー</Link>
-          <Link href="https://laruvisona.jp/laruHP/tokusho">特定商取引法</Link>
+          <Link href="https://laruhp.com/articles">作成ガイド</Link>
+          <Link href="https://laruhp.com/contact">お問い合わせ</Link>
+          <Link href="https://laruhp.com/terms">利用規約</Link>
+          <Link href="https://laruhp.com/privacy">プライバシー</Link>
+          <Link href="https://laruhp.com/tokusho">特定商取引法</Link>
         </nav>
         <small>© LaruVisona Inc.</small>
       </footer>

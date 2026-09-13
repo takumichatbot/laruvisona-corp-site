@@ -5,6 +5,7 @@ import { proxy } from '../proxy';
 import { isReservedHost } from '../lib/domain';
 import { initialComposition } from '../lib/studio-composition';
 import { compositionTransferUrl, parseCompositionTransfer } from '../lib/composition-transfer';
+import { LARUHP_PUBLIC_PATHS } from '../lib/laruhp-public';
 const req = (path: string, host = 'laruhp.com', method = 'GET') => new NextRequest(`https://${host}${path}`, { headers: { host }, method });
 test('専用ドメインの入口とクエリをLPへ、wwwは同じパスで正規化', async () => {
   const res = await proxy(req('/?utm_source=domain'));
@@ -17,9 +18,24 @@ test('ログイン・制作は既存origin、APIへの書込みと顧客ペー�
   for (const path of ['/api/contact', '/hp/other', '/brand', '/missing']) assert.equal((await proxy(req(path))).status, 404);
   assert.equal((await proxy(req('/api/contact', 'laruhp.com', 'POST'))).status, 405);
 });
+test('案内・業種・記事・料金・法的ページは専用ドメインで配信する', async () => {
+  for (const [path, internal] of [
+    ['/articles', '/laruHP/articles'],
+    ['/articles/hp-sakusei-cost', '/laruHP/articles/hp-sakusei-cost'],
+    ['/beauty', '/laruHP/beauty'],
+    ['/plans', '/laruHP/plans'],
+    ['/contact', '/laruHP/contact'],
+    ['/privacy', '/laruHP/privacy'],
+  ]) {
+    const res = await proxy(req(`${path}?from=search`));
+    assert.equal(res.headers.get('x-middleware-rewrite'), `https://laruhp.com${internal}?from=search`);
+  }
+});
 test('素材は配信し、サイトマップはサービスのURLだけを載せる', async () => {
   for (const path of ['/lp/film/flow-mobile.mp4', '/studio/references/cafe-v1.webp', '/salon/hero-900.avif', '/_next/image']) assert.equal((await proxy(req(path))).headers.get('x-middleware-next'), '1');
-  assert.match(await (await proxy(req('/sitemap.xml'))).text(), /<loc>https:\/\/laruhp.com\/<\/loc>/);
+  const sitemap = await (await proxy(req('/sitemap.xml'))).text();
+  for (const path of LARUHP_PUBLIC_PATHS) assert.match(sitemap, new RegExp(`<loc>https://laruhp\\.com${path.replaceAll('/', '\\/')}</loc>`));
+  assert.doesNotMatch(sitemap, /laruvisona\.jp|\/laruHP\//);
   assert.match(await (await proxy(req('/robots.txt'))).text(), /https:\/\/laruhp.com\/sitemap.xml/);
   assert.equal(isReservedHost('laruhp.com'), true);
   assert.equal(isReservedHost('www.laruhp.com'), true);
@@ -36,15 +52,30 @@ test('デモの日本語・写真・見せ方を期限つきで引き継ぐ', ()
   assert.equal(parseCompositionTransfer('#creation='+encodeURIComponent(JSON.stringify({at:1000,choice:{...value,photo:'https://evil.test'}})),1000), null);
 });
 
-test('会社の旧案内URLだけを新ドメインへ308転送し、クエリを保持する', async () => {
+test('会社側に残る旧公開URLを専用ドメインへ308転送し、クエリを保持する', async () => {
   for (const host of ['laruvisona.jp', 'www.laruvisona.jp']) {
-    for (const path of ['/laruHP', '/laruHP/']) {
+    for (const [path, target] of [
+      ['/laruHP', '/'],
+      ['/laruHP/', '/'],
+      ['/laruHP/articles', '/articles'],
+      ['/laruHP/articles/hp-sakusei-cost', '/articles/hp-sakusei-cost'],
+      ['/laruHP/beauty', '/beauty'],
+      ['/laruHP/plans', '/plans'],
+    ]) {
       for (const method of ['GET', 'HEAD']) {
         const res = await proxy(req(path + '?utm_source=google', host, method));
         assert.equal(res.status, 308);
-        assert.equal(res.headers.get('location'), 'https://laruhp.com/?utm_source=google');
+        assert.equal(res.headers.get('location'), `https://laruhp.com${target}?utm_source=google`);
         assert.equal(res.headers.get('x-middleware-rewrite'), null);
       }
     }
   }
+});
+
+test('料金ページは専用ドメインで配信し、会社側の旧URLだけを308転送する', async () => {
+  const own = await proxy(req('/plans', 'laruhp.com'));
+  assert.equal(own.headers.get('x-middleware-rewrite'), 'https://laruhp.com/laruHP/plans');
+  const legacy = await proxy(req('/plans?from=old', 'laruvisona.jp'));
+  assert.equal(legacy.status, 308);
+  assert.equal(legacy.headers.get('location'), 'https://laruhp.com/plans?from=old');
 });

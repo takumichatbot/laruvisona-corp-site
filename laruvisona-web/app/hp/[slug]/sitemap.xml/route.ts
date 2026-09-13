@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { canonicalBase, decodeSlug } from '@/lib/public-site-url';
 
+// 顧客サイトと記事をDBから読むため、ビルド時に仮のslugで事前生成しない。
+export const dynamic = 'force-dynamic';
+
 function getAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

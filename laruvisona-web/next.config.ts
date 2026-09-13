@@ -2,11 +2,6 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
-  async redirects() {
-    return [
-      { source: '/plans', destination: '/laruHP/plans', permanent: true },
-    ];
-  },
   // 新LPのプレビューを /laruHP/lp-next で見せつつ、実体はレイアウト配下の外に置く。
   //
   // なぜこうするか:

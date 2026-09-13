@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-export const metadata = { title: '特定商取引法に基づく表記 | LARU HP' };
+export const metadata = { title: '特定商取引法に基づく表記 | LARU HP', alternates: { canonical: 'https://laruhp.com/tokusho' } };
 
 export default function TokushoPage() {
   const items = [

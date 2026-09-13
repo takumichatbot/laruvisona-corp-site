@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-export const metadata = { title: 'プライバシーポリシー | LARU HP' };
+export const metadata = { title: 'プライバシーポリシー | LARU HP', alternates: { canonical: 'https://laruhp.com/privacy' } };
 
 const SECTIONS = [
   {
