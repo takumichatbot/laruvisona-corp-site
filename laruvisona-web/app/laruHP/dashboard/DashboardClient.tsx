@@ -636,6 +636,7 @@ export default function DashboardPage() {
   const [memberLists, setMemberLists] = useState<Record<string, { id: string; invited_email: string; role: string; status: string }[]>>({});
   const [memberLoading, setMemberLoading] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<Record<string, string>>({});
+  const [memberErrors, setMemberErrors] = useState<Record<string, string>>({});
   const [publishToast, setPublishToast] = useState<{ message: string; type: 'success' | 'warn'; slug?: string } | null>(null);
   const [abWinnerLoading, setAbWinnerLoading] = useState<string | null>(null);
   const [qrSite, setQrSite] = useState<{ url: string; name: string } | null>(null);
@@ -1910,15 +1911,16 @@ export default function DashboardPage() {
                           setMemberPanels(p => ({ ...p, [site.id]: open }));
                           if (open && !memberLists[site.id]) {
                             const res = await fetch(`/api/sites/${site.id}/members`);
-                            const d = await res.json();
-                            setMemberLists(p => ({ ...p, [site.id]: d.members || [] }));
+                            const d = await res.json().catch(() => ({}));
+                            if (!res.ok) setMemberErrors(p => ({ ...p, [site.id]: d.error || 'メンバーを読み込めませんでした' }));
+                            else setMemberLists(p => ({ ...p, [site.id]: d.members || [] }));
                           }
                         }}
                         className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                          メンバー管理
+                          LARUbot履歴の共有
                         </div>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-gray-400 transition-transform ${memberPanels[site.id] ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
                       </button>
@@ -1939,11 +1941,21 @@ export default function DashboardPage() {
                                 </span>
                                 <button
                                   onClick={async () => {
-                                    await fetch(`/api/sites/${site.id}/members`, {
+                                    setMemberErrors(p => ({ ...p, [site.id]: '' }));
+                                    const response = await fetch(`/api/sites/${site.id}/members`, {
                                       method: 'DELETE',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ email: m.invited_email }),
-                                    });
+                                    }).catch(() => null);
+                                    if (!response) {
+                                      setMemberErrors(p => ({ ...p, [site.id]: '通信できませんでした' }));
+                                      return;
+                                    }
+                                    const result = await response.json().catch(() => ({}));
+                                    if (!response.ok) {
+                                      setMemberErrors(p => ({ ...p, [site.id]: result.error || 'メンバーを削除できませんでした' }));
+                                      return;
+                                    }
                                     setMemberLists(p => ({ ...p, [site.id]: (p[site.id] || []).filter(x => x.id !== m.id) }));
                                   }}
                                   className="text-[9px] text-gray-400 hover:text-red-500 transition-colors"
@@ -1957,7 +1969,7 @@ export default function DashboardPage() {
                           <div className="flex gap-1.5 pt-1">
                             <input
                               type="email"
-                              placeholder="メールアドレスで招待"
+                              placeholder="閲覧メンバーをメールで招待"
                               value={memberInputs[site.id] || ''}
                               onChange={e => setMemberInputs(p => ({ ...p, [site.id]: e.target.value }))}
                               className="flex-1 min-w-0 bg-white border border-gray-200 rounded-md px-2 py-1.5 text-[10px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500"
@@ -1968,19 +1980,24 @@ export default function DashboardPage() {
                                 if (!email) return;
                                 setMemberLoading(site.id);
                                 setInviteSuccess(p => ({ ...p, [site.id]: '' }));
-                                const res = await fetch(`/api/sites/${site.id}/members`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ email }),
-                                });
-                                if (res.ok) {
+                                setMemberErrors(p => ({ ...p, [site.id]: '' }));
+                                try {
+                                  const res = await fetch(`/api/sites/${site.id}/members`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ email }),
+                                  });
+                                  const result = await res.json().catch(() => ({}));
+                                  if (!res.ok) throw Error(result.error || '招待できませんでした');
                                   setMemberInputs(p => ({ ...p, [site.id]: '' }));
                                   setInviteSuccess(p => ({ ...p, [site.id]: '招待メールを送信しました' }));
                                   const r2 = await fetch(`/api/sites/${site.id}/members`);
-                                  const d = await r2.json();
+                                  const d = await r2.json().catch(() => ({}));
+                                  if (!r2.ok) throw Error(d.error || 'メンバーを読み込めませんでした');
                                   setMemberLists(p => ({ ...p, [site.id]: d.members || [] }));
-                                }
-                                setMemberLoading(null);
+                                } catch (error) {
+                                  setMemberErrors(p => ({ ...p, [site.id]: error instanceof Error ? error.message : '招待できませんでした' }));
+                                } finally { setMemberLoading(null); }
                               }}
                               disabled={memberLoading === site.id}
                               className="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2.5 py-1.5 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
@@ -1990,6 +2007,9 @@ export default function DashboardPage() {
                           </div>
                           {inviteSuccess[site.id] && (
                             <p className="text-[10px] text-green-600">{inviteSuccess[site.id]}</p>
+                          )}
+                          {memberErrors[site.id] && (
+                            <p className="text-[10px] text-red-600" role="alert">{memberErrors[site.id]}</p>
                           )}
                         </div>
                       )}

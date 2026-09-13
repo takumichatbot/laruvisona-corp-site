@@ -21,6 +21,7 @@ interface Conversation {
 interface Site {
   id: string;
   name: string;
+  access: 'owner' | 'viewer';
 }
 
 function timeAgo(dateStr: string) {
@@ -42,7 +43,7 @@ function firstUserMessage(messages: Message[]): string {
 
 export default function LarubotLogsPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -50,34 +51,32 @@ export default function LarubotLogsPage() {
   const [convLoading, setConvLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  const loadConversations = useCallback(async (siteId: string) => {
+    setConvLoading(true);
+    try {
+      const res = await fetch(`/api/larubot/conversations?siteId=${siteId}`);
+      const data = await res.json().catch(() => ({}));
+      setConversations(res.ok ? data.conversations || [] : []);
+    } finally { setConvLoading(false); }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/laruHP/auth/login'); return; }
-      const res = await fetch('/api/sites');
-      const data = await res.json();
-      const s: Site[] = (data.sites || []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name }));
+      const res = await fetch('/api/larubot/conversations');
+      const data = await res.json().catch(() => ({}));
+      const s: Site[] = res.ok ? (data.sites || []) : [];
       setSites(s);
-      if (s.length > 0) setSelectedSiteId(s[0].id);
+      if (s.length > 0) { setSelectedSiteId(s[0].id); await loadConversations(s[0].id); }
       setLoading(false);
     })();
-  }, []);
-
-  const loadConversations = useCallback(async (siteId: string) => {
-    setConvLoading(true);
-    const res = await fetch(`/api/larubot/conversations?siteId=${siteId}`);
-    const data = await res.json();
-    setConversations(data.conversations || []);
-    setConvLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (selectedSiteId) loadConversations(selectedSiteId);
-  }, [selectedSiteId, loadConversations]);
+  }, [loadConversations, router, supabase]);
 
   const totalMessages = conversations.reduce((s, c) => s + c.messages.length, 0);
   const avgMessages = conversations.length > 0 ? (totalMessages / conversations.length).toFixed(1) : '0';
   const userMessages = conversations.reduce((s, c) => s + c.messages.filter(m => m.role === 'user').length, 0);
+  const selectedSite = sites.find(site => site.id === selectedSiteId);
 
   // AI chat analysis
   const [analysis, setAnalysis] = useState<{
@@ -165,7 +164,7 @@ export default function LarubotLogsPage() {
             <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-indigo-400">LB</div>
             <p className="text-gray-600 text-sm font-semibold mb-1">サイトがありません</p>
             <p className="text-gray-400 text-xs mb-4">まずダッシュボードからサイトを作成してください</p>
-            <a href="/laruHP/dashboard" className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-xl hover:bg-sky-500 transition-colors">ダッシュボードへ</a>
+            <Link href="/laruHP/dashboard" className="text-xs bg-sky-600 text-white font-bold px-4 py-2 rounded-xl hover:bg-sky-500 transition-colors">ダッシュボードへ</Link>
           </div>
         ) : (
           <>
@@ -173,7 +172,7 @@ export default function LarubotLogsPage() {
             <div className="flex items-center gap-3 mb-6">
               <select
                 value={selectedSiteId || ''}
-                onChange={e => setSelectedSiteId(e.target.value)}
+                onChange={e => { setSelectedSiteId(e.target.value); void loadConversations(e.target.value); }}
                 className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-sky-500"
               >
                 {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -181,7 +180,7 @@ export default function LarubotLogsPage() {
             </div>
 
             {/* AI Analysis buttons */}
-            {conversations.length > 0 && (
+            {conversations.length > 0 && selectedSite?.access === 'owner' && (
               <div className="mb-4 flex gap-2 flex-wrap">
                 <button
                   onClick={handleAnalyze}

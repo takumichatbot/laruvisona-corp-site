@@ -47,7 +47,23 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const siteId = searchParams.get('siteId');
-  if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
+  if (!siteId) {
+    const service = await createServiceClient();
+    const [{ data: owned, error: ownedError }, { data: memberships, error: memberError }] = await Promise.all([
+      service.from('sites').select('id, name').eq('user_id', user.id),
+      service.from('site_members').select('site_id').eq('user_id', user.id).eq('status', 'active'),
+    ]);
+    if (ownedError || memberError) return NextResponse.json({ error: 'サイトを読み込めませんでした' }, { status: 500 });
+    const memberIds = [...new Set((memberships || []).map(item => item.site_id as string))];
+    const { data: shared, error: sharedError } = memberIds.length
+      ? await service.from('sites').select('id, name').in('id', memberIds)
+      : { data: [], error: null };
+    if (sharedError) return NextResponse.json({ error: 'サイトを読み込めませんでした' }, { status: 500 });
+    return NextResponse.json({ sites: [
+      ...(owned || []).map(site => ({ ...site, access: 'owner' as const })),
+      ...(shared || []).filter(site => !(owned || []).some(item => item.id === site.id)).map(site => ({ ...site, access: 'viewer' as const })),
+    ] });
+  }
 
   // Verify site ownership (or membership)
   const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
