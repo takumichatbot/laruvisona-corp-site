@@ -1,6 +1,11 @@
 'use client';
 import { Image as ImageIcon, Layers3, Play, AlignCenter } from 'lucide-react';
 import type { Block } from '@/types/laruHP';
+import {
+  isDirection,
+  compositionAdvice,
+  DIRECTIONS,
+} from '@/lib/studio-direction';
 export default function SectionCraft({
   block,
   onChange,
@@ -40,6 +45,11 @@ export default function SectionCraft({
                 aria-pressed={(d.heroLayout || globalLayout) === v}
                 onClick={() => {
                   onChange('heroLayout', v);
+                  if (isDirection(d.compositionStyle))
+                    onChange(
+                      'compositionStyle',
+                      DIRECTIONS.find((x) => x.layout === v)!.id,
+                    );
                   onChange('textColor', v === 'split' ? ink : '#ffffff');
                 }}
               >
@@ -56,11 +66,55 @@ export default function SectionCraft({
             className="sc-inherit"
             onClick={() => {
               onChange('heroLayout', '');
+              if (isDirection(d.compositionStyle))
+                onChange(
+                  'compositionStyle',
+                  DIRECTIONS.find((x) => x.layout === globalLayout)?.id ||
+                    'editorial',
+                );
               onChange('textColor', globalLayout === 'split' ? ink : '#ffffff');
             }}
           >
             サイト全体の配置に戻す
           </button>
+          <h3>スマホでも、整えて見せる</h3>
+          {isDirection(d.compositionStyle) ? (
+            <>
+              <p>文章を省略せずに折り返し、内容に合わせて高さを確保します。</p>
+              <label>
+                スマホの写真の収め方
+                <select
+                  aria-label="スマホの写真の収め方"
+                  value={d.mobilePhotoFit === 'contain' ? 'contain' : 'cover'}
+                  onChange={(e) => onChange('mobilePhotoFit', e.target.value)}
+                >
+                  <option value="cover">選んだ焦点を大きく見せる</option>
+                  <option value="contain">写真の全体を残す</option>
+                </select>
+              </label>
+              <ul className="de-quality">
+                {compositionAdvice(block).map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="sc-inherit"
+              onClick={() => {
+                onChange(
+                  'compositionStyle',
+                  DIRECTIONS.find(
+                    (x) => x.layout === (d.heroLayout || globalLayout),
+                  )?.id || 'editorial',
+                );
+                onChange('adaptiveLayout', true);
+              }}
+            >
+              この節に読みやすさの調整を使う
+            </button>
+          )}
           <fieldset>
             <legend>スマホの写真の焦点</legend>
             {['横', '縦'].map((label, i) => (

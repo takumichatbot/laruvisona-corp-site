@@ -9,7 +9,7 @@ const { chromium } = createRequire(
 )('playwright');
 const base = 'http://127.0.0.1:3319',
   fix = 'http://127.0.0.1:54999',
-  out = '/tmp/laruhp-five';
+  out = process.env.OUTPUT_DIR || '/tmp/laruhp-five';
 const { lastId: id } = JSON.parse(fs.readFileSync(out + '/results.json'));
 const results = [];
 function check(name, ok, detail) {
@@ -123,6 +123,17 @@ try {
     .locator('.se-block-select')
     .filter({ hasText: '写真をならべる' })
     .click();
+  while (
+    await p
+      .locator('[data-field-key=images]')
+      .getByRole('button', { name: '削除', exact: true })
+      .count()
+  )
+    await p
+      .locator('[data-field-key=images]')
+      .getByRole('button', { name: '削除', exact: true })
+      .first()
+      .click();
   for (let i = 1; i <= 2; i++) {
     await p.getByRole('button', { name: '＋ 追加する', exact: true }).click();
     const uploaded = p.waitForResponse(
@@ -186,8 +197,8 @@ try {
   check('local owner publish API', published.ok());
   const row = await load();
   check(
-    'published HTML version13 and media',
-    row.published_html.includes('<!--lhpv:13-->') &&
+    'published HTML version14 and media',
+    row.published_html.includes('<!--lhpv:14-->') &&
       row.published_html.includes('lhp-gallery-stack') &&
       row.published_html.includes('/local-craft-video.mp4'),
   );

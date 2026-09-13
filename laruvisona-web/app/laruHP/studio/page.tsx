@@ -41,6 +41,8 @@ import { useStudioHistory } from '@/components/studio/useStudioHistory';
 import BlockList, { BlockIcon } from '@/components/studio/BlockList';
 import { Plus, Film, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import SectionCraft from '@/components/studio/SectionCraft';
+import DirectionEditor from '@/components/studio/DirectionEditor';
+import {arrangeDirection} from '@/lib/studio-direction';
 import SectionAssistant from '@/components/studio/SectionAssistant';
 import {applySectionProposal, type SectionProposal} from '@/lib/studio-ai';
 import {readComposition,clearComposition,buildComposition} from '@/lib/studio-composition';
@@ -1053,7 +1055,8 @@ function StudioInner() {
               )
             )}
 
-            {panel === 'design' && (
+            {panel === 'design' && (<>
+              <DirectionEditor blocks={blocks} settings={toExportSettings(site.settings) as never} name={site.name} seo={page?.seo||EMPTY_SEO} disabled={uploads>0} onApply={id=>{if(uploads)return;setSite(prev=>({...prev,pages:prev.pages.map((p,i)=>i===0?{...p,blocks:arrangeDirection(p.blocks,id,prev.settings.design?.ink||'#263248')}:p)}));setHistoryNote('選んだ構成を採用しました。文章と写真は残っています。取り消しで元の並びに戻せます。');}}/>
               <DesignPanel
                 site={site}
                 setSite={setSite}
@@ -1062,7 +1065,7 @@ function StudioInner() {
                 seo={page?.seo || EMPTY_SEO}
                 onSeo={next => setSite(prev => ({ ...prev, pages: prev.pages.map((p, i) => i === 0 ? { ...p, seo: next } : p) }))}
               />
-            )}
+            </>)}
 
             {panel === 'ready' && (
               <Ready

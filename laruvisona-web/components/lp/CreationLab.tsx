@@ -15,11 +15,15 @@ import { INDUSTRY_BLUEPRINTS } from '@/lib/studio-blueprints';
 import { exportToHTML } from '@/lib/html-export';
 import { withPreviewBridge } from '@/lib/preview-frame';
 import './creation-lab.css';
+import DirectionChoices from '@/components/studio/DirectionChoices';
+import { DIRECTIONS } from '@/lib/studio-direction';
+import { INDUSTRY_REFERENCES } from '@/lib/studio-reference';
 const labels: Record<string, string> = {
   beauty: '美容',
   restaurant: '飲食',
   construction: '工事',
   retail: '物販',
+  clinic: '整体',
 };
 const moods = [
   ['refined', '上質'],
@@ -51,6 +55,7 @@ export default function CreationLab() {
     [ready, setReady] = useState(false),
     [depth, setDepth] = useState(false),
     [error, setError] = useState('');
+  const lastHtml = useRef('');
   const holder = useRef<HTMLDivElement>(null),
     frame = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
@@ -87,13 +92,15 @@ export default function CreationLab() {
         '<head>',
         "<head><meta http-equiv=\"Content-Security-Policy\" content=\"connect-src 'none'; form-action 'none'; frame-src 'none';\">",
       );
-      setHtml(
-        safe.replace(
-          '</head>',
-          '<style>[data-lhp-block]:hover{outline:0!important}</style></head>',
-        ),
+      const nextHtml = safe.replace(
+        '</head>',
+        '<style>[data-lhp-block]:hover{outline:0!important}</style></head>',
       );
-      setReady(false);
+      if (nextHtml !== lastHtml.current) {
+        lastHtml.current = nextHtml;
+        setHtml(nextHtml);
+        setReady(false);
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [built, choice.industry, active]);
@@ -165,6 +172,22 @@ export default function CreationLab() {
             </button>
           ))}
         </div>
+      </div>
+      <div className="cl-directions">
+        <div className="cl-direction-heading">
+          <strong>同じ内容から、構成の違う3案。</strong>
+          <span>配置の見取り図を選ぶと、下の実物が変わります</span>
+        </div>
+        <DirectionChoices
+          value={DIRECTIONS.find((d) => d.layout === choice.presentation)!.id}
+          photo={COMPOSITION_PHOTOS.find((p) => p.id === choice.photo)!.src}
+          onChange={(id) =>
+            edit('presentation', DIRECTIONS.find((d) => d.id === id)!.layout)
+          }
+        />
+        <p className="cl-direction-note">
+          {DIRECTIONS.find((d) => d.layout === choice.presentation)!.note}
+        </p>
       </div>
       <div className="cl-photo-row">
         <div className="cl-photos" role="group" aria-label="写真を選ぶ">
@@ -272,7 +295,7 @@ export default function CreationLab() {
         </div>
       </div>
       <div className="cl-structure">
-        <span>{INDUSTRY_BLUEPRINTS[choice.industry].label}</span>
+        <span>{INDUSTRY_REFERENCES[choice.industry].concept}</span>
         <p>{INDUSTRY_BLUEPRINTS[choice.industry].reason}</p>
       </div>
       <button type="button" className="cl-continue" onClick={continueMaking}>

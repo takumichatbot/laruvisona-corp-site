@@ -1,0 +1,119 @@
+[
+  {
+    "name": "AI real API other site",
+    "ok": true,
+    "detail": {
+      "status": 403
+    }
+  },
+  {
+    "name": "AI real API unknown block",
+    "ok": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "name": "AI real API invalid block",
+    "ok": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "name": "AI real API oversized prompt",
+    "ok": true,
+    "detail": {
+      "status": 400
+    }
+  },
+  {
+    "name": "AI rejected requests do not save site",
+    "ok": true
+  },
+  {
+    "name": "video loads after choosing it",
+    "ok": true
+  },
+  {
+    "name": "video is muted and inline",
+    "ok": true
+  },
+  {
+    "name": "gallery upload 1",
+    "ok": true
+  },
+  {
+    "name": "gallery upload 2",
+    "ok": true
+  },
+  {
+    "name": "gallery two actual images and stacking",
+    "ok": true
+  },
+  {
+    "name": "gallery stacking computed",
+    "ok": true
+  },
+  {
+    "name": "media saved through owner API",
+    "ok": true
+  },
+  {
+    "name": "gallery mode saved",
+    "ok": true
+  },
+  {
+    "name": "video URL saved",
+    "ok": true
+  },
+  {
+    "name": "local owner publish API",
+    "ok": true
+  },
+  {
+    "name": "published HTML version14 and media",
+    "ok": true
+  },
+  {
+    "name": "real public URL serves new gallery",
+    "ok": true
+  },
+  {
+    "name": "gallery photo actually sticks while scrolling",
+    "ok": true,
+    "detail": {
+      "pos1": 80,
+      "pos2": 80
+    }
+  },
+  {
+    "name": "reduced motion gallery is static",
+    "ok": true
+  },
+  {
+    "name": "reduced motion never fetches video",
+    "ok": true
+  },
+  {
+    "name": "existing draft preserved over incoming example",
+    "ok": true
+  },
+  {
+    "name": "handoff conflict explained",
+    "ok": true
+  },
+  {
+    "name": "existing site never adopts incoming example",
+    "ok": true
+  },
+  {
+    "name": "existing site data untouched by incoming handoff",
+    "ok": true
+  },
+  {
+    "name": "no JavaScript errors",
+    "ok": true,
+    "detail": []
+  }
+]

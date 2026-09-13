@@ -1,0 +1,32 @@
+[
+  {
+    "name": "cafe",
+    "prompt": "Use case: photorealistic-natural. Create one landscape 4:3 editorial photograph for a fictional Japanese cafe website hero. A beautifully made ceramic cup of coffee and small baked pastry on a walnut table beside a large window, with a small intimate cafe softly visible beyond. Morning natural light, ivory plaster, restrained wood, linen, photographic depth and realistic texture. The coffee and pastry stay near the central region so a mobile portrait crop remains legible. Calm, welcoming, exceptional architectural food photography, no people, no text, no logos, no UI, no collage. Deliver a single polished photograph, not a website screenshot.",
+    "method": "built-in image_gen",
+    "scope": "fictional business reference photograph",
+    "output": "public/studio/references/cafe-v1.webp",
+    "width": 1448,
+    "height": 1086,
+    "bytes": 179594
+  },
+  {
+    "name": "tableware",
+    "prompt": "Use case: photorealistic-natural. Create one landscape 4:3 editorial photograph for a fictional Japanese homeware shop website. A small curated collection of handmade everyday ceramic bowls, a plate and a cup on pale oak, subtle white and warm grey glazes, woven linen, soft side daylight and beautifully composed negative space. Real usable tableware with simple elegant shapes, no abstract industrial ceramics or perforated filters. Objects near the center remain recognizable in a portrait mobile crop. Quiet premium retail art direction, realistic imperfections, no people, no text, no logos, no UI, no collage. Single photograph.",
+    "method": "built-in image_gen",
+    "scope": "fictional business reference photograph",
+    "output": "public/studio/references/tableware-v1.webp",
+    "width": 1448,
+    "height": 1086,
+    "bytes": 107564
+  },
+  {
+    "name": "clinic",
+    "prompt": "Use case: photorealistic-natural. Create one landscape 4:3 architectural photograph for a fictional Japanese bodywork/seitai clinic website. A small welcoming private treatment room, a professional padded treatment table covered in clean ivory linen, a neatly folded towel, warm pale timber shelving and soft daylight through translucent curtains. Fresh, human-scale, uncluttered and credible small business interior, not a spa pool or hospital operating theater. The treatment table is the central recognizable subject and survives a mobile portrait crop. Restrained photographic lighting and genuine textures, no people or anatomy, no signs, no text, no logos, no UI, no collage.",
+    "method": "built-in image_gen",
+    "scope": "fictional business reference photograph",
+    "output": "public/studio/references/clinic-v1.webp",
+    "width": 1448,
+    "height": 1086,
+    "bytes": 105632
+  }
+]

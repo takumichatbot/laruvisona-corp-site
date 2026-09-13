@@ -29,7 +29,7 @@ export const STARTER_EXAMPLES: Record<
     area: "神奈川県鎌倉市",
     audience: "ゆっくりひと息つきたい方",
     description: "季節の味と、ゆっくり流れる時間を。",
-    photo: "/company/concepts/retreat.webp",
+    photo: "/studio/references/cafe-v1.webp",
     goal: "visit",
   },
   clinic: {
@@ -37,7 +37,7 @@ export const STARTER_EXAMPLES: Record<
     area: "千葉県船橋市",
     audience: "毎日の体の使い方を見直したい方",
     description: "一人ひとりのお悩みを伺い、体と向き合う整体院です。",
-    photo: "/company/concepts/retreat.webp",
+    photo: "/studio/references/clinic-v1.webp",
     goal: "booking",
   },
   construction: {
@@ -53,7 +53,7 @@ export const STARTER_EXAMPLES: Record<
     area: "京都府京都市",
     audience: "日々の道具を大切に選びたい方",
     description: "いつもの食卓に、長く使いたい一品を。",
-    photo: "/company/concepts/ceramics.webp",
+    photo: "/studio/references/tableware-v1.webp",
     goal: "buy",
   },
 };
@@ -193,8 +193,8 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
             ctaText: target.text,
             ctaLink: link,
             bgImage: photo,
-            bgImageWidth: intake.industry === "beauty" ? 1200 : 1440,
-            bgImageHeight: intake.industry === "beauty" ? 896 : 960,
+            bgImageWidth: intake.industry === "beauty" ? 1200 : ["restaurant","clinic","retail"].includes(intake.industry) ? 1448 : 1440,
+            bgImageHeight: intake.industry === "beauty" ? 896 : ["restaurant","clinic","retail"].includes(intake.industry) ? 1086 : 960,
             bgImageAlt:
               "サンプル写真。公開前にご自身の写真へ差し替えてください。",
             bgColor: preset.design.bg,

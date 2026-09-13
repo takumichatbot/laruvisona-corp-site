@@ -1,0 +1,14 @@
+{
+  "unit": 526,
+  "browser": {
+    "directions": 104,
+    "existing-craft": 77,
+    "media": 25,
+    "landing": 91,
+    "editor": 65
+  },
+  "browserTotal": 362,
+  "referenceScreens": 10,
+  "conditions": "production build, local Next/isolated fixture DB, local test fonts; no production operations",
+  "assets": "New generated photos included in final direction test and reference captures; baseline craft/media/landing/editor passed before photo mapping change"
+}

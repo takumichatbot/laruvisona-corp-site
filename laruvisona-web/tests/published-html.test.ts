@@ -801,6 +801,6 @@ test('settings.design を持たない古いサイトは、スタッフ写真96px
 });
 
 test('生成HTMLの版数が13になっている', () => {
-  assert.equal(EXPORT_VERSION, 13);
-  assert.match(basic, /<!--lhpv:13-->$/);
+  assert.equal(EXPORT_VERSION, 14);
+  assert.match(basic, /<!--lhpv:14-->$/);
 });

@@ -1,11 +1,13 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { designCss } from '@/lib/site-design';
+import { COMPOSITION_CSS } from '@/lib/composition-css';
+import { isDirection } from '@/lib/studio-direction';
 import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeToken, safeCssColor } from '@/lib/safe-markup';
 
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
-// 生成HTML末尾に <!--lhpv:N--> として埋め込まれ、デプロイ後の起動時に server.js が
-// 古いバージョンの published_html だけを自動で一括再生成する（/api/admin/republish-all）。
-export const EXPORT_VERSION = 13;
+// 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
+// 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
+export const EXPORT_VERSION = 14;
 
 function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string }): string {
   const d = block.data;
@@ -114,7 +116,9 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       <a href="${url('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
     </div>
     ${imgCol}
+    ${isDirection(d.compositionStyle) && layout !== 'split' && d.mobilePhotoFit === 'contain' && raw('bgImage') ? `<img class="lhp-adaptive-mobile-photo" src="${url('bgImage', '')}" alt="${heroAlt}" loading="eager" decoding="async">` : ''}
   </div>
+  ${isDirection(d.compositionStyle) && layout !== 'split' ? videoBox : ''}
 </section>`;
     }
 
@@ -1225,6 +1229,11 @@ function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: stri
     inner = html.replace(' data-lhp-anim', ` data-lhp-anim="${anim}" data-lhp-dur="${dur}"`);
   }
 
+  if (isDirection(d.compositionStyle)) {
+    const dense = Array.from(String(d.heading || '').replace(/\s/g, '')).length > 28;
+    inner = inner.replace(/<[a-z][a-z0-9-]*/i, m => `${m} data-composition="${d.compositionStyle}"${block.type === 'hero' ? ` data-heading-density="${dense ? 'long' : 'normal'}" data-photo-fit="${d.mobilePhotoFit === 'contain' ? 'contain' : 'cover'}"` : ''}`);
+  }
+
   // Wrap in padding div only when non-default values are set
   const wrapStyles: string[] = [];
   if (pt && pt !== 'md') wrapStyles.push(`padding-top:${padMap[pt] || '48px'}`);
@@ -2095,6 +2104,7 @@ ${heroLayout === 'split' && settings.design ? `@media(max-width:768px){.lhp-hero
 ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
 ${settings.design ? `<style>${designCss(settings.design)}</style>` : ''}
+${pages.some(p => p.blocks.some(b => isDirection(b.data.compositionStyle))) ? `<style>${COMPOSITION_CSS}</style>` : ''}
 ${settings.customCss ? `<style>${safeStyleText(settings.customCss)}</style>` : ''}
 </head>
 <body class="lhp-style-${designStyle}">

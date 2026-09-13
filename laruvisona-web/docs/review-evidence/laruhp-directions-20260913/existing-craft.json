@@ -1,0 +1,333 @@
+{
+  "results": [
+    {
+      "name": "390 landing no overflow",
+      "ok": true
+    },
+    {
+      "name": "390 real export has selected copy",
+      "ok": true
+    },
+    {
+      "name": "390 real export has selected photo",
+      "ok": true
+    },
+    {
+      "name": "390 depth is a real transformed page",
+      "ok": true
+    },
+    {
+      "name": "390 handoff same copy",
+      "ok": true
+    },
+    {
+      "name": "390 handoff same photo",
+      "ok": true
+    },
+    {
+      "name": "390 handoff same design",
+      "ok": true
+    },
+    {
+      "name": "390 token consumed",
+      "ok": true
+    },
+    {
+      "name": "390 editor no overflow",
+      "ok": true
+    },
+    {
+      "name": "390 tapped text opens own field",
+      "ok": true
+    },
+    {
+      "name": "390 sheet expands",
+      "ok": true,
+      "detail": {
+        "before": 269.625,
+        "after": 427.890625
+      }
+    },
+    {
+      "name": "390 section layout changed",
+      "ok": true
+    },
+    {
+      "name": "390 section spacing and motion exported",
+      "ok": true
+    },
+    {
+      "name": "390 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "390 AI proposal does not auto-apply",
+      "ok": true
+    },
+    {
+      "name": "390 only checked field applied",
+      "ok": true
+    },
+    {
+      "name": "390 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "390 stale proposal refused",
+      "ok": true
+    },
+    {
+      "name": "390 two explicit AI requests only",
+      "ok": true
+    },
+    {
+      "name": "390 real save API",
+      "ok": true
+    },
+    {
+      "name": "390 presentation persists",
+      "ok": true
+    },
+    {
+      "name": "390 mood persists",
+      "ok": true
+    },
+    {
+      "name": "390 saved copy survives reopen",
+      "ok": true
+    },
+    {
+      "name": "390 real API unavailable without provider",
+      "ok": true,
+      "detail": {
+        "status": 503
+      }
+    },
+    {
+      "name": "390 no JS exceptions",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "320 landing no overflow",
+      "ok": true
+    },
+    {
+      "name": "320 real export has selected copy",
+      "ok": true
+    },
+    {
+      "name": "320 real export has selected photo",
+      "ok": true
+    },
+    {
+      "name": "320 depth is a real transformed page",
+      "ok": true
+    },
+    {
+      "name": "320 handoff same copy",
+      "ok": true
+    },
+    {
+      "name": "320 handoff same photo",
+      "ok": true
+    },
+    {
+      "name": "320 handoff same design",
+      "ok": true
+    },
+    {
+      "name": "320 token consumed",
+      "ok": true
+    },
+    {
+      "name": "320 editor no overflow",
+      "ok": true
+    },
+    {
+      "name": "320 tapped text opens own field",
+      "ok": true
+    },
+    {
+      "name": "320 sheet expands",
+      "ok": true,
+      "detail": {
+        "before": 269.625,
+        "after": 427.890625
+      }
+    },
+    {
+      "name": "320 section layout changed",
+      "ok": true
+    },
+    {
+      "name": "320 section spacing and motion exported",
+      "ok": true
+    },
+    {
+      "name": "320 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "320 AI proposal does not auto-apply",
+      "ok": true
+    },
+    {
+      "name": "320 only checked field applied",
+      "ok": true
+    },
+    {
+      "name": "320 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "320 stale proposal refused",
+      "ok": true
+    },
+    {
+      "name": "320 two explicit AI requests only",
+      "ok": true
+    },
+    {
+      "name": "320 real save API",
+      "ok": true
+    },
+    {
+      "name": "320 presentation persists",
+      "ok": true
+    },
+    {
+      "name": "320 mood persists",
+      "ok": true
+    },
+    {
+      "name": "320 saved copy survives reopen",
+      "ok": true
+    },
+    {
+      "name": "320 real API unavailable without provider",
+      "ok": true,
+      "detail": {
+        "status": 503
+      }
+    },
+    {
+      "name": "320 no JS exceptions",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "1440 landing no overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 real export has selected copy",
+      "ok": true
+    },
+    {
+      "name": "1440 real export has selected photo",
+      "ok": true
+    },
+    {
+      "name": "1440 depth is a real transformed page",
+      "ok": true
+    },
+    {
+      "name": "1440 handoff same copy",
+      "ok": true
+    },
+    {
+      "name": "1440 handoff same photo",
+      "ok": true
+    },
+    {
+      "name": "1440 handoff same design",
+      "ok": true
+    },
+    {
+      "name": "1440 token consumed",
+      "ok": true
+    },
+    {
+      "name": "1440 editor no overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 tapped text opens own field",
+      "ok": true
+    },
+    {
+      "name": "1440 section layout changed",
+      "ok": true
+    },
+    {
+      "name": "1440 section spacing and motion exported",
+      "ok": true
+    },
+    {
+      "name": "1440 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "1440 AI proposal does not auto-apply",
+      "ok": true
+    },
+    {
+      "name": "1440 only checked field applied",
+      "ok": true
+    },
+    {
+      "name": "1440 AI request only scoped copy",
+      "ok": true
+    },
+    {
+      "name": "1440 stale proposal refused",
+      "ok": true
+    },
+    {
+      "name": "1440 two explicit AI requests only",
+      "ok": true
+    },
+    {
+      "name": "1440 real save API",
+      "ok": true
+    },
+    {
+      "name": "1440 presentation persists",
+      "ok": true
+    },
+    {
+      "name": "1440 mood persists",
+      "ok": true
+    },
+    {
+      "name": "1440 saved copy survives reopen",
+      "ok": true
+    },
+    {
+      "name": "1440 real API unavailable without provider",
+      "ok": true,
+      "detail": {
+        "status": 503
+      }
+    },
+    {
+      "name": "1440 no JS exceptions",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "reduced motion has no depth control",
+      "ok": true
+    },
+    {
+      "name": "reduced motion completed preview visible",
+      "ok": true
+    },
+    {
+      "name": "AI API requires login",
+      "ok": true
+    }
+  ],
+  "lastId": "new-site-20-nnrnnw"
+}

@@ -1,0 +1,497 @@
+{
+  "conditions": "Local production build, fake PostgREST, local selected fonts, service worker disabled only in browser harness; no AI calls",
+  "lastId": "new-site-29-wymg45",
+  "results": [
+    {
+      "name": "390 reference 美容",
+      "ok": true
+    },
+    {
+      "name": "390 reference 飲食",
+      "ok": true
+    },
+    {
+      "name": "390 reference 工事",
+      "ok": true
+    },
+    {
+      "name": "390 reference 物販",
+      "ok": true
+    },
+    {
+      "name": "390 reference 整体",
+      "ok": true
+    },
+    {
+      "name": "390 editorial actual copy",
+      "ok": true
+    },
+    {
+      "name": "390 editorial no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "390 immersive actual copy",
+      "ok": true
+    },
+    {
+      "name": "390 immersive no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "390 catalog actual copy",
+      "ok": true
+    },
+    {
+      "name": "390 catalog no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "390 service-first order differs from photo-first",
+      "ok": true,
+      "detail": [
+        "start-0-hero,start-4-gallery,start-3-services,start-2-three-col,start-1-heading,start-flow,start-5-contact",
+        "start-0-hero,start-4-gallery,start-3-services,start-2-three-col,start-1-heading,start-flow,start-5-contact",
+        "start-0-hero,start-3-services,start-2-three-col,start-4-gallery,start-1-heading,start-flow,start-5-contact"
+      ]
+    },
+    {
+      "name": "390 own photo through real upload",
+      "ok": true
+    },
+    {
+      "name": "390 preview does not mutate current",
+      "ok": true
+    },
+    {
+      "name": "390 comparison is modal",
+      "ok": true
+    },
+    {
+      "name": "390 comparison has usable photo area",
+      "ok": true
+    },
+    {
+      "name": "390 candidate retains own image",
+      "ok": true
+    },
+    {
+      "name": "390 candidate retains full copy",
+      "ok": true
+    },
+    {
+      "name": "390 immersive whole photo stays below copy",
+      "ok": true,
+      "detail": {
+        "ratio": 0.7990762124711316,
+        "natural": 0.8,
+        "top": 313.375,
+        "copy": 285.375
+      }
+    },
+    {
+      "name": "390 catalog whole photo stays below copy",
+      "ok": true,
+      "detail": {
+        "ratio": 0.7990762124711316,
+        "natural": 0.8,
+        "top": 313.375,
+        "copy": 285.375
+      }
+    },
+    {
+      "name": "390 PC comparison canvas",
+      "ok": true
+    },
+    {
+      "name": "390 Escape closes comparison",
+      "ok": true
+    },
+    {
+      "name": "390 cancel unchanged",
+      "ok": true
+    },
+    {
+      "name": "390 adoption keeps full copy",
+      "ok": true
+    },
+    {
+      "name": "390 undo restores direction",
+      "ok": true
+    },
+    {
+      "name": "390 studio outer width",
+      "ok": true
+    },
+    {
+      "name": "390 studio canvas width",
+      "ok": true
+    },
+    {
+      "name": "390 saved through owner API",
+      "ok": true
+    },
+    {
+      "name": "390 saved direction photo and fit",
+      "ok": true
+    },
+    {
+      "name": "390 reopen retains heading and direction",
+      "ok": true
+    },
+    {
+      "name": "390 real publish API",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "390 published full text",
+      "ok": true
+    },
+    {
+      "name": "390 published no overflow",
+      "ok": true
+    },
+    {
+      "name": "390 whole portrait survives without overlap",
+      "ok": true,
+      "detail": {
+        "ratio": 0.7990762124711316,
+        "natural": 0.8,
+        "h1": 158.015625,
+        "photo": 313.375
+      }
+    },
+    {
+      "name": "390 no JS errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "320 reference 美容",
+      "ok": true
+    },
+    {
+      "name": "320 reference 飲食",
+      "ok": true
+    },
+    {
+      "name": "320 reference 工事",
+      "ok": true
+    },
+    {
+      "name": "320 reference 物販",
+      "ok": true
+    },
+    {
+      "name": "320 reference 整体",
+      "ok": true
+    },
+    {
+      "name": "320 editorial actual copy",
+      "ok": true
+    },
+    {
+      "name": "320 editorial no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "320 immersive actual copy",
+      "ok": true
+    },
+    {
+      "name": "320 immersive no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "320 catalog actual copy",
+      "ok": true
+    },
+    {
+      "name": "320 catalog no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "320 service-first order differs from photo-first",
+      "ok": true,
+      "detail": [
+        "start-0-hero,start-4-gallery,start-3-services,start-2-three-col,start-1-heading,start-flow,start-5-contact",
+        "start-0-hero,start-4-gallery,start-3-services,start-2-three-col,start-1-heading,start-flow,start-5-contact",
+        "start-0-hero,start-3-services,start-2-three-col,start-4-gallery,start-1-heading,start-flow,start-5-contact"
+      ]
+    },
+    {
+      "name": "320 own photo through real upload",
+      "ok": true
+    },
+    {
+      "name": "320 preview does not mutate current",
+      "ok": true
+    },
+    {
+      "name": "320 comparison is modal",
+      "ok": true
+    },
+    {
+      "name": "320 comparison has usable photo area",
+      "ok": true
+    },
+    {
+      "name": "320 candidate retains own image",
+      "ok": true
+    },
+    {
+      "name": "320 candidate retains full copy",
+      "ok": true
+    },
+    {
+      "name": "320 immersive whole photo stays below copy",
+      "ok": true,
+      "detail": {
+        "ratio": 0.7990762124711316,
+        "natural": 0.8,
+        "top": 313.375,
+        "copy": 285.375
+      }
+    },
+    {
+      "name": "320 catalog whole photo stays below copy",
+      "ok": true,
+      "detail": {
+        "ratio": 0.7990762124711316,
+        "natural": 0.8,
+        "top": 313.375,
+        "copy": 285.375
+      }
+    },
+    {
+      "name": "320 PC comparison canvas",
+      "ok": true
+    },
+    {
+      "name": "320 Escape closes comparison",
+      "ok": true
+    },
+    {
+      "name": "320 cancel unchanged",
+      "ok": true
+    },
+    {
+      "name": "320 adoption keeps full copy",
+      "ok": true
+    },
+    {
+      "name": "320 undo restores direction",
+      "ok": true
+    },
+    {
+      "name": "320 studio outer width",
+      "ok": true
+    },
+    {
+      "name": "320 studio canvas width",
+      "ok": true
+    },
+    {
+      "name": "320 saved through owner API",
+      "ok": true
+    },
+    {
+      "name": "320 saved direction photo and fit",
+      "ok": true
+    },
+    {
+      "name": "320 reopen retains heading and direction",
+      "ok": true
+    },
+    {
+      "name": "320 real publish API",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "320 published full text",
+      "ok": true
+    },
+    {
+      "name": "320 published no overflow",
+      "ok": true
+    },
+    {
+      "name": "320 whole portrait survives without overlap",
+      "ok": true,
+      "detail": {
+        "ratio": 0.8,
+        "natural": 0.8,
+        "h1": 190.75,
+        "photo": 346.109375
+      }
+    },
+    {
+      "name": "320 no JS errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "1440 reference 美容",
+      "ok": true
+    },
+    {
+      "name": "1440 reference 飲食",
+      "ok": true
+    },
+    {
+      "name": "1440 reference 工事",
+      "ok": true
+    },
+    {
+      "name": "1440 reference 物販",
+      "ok": true
+    },
+    {
+      "name": "1440 reference 整体",
+      "ok": true
+    },
+    {
+      "name": "1440 editorial actual copy",
+      "ok": true
+    },
+    {
+      "name": "1440 editorial no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 immersive actual copy",
+      "ok": true
+    },
+    {
+      "name": "1440 immersive no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 catalog actual copy",
+      "ok": true
+    },
+    {
+      "name": "1440 catalog no iframe overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 service-first order differs from photo-first",
+      "ok": true,
+      "detail": [
+        "start-0-hero,start-4-gallery,start-3-services,start-2-three-col,start-1-heading,start-flow,start-5-contact",
+        "start-0-hero,start-4-gallery,start-3-services,start-2-three-col,start-1-heading,start-flow,start-5-contact",
+        "start-0-hero,start-3-services,start-2-three-col,start-4-gallery,start-1-heading,start-flow,start-5-contact"
+      ]
+    },
+    {
+      "name": "1440 own photo through real upload",
+      "ok": true
+    },
+    {
+      "name": "1440 preview does not mutate current",
+      "ok": true
+    },
+    {
+      "name": "1440 comparison is modal",
+      "ok": true
+    },
+    {
+      "name": "1440 comparison has usable photo area",
+      "ok": true
+    },
+    {
+      "name": "1440 candidate retains own image",
+      "ok": true
+    },
+    {
+      "name": "1440 candidate retains full copy",
+      "ok": true
+    },
+    {
+      "name": "1440 immersive whole photo stays below copy",
+      "ok": true,
+      "detail": {
+        "ratio": 0.7990762124711316,
+        "natural": 0.8,
+        "top": 313.375,
+        "copy": 285.375
+      }
+    },
+    {
+      "name": "1440 catalog whole photo stays below copy",
+      "ok": true,
+      "detail": {
+        "ratio": 0.7990762124711316,
+        "natural": 0.8,
+        "top": 313.375,
+        "copy": 285.375
+      }
+    },
+    {
+      "name": "1440 PC comparison canvas",
+      "ok": true
+    },
+    {
+      "name": "1440 Escape closes comparison",
+      "ok": true
+    },
+    {
+      "name": "1440 cancel unchanged",
+      "ok": true
+    },
+    {
+      "name": "1440 adoption keeps full copy",
+      "ok": true
+    },
+    {
+      "name": "1440 undo restores direction",
+      "ok": true
+    },
+    {
+      "name": "1440 studio outer width",
+      "ok": true
+    },
+    {
+      "name": "1440 studio canvas width",
+      "ok": true
+    },
+    {
+      "name": "1440 saved through owner API",
+      "ok": true
+    },
+    {
+      "name": "1440 saved direction photo and fit",
+      "ok": true
+    },
+    {
+      "name": "1440 reopen retains heading and direction",
+      "ok": true
+    },
+    {
+      "name": "1440 real publish API",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "1440 published full text",
+      "ok": true
+    },
+    {
+      "name": "1440 published no overflow",
+      "ok": true
+    },
+    {
+      "name": "1440 no JS errors",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

@@ -84,6 +84,10 @@ try {
       .getByRole('group', { name: '見せ方を選ぶ' })
       .getByRole('button', { name: 'やわらかい', exact: true })
       .click();
+    await p
+      .getByRole('group', { name: '構成の違う3案' })
+      .getByRole('button', { name: /言葉で伝える/ })
+      .click();
     await p.getByRole('button', { name: '建築と光', exact: true }).click();
     await p.locator('.cl-copy summary').click();
     await p

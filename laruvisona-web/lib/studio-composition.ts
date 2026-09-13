@@ -2,13 +2,27 @@ import { makeStarterSite, exampleFor } from '@/lib/studio-start';
 import { DESIGN_PRESETS } from '@/lib/site-design';
 import { cleanIncomingText } from '@/lib/safe-markup';
 import { editStudioBlock } from '@/lib/studio-image';
+import { arrangeDirection, DIRECTIONS } from '@/lib/studio-direction';
+import { referenceBlocks, INDUSTRY_REFERENCES } from '@/lib/studio-reference';
 export const COMPOSITION_INDUSTRIES = [
   'beauty',
   'restaurant',
   'construction',
   'retail',
+  'clinic',
 ] as const;
 export const COMPOSITION_PHOTOS = [
+  { id: 'cafe', src: '/studio/references/cafe-v1.webp', label: 'カフェの一杯' },
+  {
+    id: 'tableware',
+    src: '/studio/references/tableware-v1.webp',
+    label: '暮らしのうつわ',
+  },
+  {
+    id: 'clinic',
+    src: '/studio/references/clinic-v1.webp',
+    label: '清潔な施術室',
+  },
   { id: 'salon', src: '/salon/hero-1200.jpg', label: '自然光の空間' },
   {
     id: 'retreat',
@@ -39,7 +53,12 @@ export function initialComposition(industry = 'beauty'): Composition {
   const ex = exampleFor(industry);
   return {
     industry,
-    preset: 'refined',
+    preset:
+      industry === 'restaurant'
+        ? 'warm'
+        : ['construction', 'clinic'].includes(industry)
+          ? 'calm'
+          : 'refined',
     name: ex.name,
     heading:
       industry === 'beauty'
@@ -48,17 +67,23 @@ export function initialComposition(industry = 'beauty'): Composition {
           ? '一杯の余白を、\n日々のまんなかに。'
           : industry === 'construction'
             ? '暮らしを聞く。\nそこから、つくる。'
-            : '暮らしに、\n好きな道具を。',
+            : industry === 'clinic'
+              ? 'あなたのお話から、\nはじめます。'
+              : '暮らしに、\n好きな道具を。',
     description: ex.description,
     photo:
       industry === 'beauty'
         ? 'salon'
         : industry === 'restaurant'
-          ? 'retreat'
+          ? 'cafe'
           : industry === 'construction'
             ? 'architecture'
-            : 'ceramics',
-    presentation: 'split',
+            : industry === 'clinic'
+              ? 'clinic'
+              : 'tableware',
+    presentation:
+      DIRECTIONS.find((d) => d.id === INDUSTRY_REFERENCES[industry]?.direction)
+        ?.layout || 'split',
   };
 }
 export function parseComposition(v: unknown): Composition | null {
@@ -97,7 +122,10 @@ export function buildComposition(choice: Composition) {
     goal: exampleFor(choice.industry).goal,
   };
   const site = makeStarterSite(intake, choice.preset);
-  site.pages[0].blocks = site.pages[0].blocks.map((b) =>
+  site.pages[0].blocks = referenceBlocks(
+    site.pages[0].blocks,
+    choice.industry,
+  ).map((b) =>
     b.type === 'hero'
       ? {
           ...editStudioBlock(
@@ -111,6 +139,9 @@ export function buildComposition(choice: Composition) {
               'bgImage',
               COMPOSITION_PHOTOS.find((p) => p.id === choice.photo)!.src,
             ).data,
+            ...(['cafe', 'tableware', 'clinic'].includes(choice.photo)
+              ? { bgImageWidth: 1448, bgImageHeight: 1086 }
+              : {}),
             heading: choice.heading,
             subheading: choice.description,
             heroLayout: choice.presentation,
@@ -127,6 +158,11 @@ export function buildComposition(choice: Composition) {
           },
         }
       : b,
+  );
+  site.pages[0].blocks = arrangeDirection(
+    site.pages[0].blocks,
+    DIRECTIONS.find((d) => d.layout === choice.presentation)!.id,
+    site.settings.design.ink,
   );
   return { site, intake };
 }

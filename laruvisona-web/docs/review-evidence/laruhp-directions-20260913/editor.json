@@ -1,0 +1,274 @@
+[
+  {
+    "name": "320 no outer overflow",
+    "ok": true
+  },
+  {
+    "name": "320 preview visible",
+    "ok": true
+  },
+  {
+    "name": "320 panels initially closed",
+    "ok": true
+  },
+  {
+    "name": "320 mobile preview default",
+    "ok": true
+  },
+  {
+    "name": "320 text click opens text field",
+    "ok": true
+  },
+  {
+    "name": "320 text changes actual preview",
+    "ok": true
+  },
+  {
+    "name": "320 photo click opens image field",
+    "ok": true
+  },
+  {
+    "name": "320 real upload API succeeds",
+    "ok": true,
+    "detail": {
+      "url": "http://127.0.0.1:54999/storage/v1/object/public/site-images/7c9e6679-7425-40de-944b-e07fc1f90ae7/1789275462788.webp"
+    }
+  },
+  {
+    "name": "320 uploaded WebP served",
+    "ok": true
+  },
+  {
+    "name": "320 new photo in rendered HTML",
+    "ok": true
+  },
+  {
+    "name": "320 storage failure returned",
+    "ok": true
+  },
+  {
+    "name": "320 failed upload keeps previous image",
+    "ok": true
+  },
+  {
+    "name": "320 focal position selected",
+    "ok": true
+  },
+  {
+    "name": "320 focal setting in real export",
+    "ok": true
+  },
+  {
+    "name": "320 layout remains within screen",
+    "ok": true
+  },
+  {
+    "name": "320 block list opens",
+    "ok": true
+  },
+  {
+    "name": "320 service fields editable",
+    "ok": true
+  },
+  {
+    "name": "320 keyboard selection and feature editing",
+    "ok": true
+  },
+  {
+    "name": "320 changes saved through real API",
+    "ok": true
+  },
+  {
+    "name": "320 photo and position persisted",
+    "ok": true
+  },
+  {
+    "name": "320 reopening retains edited content",
+    "ok": true
+  },
+  {
+    "name": "320 no JS errors",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "390 no outer overflow",
+    "ok": true
+  },
+  {
+    "name": "390 preview visible",
+    "ok": true
+  },
+  {
+    "name": "390 panels initially closed",
+    "ok": true
+  },
+  {
+    "name": "390 mobile preview default",
+    "ok": true
+  },
+  {
+    "name": "390 text click opens text field",
+    "ok": true
+  },
+  {
+    "name": "390 text changes actual preview",
+    "ok": true
+  },
+  {
+    "name": "390 photo click opens image field",
+    "ok": true
+  },
+  {
+    "name": "390 real upload API succeeds",
+    "ok": true,
+    "detail": {
+      "url": "http://127.0.0.1:54999/storage/v1/object/public/site-images/7c9e6679-7425-40de-944b-e07fc1f90ae7/1789275468359.webp"
+    }
+  },
+  {
+    "name": "390 uploaded WebP served",
+    "ok": true
+  },
+  {
+    "name": "390 new photo in rendered HTML",
+    "ok": true
+  },
+  {
+    "name": "390 storage failure returned",
+    "ok": true
+  },
+  {
+    "name": "390 failed upload keeps previous image",
+    "ok": true
+  },
+  {
+    "name": "390 focal position selected",
+    "ok": true
+  },
+  {
+    "name": "390 focal setting in real export",
+    "ok": true
+  },
+  {
+    "name": "390 layout remains within screen",
+    "ok": true
+  },
+  {
+    "name": "390 block list opens",
+    "ok": true
+  },
+  {
+    "name": "390 service fields editable",
+    "ok": true
+  },
+  {
+    "name": "390 keyboard selection and feature editing",
+    "ok": true
+  },
+  {
+    "name": "gallery structure disabled during upload",
+    "ok": true
+  },
+  {
+    "name": "gallery real upload API",
+    "ok": true
+  },
+  {
+    "name": "390 changes saved through real API",
+    "ok": true
+  },
+  {
+    "name": "390 photo and position persisted",
+    "ok": true
+  },
+  {
+    "name": "390 reopening retains edited content",
+    "ok": true
+  },
+  {
+    "name": "390 no JS errors",
+    "ok": true,
+    "detail": []
+  },
+  {
+    "name": "1440 no outer overflow",
+    "ok": true
+  },
+  {
+    "name": "1440 preview visible",
+    "ok": true
+  },
+  {
+    "name": "1440 text click opens text field",
+    "ok": true
+  },
+  {
+    "name": "1440 text changes actual preview",
+    "ok": true
+  },
+  {
+    "name": "1440 photo click opens image field",
+    "ok": true
+  },
+  {
+    "name": "1440 real upload API succeeds",
+    "ok": true,
+    "detail": {
+      "url": "http://127.0.0.1:54999/storage/v1/object/public/site-images/7c9e6679-7425-40de-944b-e07fc1f90ae7/1789275475458.webp"
+    }
+  },
+  {
+    "name": "1440 uploaded WebP served",
+    "ok": true
+  },
+  {
+    "name": "1440 new photo in rendered HTML",
+    "ok": true
+  },
+  {
+    "name": "1440 storage failure returned",
+    "ok": true
+  },
+  {
+    "name": "1440 failed upload keeps previous image",
+    "ok": true
+  },
+  {
+    "name": "1440 focal position selected",
+    "ok": true
+  },
+  {
+    "name": "1440 focal setting in real export",
+    "ok": true
+  },
+  {
+    "name": "1440 layout remains within screen",
+    "ok": true
+  },
+  {
+    "name": "1440 service fields editable",
+    "ok": true
+  },
+  {
+    "name": "1440 keyboard selection and feature editing",
+    "ok": true
+  },
+  {
+    "name": "1440 changes saved through real API",
+    "ok": true
+  },
+  {
+    "name": "1440 photo and position persisted",
+    "ok": true
+  },
+  {
+    "name": "1440 reopening retains edited content",
+    "ok": true
+  },
+  {
+    "name": "1440 no JS errors",
+    "ok": true,
+    "detail": []
+  }
+]

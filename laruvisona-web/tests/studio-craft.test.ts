@@ -178,7 +178,7 @@ test('presentation options are scoped to the configured block', () => {
   assert.ok(one >= 0 && two > one);
   assert.doesNotMatch(html.slice(one, two), /class="lhp-hero lhp-hero-split/);
   assert.match(html.slice(two), /lhp-hero-split/);
-  assert.equal(EXPORT_VERSION, 13);
+  assert.equal(EXPORT_VERSION, 14);
 });
 test('gallery stacking opts in and has reduced motion fallback', () => {
   const { site } = buildComposition(initialComposition());
