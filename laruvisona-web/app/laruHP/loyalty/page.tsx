@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
+import { Award, BadgeCheck, Star } from 'lucide-react';
 
 interface LoyaltyCard {
   id: string;
@@ -27,6 +28,12 @@ interface Site {
   name: string;
 }
 
+const DEFAULT_CONFIG: LoyaltyConfig = { maxStamps: 10, reward: '次回10%オフ', cardName: 'スタンプカード' };
+
+async function responseBody(res: Response): Promise<{ error?: string; [key: string]: unknown }> {
+  try { return await res.json(); } catch { return {}; }
+}
+
 export default function LoyaltyPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -34,8 +41,9 @@ export default function LoyaltyPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState('');
   const [cards, setCards] = useState<LoyaltyCard[]>([]);
-  const [config, setConfig] = useState<LoyaltyConfig>({ maxStamps: 10, reward: '次回10%オフ', cardName: 'スタンプカード' });
+  const [config, setConfig] = useState<LoyaltyConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   // Issue form
   const [customerName, setCustomerName] = useState('');
@@ -53,6 +61,7 @@ export default function LoyaltyPage() {
   const [stamping, setStamping] = useState<string | null>(null);
   const [celebrationCard, setCelebrationCard] = useState<{ stamps: number; reward: string } | null>(null);
   const [cardSearch, setCardSearch] = useState('');
+  const [stampError, setStampError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -60,8 +69,9 @@ export default function LoyaltyPage() {
       if (!user) { router.replace('/laruHP/auth/login'); return; }
 
       const res = await fetch('/api/sites');
-      const d = await res.json();
-      const s: Site[] = d.sites || [];
+      const d = await responseBody(res);
+      if (!res.ok) { setLoadError('サイトを読み込めませんでした。再読み込みしてください'); setLoading(false); return; }
+      const s = Array.isArray(d.sites) ? d.sites as Site[] : [];
       setSites(s);
       if (s.length > 0) setSelectedSiteId(s[0].id);
       setLoading(false);
@@ -71,12 +81,20 @@ export default function LoyaltyPage() {
 
   useEffect(() => {
     if (!selectedSiteId) return;
+    const controller = new AbortController();
     (async () => {
-      const res = await fetch(`/api/loyalty?siteId=${selectedSiteId}`);
-      const d = await res.json();
-      setCards(d.cards || []);
-      if (d.config) setConfig(d.config);
+      try {
+        const res = await fetch(`/api/loyalty?siteId=${selectedSiteId}`, { signal: controller.signal });
+        const d = await responseBody(res);
+        if (!res.ok) throw Error();
+        setCards(Array.isArray(d.cards) ? d.cards as LoyaltyCard[] : []);
+        setConfig(d.config && typeof d.config === 'object' ? d.config as LoyaltyConfig : DEFAULT_CONFIG);
+        setLoadError('');
+      } catch {
+        if (!controller.signal.aborted) setLoadError('ポイントカードを読み込めませんでした。再読み込みしてください');
+      }
     })();
+    return () => controller.abort();
   }, [selectedSiteId]);
 
   useEffect(() => {
@@ -88,13 +106,15 @@ export default function LoyaltyPage() {
   const handleSaveConfig = async () => {
     setSavingConfig(true);
     setConfigMsg('');
-    const res = await fetch('/api/loyalty', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'configure', siteId: selectedSiteId, ...config }),
-    });
-    setConfigMsg(res.ok ? '設定を保存しました' : 'エラーが発生しました');
-    setSavingConfig(false);
+    try {
+      const res = await fetch('/api/loyalty', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'configure', siteId: selectedSiteId, ...config }),
+      });
+      const d = await responseBody(res);
+      setConfigMsg(res.ok ? '設定を保存しました' : d.error || '設定を保存できませんでした');
+    } catch { setConfigMsg('通信できませんでした。入力内容は残っています'); }
+    finally { setSavingConfig(false); }
     setTimeout(() => setConfigMsg(''), 3000);
   };
 
@@ -103,45 +123,39 @@ export default function LoyaltyPage() {
     setIssuing(true);
     setIssueMsg('');
     setNewCardUrl('');
-    const res = await fetch('/api/loyalty', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'issue',
-        siteId: selectedSiteId,
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim() || undefined,
-      }),
-    });
-    const d = await res.json();
-    if (!res.ok) {
-      setIssueMsg(`エラー: ${d.error}`);
-    } else {
+    try {
+      const res = await fetch('/api/loyalty', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'issue', siteId: selectedSiteId, customerName: customerName.trim(), customerPhone: customerPhone.trim() }),
+      });
+      const d = await responseBody(res);
+      if (!res.ok || typeof d.cardUrl !== 'string') { setIssueMsg(d.error || 'カードを発行できませんでした'); return; }
       setIssueMsg('カードを発行しました');
       setNewCardUrl(d.cardUrl);
-      setCustomerName('');
-      setCustomerPhone('');
-      // Reload cards
+      setCustomerName(''); setCustomerPhone('');
       const r2 = await fetch(`/api/loyalty?siteId=${selectedSiteId}`);
-      const d2 = await r2.json();
-      setCards(d2.cards || []);
-    }
-    setIssuing(false);
+      const d2 = await responseBody(r2);
+      if (r2.ok && Array.isArray(d2.cards)) setCards(d2.cards as LoyaltyCard[]);
+      else setIssueMsg('カードは発行されました。一覧を再読み込みしてください');
+    } catch { setIssueMsg('通信できませんでした。入力内容は残っています'); }
+    finally { setIssuing(false); }
   };
 
   const handleStamp = async (cardId: string) => {
     setStamping(cardId);
-    const res = await fetch(`/api/loyalty?cardId=${cardId}`, { method: 'PATCH' });
-    const d = await res.json();
-    if (res.ok) {
+    setStampError('');
+    try {
+      const res = await fetch(`/api/loyalty?cardId=${cardId}`, { method: 'PATCH' });
+      const d = await responseBody(res);
+      if (!res.ok || typeof d.stamps !== 'number') { setStampError(d.error || 'ポイントを追加できませんでした'); return; }
       setCards(prev => prev.map(c =>
-        c.id === cardId ? { ...c, stamps: d.stamps, last_stamped_at: new Date().toISOString() } : c
+        c.id === cardId ? { ...c, stamps: d.stamps as number, last_stamped_at: new Date().toISOString() } : c
       ));
       if (d.completed) {
-        setCelebrationCard({ stamps: d.stamps, reward: d.reward });
+        setCelebrationCard({ stamps: d.stamps, reward: String(d.reward || '') });
       }
-    }
-    setStamping(null);
+    } catch { setStampError('通信できませんでした。もう一度お試しください'); }
+    finally { setStamping(null); }
   };
 
   const inputCls = 'w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 transition-colors';
@@ -158,7 +172,7 @@ export default function LoyaltyPage() {
       {celebrationCard && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center" onClick={e => e.stopPropagation()}>
-            <div className="text-6xl mb-4">🎉</div>
+            <Award className="mx-auto mb-4 h-14 w-14 text-amber-600" aria-hidden="true" />
             <h3 className="font-bold text-xl text-gray-900 mb-2">{celebrationCard.stamps}スタンプ達成！</h3>
             <p className="text-sm text-gray-600 mb-1">特典が付与されました</p>
             <p className="text-base font-bold text-sky-700 mb-6">{celebrationCard.reward}</p>
@@ -181,6 +195,8 @@ export default function LoyaltyPage() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+
+        {loadError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
 
         {/* Site picker */}
         {sites.length > 1 && (
@@ -213,7 +229,7 @@ export default function LoyaltyPage() {
                 <label className="text-xs font-semibold text-gray-600 mb-1.5 block">達成時の特典</label>
                 <input type="text" value={config.reward} onChange={e => setConfig(c => ({ ...c, reward: e.target.value }))} className={inputCls} placeholder="次回10%オフ・無料サービスなど" />
               </div>
-              {configMsg && <p className={`text-xs font-semibold ${configMsg.startsWith('エラー') ? 'text-red-600' : 'text-green-600'}`}>{configMsg}</p>}
+              {configMsg && <p role="status" className={`text-xs font-semibold ${configMsg === '設定を保存しました' ? 'text-green-600' : 'text-red-600'}`}>{configMsg}</p>}
               <button onClick={handleSaveConfig} disabled={savingConfig} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors">
                 {savingConfig ? '保存中...' : '設定を保存'}
               </button>
@@ -233,7 +249,7 @@ export default function LoyaltyPage() {
                 <label className="text-xs font-semibold text-gray-600 mb-1.5 block">電話番号（任意）</label>
                 <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className={inputCls} placeholder="090-0000-0000" />
               </div>
-              {issueMsg && <p className={`text-xs font-semibold ${issueMsg.startsWith('エラー') ? 'text-red-600' : 'text-green-600'}`}>{issueMsg}</p>}
+              {issueMsg && <p role="status" className={`text-xs font-semibold ${issueMsg === 'カードを発行しました' ? 'text-green-600' : 'text-red-600'}`}>{issueMsg}</p>}
               <button onClick={handleIssue} disabled={issuing || !customerName.trim()} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-xl text-sm transition-colors">
                 {issuing ? '発行中...' : 'カードを発行する'}
               </button>
@@ -267,9 +283,11 @@ export default function LoyaltyPage() {
             />
           </div>
 
+          {stampError && <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{stampError}</p>}
+
           {cards.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-5xl mb-4">⭐</div>
+              <Star className="mx-auto mb-4 h-12 w-12 text-sky-500" aria-hidden="true" />
               <p className="text-sm text-gray-500">まだカードが発行されていません</p>
               <p className="text-xs text-gray-400 mt-1">「カードを発行」フォームから登録してください</p>
             </div>
@@ -288,7 +306,7 @@ export default function LoyaltyPage() {
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="font-semibold text-sm text-gray-900">{card.customer_name}</span>
                         {card.customer_phone && <span className="text-xs text-gray-400">{card.customer_phone}</span>}
-                        {isComplete && <span className="text-[10px] bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full font-bold">達成 🎉</span>}
+                        {isComplete && <span className="inline-flex items-center gap-1 text-[10px] bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full font-bold"><BadgeCheck className="h-3 w-3" aria-hidden="true" />達成</span>}
                       </div>
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="flex gap-0.5 flex-wrap max-w-[200px]">

@@ -1,163 +1,132 @@
+import { randomBytes } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { appUrlFallback } from '@/lib/site-origin';
+import {
+  loyaltyTokenHash,
+  loyaltyTokenMatches,
+  parseLoyaltyCommand,
+  readLoyaltyBody,
+  validLoyaltyCardId,
+  validLoyaltyToken,
+} from '@/lib/loyalty-contract';
 
-// GET  /api/loyalty?siteId=xxx — list loyalty cards for a site (owner view)
-// GET  /api/loyalty?cardId=xxx — get a customer's card (public, no auth)
-// POST /api/loyalty — create a new loyalty card program config
-// PATCH /api/loyalty?cardId=xxx — add stamp to customer card (requires site owner auth or site secret)
+function reply(body: Record<string, unknown>, status = 200) {
+  return NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
+}
+
+function databaseError() {
+  return reply({ error: '処理を完了できませんでした。時間をおいてもう一度お試しください' }, 500);
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const siteId = searchParams.get('siteId');
   const cardId = searchParams.get('cardId');
-
-  const service = await createServiceClient();
+  const token = searchParams.get('token');
+  const service = createServiceClient();
 
   if (cardId) {
-    // Public: return card info for display
-    const { data: card } = await service
+    if (!validLoyaltyCardId(cardId) || !validLoyaltyToken(token)) return reply({ error: 'カードが見つかりません' }, 404);
+    const { data: card, error } = await service
       .from('loyalty_cards')
-      .select('id, customer_name, stamps, max_stamps, reward, site_id, created_at')
+      .select('id, customer_name, stamps, max_stamps, reward, card_name, site_id, created_at, public_token_hash')
       .eq('id', cardId)
       .single();
-
-    if (!card) return NextResponse.json({ error: 'Card not found' }, { status: 404 });
-
-    const { data: site } = await service.from('sites').select('name, industry').eq('id', card.site_id).single();
-
-    return NextResponse.json({ card, site });
+    if (error || !card || !loyaltyTokenMatches(token, card.public_token_hash)) return reply({ error: 'カードが見つかりません' }, 404);
+    const { data: site, error: siteError } = await service.from('sites').select('name, industry').eq('id', card.site_id).single();
+    if (siteError || !site) return databaseError();
+    const { public_token_hash: _secret, ...safeCard } = card;
+    void _secret;
+    return reply({ card: safeCard, site });
   }
 
-  if (siteId) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    // Verify ownership
-    const { data: site } = await supabase.from('sites').select('id, name, settings_json').eq('id', siteId).eq('user_id', user.id).single();
-    if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
-
-    // Get all loyalty cards for this site
-    const { data: cards } = await service
-      .from('loyalty_cards')
-      .select('id, customer_name, customer_phone, stamps, max_stamps, reward, created_at, last_stamped_at')
-      .eq('site_id', siteId)
-      .order('created_at', { ascending: false });
-
-    const config = (site.settings_json as Record<string, unknown>)?.loyalty_config as {
-      maxStamps: number;
-      reward: string;
-      cardName: string;
-    } | null;
-
-    return NextResponse.json({ cards: cards || [], config });
-  }
-
-  return NextResponse.json({ error: 'siteId or cardId required' }, { status: 400 });
+  if (!siteId || !validLoyaltyCardId(siteId)) return reply({ error: 'サイトを確認してください' }, 400);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return reply({ error: 'ログインしてください' }, 401);
+  const { data: site, error: siteError } = await supabase
+    .from('sites').select('id, name, settings_json').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError || !site) return reply({ error: 'サイトが見つかりません' }, 404);
+  const { data: cards, error: cardsError } = await service
+    .from('loyalty_cards')
+    .select('id, customer_name, customer_phone, stamps, max_stamps, reward, created_at, last_stamped_at')
+    .eq('site_id', siteId).order('created_at', { ascending: false });
+  if (cardsError) return databaseError();
+  const config = (site.settings_json as Record<string, unknown> | null)?.loyalty_config ?? null;
+  return reply({ cards, config });
 }
 
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return reply({ error: 'ログインしてください' }, 401);
 
-  const body = await req.json() as {
-    action: 'configure' | 'issue';
-    siteId: string;
-    // configure
-    maxStamps?: number;
-    reward?: string;
-    cardName?: string;
-    // issue new card to customer
-    customerName?: string;
-    customerPhone?: string;
-  };
-
-  const { action, siteId } = body;
-  if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
-
-  const { data: site } = await supabase.from('sites').select('id, settings_json').eq('id', siteId).eq('user_id', user.id).single();
-  if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
-
-  const service = await createServiceClient();
-
-  if (action === 'configure') {
-    const settings = (site.settings_json as Record<string, unknown>) || {};
-    await supabase.from('sites').update({
-      settings_json: {
-        ...settings,
-        loyalty_config: {
-          maxStamps: body.maxStamps || 10,
-          reward: body.reward || '特典プレゼント',
-          cardName: body.cardName || 'スタンプカード',
-        },
-      },
-    }).eq('id', siteId);
-
-    return NextResponse.json({ ok: true });
+  let command;
+  try {
+    command = parseLoyaltyCommand(await readLoyaltyBody(req));
+  } catch (error) {
+    return reply({ error: error instanceof Error ? error.message : '入力を確認してください' }, 400);
   }
 
-  if (action === 'issue') {
-    const settings = (site.settings_json as Record<string, unknown>) || {};
-    const config = (settings.loyalty_config as { maxStamps?: number; reward?: string } | null) || {};
+  const { data: site, error: siteError } = await supabase
+    .from('sites').select('id, settings_json').eq('id', command.siteId).eq('user_id', user.id).single();
+  if (siteError || !site) return reply({ error: 'サイトが見つかりません' }, 404);
+  const service = createServiceClient();
 
-    const { data: card, error } = await service.from('loyalty_cards').insert({
-      site_id: siteId,
-      customer_name: body.customerName || '未設定',
-      customer_phone: body.customerPhone || null,
-      stamps: 0,
-      max_stamps: config.maxStamps || 10,
-      reward: config.reward || '特典プレゼント',
-      created_at: new Date().toISOString(),
-    }).select('id').single();
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    const cardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/laruHP/loyalty/card/${card!.id}`;
-    return NextResponse.json({ ok: true, cardId: card!.id, cardUrl });
+  if (command.action === 'configure') {
+    const { data, error } = await service.rpc('laruhp_loyalty_configure', {
+      p_site: command.siteId,
+      p_owner: user.id,
+      p_config: { maxStamps: command.maxStamps, reward: command.reward, cardName: command.cardName },
+    });
+    if (error || !(data as { ok?: boolean } | null)?.ok) return databaseError();
+    return reply({ ok: true });
   }
 
-  return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  const rawConfig = (site.settings_json as Record<string, unknown> | null)?.loyalty_config;
+  const config = rawConfig && typeof rawConfig === 'object' && !Array.isArray(rawConfig)
+    ? rawConfig as Record<string, unknown> : {};
+  const maxStamps = Number.isInteger(config.maxStamps) && Number(config.maxStamps) >= 1 && Number(config.maxStamps) <= 50
+    ? Number(config.maxStamps) : 10;
+  const reward = typeof config.reward === 'string' && config.reward.trim() && config.reward.length <= 200
+    ? config.reward.trim() : '特典プレゼント';
+  const cardName = typeof config.cardName === 'string' && config.cardName.trim() && config.cardName.length <= 80
+    ? config.cardName.trim() : 'スタンプカード';
+  const token = randomBytes(32).toString('base64url');
+  const { data: card, error } = await service.from('loyalty_cards').insert({
+    site_id: command.siteId,
+    customer_name: command.customerName,
+    customer_phone: command.customerPhone || null,
+    stamps: 0,
+    max_stamps: maxStamps,
+    reward,
+    card_name: cardName,
+    public_token_hash: loyaltyTokenHash(token),
+  }).select('id').single();
+  if (error || !card?.id) return databaseError();
+  const cardUrl = `${appUrlFallback()}/laruHP/loyalty/card/${card.id}?token=${encodeURIComponent(token)}`;
+  return reply({ ok: true, cardId: card.id, cardUrl });
 }
 
 export async function PATCH(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const cardId = searchParams.get('cardId');
-  if (!cardId) return NextResponse.json({ error: 'cardId required' }, { status: 400 });
-
-  // Auth: must be site owner
+  const cardId = new URL(req.url).searchParams.get('cardId');
+  if (!validLoyaltyCardId(cardId)) return reply({ error: 'カードを確認してください' }, 400);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const service = await createServiceClient();
-
-  const { data: card } = await service
-    .from('loyalty_cards')
-    .select('id, site_id, stamps, max_stamps, reward, customer_name')
-    .eq('id', cardId)
-    .single();
-
-  if (!card) return NextResponse.json({ error: 'Card not found' }, { status: 404 });
-
-  // Verify site ownership
-  const { data: site } = await supabase.from('sites').select('id').eq('id', card.site_id).eq('user_id', user.id).single();
-  if (!site) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-
-  const newStamps = Math.min(card.stamps + 1, card.max_stamps);
-  const completed = newStamps >= card.max_stamps;
-
-  await service.from('loyalty_cards').update({
-    stamps: newStamps,
-    last_stamped_at: new Date().toISOString(),
-    completed_at: completed ? new Date().toISOString() : null,
-  }).eq('id', cardId);
-
-  return NextResponse.json({
+  if (!user) return reply({ error: 'ログインしてください' }, 401);
+  const { data, error } = await createServiceClient().rpc('laruhp_loyalty_add_stamp', {
+    p_card: cardId,
+    p_owner: user.id,
+  });
+  const result = data as { ok?: boolean; stamps?: number; maxStamps?: number; completed?: boolean; reward?: string | null } | null;
+  if (error?.message?.includes('card_not_found')) return reply({ error: 'カードが見つかりません' }, 404);
+  if (error || !result?.ok || !Number.isInteger(result.stamps) || !Number.isInteger(result.maxStamps)) return databaseError();
+  return reply({
     ok: true,
-    stamps: newStamps,
-    maxStamps: card.max_stamps,
-    completed,
-    reward: completed ? card.reward : null,
+    stamps: result.stamps,
+    maxStamps: result.maxStamps,
+    completed: Boolean(result.completed),
+    reward: result.completed ? result.reward : null,
   });
 }
