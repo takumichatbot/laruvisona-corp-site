@@ -139,7 +139,7 @@ export function wwwSibling(host: string): string | null {
  */
 export function isReservedHost(host: string, mainHost?: string | null): boolean {
   const h = host.toLowerCase();
-  const fixed = ['onrender.com', 'localhost', 'larubot.tokyo', 'laruvisona.jp', 'vercel.app', 'render.com'];
+  const fixed = ['onrender.com', 'localhost', 'larubot.tokyo', 'laruvisona.jp', 'laruhp.com', 'vercel.app', 'render.com'];
   for (const f of fixed) {
     if (h === f || h.endsWith(`.${f}`)) return true;
   }

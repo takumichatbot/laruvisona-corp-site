@@ -22,15 +22,18 @@ import { PLANS, TERMS, PRIMARY_CTA, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
 import './landing.css';
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://laruhp.com/' },
   title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
   description:
     '写真と言葉から、お店や会社にふさわしいホームページへ。実際の完成像を見ながら構成・書体・写真・動きを選んで作る、LARU HP。',
   openGraph: {
+    siteName: 'LARU HP',
+    type: 'website',
     title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
     description:
       '写真と言葉を選んで、完成を見ながら整える。お店にも、会社にも。',
-    url: 'https://laruvisona.jp/laruHP',
-    images: [{ url: '/laruHP/opengraph-image', width: 1200, height: 630 }],
+    url: 'https://laruhp.com/',
+    images: [{ url: 'https://laruvisona.jp/laruHP/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
@@ -79,7 +82,7 @@ export default function LaruHPLandingPage() {
       <header className="lp-header">
         <Link
           className="lp-wordmark"
-          href="/laruHP"
+          href="https://laruhp.com/"
           aria-label="LARU HP ホーム"
         >
           LARU<span>HP</span>
@@ -91,10 +94,10 @@ export default function LaruHPLandingPage() {
           <a href="#price">料金</a>
         </nav>
         <div className="lp-header-actions">
-          <Link className="lp-login" href="/laruHP/auth/login">
+          <Link className="lp-login" href="https://laruvisona.jp/laruHP/auth/login">
             ログイン
           </Link>
-          <Link className="lp-button lp-button-small" href="/laruHP/studio">
+          <Link className="lp-button lp-button-small" href="https://laruvisona.jp/laruHP/studio">
             作りはじめる
             <ArrowUpRight size={15} />
           </Link>
@@ -121,7 +124,7 @@ export default function LaruHPLandingPage() {
               あなたの仕事が伝わるサイトを、ここで。
             </p>
             <div className="lp-hero-actions">
-              <Link href="/laruHP/studio" className="lp-button">
+              <Link href="https://laruvisona.jp/laruHP/studio" className="lp-button">
                 完成を見ながら、つくる
                 <ArrowUpRight size={20} />
               </Link>
@@ -258,7 +261,7 @@ export default function LaruHPLandingPage() {
               </article>
             ))}
           </div>
-          <Link className="lp-text-link" href="/laruHP/studio">
+          <Link className="lp-text-link" href="https://laruvisona.jp/laruHP/studio">
             あなたのお店で試してみる
             <ArrowUpRight size={18} />
           </Link>
@@ -347,7 +350,7 @@ export default function LaruHPLandingPage() {
                 </p>
                 <Link
                   className={`lp-button ${p.highlight ? '' : 'lp-button-outline'}`}
-                  href={PRIMARY_CTA.href}
+                  href={`https://laruvisona.jp${PRIMARY_CTA.href}`}
                 >
                   {PRIMARY_CTA.label}
                   <ArrowUpRight size={17} />
@@ -370,7 +373,7 @@ export default function LaruHPLandingPage() {
             <p>
               {TERMS.annualNote}。{TERMS.domainNote}。{TERMS.payment}。
             </p>
-            <Link href="/laruHP/plans">
+            <Link href="https://laruvisona.jp/laruHP/plans">
               プランの詳しい内容を見る
               <ArrowUpRight size={14} />
             </Link>
@@ -386,7 +389,7 @@ export default function LaruHPLandingPage() {
             <p>
               迷ったら、お気軽に。
               <br />
-              <Link href="/contact" className="lp-text-link">
+              <Link href="https://laruvisona.jp/contact" className="lp-text-link">
                 相談する
                 <ArrowUpRight size={16} />
               </Link>
@@ -418,7 +421,7 @@ export default function LaruHPLandingPage() {
             <br />
             作りながら、見つけていきましょう。
           </p>
-          <Link className="lp-button" href="/laruHP/studio">
+          <Link className="lp-button" href="https://laruvisona.jp/laruHP/studio">
             自分のサイトをつくる
             <ArrowUpRight size={20} />
           </Link>
@@ -429,18 +432,18 @@ export default function LaruHPLandingPage() {
       </main>
       <footer className="lp-footer lp-container">
         <div>
-          <Link className="lp-wordmark" href="/laruHP">
+          <Link className="lp-wordmark" href="https://laruhp.com/">
             LARU<span>HP</span>
             <i aria-hidden="true" />
           </Link>
           <p>その仕事に、ふさわしいホームページを。</p>
         </div>
         <nav aria-label="フッター">
-          <Link href="/">運営会社</Link>
-          <Link href="/contact">お問い合わせ</Link>
-          <Link href="/laruHP/terms">利用規約</Link>
-          <Link href="/laruHP/privacy">プライバシー</Link>
-          <Link href="/laruHP/tokusho">特定商取引法</Link>
+          <Link href="https://laruvisona.jp/">運営会社</Link>
+          <Link href="https://laruvisona.jp/contact">お問い合わせ</Link>
+          <Link href="https://laruvisona.jp/laruHP/terms">利用規約</Link>
+          <Link href="https://laruvisona.jp/laruHP/privacy">プライバシー</Link>
+          <Link href="https://laruvisona.jp/laruHP/tokusho">特定商取引法</Link>
         </nav>
         <small>© LaruVisona Inc.</small>
       </footer>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { isLaruHpHost } from '@/lib/laruhp-host';
 
 /**
  * LARUbot AIチャットボットのランチャーを全ページに読み込むコンポーネント。
@@ -30,6 +31,7 @@ function ensureIdleCallback() {
 
 export default function LarubotWidget() {
   useEffect(() => {
+    if (isLaruHpHost(window.location.hostname)) return;
     const id = process.env.NEXT_PUBLIC_LARUBOT_PUBLIC_ID;
     if (!id) return;
 

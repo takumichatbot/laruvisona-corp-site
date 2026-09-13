@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { isLaruHpHost } from '@/lib/laruhp-host';
 
 /**
  * Service Worker の登録だけを行う。
@@ -17,6 +18,7 @@ import { useEffect } from 'react';
  */
 export default function PwaInit() {
   useEffect(() => {
+    if (isLaruHpHost(window.location.hostname)) return;
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').catch(() => { /* 失敗しても何もしない */ });
   }, []);

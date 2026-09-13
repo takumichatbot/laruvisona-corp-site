@@ -1,3 +1,4 @@
+import { LARUHP_ORIGIN, LARUHP_APP_ORIGIN, isLaruHpHost } from './lib/laruhp-host';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -120,6 +121,47 @@ async function isAgencyAdminDomain(host: string): Promise<boolean> {
 export async function proxy(request: NextRequest) {
   const hostname = (request.headers.get('host') || '').split(':')[0];
   const pathname = request.nextUrl.pathname;
+
+  // サービス自身の案内ホスト。顧客ドメインの解決や認証DBには渡さない。
+  if (isLaruHpHost(hostname)) {
+    if (!['GET', 'HEAD'].includes(request.method)) {
+      return new NextResponse(null, { status: 405, headers: { Allow: 'GET, HEAD' } });
+    }
+    if (hostname.toLowerCase() === 'www.laruhp.com' || pathname === '/laruHP' || pathname === '/laruHP/') {
+      const to = new URL(LARUHP_ORIGIN);
+      to.pathname = pathname === '/laruHP' || pathname === '/laruHP/' ? '/' : pathname;
+      to.search = request.nextUrl.search;
+      return NextResponse.redirect(to, 308);
+    }
+    if (pathname === '/') {
+      const to = request.nextUrl.clone();
+      to.pathname = '/laruHP';
+      return NextResponse.rewrite(to);
+    }
+    if (pathname === '/robots.txt') {
+      return new NextResponse('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://laruhp.com/sitemap.xml\n', {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
+    }
+    if (pathname === '/sitemap.xml') {
+      return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://laruhp.com/</loc></url></urlset>', {
+        headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+      });
+    }
+    // 公開画像・映像・JS/CSSだけを同じoriginで配る。制作・認証は既存originへ。
+    const staticFile = /^\/(?:lp|studio|salon|company|brand|images)\/.*\.(?:avif|webp|png|jpe?g|svg|mp4|webm|woff2?)$/i.test(pathname);
+    if (pathname.startsWith('/_next/') || staticFile ||
+        ['/favicon.ico', '/laruhp-icon-192.png', '/laruhp-icon-512.png', '/apple-touch-icon.png', '/laruhp-manifest.json', '/laruHP/opengraph-image', '/api/domain-probe'].includes(pathname)) {
+      return NextResponse.next();
+    }
+    if (pathname.startsWith('/laruHP/') || pathname === '/contact') {
+      const to = new URL(LARUHP_APP_ORIGIN);
+      to.pathname = pathname;
+      to.search = request.nextUrl.search;
+      return NextResponse.redirect(to, 307);
+    }
+    return new NextResponse(null, { status: 404 });
+  }
 
   const isSystemHost =
     !hostname ||

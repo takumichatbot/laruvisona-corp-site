@@ -31,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
 
     // LARU HP メイン
-    { url: `${base}/laruHP`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `https://laruhp.com/`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
 
     // 業種特化LP（15業種）
     ...industryEntries,

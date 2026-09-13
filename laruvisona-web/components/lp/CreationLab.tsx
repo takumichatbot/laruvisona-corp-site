@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { isLaruHpHost } from '@/lib/laruhp-host';
+import { compositionTransferUrl } from '@/lib/composition-transfer';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowRight, Layers3, Check, MousePointer2 } from 'lucide-react';
@@ -121,6 +123,10 @@ export default function CreationLab() {
   const canvasWidth = width < 560 ? 390 : 1100,
     scale = width / canvasWidth;
   const continueMaking = () => {
+    if (isLaruHpHost(window.location.hostname)) {
+      window.location.assign(compositionTransferUrl(choice));
+      return;
+    }
     const id = storeComposition(choice);
     if (!id) {
       setError(
