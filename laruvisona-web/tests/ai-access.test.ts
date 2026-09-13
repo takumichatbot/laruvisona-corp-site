@@ -45,4 +45,7 @@ test('AI利用枠はDBの一意な時間枠で原子的に加算し公開ロー�
 test('素材ライブラリ欠落時に利用者単位の画像を自動生成しない',()=>{
   const source=readFileSync(new URL('../app/api/ai/site-images/route.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/generateLive|generateImagenToStorage/);
+  const publicSource=readFileSync(new URL('../app/api/library-image/route.ts',import.meta.url),'utf8');
+  assert.doesNotMatch(publicSource,/generateImagenToStorage|getGeminiKey|inflight/);
+  assert.match(publicSource,/status: 404/);
 });
