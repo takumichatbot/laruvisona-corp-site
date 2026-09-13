@@ -35,6 +35,7 @@ with checks(section,item,ok) as (
   ('ai','hp_ai_usage',to_regclass('public.hp_ai_usage') is not null),
   ('ai','usage claim RPC',to_regprocedure('public.laruhp_ai_claim_usage(text,integer)') is not null),
   ('forms','hp_public_rate_limits',to_regclass('public.hp_public_rate_limits') is not null),
+  ('forms','public rate expiry index',to_regclass('public.hp_public_rate_limits_window_start_idx') is not null),
   ('forms','public rate claim RPC',to_regprocedure('public.laruhp_public_claim_rate(text,text,integer,integer)') is not null)
 ), rows as (
   select section,item,ok from checks

@@ -32,6 +32,8 @@ test('公開フォーム制限SQLはサービス以外から閉じ、原子的�
   assert.match(sql, /where hp_public_rate_limits\.used<p_limit/i);
   assert.match(sql, /grant execute on function public\.laruhp_public_claim_rate\(text,text,integer,integer\) to service_role/i);
   assert.match(sql, /extract\(epoch from now\(\)\)\/p_window_seconds/i);
+  assert.match(sql, /hp_public_rate_limits_window_start_idx[\s\S]*window_start/i);
+  assert.match(sql, /delete from hp_public_rate_limits where window_start<now\(\)-interval '2 days'/i);
 });
 
 test('ニュースレターと会員認証もプロセス内だけの制限に依存しない', () => {

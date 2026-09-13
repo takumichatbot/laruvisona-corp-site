@@ -8,6 +8,8 @@ create table if not exists public.hp_public_rate_limits (
   updated_at timestamptz not null default now(),
   primary key(key_hash,scope,window_start)
 );
+create index if not exists hp_public_rate_limits_window_start_idx
+  on public.hp_public_rate_limits(window_start);
 
 alter table public.hp_public_rate_limits enable row level security;
 revoke all on public.hp_public_rate_limits from public,anon,authenticated;
