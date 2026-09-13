@@ -37,6 +37,11 @@ create policy "Users see own orders" on public.hp_orders
 create policy "Users update own orders" on public.hp_orders
   for update using (
     site_id in (select id from public.sites where user_id = auth.uid())
+  ) with check (
+    site_id in (select id from public.sites where user_id = auth.uid())
   );
+
+revoke all on public.hp_orders from anon, authenticated;
+grant select, update on public.hp_orders to authenticated;
 
 create index if not exists hp_orders_site_idx on public.hp_orders (site_id, created_at desc);

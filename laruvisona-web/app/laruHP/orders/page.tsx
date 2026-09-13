@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import { MapPin, Package } from 'lucide-react';
+import { nextOrderStatuses, type OrderStatus } from '@/lib/order-contract';
 
 interface OrderItem { name: string; variant: string | null; quantity: number; unit: number }
 interface Shipping { name?: string; phone?: string; postal_code?: string; state?: string; city?: string; line1?: string; line2?: string; country?: string }
@@ -13,7 +15,7 @@ interface Order {
   amount: number;
   items: OrderItem[];
   shipping: Shipping | null;
-  status: 'paid' | 'shipped' | 'completed' | 'canceled';
+  status: OrderStatus;
   note: string | null;
   created_at: string;
 }
@@ -33,39 +35,66 @@ function fmt(iso: string) {
 }
 
 export default function OrdersPage() {
-  const supabase = createClient();
+  const router = useRouter();
   const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [savingId, setSavingId] = useState('');
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { window.location.href = '/laruHP/auth/login?redirectTo=/laruHP/orders'; return; }
-      const { data } = await supabase.from('sites').select('id, name').eq('user_id', user.id);
-      setSites(data ?? []);
-      if (data && data.length > 0) setSiteId(prev => prev || data[0].id);
+      const response = await fetch('/api/sites', { cache: 'no-store' });
+      if (response.status === 401) { router.push('/laruHP/auth/login?redirectTo=/laruHP/orders'); return; }
+      const body = await response.json().catch(() => ({})) as { sites?: Site[]; error?: string };
+      if (!response.ok) throw new Error(body.error || 'サイトを読み込めませんでした');
+      const nextSites = body.sites ?? [];
+      setSites(nextSites);
+      if (nextSites.length > 0) setSiteId(prev => prev || nextSites[0].id);
     } catch (e) {
       setErr((e as Error)?.message || '読み込みに失敗しました');
     } finally {
       setLoaded(true);
     }
-  }, [supabase]);
+  }, [router]);
 
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     if (!siteId) return;
-    supabase.from('hp_orders').select('*').eq('site_id', siteId).order('created_at', { ascending: false })
-      .then(({ data, error }) => { if (error) setErr(error.message); else setOrders((data as Order[]) ?? []); });
-  }, [siteId, supabase]);
+    const controller = new AbortController();
+    setOrdersLoading(true);
+    setErr('');
+    fetch(`/api/orders?siteId=${encodeURIComponent(siteId)}`, { cache: 'no-store', signal: controller.signal })
+      .then(async response => {
+        const body = await response.json().catch(() => ({})) as { orders?: Order[]; error?: string };
+        if (!response.ok) throw new Error(body.error || '注文を読み込めませんでした');
+        setOrders(body.orders ?? []);
+      })
+      .catch(error => { if (error.name !== 'AbortError') setErr(error.message || '注文を読み込めませんでした'); })
+      .finally(() => { if (!controller.signal.aborted) setOrdersLoading(false); });
+    return () => controller.abort();
+  }, [siteId]);
 
-  const updateStatus = async (id: string, status: Order['status']) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    const { error } = await supabase.from('hp_orders').update({ status }).eq('id', id);
-    if (error) setErr(error.message);
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    setSavingId(id);
+    setErr('');
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      const body = await response.json().catch(() => ({})) as { order?: { id: string; status: OrderStatus }; error?: string };
+      if (!response.ok || !body.order) throw new Error(body.error || '注文状態を変更できませんでした');
+      setOrders(prev => prev.map(order => order.id === body.order?.id ? { ...order, status: body.order.status } : order));
+    } catch (error) {
+      setErr((error as Error).message || '注文状態を変更できませんでした');
+    } finally {
+      setSavingId('');
+    }
   };
 
   const addr = (s: Shipping) => [s.postal_code && `〒${s.postal_code}`, s.state, s.city, s.line1, s.line2].filter(Boolean).join(' ');
@@ -88,9 +117,11 @@ export default function OrdersPage() {
 
       <main className="max-w-screen-lg mx-auto px-4 py-6">
         {err && <p className="text-red-600 text-sm mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{err}</p>}
-        {orders.length === 0 ? (
+        {ordersLoading ? (
+          <div className="text-center py-20 text-sm text-gray-500">注文を読み込んでいます</div>
+        ) : orders.length === 0 ? (
           <div className="text-center py-20">
-            <div className="text-5xl mb-3">📦</div>
+            <Package aria-hidden="true" className="mx-auto mb-3 h-12 w-12 text-sky-700" />
             <p className="text-gray-500 text-sm font-semibold">まだ注文はありません</p>
             <p className="text-gray-400 text-xs mt-1">ショップで購入が入るとここに表示されます</p>
           </div>
@@ -118,16 +149,20 @@ export default function OrdersPage() {
                     {o.customer_email && <p className="text-xs text-gray-500">{o.customer_email}</p>}
                     {o.customer_phone && <p className="text-xs text-gray-500">{o.customer_phone}</p>}
                     {o.shipping && addr(o.shipping) && (
-                      <p className="text-xs text-gray-600 mt-1">📦 {o.shipping.name} {addr(o.shipping)}</p>
+                      <p className="text-xs text-gray-600 mt-1 flex items-start gap-1.5"><MapPin aria-hidden="true" className="h-4 w-4 shrink-0" /> <span>{o.shipping.name} {addr(o.shipping)}</span></p>
                     )}
                   </div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-2">
                   <span className="text-xs text-gray-400">ステータス変更:</span>
-                  <select value={o.status} onChange={e => updateStatus(o.id, e.target.value as Order['status'])}
-                    className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
-                    {(Object.keys(STATUS) as Order['status'][]).map(s => <option key={s} value={s}>{STATUS[s].label}</option>)}
+                  <select value={o.status} disabled={savingId === o.id || nextOrderStatuses(o.status).length === 0}
+                    onChange={e => updateStatus(o.id, e.target.value as OrderStatus)}
+                    aria-label={`${o.customer_name || '注文'}の状態`}
+                    className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm disabled:opacity-60">
+                    <option value={o.status}>{STATUS[o.status].label}</option>
+                    {nextOrderStatuses(o.status).map(status => <option key={status} value={status}>{STATUS[status].label}</option>)}
                   </select>
+                  {savingId === o.id && <span role="status" className="text-xs text-gray-500">保存しています</span>}
                 </div>
               </div>
             ))}
