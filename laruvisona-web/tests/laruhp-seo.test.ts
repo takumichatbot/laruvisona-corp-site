@@ -37,6 +37,16 @@ test('OGP画像は会社サイトではなくLARU HP専用ドメインを使う'
   assert.doesNotMatch(`${layout}\n${page}`, /laruvisona\.jp\/laruHP\/opengraph-image/);
 });
 
+test('IndexNow は公開鍵と同一ホストのサイトマップだけを送る', () => {
+  const key = read('public/indexnow-key.txt').trim();
+  const submitter = read('scripts/submit-indexnow.mjs');
+  assert.match(key, /^[A-Za-z0-9-]{8,128}$/);
+  assert.match(submitter, /https:\/\/laruhp\.com/);
+  assert.match(submitter, /new URL\(url\)\.origin !== siteOrigin/);
+  assert.match(submitter, /The deployed IndexNow key does not match/);
+  assert.doesNotMatch(submitter, /console\.log\([^)]*key/);
+});
+
 test('検索へ出す記事と業種ページに未検証の成果断定や絵文字を残さない', () => {
   const articles = read('app/laruHP/articles/articles-data.ts');
   const industry = read('app/laruHP/[industry]/page.tsx');
