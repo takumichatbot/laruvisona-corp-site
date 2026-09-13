@@ -63,6 +63,19 @@ psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_sequences.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_members.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/site_members.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/site_domains.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_notifications.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_reminders.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduled_emails.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_analytics.sql"
+
+STATE="$WORK/release-state.txt"
+psql -X -A -t -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/release_state_check_20260914.sql" >"$STATE"
+if ! grep -qx 'zz|ALL_REQUIRED_STATE|t' "$STATE"; then
+  echo "出荷状態の確認に失敗しました:" >&2
+  cat "$STATE" >&2
+  exit 1
+fi
 
 echo "--- 回帰シナリオ ---"
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/contacts_crm_regression.sql"

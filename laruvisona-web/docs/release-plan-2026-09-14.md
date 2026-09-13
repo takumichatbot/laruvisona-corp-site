@@ -5,8 +5,8 @@
 ## 現在の固定点
 
 - ブランチ: `codex/domain-onboarding-20260914`
-- `origin/main` から32コミット（文書コミット前。push直前に数え直す）
-- 全単体テスト: 706件通過
+- `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
+- 全単体テスト: 717件通過
 - `next build`: exit 0
 - SQL回帰: ランナーへ統合済み。ただしこのMacにはPostgreSQL実行環境が無いため未実行
 - push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
@@ -23,10 +23,11 @@
 6. `hp_members.sql`
 7. `site_members.sql`
 8. `hp_analytics.sql`
-9. `hp_scheduling_notifications.sql`（`hp_scheduling.sql` 適用済みが前提）
-10. `hp_scheduling_reminders.sql`（同上）
-11. `hp_scheduled_emails.sql`
-12. `hp_push_subscriptions.sql`
+9. `hp_scheduling.sql`
+10. `hp_scheduling_notifications.sql`
+11. `hp_scheduling_reminders.sql`
+12. `hp_scheduled_emails.sql`
+13. `hp_push_subscriptions.sql`
 
 適用後に `release_state_check_20260914.sql` を読み取り実行する。最終行 `ALL_REQUIRED_STATE` が `true` でなければコードを有効化しない。この確認は関数本体の業務動作や実データを保証しないため、機能ごとの試験も必要である。
 
@@ -39,7 +40,10 @@
 - ショップ: `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_CONNECT_WEBHOOK_SECRET`、`HP_SHOP_PAYMENTS_ENABLED=1`
 - 予約事前決済: 上記Stripe設定、`HP_BOOKING_PREPAY_ENABLED=1`
 - 定期配信: `RETENTION_SECRET`
+- 定期処理: `CRON_SECRET`
+- アクセス解析署名: `ANALYTICS_SIGNING_SECRET`
 - 端末通知（任意）: 同じ組の `NEXT_PUBLIC_VAPID_PUBLIC_KEY` と `VAPID_PUBLIC_KEY`、`VAPID_PRIVATE_KEY`、任意の `VAPID_EMAIL`
+- ドメイン取得案内（任意）: 審査後の `NEXT_PUBLIC_MUUMUU_DOMAIN_URL`、`NEXT_PUBLIC_ONAMAE_DOMAIN_URL`
 - `REPUBLISH_ON_BOOT` は設定しない。公開HTMLの再生成は対象を確認して手動で行う。
 
 ## 出荷の順番
@@ -51,9 +55,10 @@
 5. ブランチ先端SHAとコミット数を固定し、mainへ通常マージしてpushする。force pushしない。
 6. Render Liveが固定SHAになったことを確認する。
 7. ログイン、制作、保存、公開、問い合わせを最小1件ずつ確認する。
-8. 予約は空き枠取得→確定→通知、ショップはテスト決済→注文→返金、端末通知は登録→受信→解除を各1件確認する。
-9. 独自ドメインはテスト用ドメインだけで所有確認・接続・主従308・解除を確認する。
-10. 公開HTMLは `dryRun:true, slug, limit:1` で対象IDと指紋を確認してから1件だけ再生成する。応答のundoを保存する。
+8. Stripeテストモードで新規契約→支払方法変更→プラン変更→解約同期を確認する。有効契約を残した退会と、二重Checkoutが拒否されることも確認する。
+9. 予約は空き枠取得→確定→通知、ショップはテスト決済→注文→返金、端末通知は登録→受信→解除を各1件確認する。
+10. 独自ドメインはテスト用ドメインだけで所有確認・接続・主従308・解除を確認する。
+11. 公開HTMLは `dryRun:true, slug, limit:1` で対象IDと指紋を確認してから1件だけ再生成する。応答のundoを保存する。
 
 ## 停止条件
 
