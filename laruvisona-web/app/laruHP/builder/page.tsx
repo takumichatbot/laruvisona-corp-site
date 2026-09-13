@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'rea
 import { withPreviewBridge } from '@/lib/preview-frame';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
+import { starterTemplate } from '@/lib/starter-template';
 import { exportToHTML } from '@/lib/html-export';
 import { createClient } from '@/lib/supabase/client';
 import { hasFeature } from '@/lib/plan-limits';
@@ -4770,15 +4771,15 @@ function BuilderContent() {
       const template = getTemplateForIndustry(d.industry);
       let blocks: Block[];
       if (template) {
-        blocks = applyTemplateData(template, {
+        blocks = starterTemplate(applyTemplateData(template, {
           name: d.businessName,
           address: d.address,
-          description: ai.aboutText || d.description,
+          description: d.description,
           catchphrase: ai.heroSubheading || d.catchphrase,
           phone: d.phone,
           services: d.services || [],
           hours: d.hours || [],
-        });
+        }), d.description || '');
 
         // Override hero with AI-generated copy
         if (ai.heroHeading || ai.heroSubheading || ai.ctaText) {
@@ -4819,34 +4820,8 @@ function BuilderContent() {
           });
         }
 
-        // Inject AI-generated testimonials
-        if (ai.testimonials?.length) {
-          blocks = blocks.map(block => {
-            if (block.type === 'testimonials') {
-              return { ...block, data: { ...block.data, items: ai.testimonials } };
-            }
-            return block;
-          });
-        }
-
-        // Inject AI-generated three-col strengths
-        if (ai.threeColItems?.length) {
-          blocks = blocks.map(block => {
-            if (block.type === 'three-col') {
-              const [c1, c2, c3] = ai.threeColItems;
-              return {
-                ...block, data: {
-                  ...block.data,
-                  ...(ai.threeColHeading && { heading: ai.threeColHeading }),
-                  ...(c1 && { col1Icon: c1.icon, col1Title: c1.title, col1Text: c1.text }),
-                  ...(c2 && { col2Icon: c2.icon, col2Title: c2.title, col2Text: c2.text }),
-                  ...(c3 && { col3Icon: c3.icon, col3Title: c3.title, col3Text: c3.text }),
-                },
-              };
-            }
-            return block;
-          });
-        }
+        // Reviews, achievements, guarantees, and other proof are never injected
+        // from generated text. Owners add only facts they can verify.
       } else {
         const heroBlock = defaultBlock('hero');
         heroBlock.data = {
