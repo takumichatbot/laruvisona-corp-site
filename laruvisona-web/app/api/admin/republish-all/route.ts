@@ -5,6 +5,8 @@ import { exportToHTML, EXPORT_VERSION } from '@/lib/html-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { redact, logError } from '@/lib/api-error';
 import { sha256 } from '@/lib/content-hash';
+import { verifySharedSecret } from '@/lib/shared-secret';
+import { readContactBody } from '@/lib/contact-contract';
 
 // 公開サイトの published_html を、いまの html-export で作り直す。
 //
@@ -34,7 +36,7 @@ import { sha256 } from '@/lib/content-hash';
 // 公開した内容まで巻き戻すので、標準の手順から外した。
 export async function POST(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  const secretOk = !!process.env.ADMIN_SECRET && bearer === process.env.ADMIN_SECRET;
+  const secretOk = verifySharedSecret(bearer, process.env.ADMIN_SECRET);
 
   if (!secretOk) {
     const supabase = await createClient();
@@ -47,8 +49,18 @@ export async function POST(req: Request) {
     }
   }
 
-  const { onlyOutdated, slug, limit, dryRun, includeBefore } = await req.json().catch(() => ({})) as
+  let input: Record<string, unknown>;
+  try { input = await readContactBody(req, 16_384); }
+  catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  const { onlyOutdated, slug, limit, dryRun, includeBefore } = input as
     { onlyOutdated?: boolean; slug?: string; limit?: number; dryRun?: boolean; includeBefore?: boolean };
+  if ((slug != null && (typeof slug !== 'string' || slug.length > 160))
+    || (limit != null && (typeof limit !== 'number' || !Number.isInteger(limit) || limit < 1 || limit > 500))
+    || (onlyOutdated != null && typeof onlyOutdated !== 'boolean')
+    || (dryRun != null && typeof dryRun !== 'boolean')
+    || (includeBefore != null && typeof includeBefore !== 'boolean')) {
+    return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
+  }
   const keepBefore = includeBefore !== false;
 
   const service = await createServiceClient();

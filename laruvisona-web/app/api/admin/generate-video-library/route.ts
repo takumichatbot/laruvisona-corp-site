@@ -7,6 +7,8 @@ import {
   HERO_VIDEO_PATH, buildHeroVideoPrompt,
   HERO_VARIANTS, isHeroVariant, heroVariantPath, buildHeroVariantPrompt,
 } from '@/lib/veo-prompt';
+import { verifySharedSecret } from '@/lib/shared-secret';
+import { readContactBody } from '@/lib/contact-contract';
 
 // 業種ショーケース用の短尺ループ動画を Veo で作って Supabase Storage に貯める。
 //
@@ -32,7 +34,7 @@ export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  const secretOk = !!process.env.ADMIN_SECRET && bearer === process.env.ADMIN_SECRET;
+  const secretOk = verifySharedSecret(bearer, process.env.ADMIN_SECRET);
 
   if (!secretOk) {
     const supabase = await createClient();
@@ -49,8 +51,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'GEMINI_API_KEY (or GOOGLE_AI_API_KEY) is not set' }, { status: 500 });
   }
 
+  let input: Record<string, unknown>;
+  try { input = await readContactBody(req, 16_384); }
+  catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
   const { industry, overwrite = false, durationSeconds = '4', model, action, target, variant, resolution } =
-    await req.json().catch(() => ({})) as {
+    input as {
       industry?: string; overwrite?: boolean; durationSeconds?: '4' | '6' | '8';
       model?: string; action?: 'list-models' | 'list-hero-variants' | 'promote-hero' | 'faststart-hero';
       target?: 'lp-hero'; variant?: string; resolution?: '720p' | '1080p';

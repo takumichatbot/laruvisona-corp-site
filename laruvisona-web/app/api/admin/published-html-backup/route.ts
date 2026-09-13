@@ -4,6 +4,8 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { EXPORT_VERSION } from '@/lib/html-export';
 import { sha256 } from '@/lib/content-hash';
 import { redact, logError } from '@/lib/api-error';
+import { verifySharedSecret } from '@/lib/shared-secret';
+import { readContactBody } from '@/lib/contact-contract';
 
 // 公開HTMLの控えを取る／書き戻す。
 //
@@ -32,7 +34,7 @@ import { redact, logError } from '@/lib/api-error';
 
 async function assertAdmin(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (process.env.ADMIN_SECRET && bearer === process.env.ADMIN_SECRET) return null;
+  if (verifySharedSecret(bearer, process.env.ADMIN_SECRET)) return null;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -93,9 +95,12 @@ export async function POST(req: Request) {
   const denied = await assertAdmin(req);
   if (denied) return denied;
 
-  const body = await req.json().catch(() => null) as
+  let parsed: Record<string, unknown>;
+  try { parsed = await readContactBody(req, 25_000_000); }
+  catch { return NextResponse.json({ error: '復元データを読み取れません' }, { status: 400 }); }
+  const body = parsed as
     | { sites?: RestoreEntry[]; undo?: { sites?: RestoreEntry[] }; dryRun?: boolean; force?: boolean }
-    | null;
+    ;
 
   // 再生成の応答（undo を含む形）を、そのまま送り返せるようにする
   const sites = body?.undo?.sites ?? body?.sites;

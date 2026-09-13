@@ -4,20 +4,22 @@ import {
   IMAGE_INDUSTRIES, buildHeroPrompt, galleryScenesFor, buildGalleryPrompt,
   generateImagenToStorage, getAdminStorage, getGeminiKey,
 } from '@/lib/imagen';
+import { verifySharedSecret } from '@/lib/shared-secret';
+import { readContactBody } from '@/lib/contact-contract';
 
 // 業種ごとの画像ライブラリを Imagen で一度だけ生成して Supabase Storage にプールする。
 // 以降のサイト作成は /api/ai/site-images がこのプールから選ぶだけになり、生成コスト・待ち時間ゼロ。
 //
 // 認証: 管理者セッション、またはサーバー内部/手動実行用の Bearer ADMIN_SECRET。
 // body: {
-//   industry?: string,      // 指定なら1業種のみ。未指定なら全業種
+//   industry: string,       // 1リクエスト1業種。全業種の一括発注は受け付けない
 //   heroCount?: number,     // 業種あたりのヒーロー枚数（既定3）
 //   galleryCount?: number,  // 業種あたりのギャラリー枚数（既定6）
 //   overwrite?: boolean,    // true で既存プールを無視して再生成（既定false=既に十分あればスキップ）
 // }
 //
-// コスト注記: 全業種 × (heroCount + galleryCount) 枚を生成する高コスト処理。
-// 既定で 16業種 × (3+6) = 144枚。overwrite しない限り、既に揃っている業種はスキップする。
+// コスト注記: 既定で1業種につき3+6=9枚を生成する。
+// overwrite しない限り、既に揃っている素材はスキップする。
 
 // 同時実行数を制限しつつ全タスクを実行（レート制限で取りこぼさないため）
 async function runWithConcurrency<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
@@ -35,7 +37,7 @@ async function runWithConcurrency<T>(tasks: (() => Promise<T>)[], limit: number)
 
 export async function POST(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  const secretOk = !!process.env.ADMIN_SECRET && bearer === process.env.ADMIN_SECRET;
+  const secretOk = verifySharedSecret(bearer, process.env.ADMIN_SECRET);
 
   if (!secretOk) {
     const supabase = await createClient();
@@ -59,13 +61,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'GEMINI_API_KEY (or GOOGLE_AI_API_KEY) is not set' }, { status: 500 });
   }
 
+  let input: Record<string, unknown>;
+  try { input = await readContactBody(req, 16_384); }
+  catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
   const { industry, heroCount = 3, galleryCount = 6, overwrite = false, only } =
-    await req.json().catch(() => ({})) as {
+    input as {
       industry?: string; heroCount?: number; galleryCount?: number; overwrite?: boolean;
       only?: 'hero' | 'gallery'; // 指定時はその種別のみ生成（1リクエストを短くしてタイムアウト回避）
     };
+  if ((industry != null && (typeof industry !== 'string' || !(IMAGE_INDUSTRIES as readonly string[]).includes(industry)))
+    || !Number.isInteger(heroCount) || heroCount < 0 || heroCount > 10
+    || !Number.isInteger(galleryCount) || galleryCount < 0 || galleryCount > 20
+    || typeof overwrite !== 'boolean' || (only != null && only !== 'hero' && only !== 'gallery')) {
+    return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
+  }
 
-  const industries = industry ? [industry] : [...IMAGE_INDUSTRIES];
+  if (!industry) return NextResponse.json({ error: 'industry が必要です（1リクエストにつき1業種）' }, { status: 400 });
+  const industries = [industry];
   const admin = getAdminStorage();
   // hero/gallery = 生成後に実在する枚数, complete = 目標枚数に達したか
   const results: Record<string, { hero: number; gallery: number; complete: boolean; skipped?: boolean }> = {};

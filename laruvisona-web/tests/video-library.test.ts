@@ -45,7 +45,7 @@ test('既に生成済みなら作り直さない（overwrite 指定時のみ）'
 });
 
 test('管理者以外は生成できない', () => {
-  assert.match(adminRoute, /process\.env\.ADMIN_SECRET && bearer === process\.env\.ADMIN_SECRET/);
+  assert.match(adminRoute, /verifySharedSecret\(bearer, process\.env\.ADMIN_SECRET\)/);
   assert.match(adminRoute, /adminEmails\.includes/);
   assert.match(adminRoute, /\{ error: 'Forbidden' \}, \{ status: 403 \}/);
 });

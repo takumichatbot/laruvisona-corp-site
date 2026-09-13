@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ADMIN_COOKIE, readAdminCookie, verifyAdminSession } from './admin-session';
+import { verifySharedSecret } from './shared-secret';
 
 /**
  * 管理者リクエストかを判定する。
@@ -29,9 +30,9 @@ export async function isAdminBearer(req: Request): Promise<boolean> {
   const secret = process.env.ADMIN_SECRET || '';
   if (!secret) return false;
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (bearer && bearer === secret) return true;
+  if (verifySharedSecret(bearer, secret)) return true;
   const header = req.headers.get('x-admin-secret') || '';
-  return !!header && header === secret;
+  return verifySharedSecret(header, secret);
 }
 
 /**

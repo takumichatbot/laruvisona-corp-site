@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { verifySharedSecret } from './shared-secret';
 
 export function requireBearer(req: Request, value: string | undefined) {
-  return !!value && req.headers.get('authorization') === `Bearer ${value}`;
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  return verifySharedSecret(bearer, value);
 }
 
 export function escapeEmailHtml(value: unknown) {
