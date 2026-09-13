@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { requireAiAccess } from '@/lib/ai-access';
 
 interface LeadScore {
   conversationId: string;
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied=await requireAiAccess(supabase,user.id,'assistant',30);
+  if(denied)return denied;
 
   if (!checkLeadScoreRate(user.id)) {
     return NextResponse.json({ error: '1時間あたりのスコアリング上限（5回）に達しました' }, { status: 429 });

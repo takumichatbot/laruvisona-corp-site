@@ -31,7 +31,9 @@ with checks(section,item,ok) as (
   ('booking','reminder claim RPC',to_regprocedure('public.hp_schedule_claim_reminders(integer)') is not null),
   ('email','hp_scheduled_email_deliveries',to_regclass('public.hp_scheduled_email_deliveries') is not null),
   ('email','scheduled claim RPC',to_regprocedure('public.hp_claim_scheduled_email(uuid,text,text)') is not null),
-  ('push','hp_push_subscriptions',to_regclass('public.hp_push_subscriptions') is not null)
+  ('push','hp_push_subscriptions',to_regclass('public.hp_push_subscriptions') is not null),
+  ('ai','hp_ai_usage',to_regclass('public.hp_ai_usage') is not null),
+  ('ai','usage claim RPC',to_regprocedure('public.laruhp_ai_claim_usage(text,integer)') is not null)
 ), rows as (
   select section,item,ok from checks
   union all select 'zz','ALL_REQUIRED_STATE',bool_and(ok) from checks

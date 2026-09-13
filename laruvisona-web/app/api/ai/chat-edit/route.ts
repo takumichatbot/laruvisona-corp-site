@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { logError } from '@/lib/api-error';
+import { requireAiAccess } from '@/lib/ai-access';
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -11,6 +12,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied=await requireAiAccess(supabase,user.id,'assistant',30);
+  if(denied)return denied;
 
   const { message, blocks, selectedBlockId, siteName, industry } = await req.json();
   if (!message) return NextResponse.json({ error: 'message required' }, { status: 400 });

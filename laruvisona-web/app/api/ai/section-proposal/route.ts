@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
-import { rateLimit } from '@/lib/rate-limit';
 import { hasFeature } from '@/lib/plan-limits';
+import { requireAiAccess } from '@/lib/ai-access';
 import { aiFields, parseSectionProposal } from '@/lib/studio-ai';
 import type { Block } from '@/types/laruHP';
 export async function POST(req: Request) {
@@ -30,12 +30,8 @@ export async function POST(req: Request) {
       { error: 'ご契約の状態を確認してください。' },
       { status: 403 },
     );
-  const limit = rateLimit('studio-ai:' + user.id, 12, 3600000);
-  if (!limit.ok)
-    return NextResponse.json(
-      { error: '少し時間をおいてからお試しください。' },
-      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
-    );
+  const denied=await requireAiAccess(sb,user.id,'studio-section',12);
+  if(denied)return denied;
   const raw = await req.text();
   if (raw.length > 16000)
     return NextResponse.json({ error: '入力が長すぎます。' }, { status: 413 });

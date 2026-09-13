@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
-  buildHeroPrompt, galleryScenesFor, buildGalleryPrompt,
-  generateImagenToStorage, getAdminStorage,
+  getAdminStorage,
 } from '@/lib/imagen';
+import { requireAiAccess } from '@/lib/ai-access';
 
 // AI生成HP用の画像を返す。
 // 基本は事前生成した「業種ライブラリ」(library/<industry>/hero|gallery) からランダムに選ぶだけ
-// （生成コスト・待ち時間ゼロ）。ライブラリが未整備の業種のみ、その場で Imagen 生成にフォールバックする。
+// （生成コスト・待ち時間ゼロ）。未整備時は空で返し、利用者ごとの自動生成は行わない。
 //
 // ライブラリの作り方: 管理者が一度 POST /api/admin/generate-image-library を実行してプールを作る。
 
@@ -44,30 +44,17 @@ async function pickFromLibrary(industry: string): Promise<{ heroImage: string | 
   return { heroImage, galleryImages };
 }
 
-// ライブラリが空の業種向け: その場で最小限生成（ユーザー個別フォルダに保存）
-async function generateLive(userId: string, industry: string, businessName: string, description: string) {
-  const scenes = galleryScenesFor(industry).slice(0, GALLERY_PICK);
-  const [heroImage, ...gallery] = await Promise.all([
-    generateImagenToStorage(buildHeroPrompt(industry, businessName, description), '16:9', 1600, 900, `${userId}/hero-${Date.now()}.webp`),
-    ...scenes.map((s, i) => generateImagenToStorage(buildGalleryPrompt(s, businessName), '4:3', 1000, 750, `${userId}/gallery-${Date.now()}-${i}.webp`)),
-  ]);
-  return { heroImage, galleryImages: gallery.filter((u): u is string => !!u) };
-}
-
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied=await requireAiAccess(supabase,user.id,'asset-library',60);
+  if(denied)return denied;
 
-  const { industry = 'other', businessName = '', description = '' } = await req.json().catch(() => ({}));
+  const { industry = 'other' } = await req.json().catch(() => ({}));
 
   // まずライブラリから（コスト・待ち時間ゼロ）
-  let { heroImage, galleryImages } = await pickFromLibrary(industry);
-
-  // ライブラリ未整備の業種のみ、その場生成でフォールバック
-  if (!heroImage && galleryImages.length === 0) {
-    ({ heroImage, galleryImages } = await generateLive(user.id, industry, businessName, description));
-  }
+  const { heroImage, galleryImages } = await pickFromLibrary(industry);
 
   return NextResponse.json({ heroImage, galleryImages });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { safeErrorMessage, logError } from '@/lib/api-error';
+import { requireAiAccess } from '@/lib/ai-access';
 
 // POST /api/ai/chat-analysis
 // Analyzes LARUbot conversation history to extract FAQs and pain points
@@ -30,6 +31,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied=await requireAiAccess(supabase,user.id,'assistant',30);
+  if(denied)return denied;
 
   if (!checkChatAnalysisRate(user.id)) {
     return NextResponse.json({ error: '1時間あたりの分析上限（5回）に達しました' }, { status: 429 });

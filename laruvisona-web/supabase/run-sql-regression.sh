@@ -70,6 +70,7 @@ psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_notifications.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_reminders.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduled_emails.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_analytics.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_ai_usage.sql"
 
 STATE="$WORK/release-state.txt"
 psql -X -A -t -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/release_state_check_20260914.sql" >"$STATE"

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { safeErrorMessage, logError } from '@/lib/api-error';
+import { requireAiAccess } from '@/lib/ai-access';
 
 // POST /api/ai/review-reply
 // body: { reviewText, reviewerName, rating, businessName, industry }
@@ -11,6 +12,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied=await requireAiAccess(supabase,user.id,'assistant',30);
+  if(denied)return denied;
 
   const { reviewText, reviewerName, rating, businessName, industry } = await req.json() as {
     reviewText: string;

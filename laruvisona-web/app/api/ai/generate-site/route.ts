@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { requireAiAccess } from '@/lib/ai-access';
 
 const anthropic = new Anthropic();
 
@@ -8,6 +9,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied=await requireAiAccess(supabase,user.id,'site-copy',20);
+  if(denied)return denied;
 
   const { businessName, industry, description, phone, address, services, colorScheme } = await req.json();
 

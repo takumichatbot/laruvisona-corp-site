@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { safeFetch, readCapped, BlockedUrlError } from '@/lib/safe-fetch';
+import { requireAiAccess } from '@/lib/ai-access';
 
 function normalizeUrl(raw: string): string {
   const trimmed = raw.trim();
@@ -46,6 +47,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied=await requireAiAccess(supabase,user.id,'assistant',30);
+  if(denied)return denied;
 
   const { url: rawUrl } = await req.json();
   if (!rawUrl) return NextResponse.json({ error: 'URL required' }, { status: 400 });
