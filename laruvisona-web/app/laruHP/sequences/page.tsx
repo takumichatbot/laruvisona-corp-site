@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { Mail, Trash2 } from 'lucide-react';
 
 interface SequenceStep {
   delay: number;
@@ -24,6 +25,8 @@ interface Site {
   id: string;
   name: string;
 }
+
+interface ContactOption { id: string; name: string; email: string }
 
 const TRIGGER_LABELS: Record<string, string> = {
   contact_form: '問い合わせフォーム送信時',
@@ -53,6 +56,9 @@ export default function SequencesPage() {
   const stepsEndRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [manualContact, setManualContact] = useState<Record<string, string>>({});
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
   const [form, setForm] = useState<{ name: string; trigger: Sequence['trigger']; steps: SequenceStep[] }>({
     name: '',
@@ -79,6 +85,7 @@ export default function SequencesPage() {
         if (s.length > 0) {
           setSelectedSite(s[0]);
           await loadSequences(s[0].id);
+          await loadContacts(s[0].id);
         }
       } catch {
         setError('データの読み込みに失敗しました。ページを再読み込みしてください。');
@@ -98,6 +105,32 @@ export default function SequencesPage() {
     } catch {
       showMsg('シーケンスの読み込みに失敗しました', 'error');
     }
+  };
+
+  const loadContacts = async (siteId: string) => {
+    try {
+      const res = await fetch(`/api/contacts?siteId=${encodeURIComponent(siteId)}`);
+      if (!res.ok) throw Error();
+      const data = await res.json();
+      setContacts((data.contacts || []).filter((item: ContactOption) => item.email).map((item: ContactOption) => ({ id: item.id, name: item.name, email: item.email })));
+    } catch { showMsg('顧客一覧を読み込めませんでした', 'error'); }
+  };
+
+  const enrollContact = async (seq: Sequence) => {
+    if (!selectedSite || !manualContact[seq.id] || enrollingId) return;
+    setEnrollingId(seq.id);
+    try {
+      const res = await fetch('/api/sequences/enroll', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId: selectedSite.id, sequenceId: seq.id, contactId: manualContact[seq.id] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw Error(data.error || '登録できませんでした');
+      setSequences(prev => prev.map(item => item.id === seq.id ? { ...item, enrolledCount: item.enrolledCount + 1 } : item));
+      setManualContact(prev => ({ ...prev, [seq.id]: '' }));
+      showMsg('顧客をステップ配信へ登録しました');
+    } catch (error) { showMsg(error instanceof Error ? error.message : '登録できませんでした', 'error'); }
+    finally { setEnrollingId(null); }
   };
 
   const handleCreate = async () => {
@@ -134,7 +167,7 @@ export default function SequencesPage() {
         body: JSON.stringify({ active: !seq.active }),
       });
       if (res.ok) {
-        setSequences(prev => prev.map(s => s.id === seq.id ? { ...s, active: !s.active } : s));
+        await loadSequences(selectedSite.id);
       } else {
         showMsg('更新に失敗しました', 'error');
       }
@@ -194,7 +227,7 @@ export default function SequencesPage() {
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4 text-2xl">🗑️</div>
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4"><Trash2 className="h-6 w-6 text-red-500" aria-hidden="true" /></div>
             <h3 className="font-bold text-gray-900 mb-1">シーケンスを削除しますか？</h3>
             <p className="text-sm text-gray-500 mb-5">「{deleteTarget?.name}」を削除します。この操作は取り消せません。</p>
             <div className="flex gap-2">
@@ -222,7 +255,7 @@ export default function SequencesPage() {
             onChange={async e => {
               const s = sites.find(x => x.id === e.target.value) ?? null;
               setSelectedSite(s);
-              if (s) await loadSequences(s.id);
+              if (s) { await loadSequences(s.id); await loadContacts(s.id); }
             }}
             className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-sky-500"
           >
@@ -252,7 +285,7 @@ export default function SequencesPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-semibold text-gray-600 mb-1.5 block">シーケンス名</label>
                 <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls} placeholder="問い合わせフォロー" />
@@ -364,9 +397,9 @@ export default function SequencesPage() {
 
           {sequences.length === 0 ? (
             <div className="text-center py-10">
-              <div className="text-5xl mb-4">✉️</div>
+              <Mail className="mx-auto mb-4 h-11 w-11 text-sky-500" aria-hidden="true" />
               <p className="text-sm text-gray-500">まだシーケンスがありません</p>
-              <p className="text-xs text-gray-400 mt-1">問い合わせやメール登録後の自動フォローアップを設定しましょう</p>
+              <p className="text-xs text-gray-400 mt-1">問い合わせや予約後の自動フォローアップを設定しましょう</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -419,6 +452,22 @@ export default function SequencesPage() {
                           </div>
                         ))}
                       </div>
+                      {seq.trigger === 'manual' && (
+                        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-3">
+                          <label className="mb-2 block text-[11px] font-semibold text-gray-600">この配信へ顧客を登録</label>
+                          {seq.active ? (
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <select value={manualContact[seq.id] || ''} onChange={event => setManualContact(prev => ({ ...prev, [seq.id]: event.target.value }))} className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-xs">
+                                <option value="">顧客を選ぶ</option>
+                                {contacts.map(contact => <option key={contact.id} value={contact.id}>{contact.name}（{contact.email}）</option>)}
+                              </select>
+                              <button onClick={() => enrollContact(seq)} disabled={!manualContact[seq.id] || enrollingId === seq.id} className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+                                {enrollingId === seq.id ? '登録中...' : '登録する'}
+                              </button>
+                            </div>
+                          ) : <p className="text-[11px] text-gray-500">有効にすると顧客を選べます。</p>}
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleToggle(seq)}
@@ -445,10 +494,10 @@ export default function SequencesPage() {
         <section className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
           <h3 className="font-bold text-sm text-indigo-900 mb-2">シーケンスの動作</h3>
           <ul className="space-y-1.5 text-xs text-indigo-700">
-            <li>• 問い合わせフォームが送信されると自動的にシーケンスが開始されます</li>
-            <li>• <code className="bg-indigo-100 px-1 rounded">{'{{name}}'}</code> は顧客名に自動置換されます</li>
-            <li>• シーケンスを複数作成した場合、トリガーが一致する最初のアクティブなものが実行されます</li>
-            <li>• 送信にはResend（送信数が無料枠内）を使用します</li>
+            <li>問い合わせ・予約では、開始条件が一致する最初の有効な配信へ自動登録されます</li>
+            <li><code className="bg-indigo-100 px-1 rounded">{'{{name}}'}</code> は顧客名に自動置換されます</li>
+            <li>手動登録では、有効にした配信から顧客を選んで開始できます</li>
+            <li>一時的な送信失敗は間隔を空けて最大5回まで再試行します</li>
           </ul>
         </section>
 

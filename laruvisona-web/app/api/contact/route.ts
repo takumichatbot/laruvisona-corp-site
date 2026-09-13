@@ -166,23 +166,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   }
 
-  // Find active sequence to auto-enroll (stored in extra_fields to avoid schema dependency)
-  const siteSettings = site.settings_json as Record<string, unknown> | null;
-  const sequences = (siteSettings?.sequences as Array<{
-    id: string; trigger: string; active: boolean;
-    steps: Array<{ delay: number }>;
-  }>) || [];
   const contactTrigger = (type === 'booking') ? 'booking' : 'contact_form';
-  const matchedSeq = sequences.find(s => s.active && s.trigger === contactTrigger);
-
-  const mergedExtraFields = {
-    ...(extraFields || {}),
-    ...(matchedSeq ? {
-      _seq_id: matchedSeq.id,
-      _seq_step: '0',
-      _seq_next: new Date().toISOString(),
-    } : {}),
-  };
 
   // Save to DB — await so we can update with webhook result later
   const { data: contactRow, error: contactError } = await supabase.from('contacts').insert({
@@ -192,12 +176,18 @@ export async function POST(req: Request) {
     email,
     phone: phone || null,
     message: message || null,
-    extra_fields: mergedExtraFields,
+    extra_fields: extraFields || {},
   }).select('id').single();
   if (contactError || !contactRow) {
     console.error('[Contact] save failed:', contactError?.code || 'unknown');
     return NextResponse.json({ error: '受付内容を保存できませんでした。時間をおいてお試しください' }, { status: 503 });
   }
+
+  // 自動フォローは問い合わせ保存後に専用キューへ登録する。失敗しても受付自体は失わない。
+  const { error: sequenceError } = await supabase.rpc('laruhp_sequence_enroll', {
+    p_contact: contactRow.id, p_site: siteId, p_trigger: contactTrigger,
+  });
+  if (sequenceError && sequenceError.code !== '42883') console.error('[Contact] sequence enrollment failed:', sequenceError.code || 'unknown');
 
   // Get owner email from auth.users
   const { data: userData } = await supabase.auth.admin.getUserById(site.user_id);
@@ -309,11 +299,11 @@ export async function POST(req: Request) {
       }, { timeoutMs: 8000, maxRedirects: 2 });
       const whStatus = whRes.ok ? 'success' : 'failed';
       await supabase.from('contacts').update({
-        extra_fields: { ...mergedExtraFields, webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },
+        extra_fields: { ...(extraFields || {}), webhook_status: whStatus, webhook_at: webhookAt, webhook_code: String(whRes.status) },
       }).eq('id', contactRow.id);
     } catch {
       await supabase.from('contacts').update({
-        extra_fields: { ...mergedExtraFields, webhook_status: 'failed', webhook_at: webhookAt, webhook_code: 'error' },
+        extra_fields: { ...(extraFields || {}), webhook_status: 'failed', webhook_at: webhookAt, webhook_code: 'error' },
       }).eq('id', contactRow.id);
     }
   }
