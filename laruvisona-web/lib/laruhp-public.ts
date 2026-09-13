@@ -13,6 +13,7 @@ export const LARUHP_ARTICLE_SLUGS = [
 ] as const;
 
 const FIXED_PUBLIC_PATHS = ['/plans', '/contact', '/privacy', '/terms', '/tokusho'] as const;
+const PUBLIC_ASSET_PATHS = ['/opengraph-image'] as const;
 
 export const LARUHP_PUBLIC_PATHS = [
   '/',
@@ -22,7 +23,7 @@ export const LARUHP_PUBLIC_PATHS = [
   ...LARUHP_ARTICLE_SLUGS.map(slug => `/articles/${slug}`),
 ];
 
-const PUBLIC_SET = new Set(LARUHP_PUBLIC_PATHS);
+const PUBLIC_SET = new Set([...LARUHP_PUBLIC_PATHS, ...PUBLIC_ASSET_PATHS]);
 
 export function internalLaruHpPath(pathname: string): string | null {
   if (!PUBLIC_SET.has(pathname)) return null;

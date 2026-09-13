@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     description:
       '写真と言葉を選んで、完成を見ながら整える。お店にも、会社にも。',
     url: 'https://laruhp.com/',
-    images: [{ url: 'https://laruvisona.jp/laruHP/opengraph-image', width: 1200, height: 630 }],
+    images: [{ url: 'https://laruhp.com/opengraph-image', width: 1200, height: 630 }],
   },
   twitter: {
     title: 'LARU HP｜その仕事に、ふさわしいホームページを。',

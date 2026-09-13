@@ -21,13 +21,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://laruhp.com/',
     siteName: 'LARU HP',
-    images: [{ url: '/laruHP/opengraph-image', width: 1200, height: 630, alt: 'LARU HP — AIホームページビルダー' }],
+    images: [{ url: 'https://laruhp.com/opengraph-image', width: 1200, height: 630, alt: 'LARU HP — AIホームページビルダー' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'LARU HP — 完成像を見ながら作るホームページ',
     description: '写真と言葉を整え、問い合わせや独自ドメインまで。月額999円から始められます。',
-    images: ['/laruHP/opengraph-image'],
+    images: ['https://laruhp.com/opengraph-image'],
   },
   alternates: {
     canonical: 'https://laruhp.com/',
