@@ -54,6 +54,8 @@ test('SQLは設定・進行・配信結果を分離し、期限順の排他取�
   const sql = fs.readFileSync(new URL('../supabase/hp_sequences.sql', import.meta.url), 'utf8');
   assert.match(sql, /create table if not exists public\.hp_sequences/);
   assert.match(sql, /create table if not exists public\.hp_sequence_enrollments/);
+  assert.doesNotMatch(sql, /on conflict\(sequence_id,contact_id\)/);
+  assert.match(sql, /on conflict\(site_id,sequence_id,contact_id\) do nothing returning id into v_id/);
   assert.match(sql, /create table if not exists public\.hp_sequence_deliveries/);
   assert.match(sql, /for update of e skip locked/i);
   assert.match(sql, /unique\(enrollment_id,step_index\)/);

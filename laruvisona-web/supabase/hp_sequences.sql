@@ -84,7 +84,7 @@ begin
   select * into v_sequence from public.hp_sequences where site_id=p_site and trigger=p_trigger and active and deleted_at is null order by created_at,id limit 1;
   if not found then return jsonb_build_object('ok',true,'enrolled',false); end if;
   insert into public.hp_sequence_enrollments(sequence_id,contact_id,site_id,next_send_at)
-  values(v_sequence.id,p_contact,p_site,now()) on conflict(sequence_id,contact_id) do nothing returning id into v_id;
+  values(v_sequence.id,p_contact,p_site,now()) on conflict(site_id,sequence_id,contact_id) do nothing returning id into v_id;
   return jsonb_build_object('ok',true,'enrolled',v_id is not null,'enrollment_id',v_id,'sequence_id',v_sequence.id);
 end $$;
 
