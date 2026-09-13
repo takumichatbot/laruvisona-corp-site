@@ -24,13 +24,14 @@
 7. `site_members.sql`
 8. `hp_analytics.sql`
 9. `hp_ai_usage.sql`
-10. `hp_reservations.sql`
-11. `hp_reservations_reminded.sql`
-12. `hp_scheduling.sql`
-13. `hp_scheduling_notifications.sql`
-14. `hp_scheduling_reminders.sql`
-15. `hp_scheduled_emails.sql`
-16. `hp_push_subscriptions.sql`
+10. `hp_public_rate_limits.sql`
+11. `hp_reservations.sql`
+12. `hp_reservations_reminded.sql`
+13. `hp_scheduling.sql`
+14. `hp_scheduling_notifications.sql`
+15. `hp_scheduling_reminders.sql`
+16. `hp_scheduled_emails.sql`
+17. `hp_push_subscriptions.sql`
 
 適用後に `release_state_check_20260914.sql` を読み取り実行する。最終行 `ALL_REQUIRED_STATE` が `true` でなければコードを有効化しない。この確認は関数本体の業務動作や実データを保証しないため、機能ごとの試験も必要である。
 
@@ -39,6 +40,7 @@
 値はチャット、画面記録、ログへ写さない。
 
 - 基本: `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`ADMIN_SECRET`、`RESEND_API_KEY`
+- 公開フォームの共有制限: 任意の `PUBLIC_RATE_LIMIT_SECRET`（未設定時は `ADMIN_SECRET` を使用し、生のIPは保存しない）
 - LARUbot連携: `LARU_HP_API_SECRET`、任意の `LARUBOT_API_URL`（未設定時は `https://larubot.tokyo`）
 - 独自ドメイン: `DOMAIN_PROBE_SECRET`、`RENDER_API_KEY`、`RENDER_SERVICE_ID`、`RENDER_SERVICE_SLUG`、`RENDER_APEX_IP`
 - ショップ: `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_CONNECT_WEBHOOK_SECRET`、`HP_SHOP_PAYMENTS_ENABLED=1`

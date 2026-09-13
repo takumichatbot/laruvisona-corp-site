@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import { claimBuilderUsage, requireBuilderAccess } from '@/lib/ai-access';
 
 function getAdminStorage() {
   return createAdminClient(
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const denied = await requireBuilderAccess(supabase, user.id);
+  if (denied) return denied;
 
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
@@ -27,6 +30,8 @@ export async function POST(req: Request) {
   if (file.size > 10 * 1024 * 1024) {
     return NextResponse.json({ error: 'ファイルサイズは10MB以下にしてください' }, { status: 400 });
   }
+  const limited = await claimBuilderUsage(supabase, 'image-upload', 30);
+  if (limited) return limited;
 
   const input = Buffer.from(await file.arrayBuffer());
 

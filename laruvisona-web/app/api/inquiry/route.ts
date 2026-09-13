@@ -1,29 +1,21 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { escapeContactHtml, readContactBody, singleLine } from '@/lib/contact-contract';
+import { createClient } from '@supabase/supabase-js';
+import { claimPublicRate } from '@/lib/public-rate-limit';
+import { clientIp } from '@/lib/rate-limit';
 
 // コーポレートサイトのお問い合わせ（LaruVisona宛にメール送信）。
 // 公開サイトのフォーム(/api/contact)とは別。siteId 不要。
 const COMPANY_EMAIL = process.env.INQUIRY_EMAIL || process.env.ADMIN_EMAIL || 'info@laruvisona.jp';
 
-// 簡易レート制限: 同一IP 1時間に5件
-const _rateMap = new Map<string, number[]>();
-function checkRate(ip: string): boolean {
-  const now = Date.now();
-  const windowMs = 60 * 60 * 1000;
-  const prev = (_rateMap.get(ip) ?? []).filter(t => now - t < windowMs);
-  if (prev.length >= 5) return false;
-  _rateMap.set(ip, [...prev, now]);
-  return true;
+function database() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 export async function POST(req: Request) {
-  const forwarded = req.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
-  if (!checkRate(ip)) {
-    return NextResponse.json({ error: '送信回数が上限に達しました。時間をおいてお試しください。' }, { status: 429 });
-  }
-
   let input: Record<string, unknown>;
   try { input = await readContactBody(req, 20_000); }
   catch (error) { return NextResponse.json({ error: (error as Error).message === 'too_large' ? '入力が長すぎます' : '入力を確認してください' }, { status: 400 }); }
@@ -36,6 +28,9 @@ export async function POST(req: Request) {
   if (!name || name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !message || message.length > 10_000 || company.length > 200) {
     return NextResponse.json({ error: 'お名前・メール・お問い合わせ内容は必須です' }, { status: 400 });
   }
+  const rate = await claimPublicRate(database(), 'company-inquiry', clientIp(req), 5);
+  if (rate === 'limited') return NextResponse.json({ error: '送信回数が上限に達しました。時間をおいてお試しください。' }, { status: 429 });
+  if (rate === 'unavailable') return NextResponse.json({ error: '受付を確認できません。時間をおいてお試しください。' }, { status: 503 });
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

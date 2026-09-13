@@ -4,6 +4,9 @@ import { Resend } from 'resend';
 import { safeFetch } from '@/lib/safe-fetch';
 import { escapeContactHtml, parseContactSubmission, readContactBody, singleLine } from '@/lib/contact-contract';
 import { sendUserPush } from '@/lib/push-notification';
+import { claimPublicRate } from '@/lib/public-rate-limit';
+import { clientIp } from '@/lib/rate-limit';
+import { verifySharedSecret } from '@/lib/shared-secret';
 
 function getAdminClient() {
   return createClient(
@@ -110,29 +113,9 @@ function buildEmailHtml({
 </html>`;
 }
 
-// Simple in-memory rate limiter: 5 submissions per IP per hour
-const _rateMap = new Map<string, number[]>();
-function checkRate(ip: string): boolean {
-  const now = Date.now();
-  const window = 60 * 60 * 1000; // 1 hour
-  const limit = 5;
-  const prev = (_rateMap.get(ip) ?? []).filter(t => now - t < window);
-  if (prev.length >= limit) return false;
-  _rateMap.set(ip, [...prev, now]);
-  return true;
-}
-
 export async function POST(req: Request) {
   // 内部呼び出し（予約確定など）はレート制限をバイパス
-  const internal = !!process.env.RETENTION_SECRET
-    && req.headers.get('x-internal-secret') === process.env.RETENTION_SECRET;
-
-  // Rate limiting
-  const forwarded = req.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
-  if (!internal && !checkRate(ip)) {
-    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
-  }
+  const internal = verifySharedSecret(req.headers.get('x-internal-secret'), process.env.RETENTION_SECRET);
 
   let raw: Record<string, unknown>;
   try {
@@ -154,6 +137,11 @@ export async function POST(req: Request) {
   const { siteId, name, email, phone, message, type, extraFields } = submission;
 
   const supabase = getAdminClient();
+  if (!internal) {
+    const rate = await claimPublicRate(supabase, 'site-contact', `${siteId}:${clientIp(req)}`, 5);
+    if (rate === 'limited') return NextResponse.json({ error: '送信回数が上限に達しました。時間をおいてお試しください。' }, { status: 429 });
+    if (rate === 'unavailable') return NextResponse.json({ error: '受付を確認できません。時間をおいてお試しください。' }, { status: 503 });
+  }
 
   // Get site + owner email
   const { data: site, error: siteError } = await supabase
