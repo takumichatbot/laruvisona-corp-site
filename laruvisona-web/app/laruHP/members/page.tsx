@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { Users, X } from 'lucide-react';
 
 interface Member {
   id: string;
@@ -20,6 +22,7 @@ function fmt(iso: string) {
 }
 
 export default function MembersPage() {
+  const router = useRouter();
   const supabase = createClient();
   const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState('');
@@ -31,13 +34,13 @@ export default function MembersPage() {
   const load = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { window.location.href = '/laruHP/auth/login?redirectTo=/laruHP/members'; return; }
+      if (!user) { router.push('/laruHP/auth/login?redirectTo=/laruHP/members'); return; }
       const { data } = await supabase.from('sites').select('id, name').eq('user_id', user.id);
       setSites(data ?? []);
       if (data && data.length > 0) setSiteId(prev => prev || data[0].id);
     } catch (e) { setErr((e as Error)?.message || '読み込み失敗'); }
     finally { setLoaded(true); }
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -49,9 +52,13 @@ export default function MembersPage() {
   useEffect(() => { loadMembers(); }, [loadMembers]);
 
   const remove = async (id: string) => {
-    setDelId(null);
-    setMembers(prev => prev.filter(m => m.id !== id));
-    await fetch(`/api/hp/members/manage?memberId=${id}&siteId=${siteId}`, { method: 'DELETE' });
+    try {
+      const res = await fetch(`/api/hp/members/manage?memberId=${encodeURIComponent(id)}&siteId=${encodeURIComponent(siteId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw Error(data.error || '削除できませんでした');
+      setMembers(prev => prev.filter(m => m.id !== id));
+      setDelId(null);
+    } catch (error) { setErr(error instanceof Error ? error.message : '会員を削除できませんでした'); }
   };
 
   const exportCsv = () => {
@@ -91,7 +98,7 @@ export default function MembersPage() {
 
         {members.length === 0 ? (
           <div className="text-center py-20">
-            <div className="text-5xl mb-3">👥</div>
+            <Users className="mx-auto mb-3 h-11 w-11 text-sky-500" aria-hidden="true" />
             <p className="text-gray-500 text-sm font-semibold">まだ会員がいません</p>
             <p className="text-gray-400 text-xs mt-1">「会員限定」ブロックを公開すると、登録した会員がここに表示されます</p>
           </div>
@@ -117,7 +124,7 @@ export default function MembersPage() {
                           <button onClick={() => setDelId(null)} className="text-gray-400">取消</button>
                         </span>
                       ) : (
-                        <button onClick={() => setDelId(m.id)} className="text-gray-300 hover:text-red-500 text-sm">✕</button>
+                        <button onClick={() => setDelId(m.id)} aria-label={`${m.email}を削除`} className="rounded p-2 text-gray-400 hover:text-red-500"><X className="h-4 w-4" aria-hidden="true" /></button>
                       )}
                     </td>
                   </tr>

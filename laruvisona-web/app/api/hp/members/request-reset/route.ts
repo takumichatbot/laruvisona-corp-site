@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { signResetToken } from '@/lib/member-auth';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { hpMemberEmail, hpMemberSiteId, readHpMemberBody } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,12 +17,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const { siteId, email } = await req.json().catch(() => ({}));
-  // 存在有無を漏らさないため常に ok を返す
-  if (!siteId || !email) return NextResponse.json({ ok: true });
+  let siteId: string, emailNorm: string;
+  try {
+    const body = await readHpMemberBody(req);
+    siteId = hpMemberSiteId(body.siteId);
+    emailNorm = hpMemberEmail(body.email);
+  } catch { return NextResponse.json({ ok: true }); }
 
   const supabase = admin();
-  const emailNorm = String(email).trim().toLowerCase();
   const { data: member } = await supabase
     .from('hp_members')
     .select('id, password_hash')

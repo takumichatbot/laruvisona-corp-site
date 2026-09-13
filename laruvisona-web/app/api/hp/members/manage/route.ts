@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { hpMemberId, hpMemberSiteId } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,14 +16,16 @@ export async function DELETE(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const memberId = searchParams.get('memberId');
-  const siteId = searchParams.get('siteId');
-  if (!memberId || !siteId) return NextResponse.json({ error: 'memberId and siteId required' }, { status: 400 });
+  let memberId: string, siteId: string;
+  try { memberId = hpMemberId(searchParams.get('memberId')); siteId = hpMemberSiteId(searchParams.get('siteId')); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
 
   const service = admin();
   const { data: site } = await service.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  await service.from('hp_members').delete().eq('id', memberId).eq('site_id', siteId);
+  const { data: deleted, error } = await service.from('hp_members').delete().eq('id', memberId).eq('site_id', siteId).select('id');
+  if (error) return NextResponse.json({ error: '会員を削除できませんでした' }, { status: 500 });
+  if (deleted?.length !== 1) return NextResponse.json({ error: '会員が見つかりません' }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

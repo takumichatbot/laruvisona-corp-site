@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyResetToken, hashPassword, signMemberToken, passwordFingerprint } from '@/lib/member-auth';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { parseHpMemberReset, readHpMemberBody } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +11,10 @@ function admin() {
 }
 
 export async function POST(req: Request) {
-  const { token, password } = await req.json().catch(() => ({}));
-  if (!token || !password) return NextResponse.json({ error: 'パラメータが不足しています' }, { status: 400 });
-  if (String(password).length < 6) return NextResponse.json({ error: 'パスワードは6文字以上にしてください' }, { status: 400 });
+  let input;
+  try { input = parseHpMemberReset(await readHpMemberBody(req)); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+  const { token, password } = input;
 
   // 再設定トークンの総当たり対策
   const rl = rateLimit(`member-reset-submit:${clientIp(req)}`, 10, 60 * 60 * 1000);
@@ -30,19 +32,20 @@ export async function POST(req: Request) {
 
   // 現在のパスワードハッシュと突き合わせる。既に再設定済みならトークンは無効
   // （＝リンクは一度きり。期限内でも使い回せない）。
-  const { data: current } = await supabase
+  const { data: current, error: currentError } = await supabase
     .from('hp_members')
     .select('password_hash')
     .eq('id', payload.mid)
     .eq('site_id', payload.sid)
     .maybeSingle();
+  if (currentError) return NextResponse.json({ error: '会員状態を確認できませんでした' }, { status: 500 });
   if (!current || passwordFingerprint(current.password_hash) !== payload.pwv) {
     return NextResponse.json({ error: 'リンクが無効か期限切れです。もう一度お試しください。' }, { status: 400 });
   }
 
   const { data: member, error } = await supabase
     .from('hp_members')
-    .update({ password_hash: hashPassword(String(password)) })
+    .update({ password_hash: hashPassword(password) })
     .eq('id', payload.mid)
     .eq('site_id', payload.sid)
     .select('id, email, name, plan, status')

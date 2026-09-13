@@ -1,6 +1,7 @@
 'use client';
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { CircleCheck } from 'lucide-react';
 
 function ResetInner() {
   const sp = useSearchParams();
@@ -12,7 +13,7 @@ function ResetInner() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pw.length < 6) { setError('パスワードは6文字以上にしてください'); return; }
+    if (pw.length < 8 || pw.length > 128) { setError('パスワードは8〜128文字で入力してください'); return; }
     if (pw !== pw2) { setError('パスワードが一致しません'); return; }
     setStatus('sending'); setError('');
     try {
@@ -30,13 +31,13 @@ function ResetInner() {
   const input: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 10, marginBottom: 10, boxSizing: 'border-box' };
 
   if (!token) return <div style={card}><p style={{ color: '#dc2626', fontSize: 14 }}>リンクが正しくありません。</p></div>;
-  if (status === 'done') return <div style={card}><div style={{ fontSize: 32, textAlign: 'center' }}>✅</div><p style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>パスワードを再設定しました</p><p style={{ textAlign: 'center', color: '#64748b', fontSize: 13, marginTop: 8 }}>元のページに戻ってログインしてください。</p></div>;
+  if (status === 'done') return <div style={card}><CircleCheck aria-hidden="true" style={{ width: 36, height: 36, color: '#0284c7', display: 'block', margin: '0 auto' }} /><p style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>パスワードを再設定しました</p><p style={{ textAlign: 'center', color: '#64748b', fontSize: 13, marginTop: 8 }}>元のページに戻ってログインしてください。</p></div>;
 
   return (
     <form onSubmit={submit} style={card}>
       <h1 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginTop: 0 }}>新しいパスワードを設定</h1>
-      <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="新しいパスワード（6文字以上）" style={input} />
-      <input type="password" value={pw2} onChange={e => setPw2(e.target.value)} placeholder="新しいパスワード（確認）" style={input} />
+      <input type="password" value={pw} onChange={e => setPw(e.target.value)} minLength={8} maxLength={128} autoComplete="new-password" placeholder="新しいパスワード（8文字以上）" style={input} />
+      <input type="password" value={pw2} onChange={e => setPw2(e.target.value)} minLength={8} maxLength={128} autoComplete="new-password" placeholder="新しいパスワード（確認）" style={input} />
       {error && <p style={{ color: '#dc2626', fontSize: 12, margin: '4px 0' }}>{error}</p>}
       <button type="submit" disabled={status === 'sending'} style={{ width: '100%', padding: 12, borderRadius: 10, border: 'none', background: '#0369a1', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
         {status === 'sending' ? '送信中...' : '再設定する'}

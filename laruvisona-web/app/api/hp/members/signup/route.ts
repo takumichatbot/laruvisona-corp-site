@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { hashPassword, signMemberToken } from '@/lib/member-auth';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { parseHpMemberSignup, readHpMemberBody } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,9 +11,11 @@ function admin() {
 }
 
 export async function POST(req: Request) {
-  const { siteId, email, password, name, _hp } = await req.json().catch(() => ({}));
-  if (_hp) return NextResponse.json({ ok: true });
-  if (!siteId || !email || !password) return NextResponse.json({ error: 'メールとパスワードを入力してください' }, { status: 400 });
+  let input;
+  try { input = parseHpMemberSignup(await readHpMemberBody(req)); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+  if (input.honeypot) return NextResponse.json({ ok: true });
+  const { siteId, email, password, name } = input;
 
   // 大量の会員アカウント作成でDBを埋められないように
   const rl = rateLimit(`member-signup:${clientIp(req)}`, 5, 60 * 60 * 1000);
@@ -22,20 +25,20 @@ export async function POST(req: Request) {
       { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
     );
   }
-  if (String(password).length < 6) return NextResponse.json({ error: 'パスワードは6文字以上にしてください' }, { status: 400 });
-
   const supabase = admin();
-  const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('published', true).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', siteId).eq('published', true).maybeSingle();
+  if (siteError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 500 });
   if (!site) return NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 });
 
-  const emailNorm = String(email).trim().toLowerCase();
-  const { data: existing } = await supabase.from('hp_members').select('id').eq('site_id', siteId).eq('email', emailNorm).maybeSingle();
+  const emailNorm = email;
+  const { data: existing, error: existingError } = await supabase.from('hp_members').select('id').eq('site_id', siteId).eq('email', emailNorm).maybeSingle();
+  if (existingError) return NextResponse.json({ error: '登録状態を確認できませんでした' }, { status: 500 });
   if (existing) return NextResponse.json({ error: 'このメールは既に登録されています' }, { status: 409 });
 
   const { data: member, error } = await supabase.from('hp_members').insert({
     site_id: siteId,
     email: emailNorm,
-    password_hash: hashPassword(String(password)),
+    password_hash: hashPassword(password),
     name: name || null,
     plan: 'free',
     status: 'active',

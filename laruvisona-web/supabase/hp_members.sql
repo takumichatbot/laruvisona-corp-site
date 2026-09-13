@@ -24,6 +24,9 @@ create table if not exists public.hp_members (
 );
 
 alter table public.hp_members enable row level security;
+revoke all on public.hp_members from anon, authenticated;
+grant select on public.hp_members to authenticated;
+grant all on public.hp_members to service_role;
 
 drop policy if exists "Owners view site members" on public.hp_members;
 create policy "Owners view site members" on public.hp_members

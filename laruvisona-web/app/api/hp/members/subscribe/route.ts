@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { verifyMemberToken } from '@/lib/member-auth';
 import { collectPriceIds } from '@/lib/site-blocks';
 import { safeReturnUrl } from '@/lib/site-origin';
+import { parseHpMemberSubscribe, readHpMemberBody } from '@/lib/hp-member-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,23 +13,27 @@ function admin() {
 }
 
 export async function POST(req: Request) {
-  const { siteId, token, priceId, returnUrl } = await req.json().catch(() => ({}));
-  if (!siteId || !token || !priceId) return NextResponse.json({ error: 'パラメータが不足しています' }, { status: 400 });
+  let input;
+  try { input = parseHpMemberSubscribe(await readHpMemberBody(req)); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+  const { siteId, token, priceId, returnUrl } = input;
   if (!process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: '決済が設定されていません' }, { status: 500 });
 
   const payload = verifyMemberToken(token);
   if (!payload || payload.sid !== siteId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
 
   const supabase = admin();
-  const { data: member } = await supabase.from('hp_members').select('id, email, stripe_customer_id').eq('id', payload.mid).eq('site_id', siteId).maybeSingle();
-  if (!member) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
+  const { data: member, error: memberError } = await supabase.from('hp_members').select('id, email, stripe_customer_id, status').eq('id', payload.mid).eq('site_id', siteId).maybeSingle();
+  if (memberError) return NextResponse.json({ error: '会員状態を確認できませんでした' }, { status: 500 });
+  if (!member || member.status !== 'active') return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
 
-  const { data: site } = await supabase
+  const { data: site, error: siteError } = await supabase
     .from('sites')
     .select('blocks_json, slug, custom_domain')
     .eq('id', siteId)
     .eq('published', true)
     .single();
+  if (siteError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 500 });
   if (!site) return NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 });
 
   // 価格はサイト側の設定にあるものだけ。クライアントの priceId をそのまま
