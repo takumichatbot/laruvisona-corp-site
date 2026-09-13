@@ -122,6 +122,25 @@ function IcGlobe() {
 function IcBell() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;
 }
+function IcBellOff() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 18H3s3-2 3-9a6 6 0 0 1 .28-1.82"/><path d="M9.1 3.26A6 6 0 0 1 18 9c0 2.04.25 3.62.62 4.83"/><path d="M2 2l20 20"/></svg>;
+}
+function IcReport() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>;
+}
+function IcChart() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg>;
+}
+function IcInbox() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16l2 12H2L4 4z"/><path d="M2 16h6a4 4 0 0 0 8 0h6"/></svg>;
+}
+type DashboardIconName = 'publish' | 'search' | 'message' | 'announce';
+function DashboardIcon({ name, size = 18 }: { name: DashboardIconName; size?: number }) {
+  if (name === 'publish') return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/><path d="M5 19h14"/></svg>;
+  if (name === 'search') return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>;
+  if (name === 'message') return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11v2l13 4V7L3 11z"/><path d="M16 10l5-3v10l-5-3"/><path d="M6 14l1 6h4l-1-5"/></svg>;
+}
 
 // ── Mini area chart ─────────────────────────────────────────────────────────
 type DayView = { date: string; views: number };
@@ -798,14 +817,14 @@ export default function DashboardPage() {
       {publishToast && (
         <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 border rounded-2xl px-4 py-3 shadow-2xl ${publishToast.type === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-white border-gray-200 text-gray-700'}`}>
           <div className="flex items-center gap-3">
-            <span className="text-sm">{publishToast.type === 'warn' ? '⚠ ' : '✓ '}{publishToast.message}</span>
+            <span className="flex items-center gap-2 text-sm">{publishToast.type === 'warn' ? <IcAlert /> : <IcCheck />}{publishToast.message}</span>
             <button onClick={() => setPublishToast(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
           </div>
           {publishToast.slug && publishToast.type === 'success' && (() => {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
             const siteUrl = `${appUrl}/hp/${publishToast.slug}`;
             const siteName = sites.find(s => s.slug === publishToast.slug)?.name || 'マイサイト';
-            const tweetText = encodeURIComponent(`「${siteName}」のホームページを公開しました！\n\n#LARUHP #ホームページ作成\n👉 ${siteUrl}`);
+            const tweetText = encodeURIComponent(`「${siteName}」のホームページを公開しました！\n\n#LARUHP #ホームページ作成\n${siteUrl}`);
             return (
               <div className="flex items-center gap-2 pt-1 border-t border-gray-100 w-full justify-center">
                 <span className="text-xs text-gray-400">シェア：</span>
@@ -833,7 +852,7 @@ export default function DashboardPage() {
       {/* ── Fetch error banner ── */}
       {fetchError && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl px-4 py-3 shadow-lg text-sm max-w-sm w-full mx-4">
-          <span className="flex-1">⚠ {fetchError}</span>
+          <span className="flex flex-1 items-center gap-2"><IcAlert />{fetchError}</span>
           <button onClick={() => window.location.reload()} className="text-xs font-bold text-amber-700 hover:text-amber-900 whitespace-nowrap">再読込</button>
           <button onClick={() => setFetchError('')} className="text-amber-400 hover:text-amber-700 text-lg leading-none">×</button>
         </div>
@@ -894,7 +913,7 @@ export default function DashboardPage() {
                       <div key={n.id} className="px-4 py-3 hover:bg-sky-50 transition-colors">
                         <div className="flex items-start gap-2.5">
                           <span className={`flex-shrink-0 mt-0.5 text-base ${n.type === 'error' ? 'text-red-600' : n.type === 'warn' ? 'text-yellow-600' : n.id === 'ok' ? 'text-gray-400' : 'text-sky-600'}`}>
-                            {n.type === 'error' ? '!' : n.type === 'warn' ? '⚠' : n.id === 'ok' ? '✓' : '●'}
+                            {n.type === 'error' || n.type === 'warn' ? <IcAlert /> : n.id === 'ok' ? <IcCheck /> : <IcInfo />}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className={`text-xs font-semibold ${n.id === 'ok' ? 'text-gray-400' : 'text-gray-900'}`}>{n.title}</div>
@@ -929,9 +948,11 @@ export default function DashboardPage() {
                       localStorage.setItem('laruHP_notification_sound', next ? '1' : '0');
                     }}
                     title={soundEnabled ? '通知音: ON（クリックでOFF）' : '通知音: OFF（クリックでON）'}
+                    aria-label={soundEnabled ? '通知音を切る' : '通知音を入れる'}
+                    aria-pressed={soundEnabled}
                     className={`text-sm p-2.5 rounded-lg border transition-all min-w-[40px] min-h-[40px] flex items-center justify-center ${soundEnabled ? 'border-sky-200 text-sky-600 bg-sky-50' : 'border-gray-200 text-gray-400 hover:text-gray-600'}`}
                   >
-                    {soundEnabled ? '🔔' : '🔕'}
+                    {soundEnabled ? <IcBell /> : <IcBellOff />}
                   </button>
                   <button
                     onClick={() => setShowNotifications(v => !v)}
@@ -950,7 +971,7 @@ export default function DashboardPage() {
                     title="KPIサマリーをPDFに出力"
                     className="text-gray-500 hover:text-gray-700 text-xs border border-gray-200 hover:border-gray-300 px-2 py-1.5 rounded-md transition-all hidden sm:flex items-center gap-1"
                   >
-                    <span>📄</span><span className="hidden md:inline">レポート</span>
+                    <IcReport /><span className="hidden md:inline">レポート</span>
                   </button>
                   <Link href="/laruHP/settings" className="text-gray-500 hover:text-gray-900 text-xs border border-gray-200 hover:border-gray-300 px-2 py-1.5 rounded-md transition-all flex items-center gap-1">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1057,7 +1078,7 @@ export default function DashboardPage() {
         {/* ── Weekly summary banner ── */}
         {weekSummary && !weekSummaryDismissed && (weekSummary.pvThisWeek > 0 || weekSummary.contactsThisWeek > 0) && (
           <div className="bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200 rounded-xl px-4 py-3.5 mb-6 flex items-start gap-4">
-            <div className="text-2xl flex-shrink-0">📊</div>
+            <div className="flex-shrink-0 text-sky-700"><IcChart /></div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sky-900 text-sm mb-1">先週のサマリー</p>
               <div className="flex gap-4 flex-wrap">
@@ -1139,12 +1160,12 @@ export default function DashboardPage() {
         {loading && (
           <div className="flex gap-3 overflow-x-auto pb-1">
             {[
-              { icon: '📊', label: '訪問数（7日間）' },
-              { icon: '📬', label: '問い合わせ' },
+              { icon: 'chart', label: '訪問数（7日間）' },
+              { icon: 'inbox', label: '問い合わせ' },
             ].map((item, i) => (
               <div key={i} className="flex-shrink-0 w-64 bg-white border border-gray-200 rounded-2xl p-4 animate-pulse">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg opacity-30">{item.icon}</span>
+                  <span className="text-gray-300">{item.icon === 'chart' ? <IcChart /> : <IcInbox />}</span>
                   <span className="text-xs font-semibold text-gray-300">{item.label}</span>
                 </div>
                 <div className="h-3.5 bg-gray-100 rounded w-3/4 mb-2" />
@@ -1164,11 +1185,11 @@ export default function DashboardPage() {
             return sum + (Array.isArray(arr) ? arr.reduce((s, d) => s + (d.views || 0), 0) : 0);
           }, 0);
 
-          const tips: { icon: string; title: string; body: string; href?: string; cta?: string }[] = [];
+          const tips: { icon: DashboardIconName; title: string; body: string; href?: string; cta?: string }[] = [];
 
           if (unpublishedSites.length > 0) {
             tips.push({
-              icon: '🚀',
+              icon: 'publish',
               title: 'サイトを公開しましょう',
               body: `「${unpublishedSites[0].name}」がまだ非公開です。公開するとGoogleに認識されSEO効果が始まります。`,
               href: `/laruHP/studio?siteId=${unpublishedSites[0].id}`,
@@ -1178,7 +1199,7 @@ export default function DashboardPage() {
 
           if (publishedSites.length > 0 && totalViews === 0) {
             tips.push({
-              icon: '🔍',
+              icon: 'search',
               title: 'Google Search Consoleを連携しよう',
               body: '検索順位・クリック数をダッシュボードで確認できます。連携は設定画面から2分で完了。',
               href: '/laruHP/settings?section=gsc',
@@ -1188,7 +1209,7 @@ export default function DashboardPage() {
 
           if (unreadContacts > 0) {
             tips.push({
-              icon: '💬',
+              icon: 'message',
               title: `未読のお問い合わせが${unreadContacts}件あります`,
               body: '早めの返信で顧客満足度が上がります。24時間以内の返信を心がけましょう。',
               href: '/laruHP/contacts',
@@ -1198,7 +1219,7 @@ export default function DashboardPage() {
 
           if (publishedSites.length > 0 && totalContacts === 0) {
             tips.push({
-              icon: '📣',
+              icon: 'announce',
               title: 'CTAボタンのテキストを見直す',
               body: '「お気軽にご相談ください」より「無料で相談する」の方が問い合わせが2〜3倍になる傾向があります。',
               href: `/laruHP/studio?siteId=${publishedSites[0].id}`,
@@ -1213,7 +1234,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {tips.slice(0, 2).map((tip, i) => (
                   <div key={i} className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-start gap-3 shadow-sm hover:border-sky-200 transition-colors">
-                    <span className="text-xl flex-shrink-0 mt-0.5">{tip.icon}</span>
+                    <span className="flex-shrink-0 mt-0.5 text-sky-700"><DashboardIcon name={tip.icon} /></span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-bold text-gray-900 mb-0.5">{tip.title}</div>
                       <p className="text-xs text-gray-500 leading-relaxed">{tip.body}</p>
@@ -1312,7 +1333,7 @@ export default function DashboardPage() {
           const daysSince = Math.floor((Date.now() - new Date(stale[0].created_at).getTime()) / 86400000);
           return (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5 mb-6 flex items-start gap-3">
-              <span className="text-lg flex-shrink-0 mt-0.5">⏳</span>
+              <span className="flex-shrink-0 mt-0.5 text-amber-700"><IcAlert /></span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-amber-800 mb-0.5">「{stale[0].name}」を作成してから{daysSince}日が経ちました</div>
                 <p className="text-xs text-amber-700 leading-relaxed">サイトがまだ非公開です。公開するとGoogleに認識されSEO効果が始まります。不明な点があればサポートへご連絡ください。</p>
@@ -1581,14 +1602,14 @@ export default function DashboardPage() {
             <p className="text-gray-400 text-xs mb-6">クレジットカード不要・今すぐ無料で試せます</p>
             <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
               {[
-                { step: '1', label: 'サイト作成', icon: '✨' },
-                { step: '2', label: 'コンテンツ編集', icon: '✏️' },
-                { step: '3', label: '公開', icon: '🚀' },
-                { step: '4', label: 'SEO・拡散', icon: '📣' },
+                { step: '1', label: 'サイト作成' },
+                { step: '2', label: 'コンテンツ編集' },
+                { step: '3', label: '公開' },
+                { step: '4', label: 'SEO・拡散' },
               ].map((s, i, arr) => (
                 <div key={s.step} className="flex items-center gap-2">
                   <div className="flex flex-col items-center gap-1">
-                    <div className="w-8 h-8 rounded-full bg-sky-100 border-2 border-sky-300 flex items-center justify-center text-sm">{s.icon}</div>
+                    <div className="w-8 h-8 rounded-full bg-sky-100 border-2 border-sky-300 flex items-center justify-center text-xs font-bold text-sky-800">{s.step}</div>
                     <span className="text-[10px] text-gray-500 font-medium">{s.label}</span>
                   </div>
                   {i < arr.length - 1 && <div className="w-6 h-px bg-gray-300 mb-4" />}
@@ -1650,7 +1671,7 @@ export default function DashboardPage() {
                         disabled={publishing === site.id}
                         className="absolute bottom-2.5 right-2.5 flex items-center gap-1 text-[9px] bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed px-2.5 py-1.5 rounded-md transition-all text-white font-bold shadow-sm"
                       >
-                        🚀 {publishing === site.id ? '公開中...' : '公開する'}
+                        <DashboardIcon name="publish" size={11} />{publishing === site.id ? '公開中...' : '公開する'}
                       </button>
                     )}
                   </div>
@@ -1679,29 +1700,29 @@ export default function DashboardPage() {
                         ) : site.slug ? (
                           <button onClick={() => startEditSlug(site)} className="flex items-center gap-1 group/slug">
                             <span className="text-gray-500 text-[10px] font-mono truncate">/hp/{site.slug}</span>
-                            <span className="text-gray-400 text-[9px] opacity-0 group-hover/slug:opacity-100 transition-opacity">✎</span>
+                            <span className="text-gray-400 opacity-0 group-hover/slug:opacity-100 transition-opacity"><IcEdit /></span>
                           </button>
                         ) : (
                           <button onClick={() => startEditSlug(site)} className="text-gray-400 text-[10px] hover:text-gray-600 transition-colors">URLを設定 →</button>
                         )}
                         {site.published && site.view_count > 0 && (() => {
                           const d7 = analytics['7']?.[site.id];
-                          let trend: string | null = null;
+                          let trend: 'up' | 'down' | 'flat' | null = null;
                           if (d7 && d7.length >= 4) {
                             const half = Math.floor(d7.length / 2);
                             const first = d7.slice(0, half).reduce((s, v) => s + v.views, 0);
                             const second = d7.slice(half).reduce((s, v) => s + v.views, 0);
-                            if (second > first * 1.1) trend = '↗';
-                            else if (second < first * 0.9) trend = '↘';
-                            else trend = '→';
+                            if (second > first * 1.1) trend = 'up';
+                            else if (second < first * 0.9) trend = 'down';
+                            else trend = 'flat';
                           }
                           return (
                             <span className="flex items-center gap-1 text-gray-500 text-[10px] flex-shrink-0">
                               <IcEye />
                               {site.view_count.toLocaleString()}
                               {trend && (
-                                <span className={trend === '↗' ? 'text-green-500' : trend === '↘' ? 'text-red-400' : 'text-gray-400'} title="7日間トレンド">
-                                  {trend}
+                                <span className={trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-400' : 'text-gray-400'} title="7日間トレンド">
+                                  {trend === 'up' ? '増加' : trend === 'down' ? '減少' : '横ばい'}
                                 </span>
                               )}
                             </span>
@@ -1713,7 +1734,7 @@ export default function DashboardPage() {
                         const isStale = staleDays > 30;
                         return (
                           <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${isStale ? 'text-amber-500' : 'text-gray-400'}`}>
-                            {isStale ? '⚠' : '✎'} 更新 {relativeTime(site.updated_at)}
+                            {isStale ? <IcAlert /> : <IcEdit />} 更新 {relativeTime(site.updated_at)}
                             {isStale && <span className="text-[9px] bg-amber-50 border border-amber-200 text-amber-600 px-1 py-0 rounded">更新推奨</span>}
                           </p>
                         );
@@ -1804,11 +1825,11 @@ export default function DashboardPage() {
                           <div className="flex gap-1.5 mb-1.5">
                             <div className="flex-1 bg-sky-100 rounded h-5 relative overflow-hidden">
                               <div className="absolute inset-y-0 left-0 bg-sky-300 rounded" style={{ width: `${pctA}%` }} />
-                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-sky-700">A: {pctA}%{winnerHint === 'A' && ' 👑'}</span>
+                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-sky-700">A: {pctA}%{winnerHint === 'A' && <span className="ml-1 rounded bg-sky-50 px-1">優勢</span>}</span>
                             </div>
                             <div className="flex-1 bg-purple-100 rounded h-5 relative overflow-hidden">
                               <div className="absolute inset-y-0 left-0 bg-purple-300 rounded" style={{ width: `${pctB}%` }} />
-                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-purple-700">B: {pctB}%{winnerHint === 'B' && ' 👑'}</span>
+                              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-purple-700">B: {pctB}%{winnerHint === 'B' && <span className="ml-1 rounded bg-purple-50 px-1">優勢</span>}</span>
                             </div>
                           </div>
                           <div className="flex justify-between text-[9px] text-gray-400 mb-2">
@@ -2290,7 +2311,7 @@ export default function DashboardPage() {
         return (
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4"><IcAlert /></div>
               <h3 className="font-bold text-gray-900 text-center mb-2">本当に非公開にしますか？</h3>
               <p className="text-sm text-gray-600 text-center leading-relaxed">
                 {targetSite && (targetSite.view_count || 0) > 0
@@ -2333,7 +2354,7 @@ export default function DashboardPage() {
       {showSiteLimitModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
           <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <div className="w-12 h-12 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">🚧</div>
+            <div className="w-12 h-12 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl flex items-center justify-center mx-auto mb-4"><IcAlert /></div>
             <h2 className="text-gray-900 font-bold text-lg text-center mb-1">サイト数の上限に達しました</h2>
             <p className="text-gray-500 text-sm text-center mb-5">
               現在のプランでは <strong className="text-gray-900">{showSiteLimitModal.current}/{showSiteLimitModal.limit}件</strong> が上限です。<br/>
