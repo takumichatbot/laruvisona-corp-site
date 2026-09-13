@@ -23,6 +23,9 @@ export default function SettingsPage() {
   const [planLoading, setPlanLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalMsg, setPortalMsg] = useState('');
+  const [digestEnabled, setDigestEnabled] = useState(true);
+  const [digestSaving, setDigestSaving] = useState(false);
+  const [digestMsg, setDigestMsg] = useState('');
 
   // GSC state
   const [gscConnected, setGscConnected] = useState(false);
@@ -62,6 +65,13 @@ export default function SettingsPage() {
         setBrandLogoUrl((profile as { brand_logo_url: string }).brand_logo_url);
       }
       setPlanLoading(false);
+
+      try {
+        const digestRes = await fetch('/api/digest/settings');
+        const digestData = await digestRes.json();
+        if (!digestRes.ok) throw new Error();
+        setDigestEnabled(digestData.enabled !== false);
+      } catch { setDigestMsg('週次レポートの設定を取得できませんでした。'); }
 
       // Load GSC status
       try {
@@ -392,6 +402,32 @@ export default function SettingsPage() {
               {emailLoading ? '送信中...' : '確認メールを送信'}
             </button>
           </form>
+        </section>
+
+        <section className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+          <h2 className="font-bold text-sm mb-1 text-gray-900">週次レポート</h2>
+          <p className="text-gray-500 text-xs mb-4">直近7日間の訪問数と未読の問い合わせを、毎週1回メールでお知らせします。</p>
+          <label className="flex items-center justify-between gap-4 cursor-pointer">
+            <span className="text-sm font-semibold text-gray-800">メールで受け取る</span>
+            <input
+              type="checkbox"
+              checked={digestEnabled}
+              disabled={digestSaving}
+              onChange={async e => {
+                const previous = digestEnabled;
+                const enabled = e.target.checked;
+                setDigestEnabled(enabled); setDigestSaving(true); setDigestMsg('');
+                const response = await fetch('/api/digest/settings', {
+                  method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
+                });
+                if (!response.ok) { setDigestEnabled(previous); setDigestMsg('保存できませんでした。もう一度お試しください。'); }
+                else setDigestMsg('保存しました。');
+                setDigestSaving(false);
+              }}
+              className="h-5 w-5 accent-sky-600"
+            />
+          </label>
+          {digestMsg && <p className={`mt-3 text-xs ${digestMsg.includes('できません') ? 'text-red-600' : 'text-emerald-700'}`}>{digestMsg}</p>}
         </section>
 
         {/* Password */}

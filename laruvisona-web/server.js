@@ -282,28 +282,8 @@ app.prepare().then(() => {
   }
   setTimeout(triggerRepublishOutdated, 60 * 1000); // 起動60秒後（Nextのウォームアップ後）
 
-  // 週次レポート: JST 月曜 8時台に1回だけ（同一週の二重送信を防ぐ）
-  let _lastWeeklyKey = '';
-  async function maybeWeeklyReport() {
-    if (!process.env.CRON_SECRET) return;
-    const jst = new Date(Date.now() + 9 * 3600 * 1000);
-    const day = jst.getUTCDay();   // 1 = Monday
-    const hour = jst.getUTCHours();
-    const weekKey = `${jst.getUTCFullYear()}-${jst.getUTCMonth()}-${jst.getUTCDate()}`;
-    if (day === 1 && hour === 8 && _lastWeeklyKey !== weekKey) {
-      _lastWeeklyKey = weekKey;
-      try {
-        const r = await fetch(`${SELF}/api/cron/weekly-report`, {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-        });
-        if (!r.ok) console.warn('[cron] weekly-report:', r.status);
-      } catch (e) { console.warn('[cron] weekly error:', e?.message); }
-    }
-  }
-  setInterval(maybeWeeklyReport, 30 * 60 * 1000); // 30分ごとに判定
-
-  // 日次バッチ: JST 9時台に1回（リテンション・日次ダイジェスト・予約リマインダー）
+  // 日次バッチ: JST 9時台に1回（リテンション・予約リマインダー）
+  // 週次ダイジェストは月曜だけ。DB台帳でも同一週の重複を防ぐ。
   let _lastDailyKey = '';
   async function postCron(pathname) {
     try {
@@ -322,6 +302,7 @@ app.prepare().then(() => {
     if (hour === 9 && _lastDailyKey !== dayKey) {
       _lastDailyKey = dayKey;
       await postCron('/api/retention/send');
+      // 毎日呼び、週キーの台帳で月曜の初回送信と翌日以降の失敗再試行を両立する。
       await postCron('/api/digest/send');
       await postCron('/api/sms/reminders');
       await postCron('/api/booking/reminders');

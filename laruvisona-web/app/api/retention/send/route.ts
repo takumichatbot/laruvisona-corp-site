@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
+import { claimScheduledEmail, finishScheduledEmail, requireBearer } from '@/lib/scheduled-email';
 
 // Called by a daily cron (e.g., Render cron job or external scheduler).
 // Checks profiles and sends Day-1 / Day-7 / Day-25 onboarding emails.
@@ -106,8 +107,7 @@ function emailDay25() {
 }
 
 export async function POST(req: Request) {
-  const secret = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (secret !== process.env.RETENTION_SECRET) {
+  if (!requireBearer(req, process.env.RETENTION_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -116,53 +116,62 @@ export async function POST(req: Request) {
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const service = await createServiceClient();
+  const service = createServiceClient();
 
   // Fetch all active subscriptions with contract start dates
-  const { data: profiles } = await service
+  const profilesResult = await service
     .from('profiles')
-    .select('id, plan, contract_starts_at, retention_emails_sent')
+    .select('id, plan, contract_starts_at')
     .eq('subscription_status', 'active')
     .not('contract_starts_at', 'is', null);
 
-  if (!profiles?.length) return NextResponse.json({ sent: 0 });
+  if (profilesResult.error) return NextResponse.json({ error: 'profiles unavailable' }, { status: 503 });
+  const profiles = profilesResult.data || [];
+  if (!profiles.length) return NextResponse.json({ sent: 0 });
 
   let sent = 0;
-  const results: string[] = [];
+  const failed: string[] = [];
 
   for (const profile of profiles) {
     const days = daysSince(profile.contract_starts_at);
-    const sent_flags: string[] = profile.retention_emails_sent ? JSON.parse(profile.retention_emails_sent) : [];
-
     const toSend: { day: string; email: { subject: string; html: string } }[] = [];
-    if (days >= 1 && !sent_flags.includes('day1')) toSend.push({ day: 'day1', email: emailDay1(profile.plan || 'hp') });
-    if (days >= 7 && !sent_flags.includes('day7')) toSend.push({ day: 'day7', email: emailDay7() });
-    if (days >= 25 && !sent_flags.includes('day25')) toSend.push({ day: 'day25', email: emailDay25() });
+    // 移行時に古い契約へ3通まとめて送らない。各便は5日間だけ再試行する。
+    if (days >= 1 && days <= 5) toSend.push({ day: 'day1', email: emailDay1(profile.plan || 'hp') });
+    if (days >= 7 && days <= 11) toSend.push({ day: 'day7', email: emailDay7() });
+    if (days >= 25 && days <= 29) toSend.push({ day: 'day25', email: emailDay25() });
 
     if (toSend.length === 0) continue;
 
-    const { data: { user } } = await service.auth.admin.getUserById(profile.id);
-    if (!user?.email) continue;
+    const userResult = await service.auth.admin.getUserById(profile.id);
+    if (userResult.error || !userResult.data.user?.email) {
+      failed.push(profile.id);
+      continue;
+    }
+    const user = userResult.data.user;
+    const recipientEmail = user.email!;
+    const periodKey = String(profile.contract_starts_at).slice(0, 10);
 
     for (const { day, email } of toSend) {
-      const { error } = await resend.emails.send({
-        from: 'LARU HP <noreply@laruvisona.jp>',
-        to: user.email,
-        subject: email.subject,
-        html: email.html,
-      });
-      if (!error) {
-        sent_flags.push(day);
+      let claim: { delivery_id: string; claim_token: string } | undefined;
+      try {
+        claim = await claimScheduledEmail(service, profile.id, `retention_${day}`, periodKey);
+        if (!claim) continue;
+        const response = await resend.emails.send({
+          from: 'LARU HP <noreply@laruvisona.jp>', to: recipientEmail,
+          subject: email.subject, html: email.html,
+        }, { idempotencyKey: `hp-retention-${claim.delivery_id}` });
+        if (response.error) throw new Error(response.error.message);
+        await finishScheduledEmail(service, claim, true, response.data?.id);
         sent++;
-        results.push(`${user.email}:${day}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'send failed';
+        failed.push(`${profile.id}:${day}`);
+        if (claim) {
+          try { await finishScheduledEmail(service, claim, false, undefined, message); } catch {}
+        }
       }
     }
-
-    await service
-      .from('profiles')
-      .update({ retention_emails_sent: JSON.stringify(sent_flags) })
-      .eq('id', profile.id);
   }
 
-  return NextResponse.json({ sent, results });
+  return NextResponse.json({ sent, failed }, { status: failed.length ? 503 : 200 });
 }

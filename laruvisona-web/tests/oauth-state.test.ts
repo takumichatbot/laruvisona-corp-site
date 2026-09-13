@@ -72,6 +72,5 @@ test('P0-09 state Cookie は短命で、成否にかかわらず破棄される'
 const cron = readFileSync(new URL('../app/api/cron/weekly-report/route.ts', import.meta.url), 'utf8');
 
 test('CRON_SECRET が未設定なら週次一斉メールを実行しない', () => {
-  assert.ok(/if\s*\(\s*!secret\s*\)/.test(cron), 'CRON_SECRET 未設定時に素通りする');
-  assert.ok(!/if\s*\(\s*secret\s*\)\s*\{/.test(cron), '鍵がある時だけ検証する fail-open が残っている');
+  assert.ok(/requireBearer\(req, process\.env\.CRON_SECRET\)/.test(cron), '共通のfail-closed認証を通していない');
 });
