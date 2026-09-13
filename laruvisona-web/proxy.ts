@@ -163,7 +163,7 @@ export async function proxy(request: NextRequest) {
     // 公開画像・映像・JS/CSSだけを同じoriginで配る。制作・認証は既存originへ。
     const staticFile = /^\/(?:lp|studio|salon|company|brand|images)\/.*\.(?:avif|webp|png|jpe?g|svg|mp4|webm|woff2?)$/i.test(pathname);
     if (pathname.startsWith('/_next/') || staticFile ||
-        ['/favicon.ico', '/laruhp-icon-192.png', '/laruhp-icon-512.png', '/apple-touch-icon.png', '/laruhp-manifest.json', '/laruHP/opengraph-image', '/api/domain-probe'].includes(pathname)) {
+        ['/favicon.ico', '/laruhp-icon-192.png', '/laruhp-icon-512.png', '/apple-touch-icon.png', '/laruhp-manifest.json', '/indexnow-key.txt', '/laruHP/opengraph-image', '/api/domain-probe'].includes(pathname)) {
       return NextResponse.next();
     }
     if (pathname.startsWith('/laruHP/')) {
