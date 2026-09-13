@@ -6,9 +6,11 @@ alter table public.hp_appointments add column if not exists payment_status text 
 alter table public.hp_appointments add column if not exists hold_until timestamptz;
 create table if not exists public.hp_payment_accounts (
  user_id uuid primary key references auth.users(id) on delete cascade, account_id text unique,
- livemode boolean, state_hash text, state_expires timestamptz, state_site uuid,
- updated_at timestamptz not null default now()
+ livemode boolean, charges_enabled boolean not null default false,
+ payouts_enabled boolean not null default false, updated_at timestamptz not null default now()
 );
+alter table public.hp_payment_accounts add column if not exists charges_enabled boolean not null default false;
+alter table public.hp_payment_accounts add column if not exists payouts_enabled boolean not null default false;
 create table if not exists public.hp_booking_payments (
  appointment_id uuid primary key, site_id uuid not null,
  account_id text not null, livemode boolean not null, session_id text unique, intent_id text unique,
@@ -33,7 +35,7 @@ begin
  select version into v from hp_booking_calendars where site_id=p_site;
  if coalesce(v,0)<>p_version then raise exception 'config_conflict'; end if;
  if coalesce(p_config->>'paymentMode','onsite') not in ('onsite','prepay') then raise exception 'invalid_payment_mode'; end if;
- if p_config->>'paymentMode'='prepay' and not exists(select 1 from hp_payment_accounts where user_id=p_owner and account_id is not null) then raise exception 'payment_unavailable'; end if;
+ if p_config->>'paymentMode'='prepay' and not exists(select 1 from hp_payment_accounts where user_id=p_owner and account_id is not null and charges_enabled and payouts_enabled) then raise exception 'payment_unavailable'; end if;
  -- The API validates the bounded config; legacy appointments must finish before switching engines.
  if (p_config->>'enabled')::boolean and to_regclass('public.hp_reservations') is not null then
   execute 'select exists(select 1 from public.hp_reservations where site_id=$1 and (status=''pending'' or (status=''confirmed'' and slot_datetime>now())))' into old_active using p_site;
@@ -68,7 +70,7 @@ begin
  prepaid:=c->>'paymentMode'='prepay' and (svc->>'price')::integer>0;
  if prepaid then
   select m.* into merchant from hp_payment_accounts m join sites s on s.user_id=m.user_id where s.id=p_site;
-  if merchant.account_id is null then raise exception 'payment_unavailable'; end if;
+  if merchant.account_id is null or not merchant.charges_enabled or not merchant.payouts_enabled then raise exception 'payment_unavailable'; end if;
   if (svc->>'price')::integer<50 then raise exception 'payment_amount_invalid'; end if;
  end if;
  insert into hp_appointments(site_id,client_key,request_hash,token_hash,service_id,service_name,staff_id,staff_name,resource_id,resource_name,starts_at,ends_at,occupied_until,price,name,email,phone)

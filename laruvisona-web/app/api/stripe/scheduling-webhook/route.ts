@@ -2,6 +2,7 @@ import { getStripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { reply } from '@/lib/scheduling/server';
 import { paymentService } from '@/lib/scheduling/payments';
+import { merchantAccountEvent } from '@/lib/scheduling/merchant';
 import type Stripe from 'stripe';
 export const dynamic='force-dynamic';
 export async function POST(req:Request){
@@ -11,6 +12,11 @@ export async function POST(req:Request){
  try{e=getStripe().webhooks.constructEvent(await req.text(),req.headers.get('stripe-signature')||'',secret);}catch{return reply({error:'Invalid signature'},400);}
  if(!e.account)return reply({received:true});
  const db=createServiceClient();
+ const accountUpdate=merchantAccountEvent(e);
+ if(accountUpdate){
+  const saved=await db.from('hp_payment_accounts').update({charges_enabled:accountUpdate.charges_enabled,payouts_enabled:accountUpdate.payouts_enabled,updated_at:new Date().toISOString()}).eq('account_id',accountUpdate.accountId);
+  return saved.error?reply({error:'Database unavailable'},503):reply({received:true});
+ }
  let query=db.from('hp_booking_payments').select('site_id,appointment_id').eq('account_id',e.account);
  if(e.type==='checkout.session.completed'||e.type==='checkout.session.expired'){
   const s=e.data.object as Stripe.Checkout.Session;

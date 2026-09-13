@@ -50,13 +50,15 @@ colchk as (
     count(*) filter (where table_name='hp_appointments' and column_name='payment_status' and data_type='text' and is_nullable='NO' and column_default='''onsite''::text') as appointment_payment,
     count(*) filter (where table_name='hp_appointments' and column_name='hold_until' and data_type='timestamp with time zone' and is_nullable='YES') as appointment_hold,
     count(*) filter (where table_name='hp_payment_accounts' and (column_name,data_type,is_nullable) in
-      (('user_id','uuid','NO'),('account_id','text','YES'),('livemode','boolean','YES'),('state_hash','text','YES'),
-       ('state_expires','timestamp with time zone','YES'),('state_site','uuid','YES'),('updated_at','timestamp with time zone','NO'))) as account_columns,
+      (('user_id','uuid','NO'),('account_id','text','YES'),('livemode','boolean','YES'),('charges_enabled','boolean','NO'),
+       ('payouts_enabled','boolean','NO'),('updated_at','timestamp with time zone','NO'))) as account_columns,
+    count(*) filter (where table_name='hp_payment_accounts') as account_total,
     count(*) filter (where table_name='hp_booking_payments' and (column_name,data_type,is_nullable) in
       (('appointment_id','uuid','NO'),('site_id','uuid','NO'),('account_id','text','NO'),('livemode','boolean','NO'),
        ('session_id','text','YES'),('intent_id','text','YES'),('return_url','text','YES'),('attempted_at','timestamp with time zone','YES'),
        ('refund_started_at','timestamp with time zone','YES'),('refund_id','text','YES'),('active','boolean','NO'),
        ('last_checked_at','timestamp with time zone','YES'),('created_at','timestamp with time zone','NO'))) as payment_columns
+    ,count(*) filter (where table_name='hp_booking_payments') as payment_total
   from information_schema.columns
   where table_schema='public' and table_name in ('hp_appointments','hp_payment_accounts','hp_booking_payments')
 ),
@@ -107,8 +109,8 @@ checks as (
     (3,'存在','hp_booking_payments がある','true',(select (payments is not null)::text from obj),(select payments is not null from obj)),
     (4,'ロール','anon/authenticated/service_role がある','true',(select (anon_role is not null and auth_role is not null and service_role is not null)::text from obj),(select anon_role is not null and auth_role is not null and service_role is not null from obj)),
     (5,'列','hp_appointments の決済列と既定値','2',(select (appointment_payment+appointment_hold)::text from colchk),(select appointment_payment=1 and appointment_hold=1 from colchk)),
-    (6,'列','hp_payment_accounts の列と型','7',(select account_columns::text from colchk),(select account_columns=7 from colchk)),
-    (7,'列','hp_booking_payments の列と型','13',(select payment_columns::text from colchk),(select payment_columns=13 from colchk)),
+    (6,'列','hp_payment_accounts の全6列と型','6',(select account_columns::text||'/'||account_total::text from colchk),(select account_columns=6 and account_total=6 from colchk)),
+    (7,'列','hp_booking_payments の全13列と型','13',(select payment_columns::text||'/'||payment_total::text from colchk),(select payment_columns=13 and payment_total=13 from colchk)),
     (8,'制約','予約状態と決済状態のCHECK','2',(select (appointment_status+payment_status)::text from constraints),(select appointment_status=1 and payment_status=1 from constraints)),
     (9,'制約','口座の主キー・account_id一意・退会時削除','3',(select (account_pk+account_unique+account_user_fk)::text from constraints),(select account_pk=1 and account_unique=1 and account_user_fk=1 from constraints)),
     (10,'制約','決済の主キー・session/intent一意','3',(select (payment_pk+payment_unique)::text from constraints),(select payment_pk=1 and payment_unique=2 from constraints)),

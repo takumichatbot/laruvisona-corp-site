@@ -117,6 +117,8 @@ def run():
  reset();paid_config=json.loads(json.dumps(C));paid_config['paymentMode']='prepay'
  check('Stripe接続前は前払いを有効にできない','payment_unavailable' in configure(paid_config,1,ok=False).stderr)
  sql(f"insert into hp_payment_accounts(user_id,account_id,livemode) values('{OWNER}','acct_test_shop',false)")
+ check('本人確認未完了や接続解除後は前払いを有効にできない','payment_unavailable' in configure(paid_config,1,ok=False).stderr)
+ sql(f"update hp_payment_accounts set charges_enabled=true,payouts_enabled=true where user_id='{OWNER}'")
  check('Stripe接続後だけ前払い設定を保存できる',json.loads(configure(paid_config,1))['version']==2)
  pending=json.loads(book())
  check('前払い予約は入金前に確定しない',pending['status']=='pending_payment' and pending['payment_status']=='pending' and pending['hold_until'])

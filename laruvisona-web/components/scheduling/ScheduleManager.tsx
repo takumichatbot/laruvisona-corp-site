@@ -270,7 +270,7 @@ export default function ScheduleManager() {
     api(`/api/sites/${siteId}/schedule/payments`).then(x => { if(active)setPayments(x); }).catch(() => { if(active)setPayments(null); });
     const result = new URL(window.location.href).searchParams.get("paymentConnect");
     if (result) {
-      setMessage(result === "connected" ? "Stripeの接続を受け付けました。状態を確認しています。" : result === "canceled" ? "Stripeとの接続を取り消しました" : "Stripeとの接続を完了できませんでした");
+      setMessage(result === "connected" ? "Stripeの入金設定が完了しました。" : result === "requirements" ? "Stripe側に未完了の項目があります。「Stripeの設定を続ける」から完了してください。" : "Stripeとの接続を完了できませんでした");
       const url = new URL(window.location.href); url.searchParams.delete("paymentConnect"); window.history.replaceState(null,"",url);
     }
     return () => { active=false; };

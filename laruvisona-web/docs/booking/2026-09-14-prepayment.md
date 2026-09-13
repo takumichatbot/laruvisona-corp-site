@@ -18,21 +18,21 @@ Checkout作成と返金要求は予約ID由来の固定 idempotency key を使�
 
 ## Stripe側の準備
 
-1. LaruVisona のStripeアカウントで Connect を有効にし、Standard口座向けOAuthのClient IDを取得する。
-2. OAuthのリダイレクト先へ `https://laruvisona.jp/api/stripe/booking-connect/callback` を登録する。
-3. Connect webhookとして `https://laruvisona.jp/api/stripe/scheduling-webhook` を登録し、接続アカウントの次を購読する。
+1. LaruVisona のStripeアカウントで Connect を有効にし、Stripe-hosted onboarding のブランド名・色・アイコンを設定する。LARU HPはStandard口座を作成し、一度限りのAccount Linkで本人確認へ送る。OAuth Client IDは使わない。
+2. Connect webhookとして `https://laruvisona.jp/api/stripe/scheduling-webhook` を登録し、接続アカウントの次を購読する。
    - `checkout.session.completed`
    - `checkout.session.expired`
    - `charge.refunded`
    - `refund.created`
    - `refund.updated`
    - `refund.failed`
-4. 本番とテストを混ぜない。接続口座の `livemode` とプラットフォーム鍵のモードが一致しない場合は有効化しない。
+   - `account.updated`
+   - `account.application.deauthorized`
+3. 本番とテストを混ぜない。接続口座の `livemode` とプラットフォーム鍵のモードが一致しない場合は有効化しない。
 
 ## 必要な環境変数
 
 - `HP_BOOKING_PREPAY_ENABLED=1`: コード・DB・Webhookの確認が終わるまで設定しない。
-- `STRIPE_CONNECT_CLIENT_ID`: Connect OAuthのClient ID。
 - `STRIPE_CONNECT_WEBHOOK_SECRET`: 上記Connect webhook専用の署名シークレット。
 - 既存の `STRIPE_SECRET_KEY` と `ADMIN_SECRET` を使う。値は文書・チャット・ログへ転記しない。
 
