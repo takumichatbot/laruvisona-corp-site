@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { CalendarClock, Inbox, Mail, Sparkles } from 'lucide-react';
 
 type CrmStatus = 'new' | 'in_progress' | 'done' | 'lost';
 
@@ -76,6 +77,8 @@ export default function ContactsPage() {
   const [editFollowup, setEditFollowup] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [actionError, setActionError] = useState('');
   const [newContactToast, setNewContactToast] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiSummarizing, setAiSummarizing] = useState(false);
@@ -102,14 +105,20 @@ export default function ContactsPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/laruHP/auth/login'); return; }
-      const [cRes, sRes] = await Promise.all([fetch('/api/contacts'), fetch('/api/sites')]);
-      const { contacts: c } = await cRes.json();
-      const { sites: s } = await sRes.json();
-      setContacts(c || []);
-      setSites(s || []);
-      setLoading(false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/laruHP/auth/login'); return; }
+        const [cRes, sRes] = await Promise.all([fetch('/api/contacts'), fetch('/api/sites')]);
+        if (!cRes.ok || !sRes.ok) throw Error();
+        const { contacts: c } = await cRes.json();
+        const { sites: s } = await sRes.json();
+        setContacts(c || []);
+        setSites(s || []);
+      } catch {
+        setActionError('問い合わせを読み込めませんでした。時間をおいて再読み込みしてください');
+      } finally {
+        setLoading(false);
+      }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -153,9 +162,10 @@ export default function ContactsPage() {
     setEditNote(c.crm_note || '');
     setEditFollowup(c.crm_followup_at ? c.crm_followup_at.slice(0, 10) : '');
     setSaveMsg('');
+    setSaveFailed(false);
     if (!c.read) {
-      await fetch('/api/contacts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, read: true }) });
-      setContacts(prev => prev.map(x => x.id === c.id ? { ...x, read: true } : x));
+      const res = await fetch('/api/contacts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id, read: true }) });
+      if (res.ok) setContacts(prev => prev.map(x => x.id === c.id ? { ...x, read: true } : x));
     }
   }, []);
 
@@ -163,28 +173,38 @@ export default function ContactsPage() {
     if (!selected) return;
     setSaving(true);
     setSaveMsg('');
-    await fetch('/api/contacts', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: selected.id,
-        crm_status: editStatus,
-        crm_tags: editTags,
-        crm_note: editNote,
-        crm_followup_at: editFollowup || null,
-      }),
-    });
-    const updated = { ...selected, crm_status: editStatus, crm_tags: editTags, crm_note: editNote, crm_followup_at: editFollowup || null };
-    setContacts(prev => prev.map(c => c.id === selected.id ? updated : c));
-    setSelected(updated);
-    setSaveMsg('保存しました');
-    setSaving(false);
+    setSaveFailed(false);
+    try {
+      const res = await fetch('/api/contacts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selected.id,
+          crm_status: editStatus,
+          crm_tags: editTags,
+          crm_note: editNote,
+          crm_followup_at: editFollowup || null,
+        }),
+      });
+      if (!res.ok) throw Error();
+      const updated = { ...selected, crm_status: editStatus, crm_tags: editTags, crm_note: editNote, crm_followup_at: editFollowup || null };
+      setContacts(prev => prev.map(c => c.id === selected.id ? updated : c));
+      setSelected(updated);
+      setSaveMsg('保存しました');
+    } catch {
+      setSaveFailed(true);
+      setSaveMsg('保存できませんでした。入力内容は残っています');
+    } finally {
+      setSaving(false);
+    }
     setTimeout(() => setSaveMsg(''), 2000);
   };
 
   const deleteContact = async (id: string) => {
     if (!confirm('この問い合わせを削除しますか？')) return;
-    await fetch(`/api/contacts?id=${id}`, { method: 'DELETE' });
+    setActionError('');
+    const res = await fetch(`/api/contacts?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) { setActionError('削除できませんでした。問い合わせは残っています'); return; }
     setContacts(prev => prev.filter(c => c.id !== id));
     if (selected?.id === id) setSelected(null);
   };
@@ -212,31 +232,37 @@ export default function ContactsPage() {
 
   const handleBulkStatus = async (newStatus: CrmStatus) => {
     const ids = [...checkedIds];
-    await Promise.all(ids.map(id => fetch(`/api/contacts?id=${id}`, {
+    setActionError('');
+    const results = await Promise.all(ids.map(id => fetch('/api/contacts', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ crm_status: newStatus }),
+      body: JSON.stringify({ id, crm_status: newStatus }),
     })));
-    setContacts(prev => prev.map(c => checkedIds.has(c.id) ? { ...c, crm_status: newStatus } : c));
-    setCheckedIds(new Set());
+    const saved = new Set(ids.filter((_, index) => results[index]?.ok));
+    setContacts(prev => prev.map(c => saved.has(c.id) ? { ...c, crm_status: newStatus } : c));
+    if (saved.size !== ids.length) setActionError(`${ids.length - saved.size}件を更新できませんでした。選択を残しています`);
+    setCheckedIds(new Set(ids.filter(id => !saved.has(id))));
   };
 
   const [showBulkTagPicker, setShowBulkTagPicker] = useState(false);
   const handleBulkAddTag = async (tag: string) => {
     const ids = [...checkedIds];
-    await Promise.all(ids.map(id => {
+    setActionError('');
+    const results = await Promise.all(ids.map(id => {
       const contact = contacts.find(c => c.id === id);
       const currentTags = contact?.crm_tags || [];
-      if (currentTags.includes(tag)) return Promise.resolve();
-      return fetch(`/api/contacts?id=${id}`, {
+      if (currentTags.includes(tag)) return Promise.resolve(null);
+      return fetch('/api/contacts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ crm_tags: [...currentTags, tag] }),
+        body: JSON.stringify({ id, crm_tags: [...currentTags, tag] }),
       });
     }));
-    setContacts(prev => prev.map(c => checkedIds.has(c.id) ? { ...c, crm_tags: [...(c.crm_tags || []).filter(t => t !== tag), tag] } : c));
+    const saved = new Set(ids.filter((_, index) => results[index] === null || results[index]?.ok));
+    setContacts(prev => prev.map(c => saved.has(c.id) ? { ...c, crm_tags: [...(c.crm_tags || []).filter(t => t !== tag), tag] } : c));
+    if (saved.size !== ids.length) setActionError(`${ids.length - saved.size}件へタグを保存できませんでした`);
     setShowBulkTagPicker(false);
-    setCheckedIds(new Set());
+    setCheckedIds(new Set(ids.filter(id => !saved.has(id))));
   };
 
   const [lastExportedAt] = useState<string | null>(() =>
@@ -298,7 +324,7 @@ export default function ContactsPage() {
         <div className="fixed top-4 right-4 z-[100] flex items-center gap-3 bg-white border border-blue-200 text-gray-900 text-sm font-medium px-4 py-3 rounded-xl shadow-2xl shadow-blue-100 animate-slideIn ring-1 ring-blue-200">
           <span className="relative flex-shrink-0">
             <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-40" />
-            <span className="relative w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-base">📬</span>
+            <span className="relative w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-600"><Inbox size={15} aria-hidden="true" /></span>
           </span>
           <div>
             <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wide mb-0.5">新着問い合わせ</p>
@@ -330,7 +356,7 @@ export default function ContactsPage() {
         <div className="relative flex-shrink-0">
           <button onClick={exportCsv} disabled={filtered.length === 0}
             className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 ${exportDone ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-            {exportDone ? '✓ DL完了' : filtered.length < contacts.length ? `絞込み結果CSV (${filtered.length}件)` : 'CSV出力'}
+            {exportDone ? '出力完了' : filtered.length < contacts.length ? `絞込み結果CSV (${filtered.length}件)` : 'CSV出力'}
           </button>
           {exportOverdue && !exportDone && (
             <>
@@ -355,6 +381,13 @@ export default function ContactsPage() {
         <div className="flex-1" />
         <span className="text-gray-400 text-xs self-center flex-shrink-0">計{contacts.length}件</span>
       </div>
+
+      {actionError && (
+        <div role="alert" className="flex items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-4 sm:px-6 py-2 text-xs font-semibold text-red-700">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError('')} className="min-h-[36px] px-2 text-red-700 underline underline-offset-2">閉じる</button>
+        </div>
+      )}
 
       {/* Insights bar */}
       {contacts.length > 0 && (() => {
@@ -469,7 +502,7 @@ export default function ContactsPage() {
           {checkedIds.size > 0 && (
             <div className="flex items-center gap-2 px-4 py-2 bg-sky-50 border-b border-sky-200 flex-shrink-0 flex-wrap relative">
               <span className="text-xs text-sky-700 font-semibold">{checkedIds.size}件選択中</span>
-              <button onClick={() => handleBulkStatus('done')} className="text-[10px] bg-green-50 border border-green-200 text-green-600 px-2 py-1 rounded font-bold hover:bg-green-100 transition-all">✓ 対応済みに</button>
+              <button onClick={() => handleBulkStatus('done')} className="text-[10px] bg-green-50 border border-green-200 text-green-600 px-2 py-1 rounded font-bold hover:bg-green-100 transition-all">対応済みに</button>
               <button onClick={() => handleBulkStatus('in_progress')} className="text-[10px] bg-amber-50 border border-amber-200 text-amber-600 px-2 py-1 rounded font-bold hover:bg-amber-100 transition-all">対応中に</button>
               <div className="relative">
                 <button onClick={() => setShowBulkTagPicker(v => !v)} className="text-[10px] bg-purple-50 border border-purple-200 text-purple-600 px-2 py-1 rounded font-bold hover:bg-purple-100 transition-all">+ タグ付与</button>
@@ -490,8 +523,8 @@ export default function ContactsPage() {
                 }}
                 className="text-[10px] bg-sky-50 border border-sky-200 text-sky-600 px-2 py-1 rounded font-bold hover:bg-sky-100 transition-all"
                 title="メールアプリが開き、選択中のアドレスがBCCに入ります"
-              >✉ 一括メール</button>
-              <button onClick={() => setCheckedIds(new Set())} className="text-[10px] text-gray-400 hover:text-gray-700 ml-auto transition-colors">✕ 解除</button>
+              >一括メール</button>
+              <button onClick={() => setCheckedIds(new Set())} className="text-[10px] text-gray-400 hover:text-gray-700 ml-auto transition-colors">選択解除</button>
             </div>
           )}
 
@@ -524,14 +557,14 @@ export default function ContactsPage() {
               <div className="p-6 text-center text-gray-400 text-sm">読み込み中...</div>
             ) : filtered.length === 0 ? (
               <div className="p-6 text-center">
-                <div className="text-3xl mb-2">📭</div>
+                <Inbox size={30} aria-hidden="true" className="mx-auto mb-2 text-gray-300" />
                 <div className="text-gray-500 text-sm">{searchQ || statusFilter ? '該当なし' : 'まだ問い合わせがありません'}</div>
                 {!searchQ && !statusFilter && !siteFilter && !typeFilter && (
                   <div className="mt-3 space-y-1">
                     <p className="text-xs text-gray-400">HPにお問い合わせフォームを設置しましょう</p>
-                    <a href="/laruHP/builder" className="text-xs text-sky-500 hover:text-sky-400 underline underline-offset-2">
+                    <Link href="/laruHP/builder" className="text-xs text-sky-500 hover:text-sky-400 underline underline-offset-2">
                       ビルダーでフォームを追加 →
-                    </a>
+                    </Link>
                   </div>
                 )}
               </div>
@@ -543,7 +576,7 @@ export default function ContactsPage() {
                   <div key={c.id} data-unread={!c.read ? 'true' : undefined} data-contact-id={c.id} className={`flex items-stretch border-b border-gray-100 transition-colors duration-300 ${flashId === c.id ? 'bg-yellow-50' : selected?.id === c.id ? 'bg-sky-50' : 'hover:bg-gray-50'}`}>
                     <div className="flex items-center px-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={checkedIds.has(c.id)}
-                        onChange={e => setCheckedIds(prev => { const s = new Set(prev); e.target.checked ? s.add(c.id) : s.delete(c.id); return s; })}
+                        onChange={e => setCheckedIds(prev => { const s = new Set(prev); if (e.target.checked) s.add(c.id); else s.delete(c.id); return s; })}
                         className="w-3.5 h-3.5 rounded accent-sky-500 cursor-pointer" />
                     </div>
                     <button onClick={() => openDetail(c)} className="flex-1 text-left px-3 py-3 min-w-0">
@@ -568,7 +601,7 @@ export default function ContactsPage() {
                         )}
                         {c.crm_followup_at && (
                           <div className={`text-[9px] mt-1 ${new Date(c.crm_followup_at) < new Date() ? 'text-red-400' : 'text-amber-400'}`}>
-                            📅 フォロー: {new Date(c.crm_followup_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+                            <CalendarClock size={11} aria-hidden="true" /> フォロー: {new Date(c.crm_followup_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
                           </div>
                         )}
                       </div>
@@ -624,7 +657,7 @@ export default function ContactsPage() {
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         {aiSummary ? (
                           <div>
-                            <p className="text-[10px] text-sky-400 font-semibold mb-1">✨ AI要約</p>
+                            <p className="flex items-center gap-1 text-[10px] text-sky-600 font-semibold mb-1"><Sparkles size={11} aria-hidden="true" /> AI要約</p>
                             <p className="text-xs text-gray-600">{aiSummary}</p>
                           </div>
                         ) : (
@@ -635,7 +668,7 @@ export default function ContactsPage() {
                           >
                             {aiSummarizing ? (
                               <><svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>要約中...</>
-                            ) : '✨ AIで要約'}
+                            ) : <span className="inline-flex items-center gap-1"><Sparkles size={11} aria-hidden="true" />AIで要約</span>}
                           </button>
                         )}
                       </div>
@@ -810,7 +843,7 @@ export default function ContactsPage() {
                     className="bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {saving ? '保存中...' : '保存'}
                   </button>
-                  {saveMsg && <span className="text-green-400 text-xs">{saveMsg}</span>}
+                  {saveMsg && <span role={saveFailed ? 'alert' : 'status'} className={`${saveFailed ? 'text-red-600' : 'text-green-600'} text-xs`}>{saveMsg}</span>}
                 </div>
               </div>
 
@@ -820,7 +853,7 @@ export default function ContactsPage() {
                   href={`mailto:${selected.email}?subject=${encodeURIComponent(`Re: ${selected.name}様の${selected.type === 'booking' ? 'ご予約' : 'お問い合わせ'}について`)}&body=${encodeURIComponent(`${selected.name} 様\n\n${replyTemplates[0]?.body || 'お問い合わせいただきありがとうございます。'}\n\n---\n元のメッセージ:\n${selected.message || ''}`)}`}
                   className="flex-1 flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
                   title="メールクライアントで返信">
-                  ✉️ 返信する
+                  <Mail size={15} aria-hidden="true" />返信する
                 </a>
                 <button
                   onClick={() => navigator.clipboard.writeText(selected.email)}

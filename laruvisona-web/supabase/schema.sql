@@ -174,7 +174,12 @@ create table if not exists public.contacts (
   email text not null,
   phone text,
   message text,
+  extra_fields jsonb not null default '{}'::jsonb,
   read boolean not null default false,
+  crm_status text not null default 'new' check (crm_status in ('new', 'in_progress', 'done', 'lost')),
+  crm_tags text[] not null default '{}'::text[],
+  crm_note text,
+  crm_followup_at timestamptz,
   created_at timestamptz not null default now()
 );
 alter table public.contacts enable row level security;
@@ -183,9 +188,17 @@ create policy "Users see own contacts" on public.contacts
     site_id in (select id from public.sites where user_id = auth.uid())
   );
 create policy "Users update own contacts" on public.contacts
-  for update using (
+  for update to authenticated using (
+    site_id in (select id from public.sites where user_id = auth.uid())
+  ) with check (
     site_id in (select id from public.sites where user_id = auth.uid())
   );
+create policy "Users delete own contacts" on public.contacts
+  for delete to authenticated using (
+    site_id in (select id from public.sites where user_id = auth.uid())
+  );
+revoke insert on public.contacts from anon, authenticated;
+grant select, update, delete on public.contacts to authenticated;
 create index if not exists contacts_site_id_idx on public.contacts (site_id);
 create index if not exists contacts_created_at_idx on public.contacts (created_at desc);
 

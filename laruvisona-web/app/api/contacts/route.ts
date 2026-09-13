@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { parseContactUpdate, validContactId } from '@/lib/contact-contract';
+
+const databaseError = () => NextResponse.json(
+  { error: '問い合わせ情報を確認できませんでした', code: 'database_error' },
+  { status: 503 },
+);
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -9,7 +15,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const siteId = searchParams.get('siteId');
 
-  const { data: sites } = await supabase.from('sites').select('id').eq('user_id', user.id);
+  const { data: sites, error: sitesError } = await supabase.from('sites').select('id').eq('user_id', user.id);
+  if (sitesError) return databaseError();
   const siteIds = (sites || []).map(s => s.id);
   if (!siteIds.length) return NextResponse.json({ contacts: [] });
 
@@ -22,7 +29,8 @@ export async function GET(req: Request) {
 
   if (siteId) query = query.eq('site_id', siteId);
 
-  const { data } = await query;
+  const { data, error: contactsError } = await query;
+  if (contactsError) return databaseError();
   return NextResponse.json({ contacts: data || [] });
 }
 
@@ -31,20 +39,27 @@ export async function PATCH(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json();
-  const { id, read, crm_status, crm_tags, crm_note, crm_followup_at } = body;
+  let parsed;
+  try {
+    parsed = parseContactUpdate(await req.json());
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+  }
+  const { id, updates } = parsed;
 
-  const { data: sites } = await supabase.from('sites').select('id').eq('user_id', user.id);
+  const { data: sites, error: sitesError } = await supabase.from('sites').select('id').eq('user_id', user.id);
+  if (sitesError) return databaseError();
   const siteIds = (sites || []).map(s => s.id);
+  if (!siteIds.length) return NextResponse.json({ error: '問い合わせが見つかりません' }, { status: 404 });
 
-  const updates: Record<string, unknown> = {};
-  if (read !== undefined) updates.read = read;
-  if (crm_status !== undefined) updates.crm_status = crm_status;
-  if (crm_tags !== undefined) updates.crm_tags = crm_tags;
-  if (crm_note !== undefined) updates.crm_note = crm_note;
-  if (crm_followup_at !== undefined) updates.crm_followup_at = crm_followup_at || null;
-
-  await supabase.from('contacts').update(updates).eq('id', id).in('site_id', siteIds);
+  const { data: updated, error } = await supabase
+    .from('contacts')
+    .update(updates)
+    .eq('id', id)
+    .in('site_id', siteIds)
+    .select('id');
+  if (error) return databaseError();
+  if (!updated || updated.length !== 1) return NextResponse.json({ error: '問い合わせが見つかりません' }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
 
@@ -55,11 +70,20 @@ export async function DELETE(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  if (!validContactId(id)) return NextResponse.json({ error: '問い合わせを確認してください' }, { status: 400 });
 
-  const { data: sites } = await supabase.from('sites').select('id').eq('user_id', user.id);
+  const { data: sites, error: sitesError } = await supabase.from('sites').select('id').eq('user_id', user.id);
+  if (sitesError) return databaseError();
   const siteIds = (sites || []).map(s => s.id);
+  if (!siteIds.length) return NextResponse.json({ error: '問い合わせが見つかりません' }, { status: 404 });
 
-  await supabase.from('contacts').delete().eq('id', id).in('site_id', siteIds);
+  const { data: deleted, error } = await supabase
+    .from('contacts')
+    .delete()
+    .eq('id', id)
+    .in('site_id', siteIds)
+    .select('id');
+  if (error) return databaseError();
+  if (!deleted || deleted.length !== 1) return NextResponse.json({ error: '問い合わせが見つかりません' }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
