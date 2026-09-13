@@ -1191,7 +1191,7 @@ export default function DashboardPage() {
             tips.push({
               icon: 'publish',
               title: 'サイトを公開しましょう',
-              body: `「${unpublishedSites[0].name}」がまだ非公開です。公開するとGoogleに認識されSEO効果が始まります。`,
+              body: `「${unpublishedSites[0].name}」がまだ非公開です。公開すると、訪問者が見られる状態になりアクセスの記録も始まります。`,
               href: `/laruHP/studio?siteId=${unpublishedSites[0].id}`,
               cta: 'ビルダーを開く',
             });
@@ -1211,7 +1211,7 @@ export default function DashboardPage() {
             tips.push({
               icon: 'message',
               title: `未読のお問い合わせが${unreadContacts}件あります`,
-              body: '早めの返信で顧客満足度が上がります。24時間以内の返信を心がけましょう。',
+              body: '内容と希望日時を確認し、対応状況を更新すると未対応のまま残るのを防げます。',
               href: '/laruHP/contacts',
               cta: '確認する',
             });
@@ -1221,7 +1221,7 @@ export default function DashboardPage() {
             tips.push({
               icon: 'announce',
               title: 'CTAボタンのテキストを見直す',
-              body: '「お気軽にご相談ください」より「無料で相談する」の方が問い合わせが2〜3倍になる傾向があります。',
+              body: 'ボタンを押したあと何が起きるか分かる、具体的な文言になっているか確認しましょう。',
               href: `/laruHP/studio?siteId=${publishedSites[0].id}`,
               cta: 'ビルダーを開く',
             });
@@ -1336,7 +1336,7 @@ export default function DashboardPage() {
               <span className="flex-shrink-0 mt-0.5 text-amber-700"><IcAlert /></span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-amber-800 mb-0.5">「{stale[0].name}」を作成してから{daysSince}日が経ちました</div>
-                <p className="text-xs text-amber-700 leading-relaxed">サイトがまだ非公開です。公開するとGoogleに認識されSEO効果が始まります。不明な点があればサポートへご連絡ください。</p>
+                <p className="text-xs text-amber-700 leading-relaxed">サイトがまだ非公開です。内容を確認し、準備ができたら公開へ進んでください。不明な点があればサポートへご連絡ください。</p>
               </div>
               <a href={`/laruHP/studio?siteId=${stale[0].id}`}
                 className="flex-shrink-0 text-xs font-bold text-amber-700 hover:text-amber-600 border border-amber-300 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
@@ -1598,7 +1598,7 @@ export default function DashboardPage() {
               </svg>
             </div>
             <h3 className="text-lg font-bold mb-2 text-gray-900">最初のサイトを作りましょう</h3>
-            <p className="text-gray-600 text-sm mb-1.5 max-w-xs">業種を選んで情報を入力するだけ。AIが5分で本格サイトを自動生成します。</p>
+            <p className="text-gray-600 text-sm mb-1.5 max-w-xs">4つの質問に答えると、業種に合う構成と完成イメージから制作を始められます。</p>
             <p className="text-gray-400 text-xs mb-6">クレジットカード不要・今すぐ無料で試せます</p>
             <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
               {[
@@ -1628,7 +1628,7 @@ export default function DashboardPage() {
                 業種や特徴を細かく入力して、AIに下書きを作らせる
               </Link>
             </div>
-            <p className="text-gray-400 text-[11px] mt-4">✓ 初月無料 &nbsp;✓ 最低6ヶ月契約 &nbsp;✓ 公開まで最短5分</p>
+            <p className="text-gray-400 text-[11px] mt-4">初月無料・最低利用期間6ヶ月・完成像を確認して公開</p>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

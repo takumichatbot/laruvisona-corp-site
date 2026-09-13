@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       <p style="color:rgba(255,255,255,0.85);font-size:15px;margin:0">AIで最高のホームページを最短で。</p>
     </div>
     <div style="padding:36px 40px">
-      <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px">LARU HP へようこそ！<br>次のステップで、あなたのサイトを5分で作り上げましょう。</p>
+      <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px">LARU HP へようこそ。<br>完成像を確認しながら、あなたのサイトを形にしていきましょう。</p>
       <div style="background:#f8fafc;border-radius:12px;padding:24px;margin-bottom:28px">
         <div style="display:flex;flex-direction:column;gap:16px">
           ${[['1', '業種を選択', '飲食・美容・クリニックなど16業種に対応'],['2', 'AIが自動生成', '店名・住所・説明文を入力するだけ'],['3', 'エディタで調整', 'ドラッグ＆ドロップで自由にカスタマイズ'],['4', '公開！', '独自ドメインにも対応']]

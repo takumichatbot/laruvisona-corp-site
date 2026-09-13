@@ -4,10 +4,10 @@ import SignupClient from './SignupClient';
 
 export const metadata: Metadata = {
   title: '無料登録 | LARU HP',
-  description: 'LARU HP に無料登録してAIでホームページを5分で作成。初月無料・月額999円。',
+  description: 'LARU HP に無料登録し、完成像を見ながらホームページを制作。初月無料・月額999円から。',
   openGraph: {
     title: '無料登録 | LARU HP',
-    description: '初月無料・月額999円。AIが自動でプロ品質のHPを生成します。',
+    description: '初月無料・月額999円から。写真と言葉を選び、完成像を見ながらホームページを制作できます。',
     images: ['/og-image.png'],
   },
   alternates: {

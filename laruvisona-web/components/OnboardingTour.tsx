@@ -19,7 +19,7 @@ const STEPS: Step[] = [
   {
     target: '[data-tour="new-site"]',
     title: '新しいサイトを作る',
-    body: 'ボタンをクリックしてAIによるサイト自動生成を開始。最短5分で公開できます。',
+    body: '4つの質問から制作を開始し、完成像を見ながら編集・保存・公開できます。',
     placement: 'bottom',
   },
   {
@@ -50,13 +50,24 @@ export default function OnboardingTour() {
 
   useEffect(() => {
     if (step === null) return;
-    const target = STEPS[step]?.target;
-    if (!target) return;
-    const el = document.querySelector(target);
-    if (!el) { next(); return; }
-    const r = el.getBoundingClientRect();
-    setRect(r);
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const frame = requestAnimationFrame(() => {
+      const target = STEPS[step]?.target;
+      if (!target) return;
+      const el = document.querySelector(target);
+      if (!el) {
+        if (step >= STEPS.length - 1) {
+          localStorage.setItem(STORAGE_KEY, new Date().toISOString());
+          setStep(null);
+        } else {
+          setStep(step + 1);
+        }
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      setRect(r);
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    return () => cancelAnimationFrame(frame);
   }, [step]);
 
   const next = () => {
