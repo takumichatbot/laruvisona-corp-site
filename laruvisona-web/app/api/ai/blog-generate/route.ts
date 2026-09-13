@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { requireAiAccess } from '@/lib/ai-access';
+import { readAiJson, requireAiAccess } from '@/lib/ai-access';
 
 const INDUSTRY_LABELS: Record<string, string> = {
   beauty: '美容室・サロン', restaurant: '飲食店・カフェ', clinic: '整体・接骨院',
@@ -34,8 +34,10 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const denied=await requireAiAccess(supabase,user.id,'assistant',30);
   if(denied)return denied;
+  const parsed=await readAiJson(req,64_000);
+  if(!parsed.ok)return parsed.response;
 
-  const { siteId, keyword, save = false } = await req.json() as {
+  const { siteId, keyword, save = false } = parsed.data as {
     siteId: string;
     keyword?: string;
     save?: boolean;
@@ -91,8 +93,6 @@ export async function POST(req: Request) {
 
   // Pick keyword: use provided or auto-select
   const targetKeyword = keyword || templates[Math.floor(Math.random() * templates.length)];
-  const location = site.slug?.split('-')[0] || '地域';
-
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const prompt = `あなたは日本のローカルビジネス向けSEOライターです。

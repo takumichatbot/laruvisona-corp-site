@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { requireAiAccess } from '@/lib/ai-access';
+import { claimBuilderUsage, readAiJson, requireAiAccess } from '@/lib/ai-access';
 
 interface LeadScore {
   conversationId: string;
@@ -12,17 +12,6 @@ interface LeadScore {
   estimatedValue?: number;
 }
 
-// Per-user rate limit: 5 lead-score requests per hour
-const _leadScoreRateMap = new Map<string, number[]>();
-function checkLeadScoreRate(userId: string): boolean {
-  const now = Date.now();
-  const window = 3600_000;
-  const prev = (_leadScoreRateMap.get(userId) ?? []).filter(t => now - t < window);
-  if (prev.length >= 5) return false;
-  _leadScoreRateMap.set(userId, [...prev, now]);
-  return true;
-}
-
 // POST /api/ai/lead-score — score recent conversations for buying intent
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -30,12 +19,13 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const denied=await requireAiAccess(supabase,user.id,'assistant',30);
   if(denied)return denied;
+  const parsed=await readAiJson(req,64_000);
+  if(!parsed.ok)return parsed.response;
 
-  if (!checkLeadScoreRate(user.id)) {
-    return NextResponse.json({ error: '1時間あたりのスコアリング上限（5回）に達しました' }, { status: 429 });
-  }
+  const featureLimit=await claimBuilderUsage(supabase,'lead-score',5);
+  if(featureLimit)return featureLimit;
 
-  const { siteId } = await req.json() as { siteId: string };
+  const { siteId } = parsed.data as { siteId: string };
   if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
 
   const { data: site } = await supabase.from('sites').select('id, name').eq('id', siteId).eq('user_id', user.id).single();

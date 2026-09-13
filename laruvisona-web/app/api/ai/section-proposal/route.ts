@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { hasFeature } from '@/lib/plan-limits';
-import { requireAiAccess } from '@/lib/ai-access';
+import { readAiJson, requireAiAccess } from '@/lib/ai-access';
 import { aiFields, parseSectionProposal } from '@/lib/studio-ai';
 import type { Block } from '@/types/laruHP';
 export async function POST(req: Request) {
@@ -32,18 +32,13 @@ export async function POST(req: Request) {
     );
   const denied=await requireAiAccess(sb,user.id,'studio-section',12);
   if(denied)return denied;
-  const raw = await req.text();
-  if (raw.length > 16000)
-    return NextResponse.json({ error: '入力が長すぎます。' }, { status: 413 });
-  let input;
-  try {
-    input = JSON.parse(raw);
-  } catch {
-    return NextResponse.json(
-      { error: '入力を確認してください。' },
-      { status: 400 },
-    );
-  }
+  const parsed=await readAiJson(req,16_000);
+  if(!parsed.ok)return parsed.response;
+  const input=parsed.data as {
+    block?: { id?: unknown; type?: unknown; data?: unknown };
+    prompt?: unknown;
+    siteId?: unknown;
+  };
   if (
     !input?.block ||
     typeof input.block.id !== 'string' ||

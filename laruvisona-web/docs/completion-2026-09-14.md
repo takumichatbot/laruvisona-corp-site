@@ -25,7 +25,7 @@
 
 ## ローカル検証
 
-- `npm test`: 755 / 755
+- `npm test`: 756 / 756
 - `npm run build`: exit 0（Next.js 16.3.4、本番用ビルド、145静的ページ生成）
 - TypeScript: clean
 - 変更ファイルの ESLint: clean

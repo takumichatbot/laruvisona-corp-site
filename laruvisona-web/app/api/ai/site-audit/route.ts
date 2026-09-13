@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { safeErrorMessage, logError } from '@/lib/api-error';
-import { requireAiAccess } from '@/lib/ai-access';
+import { readAiJson, requireAiAccess } from '@/lib/ai-access';
 
 // POST /api/ai/site-audit
 // body: { siteId }
@@ -26,8 +26,10 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const denied=await requireAiAccess(supabase,user.id,'assistant',30);
   if(denied)return denied;
+  const parsed=await readAiJson(req,64_000);
+  if(!parsed.ok)return parsed.response;
 
-  const { siteId } = await req.json() as { siteId: string };
+  const { siteId } = parsed.data as { siteId: string };
   if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
 
   const { data: site } = await supabase

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   getAdminStorage,
 } from '@/lib/imagen';
-import { requireAiAccess } from '@/lib/ai-access';
+import { readAiJson, requireAiAccess } from '@/lib/ai-access';
 
 // AI生成HP用の画像を返す。
 // 基本は事前生成した「業種ライブラリ」(library/<industry>/hero|gallery) からランダムに選ぶだけ
@@ -50,8 +50,11 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const denied=await requireAiAccess(supabase,user.id,'asset-library',60);
   if(denied)return denied;
+  const parsed=await readAiJson(req,64_000);
+  if(!parsed.ok)return parsed.response;
 
-  const { industry = 'other' } = await req.json().catch(() => ({}));
+  const { industry = 'other' } = parsed.data as { industry?: string };
+  if (typeof industry !== 'string' || industry.length > 80) return NextResponse.json({ error: '業種を確認してください' }, { status: 400 });
 
   // まずライブラリから（コスト・待ち時間ゼロ）
   const { heroImage, galleryImages } = await pickFromLibrary(industry);

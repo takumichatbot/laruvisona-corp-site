@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { safeErrorMessage, logError } from '@/lib/api-error';
-import { requireAiAccess } from '@/lib/ai-access';
+import { claimBuilderUsage, readAiJson, requireAiAccess } from '@/lib/ai-access';
 
 // POST /api/ai/chat-analysis
 // Analyzes LARUbot conversation history to extract FAQs and pain points
@@ -16,29 +16,19 @@ interface ChatAnalysis {
   conversationCount: number;
 }
 
-// Per-user rate limit: 5 AI analyses per hour
-const _chatAnalysisRateMap = new Map<string, number[]>();
-function checkChatAnalysisRate(userId: string): boolean {
-  const now = Date.now();
-  const window = 3600_000;
-  const prev = (_chatAnalysisRateMap.get(userId) ?? []).filter(t => now - t < window);
-  if (prev.length >= 5) return false;
-  _chatAnalysisRateMap.set(userId, [...prev, now]);
-  return true;
-}
-
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const denied=await requireAiAccess(supabase,user.id,'assistant',30);
   if(denied)return denied;
+  const parsed=await readAiJson(req,64_000);
+  if(!parsed.ok)return parsed.response;
 
-  if (!checkChatAnalysisRate(user.id)) {
-    return NextResponse.json({ error: '1時間あたりの分析上限（5回）に達しました' }, { status: 429 });
-  }
+  const featureLimit=await claimBuilderUsage(supabase,'chat-analysis',5);
+  if(featureLimit)return featureLimit;
 
-  const { siteId } = await req.json() as { siteId: string };
+  const { siteId } = parsed.data as { siteId: string };
   if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
 
   // Verify ownership

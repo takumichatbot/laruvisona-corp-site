@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { requireAiAccess } from '@/lib/ai-access';
+import { readAiJson, requireAiAccess } from '@/lib/ai-access';
 
 const anthropic = new Anthropic();
 
@@ -11,8 +11,10 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const denied=await requireAiAccess(supabase,user.id,'site-copy',20);
   if(denied)return denied;
+  const parsed=await readAiJson(req,64_000);
+  if(!parsed.ok)return parsed.response;
 
-  const { businessName, industry, description, phone, address, services, colorScheme } = await req.json();
+  const { businessName, industry, description, phone, address, services, colorScheme } = parsed.data;
 
   const prompt = `あなたはウェブサイトの文章編集者です。以下の入力に明記された事実だけを使い、日本語の下書きを生成してください。
 

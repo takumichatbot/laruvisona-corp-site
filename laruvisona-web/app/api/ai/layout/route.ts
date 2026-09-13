@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { requireAiAccess } from '@/lib/ai-access';
+import { readAiJson, requireAiAccess } from '@/lib/ai-access';
 
 function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -57,8 +57,13 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const denied=await requireAiAccess(supabase,user.id,'assistant',30);
   if(denied)return denied;
+  const parsed=await readAiJson(req,64_000);
+  if(!parsed.ok)return parsed.response;
 
-  const { industry, businessName, description, services, hasBooking, hasVideo, hasGallery } = await req.json();
+  const { industry = 'other', businessName = '', description = '', services = [], hasBooking = false, hasVideo = false, hasGallery = false } = parsed.data as {
+    industry?: string; businessName?: string; description?: string; services?: Array<{ name: string }>;
+    hasBooking?: boolean; hasVideo?: boolean; hasGallery?: boolean;
+  };
 
   const blockList = Object.entries(BLOCK_DESCRIPTIONS)
     .map(([k, v]) => `- ${k}: ${v}`)

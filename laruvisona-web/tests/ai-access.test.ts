@@ -36,6 +36,16 @@ test('外部AIを呼ぶ利用者APIは共有利用枠を通る',()=>{
   for(const name of routes){
     const source=readFileSync(new URL(name+'/route.ts',root),'utf8');
     assert.match(source,/requireAiAccess\(/,name);
+    assert.match(source,/readAiJson\(req,/,name);
+    assert.doesNotMatch(source,/req\.json\(\)|req\.text\(\)/,name);
+  }
+});
+
+test('高コスト分析の個別上限もDB共有で数える',()=>{
+  for(const name of ['chat-analysis','lead-score']){
+    const source=readFileSync(new URL(`../app/api/ai/${name}/route.ts`,import.meta.url),'utf8');
+    assert.match(source,/claimBuilderUsage\(supabase,'(?:chat-analysis|lead-score)',5\)/);
+    assert.doesNotMatch(source,/new Map<|check(?:ChatAnalysis|LeadScore)Rate/);
   }
 });
 
