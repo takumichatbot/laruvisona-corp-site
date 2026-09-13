@@ -7,7 +7,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 16;
+export const EXPORT_VERSION = 17;
 
 
 function renderEditorialMark(value: unknown, index: number): string {
@@ -20,7 +20,7 @@ function renderEditorialMark(value: unknown, index: number): string {
   return `<span class="lhp-editorial-mark lhp-editorial-mark-text">${escapeHtml(text)}</span>`;
 }
 
-function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string }): string {
+function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean }): string {
   const d = block.data;
   const str = (key: string) => escapeHtml(String(d[key] ?? ''));
   /* 属性・style に入れる値。エスケープしてから出す。
@@ -86,10 +86,12 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       // スマホは切り取りが縦に長くなるので、同じ位置だと主役が外れることがある。
       const heroPos = css('bgImagePosition');
       const heroPosSp = css('bgImagePositionSp');
+      const heroLoad = ctx?.imagePriority === false
+        ? ' loading="lazy" decoding="async"'
+        : ' loading="eager" fetchpriority="high" decoding="async"';
       const heroImgTag = `<img class="lhp-hero-img" src="${url('bgImage', '')}" alt="${heroAlt}"`
         + (heroW ? ` width="${heroW}"` : '') + (heroH ? ` height="${heroH}"` : '')
-        + ` sizes="${heroSizes}"`
-        + ` loading="eager" fetchpriority="high" decoding="async">`;
+        + ` sizes="${heroSizes}"${heroLoad}>`;
       const heroPicture = heroSources.length
         ? `<picture>${heroSources.map(sc => `<source${sc.type ? ` type="${escapeHtml(sc.type)}"` : ''}`
             + `${sc.media ? ` media="${escapeHtml(sc.media)}"` : ''}`
@@ -127,7 +129,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       <a href="${url('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
     </div>
     ${imgCol}
-    ${isDirection(d.compositionStyle) && layout !== 'split' && d.mobilePhotoFit === 'contain' && raw('bgImage') ? `<img class="lhp-adaptive-mobile-photo" src="${url('bgImage', '')}" alt="${heroAlt}" loading="eager" decoding="async">` : ''}
+    ${isDirection(d.compositionStyle) && layout !== 'split' && d.mobilePhotoFit === 'contain' && raw('bgImage') ? `<img class="lhp-adaptive-mobile-photo" src="${url('bgImage', '')}" alt="${heroAlt}"${heroLoad}>` : ''}
   </div>
   ${isDirection(d.compositionStyle) && layout !== 'split' ? videoBox : ''}
 </section>`;
@@ -1228,7 +1230,7 @@ async function lhpBuy(btn, priceId) {
   }
 }
 
-function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string }): string {
+function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean }): string {
   const html = renderBlockInner(block, ctx);
   if (!html) return '';
   const d = block.data;
@@ -1804,7 +1806,7 @@ window.addEventListener('popstate',function(){
 
   const pagesHtml = pages.map((page, idx) => {
     const blocksHtml = decoratePage(
-      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor, bookingUrl: businessInfo?.siteId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/hp/scheduling/link?siteId=${encodeURIComponent(businessInfo.siteId)}` : undefined })).filter(Boolean).join('\n'),
+      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor, imagePriority: idx === 0, bookingUrl: businessInfo?.siteId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/hp/scheduling/link?siteId=${encodeURIComponent(businessInfo.siteId)}` : undefined })).filter(Boolean).join('\n'),
       idx === 0,
     );
     return multiPage

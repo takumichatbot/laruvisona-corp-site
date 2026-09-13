@@ -130,14 +130,17 @@ test('別のページのヒーローが、表示するページの優先度に�
   const tagFor = (src: string) => {
     const at = html.indexOf(src);
     assert.ok(at > 0, `${src} が出力されていない`);
-    return html.slice(html.lastIndexOf('<img', at), at);
+    const start = html.lastIndexOf('<img', at);
+    return html.slice(start, html.indexOf('>', at) + 1);
   };
   const first = tagFor('/first-visible.jpg');
   assert.match(first, /fetchpriority="high"/, '表示するページの先頭画像が優先されていない');
   assert.ok(!/loading="lazy"/.test(first), '表示するページの先頭画像が遅延読み込みになっている');
+  const hiddenHero = tagFor('/other-hero.jpg');
+  assert.match(hiddenHero, /loading="lazy"/, '隠れているページのヒーローが先読みされる');
+  assert.doesNotMatch(hiddenHero, /fetchpriority="high"/, '隠れているページのヒーローが高優先度になっている');
 
-  // 隠れているページの画像に、こちらから優先を配らない
-  //（写真つきヒーローが自分で書く分はそのまま。そこは別の話として残す）
+  // 隠れているページの画像に優先を配らない
   const hiddenTeam = exportToHTML(
     [page1, { ...page2, blocks: [
       { id: 'b2', type: 'team', data: { heading: 'スタッフ', items: [
@@ -801,8 +804,8 @@ test('settings.design を持たない古いサイトは、スタッフ写真96px
 });
 
 test('生成HTMLの版数が15になっている', () => {
-  assert.equal(EXPORT_VERSION, 16);
-  assert.match(basic, /<!--lhpv:16-->$/);
+  assert.equal(EXPORT_VERSION, 17);
+  assert.match(basic, /<!--lhpv:17-->$/);
 });
 
 
