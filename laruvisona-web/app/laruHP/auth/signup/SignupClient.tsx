@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { safeLaruHpRedirect } from '@/lib/auth-redirect';
 
 function SignupForm() {
   const [email, setEmail] = useState('');
@@ -15,12 +16,12 @@ function SignupForm() {
   const [fieldErrors, setFieldErrors] = useState<{ businessName?: string; email?: string; password?: string }>({});
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/laruHP/studio';
+  const redirectTo = safeLaruHpRedirect(searchParams.get('redirectTo'), '/laruHP/studio');
   const supabase = createClient();
 
   const handleGoogleSignup = async () => {
     setError('');
-    const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/studio';
+    const next = redirectTo;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

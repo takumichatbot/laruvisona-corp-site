@@ -38,8 +38,6 @@ export default async function InvitePage({ params }: Props) {
 
   // This is a server component — we need a form action to accept
   // We'll redirect to the accept API which handles auth check
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
-
   return (
     <div className="min-h-screen bg-sky-50 flex items-center justify-center p-4">
       <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full shadow-sm">
@@ -77,7 +75,7 @@ export default async function InvitePage({ params }: Props) {
             招待を承認する
           </a>
           <a
-            href={`/laruHP/auth/login?redirect=${encodeURIComponent(appUrl + '/laruHP/invite/' + token)}`}
+            href={`/laruHP/auth/login?redirectTo=${encodeURIComponent('/laruHP/invite/' + token)}`}
             className="block w-full text-center border border-gray-200 hover:border-gray-300 text-gray-600 py-3 rounded-xl text-sm transition-colors"
           >
             別アカウントでログインする

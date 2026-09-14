@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: Params) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.redirect(destination(`/laruHP/auth/login?redirect=${encodeURIComponent(`/laruHP/invite/${token}`)}`));
+    return NextResponse.redirect(destination(`/laruHP/auth/login?redirectTo=${encodeURIComponent(`/laruHP/invite/${token}`)}`));
   }
   const userEmail = user.email?.trim().toLowerCase();
   if (!userEmail) return NextResponse.redirect(destination('/laruHP/dashboard?invite=email-required'));

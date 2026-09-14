@@ -15,7 +15,7 @@ test('新規登録・紹介・主要な管理導線は制作スタジオを正�
   const signup=read('app/laruHP/auth/signup/SignupClient.tsx');
   const referral=read('app/laruHP/r/[code]/page.tsx');
   const dashboard=read('app/laruHP/dashboard/DashboardClient.tsx');
-  assert.match(signup,/redirectTo.*\|\| '\/laruHP\/studio'/);
+  assert.match(signup,/safeLaruHpRedirect\(searchParams\.get\('redirectTo'\), '\/laruHP\/studio'\)/);
   assert.match(referral,/redirect\(`\/laruHP\/studio\?ref=/);
   assert.match(dashboard,/label: '制作スタジオ'/);
   assert.doesNotMatch(dashboard,/href: '\/laruHP\/onboarding'/);

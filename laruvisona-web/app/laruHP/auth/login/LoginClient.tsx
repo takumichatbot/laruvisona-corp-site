@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { safeLaruHpRedirect } from '@/lib/auth-redirect';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -13,7 +14,8 @@ function LoginForm() {
   const [existingEmail, setExistingEmail] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/laruHP/dashboard';
+  // redirect は旧招待リンクとの互換用。どちらも管理画面内だけに限定する。
+  const redirectTo = safeLaruHpRedirect(searchParams.get('redirectTo') ?? searchParams.get('redirect'));
   const supabase = createClient();
 
   // Check if already logged in so user can see who and choose to switch
@@ -46,7 +48,7 @@ function LoginForm() {
   const handleGoogleLogin = async () => {
     setError('');
     await supabase.auth.signOut();
-    const next = redirectTo.startsWith('/') ? redirectTo : '/laruHP/dashboard';
+    const next = redirectTo;
     const queryParams: Record<string, string> = { prompt: 'select_account' };
     // メールが入力済みの場合は login_hint でそのアカウントを Google が強調表示する
     if (email.trim()) queryParams.login_hint = email.trim();

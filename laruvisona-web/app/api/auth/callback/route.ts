@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { Resend } from 'resend';
+import { safeLaruHpRedirect } from '@/lib/auth-redirect';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const requestHeaders = Object.fromEntries(request.headers.entries());
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/laruHP/dashboard';
+  const next = safeLaruHpRedirect(searchParams.get('next'));
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const forwardedHost = requestHeaders['x-forwarded-host'];

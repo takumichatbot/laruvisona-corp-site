@@ -109,6 +109,28 @@ if (!/https:\/\/larubot\.tokyo\/f\/[A-Za-z0-9-]+/.test(contact.body)) {
   addFailure(contactUrl.href, 'LARUbotの問い合わせフォームがありません');
 }
 
+// 管理画面を配信するアプリ側の Service Worker が、認証後のHTML・RSC・APIを
+// Cache Storageへ残さないことを本番の実体で確認する。
+const serviceWorkerUrl = new URL('/sw.js', apiOrigin);
+const serviceWorkerResponse = await fetch(serviceWorkerUrl, {
+  redirect: 'error',
+  headers: { 'user-agent': 'LARUHP-Production-Check/1.0' },
+});
+const serviceWorker = await serviceWorkerResponse.text();
+if (!serviceWorkerResponse.ok) {
+  addFailure(serviceWorkerUrl.href, `Service Workerを取得できません (HTTP ${serviceWorkerResponse.status})`);
+} else {
+  const privacyRules = [
+    [/const CACHE_NAME = 'laruhp-v6'/, '古い端末キャッシュを破棄する版ではありません'],
+    [/function cacheableRequest\(request\)/, '保存対象を限定する関数がありません'],
+    [/if \(!cacheableRequest\(e\.request\)\) return/, '保存対象外の通信を素通ししていません'],
+    [/url\.pathname\.startsWith\('\/_next\/static\/'\)/, '静的資産だけを許可する規則がありません'],
+  ];
+  for (const [pattern, message] of privacyRules) {
+    if (!pattern.test(serviceWorker)) addFailure(serviceWorkerUrl.href, message);
+  }
+}
+
 // 認証や署名が必要な書き込み口を、値を渡さずに確認する。
 // ここで成功応答が返ると、本番データを第三者が変更できる可能性がある。
 const protectedWrites = [
@@ -164,5 +186,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件、問い合わせ・旧入口・保護API ${protectedWrites.length}件）`);
+  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件、問い合わせ・PWA・旧入口・保護API ${protectedWrites.length}件）`);
 }
