@@ -5,7 +5,8 @@ import { isLaruHpHost } from '@/lib/laruhp-host';
 
 /**
  * LARUbot AIチャットボットのランチャーを全ページに読み込むコンポーネント。
- * - 公開IDは環境変数 NEXT_PUBLIC_LARUBOT_PUBLIC_ID から取得（ハードコードしない）。
+ * - 会社用IDは NEXT_PUBLIC_LARUBOT_PUBLIC_ID、LARU HP専用IDは
+ *   NEXT_PUBLIC_LARUHP_BOT_PUBLIC_ID から取得する。専用IDを用意するまでは会社用へ戻す。
  * - トップページのイントロ演出中はウィジェットを出さず、完了後に遅延ロードする。
  * - 別プロダクト領域（/laruHP・公開HP /hp）は各自のembedを持つため対象外。
  */
@@ -31,13 +32,17 @@ function ensureIdleCallback() {
 
 export default function LarubotWidget() {
   useEffect(() => {
-    if (isLaruHpHost(window.location.hostname)) return;
-    const id = process.env.NEXT_PUBLIC_LARUBOT_PUBLIC_ID;
+    const laruHpHost = isLaruHpHost(window.location.hostname);
+    const companyId = process.env.NEXT_PUBLIC_LARUBOT_PUBLIC_ID;
+    const id = laruHpHost
+      ? process.env.NEXT_PUBLIC_LARUHP_BOT_PUBLIC_ID || companyId
+      : companyId;
     if (!id) return;
 
-    // 別プロダクト領域には出さない（/laruHP は独自UI、/hp は各サイト固有のbotを埋め込み済み）
+    // 会社ホスト上の管理画面と顧客公開サイトには出さない。
+    // laruhp.com は外向けの販売・案内サイトなのでLARUbotを使う。
     const path = window.location.pathname;
-    if (path.startsWith('/laruHP') || path.startsWith('/hp') || path.endsWith('/reserve')) return;
+    if (!laruHpHost && (path.startsWith('/laruHP') || path.startsWith('/hp') || path.endsWith('/reserve'))) return;
 
     // 二重ロード防止
     if (document.getElementById('larubot-embed-script')) return;
