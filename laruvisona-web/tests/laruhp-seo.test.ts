@@ -81,3 +81,10 @@ test('管理画面は既定でnoindexにし、公開ページだけ索引を明�
   }
   assert.match(read('app/laruHP/vs/[competitor]/page.tsx'), /robots: \{ index: false, follow: false \}/);
 });
+
+test('制作画面と既定テンプレートに絵文字を使わない', () => {
+  const emoji = /[\u{1F000}-\u{1FAFF}]/u;
+  for (const path of ['app/laruHP/builder/page.tsx', 'app/laruHP/agency/page.tsx', 'lib/templates.ts']) {
+    assert.doesNotMatch(read(path), emoji, path);
+  }
+});

@@ -220,7 +220,7 @@ export default function AgencyPage() {
         {/* ホワイトラベル ブランド設定 */}
         <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-sm font-bold text-white">🏷️ ブランド設定（ホワイトラベル）</h2>
+            <h2 className="text-sm font-bold text-white">商品 ブランド設定（ホワイトラベル）</h2>
           </div>
           <p className="text-[11px] text-slate-500 mb-4">管理画面のロゴ・屋号・アクセント色をあなたのブランドに差し替えます（agencyプラン）。</p>
           <div className="grid sm:grid-cols-3 gap-3">
@@ -260,7 +260,7 @@ export default function AgencyPage() {
             {domainMsg && <p className="text-[11px] text-slate-300 mt-2">{domainMsg}</p>}
             <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
               保存後、ドメインのDNSに <span className="text-slate-300">CNAME → {(process.env.NEXT_PUBLIC_RENDER_SLUG || 'your-app')}.onrender.com</span> を設定してください。
-              <br />⚠️ Googleログインやメール内リンクは主ドメイン（laruvisona.jp）に飛ぶ仕様です。完全な隠蔽が必要な場合はメール＋パスワードのみでの運用を推奨します。
+              <br />確認: Googleログインやメール内リンクは主ドメイン（laruvisona.jp）に飛ぶ仕様です。完全な隠蔽が必要な場合はメール＋パスワードのみでの運用を推奨します。
             </p>
           </div>
         </div>
@@ -268,10 +268,10 @@ export default function AgencyPage() {
         {/* Summary stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'クライアント数', value: sites.length, icon: '👥' },
-            { label: '公開中', value: publishedCount, icon: '🌐' },
-            { label: '総PV', value: totalViews.toLocaleString(), icon: '👁️' },
-            { label: '総問い合わせ', value: totalContacts, icon: '✉️' },
+            { label: 'クライアント数', value: sites.length, icon: '顧客' },
+            { label: '公開中', value: publishedCount, icon: '公開' },
+            { label: '総PV', value: totalViews.toLocaleString(), icon: '閲覧' },
+            { label: '総問い合わせ', value: totalContacts, icon: '問合' },
           ].map(stat => (
             <div key={stat.label} className="bg-[#1e293b] border border-white/10 rounded-xl p-4">
               <div className="text-2xl mb-1">{stat.icon}</div>
@@ -331,13 +331,13 @@ export default function AgencyPage() {
 
                     {/* Stats row */}
                     <div className="flex items-center gap-4 text-xs text-slate-500">
-                      <span>👁️ {(site.view_count || 0).toLocaleString()} PV</span>
+                      <span>表示 {(site.view_count || 0).toLocaleString()} PV</span>
                       <span className={unread > 0 ? 'text-blue-400 font-semibold' : ''}>
-                        ✉️ {siteContacts.length}{unread > 0 ? ` (未読${unread})` : ''}
+                        問合 {siteContacts.length}{unread > 0 ? ` (未読${unread})` : ''}
                       </span>
                       {site.settings_json?.larubot && (
                         <span className="text-indigo-400 font-medium">
-                          🤖 LARUbot {site.settings_json.larubotPlan ? `(${LARUBOT_PLANS.find(p => p.id === site.settings_json?.larubotPlan)?.label ?? site.settings_json.larubotPlan})` : ''}
+                          AI LARUbot {site.settings_json.larubotPlan ? `(${LARUBOT_PLANS.find(p => p.id === site.settings_json?.larubotPlan)?.label ?? site.settings_json.larubotPlan})` : ''}
                         </span>
                       )}
                       {site.settings_json?.larubotPublicId && (
@@ -374,7 +374,7 @@ export default function AgencyPage() {
                     )}
                     <Link href={`/laruHP/contacts?siteId=${site.id}`}
                       className="relative text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all flex items-center gap-1">
-                      ✉️ 問い合わせ
+                      問合 問い合わせ
                       {unread > 0 && (
                         <span className="bg-blue-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{unread}</span>
                       )}
@@ -382,7 +382,7 @@ export default function AgencyPage() {
                     <button
                       onClick={() => { setLarubotTarget(site); setLarubotPlan(site.settings_json?.larubotPlan ?? 'lite'); setLarubotClientEmail(site.data?.clientEmail ?? ''); setLarubotError(''); }}
                       className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${site.settings_json?.larubot ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-700 hover:bg-indigo-900/60' : 'bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white'}`}>
-                      🤖 {site.settings_json?.larubot ? 'LARUbot変更' : 'LARUbot設定'}
+                      AI {site.settings_json?.larubot ? 'LARUbot変更' : 'LARUbot設定'}
                     </button>
                     <button onClick={() => { setSelected(site); setEditForm({ clientName: site.data?.clientName ?? '', clientEmail: site.data?.clientEmail ?? '', clientPhone: site.data?.clientPhone ?? '', clientNote: site.data?.clientNote ?? '' }); setEditMode(false); }}
                       className="text-xs px-3 py-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all ml-auto">
@@ -554,7 +554,7 @@ export default function AgencyPage() {
       {/* ── Affiliate / Referral Section ── */}
       {refStats && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 border-t border-white/[0.07]">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">📣 紹介プログラム</h2>
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">紹介プログラム</h2>
 
           {/* KPI row */}
           <div className="grid grid-cols-3 gap-4 mb-6">

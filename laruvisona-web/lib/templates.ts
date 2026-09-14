@@ -47,7 +47,7 @@ export interface IndustryTemplate {
 export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
   restaurant: {
     label: '飲食店・カフェ',
-    emoji: '🍜',
+    emoji: '',
     colorScheme: 'warm-earth',
     bgColor: '#78350f',
     schemaType: 'Restaurant',
@@ -58,7 +58,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       b('hero', { heading: '{name}', subheading: '心を込めた料理でお迎えします', ctaText: 'ご予約はこちら', ctaLink: '#booking', bgColor: '#7c2d12', textColor: '#ffffff' }),
       b('heading', { text: '私たちについて', subtext: 'お店のこだわりをご紹介します', align: 'center' }),
       b('paragraph', { text: '{description}', align: 'left' }),
-      b('services', { heading: 'おすすめメニュー', columns: '3', items: [{ icon: '🍽', title: 'ランチコース', description: '旬の食材を使った日替わりランチ', price: '1,200円〜' }, { icon: '🍷', title: 'ディナーコース', description: 'シェフ特選のコース料理', price: '4,500円〜' }, { icon: '☕', title: 'カフェタイム', description: '手作りスイーツと厳選コーヒー', price: '800円〜' }] }),
+      b('services', { heading: 'おすすめメニュー', columns: '3', items: [{ icon: '', title: 'ランチコース', description: '旬の食材を使った日替わりランチ', price: '1,200円〜' }, { icon: '', title: 'ディナーコース', description: 'シェフ特選のコース料理', price: '4,500円〜' }, { icon: '', title: 'カフェタイム', description: '手作りスイーツと厳選コーヒー', price: '800円〜' }] }),
       b('gallery', { heading: '店内・料理ギャラリー', images: ['', '', '', ''], columns: '2' }),
       b('two-col', {
         col1Title: '営業時間', col1Text: 'ランチ 11:30〜14:30\nディナー 17:30〜22:00\n※月曜定休',
@@ -80,7 +80,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   beauty: {
     label: '美容室・サロン',
-    emoji: '💇',
+    emoji: '',
     colorScheme: 'modern-pink',
     bgColor: '#831843',
     schemaType: 'BeautySalon',
@@ -118,7 +118,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   clinic: {
     label: '整体・クリニック',
-    emoji: '💊',
+    emoji: '',
     colorScheme: 'fresh-green',
     bgColor: '#064e3b',
     schemaType: 'MedicalClinic',
@@ -128,9 +128,9 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '根本から改善。あなたの体の悩みに寄り添います', ctaText: '初回無料相談', ctaLink: '#booking', bgColor: '#064e3b', textColor: '#ffffff' }),
       b('heading', { text: 'こんなお悩みありませんか？', subtext: '', align: 'center' }),
-      b('three-col', { col1Icon: '😫', col1Title: '肩こり・首の痛み', col1Text: 'デスクワークや姿勢の悪さからくる慢性的なこりに', col2Icon: '🦵', col2Title: '腰痛', col2Text: '立ち仕事・重い物の持ち運びによる腰の痛みに', col3Icon: '🦷', col3Title: '頭痛・めまい', col3Text: '筋肉の緊張から来る頭痛・自律神経の乱れに' }),
+      b('three-col', { col1Icon: '', col1Title: '肩こり・首の痛み', col1Text: 'デスクワークや姿勢の悪さからくる慢性的なこりに', col2Icon: '', col2Title: '腰痛', col2Text: '立ち仕事・重い物の持ち運びによる腰の痛みに', col3Icon: '', col3Title: '頭痛・めまい', col3Text: '筋肉の緊張から来る頭痛・自律神経の乱れに' }),
       b('heading', { text: '当院の特徴', subtext: '{description}', align: 'center' }),
-      b('services', { heading: '施術メニュー', columns: '3', items: [{ icon: '🙌', title: '全身矯正', description: '骨盤・背骨の歪みを根本から整える', price: '5,500円' }, { icon: '💆', title: '肩こり・腰痛集中', description: '痛みの原因にアプローチ', price: '3,500円' }, { icon: '🌿', title: '初回体験', description: 'カウンセリング込みのお試しコース', price: '1,000円' }] }),
+      b('services', { heading: '施術メニュー', columns: '3', items: [{ icon: '', title: '全身矯正', description: '骨盤・背骨の歪みを根本から整える', price: '5,500円' }, { icon: '', title: '肩こり・腰痛集中', description: '痛みの原因にアプローチ', price: '3,500円' }, { icon: '', title: '初回体験', description: 'カウンセリング込みのお試しコース', price: '1,000円' }] }),
       b('testimonials', { heading: 'ご利用者様の声', items: [{ name: '田中様', age: '50代', rating: 5, text: '長年の腰痛が3回の施術で楽になりました。もっと早く来ればよかった。' }, { name: '山本様', age: '30代', rating: 5, text: '肩こりがひどくて来院。丁寧な説明で安心できました。' }, { name: '木村様', age: '40代', rating: 5, text: '定期的に通っています。体が軽くなって毎日快適です。' }] }),
       b('hours', makeHours('9:00〜20:00', '10:00〜17:00')),
       mapBlock,
@@ -149,7 +149,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   legal: {
     label: '士業・コンサル',
-    emoji: '⚖️',
+    emoji: '',
     colorScheme: 'elegant-dark',
     bgColor: '#111827',
     schemaType: 'LegalService',
@@ -159,7 +159,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '豊富な実績と専門知識で、お客様の課題を解決します', ctaText: '無料相談を予約する', ctaLink: '#booking', bgColor: '#111827', textColor: '#ffffff' }),
       b('heading', { text: '事務所について', subtext: '{description}', align: 'left' }),
-      b('services', { heading: 'サービス内容', columns: '3', items: [{ icon: '📄', title: 'ご相談・診断', description: '初回無料でご相談を承ります', price: '無料' }, { icon: '📋', title: '書類作成', description: '各種申請書類の作成代行', price: '要見積' }, { icon: '🤝', title: 'コンサルティング', description: '継続的なサポート・顧問契約', price: '月額制' }] }),
+      b('services', { heading: 'サービス内容', columns: '3', items: [{ icon: '', title: 'ご相談・診断', description: '初回無料でご相談を承ります', price: '無料' }, { icon: '', title: '書類作成', description: '各種申請書類の作成代行', price: '要見積' }, { icon: '', title: 'コンサルティング', description: '継続的なサポート・顧問契約', price: '月額制' }] }),
       b('cta', { heading: 'まずは無料相談から', subtext: 'お電話・メール・ZOOMでのご相談も承ります。お気軽にお問い合わせください。', buttonText: '無料相談を予約する', buttonLink: '#booking', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('hours', makeHours('9:00〜18:00')),
       b('booking', {
@@ -177,7 +177,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   construction: {
     label: '建設・工務店',
-    emoji: '🏗️',
+    emoji: '',
     colorScheme: 'bold-orange',
     bgColor: '#7c2d12',
     schemaType: 'HomeAndConstructionBusiness',
@@ -187,8 +187,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '地域密着30年。確かな技術でお客様の夢を形に', ctaText: '無料お見積りはこちら', ctaLink: '#contact', bgColor: '#7c2d12', textColor: '#ffffff' }),
       b('heading', { text: '私たちの強み', subtext: '{description}', align: 'center' }),
-      b('three-col', { col1Icon: '🏆', col1Title: '施工実績500件以上', col1Text: '地域のお客様から長年信頼いただいています', col2Icon: '💰', col2Title: '適正価格', col2Text: '中間マージンなし。材料費から透明性のある見積もり', col3Icon: '🔧', col3Title: 'アフターフォロー万全', col3Text: '施工後も安心の保証付き。何かあればすぐ駆けつけます' }),
-      b('services', { heading: '施工事例・サービス', columns: '3', items: [{ icon: '🏠', title: '新築工事', description: '注文住宅・建売住宅の施工', price: '要見積' }, { icon: '🔨', title: 'リフォーム', description: 'キッチン・バス・外壁など', price: '10万円〜' }, { icon: '🌿', title: '外構・庭工事', description: 'フェンス・駐車場・造園', price: '5万円〜' }] }),
+      b('three-col', { col1Icon: '', col1Title: '施工実績500件以上', col1Text: '地域のお客様から長年信頼いただいています', col2Icon: '', col2Title: '適正価格', col2Text: '中間マージンなし。材料費から透明性のある見積もり', col3Icon: '', col3Title: 'アフターフォロー万全', col3Text: '施工後も安心の保証付き。何かあればすぐ駆けつけます' }),
+      b('services', { heading: '施工事例・サービス', columns: '3', items: [{ icon: '', title: '新築工事', description: '注文住宅・建売住宅の施工', price: '要見積' }, { icon: '', title: 'リフォーム', description: 'キッチン・バス・外壁など', price: '10万円〜' }, { icon: '', title: '外構・庭工事', description: 'フェンス・駐車場・造園', price: '5万円〜' }] }),
       b('gallery', { heading: '施工実績', images: ['', '', '', ''], columns: '2' }),
       b('testimonials', { heading: 'お客様の声', items: [{ name: '高橋様', age: '40代', rating: 5, text: '丁寧な工事で大満足です。近所の方にも紹介しました。' }, { name: '中村様', age: '50代', rating: 5, text: '見積もりが明確で安心して依頼できました。' }, { name: '小林様', age: '60代', rating: 5, text: '質問に丁寧に答えてくれて信頼できる会社です。' }] }),
       contactBlock,
@@ -197,7 +197,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   realestate: {
     label: '不動産',
-    emoji: '🏠',
+    emoji: '',
     colorScheme: 'professional-blue',
     bgColor: '#1e3a8a',
     schemaType: 'RealEstateAgent',
@@ -207,7 +207,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '理想の暮らしを、あなたと一緒に探します', ctaText: '物件を探す', ctaLink: '#contact', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('heading', { text: '私たちにお任せください', subtext: '{description}', align: 'center' }),
-      b('services', { heading: 'サービス', columns: '3', items: [{ icon: '🏢', title: '賃貸仲介', description: '豊富な物件情報からお探しします', price: '仲介手数料1ヶ月' }, { icon: '🏡', title: '売買仲介', description: 'マイホーム・投資物件のご購入', price: '要相談' }, { icon: '📊', title: '査定・売却', description: '無料査定から売却サポートまで', price: '無料査定' }] }),
+      b('services', { heading: 'サービス', columns: '3', items: [{ icon: '', title: '賃貸仲介', description: '豊富な物件情報からお探しします', price: '仲介手数料1ヶ月' }, { icon: '', title: '売買仲介', description: 'マイホーム・投資物件のご購入', price: '要相談' }, { icon: '', title: '査定・売却', description: '無料査定から売却サポートまで', price: '無料査定' }] }),
       b('cta', { heading: '無料相談・物件査定はこちら', subtext: '地域の不動産に精通したスタッフが丁寧にご対応します。', buttonText: 'お問い合わせ・相談予約', buttonLink: '#contact', bgColor: '#1e40af', textColor: '#ffffff' }),
       b('hours', makeHours('9:00〜18:00')),
       contactBlock,
@@ -216,7 +216,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   retail: {
     label: '小売・EC',
-    emoji: '🛍️',
+    emoji: '',
     colorScheme: 'bold-orange',
     bgColor: '#7c2d12',
     schemaType: 'Store',
@@ -226,7 +226,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: 'こだわりの商品をお届けします', ctaText: '商品を見る', ctaLink: '#services', bgColor: '#7c2d12', textColor: '#ffffff' }),
       b('heading', { text: 'おすすめ商品', subtext: '{description}', align: 'center' }),
-      b('services', { heading: '商品ラインアップ', columns: '3', items: [{ icon: '⭐', title: '商品1', description: '商品説明を入力してください', price: '3,000円' }, { icon: '🌟', title: '商品2', description: '商品説明を入力してください', price: '5,000円' }, { icon: '💫', title: '商品3', description: '商品説明を入力してください', price: '8,000円' }] }),
+      b('services', { heading: '商品ラインアップ', columns: '3', items: [{ icon: '', title: '商品1', description: '商品説明を入力してください', price: '3,000円' }, { icon: '', title: '商品2', description: '商品説明を入力してください', price: '5,000円' }, { icon: '', title: '商品3', description: '商品説明を入力してください', price: '8,000円' }] }),
       b('gallery', { heading: '商品ギャラリー', images: ['', '', '', ''], columns: '2' }),
       b('two-col', { col1Title: '送料・お届けについて', col1Text: '全国送料無料（一部地域除く）\nご注文から3〜5営業日でお届け', col2Title: '返品・交換', col2Text: '商品到着後7日以内であれば返品可能\n未使用・未開封に限ります' }),
       contactBlock,
@@ -235,7 +235,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   fitness: {
     label: 'フィットネス・ジム',
-    emoji: '💪',
+    emoji: '',
     colorScheme: 'bold-orange',
     bgColor: '#7c2d12',
     schemaType: 'ExerciseGym',
@@ -244,7 +244,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     fontFamily: 'zen',
     blocks: [
       b('hero', { heading: '{name}', subheading: '理想の体を、今日から始めよう', ctaText: '無料体験を申し込む', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
-      b('three-col', { col1Icon: '🏋️', col1Title: '最新設備', col1Text: '最新のトレーニングマシンを完備', col2Icon: '👨‍🏫', col2Title: 'プロトレーナー', col2Text: '経験豊富なパーソナルトレーナーが在籍', col3Icon: '🎯', col3Title: '結果にコミット', col3Text: '目標達成まで徹底サポート' }),
+      b('three-col', { col1Icon: '', col1Title: '最新設備', col1Text: '最新のトレーニングマシンを完備', col2Icon: '', col2Title: 'プロトレーナー', col2Text: '経験豊富なパーソナルトレーナーが在籍', col3Icon: '', col3Title: '結果にコミット', col3Text: '目標達成まで徹底サポート' }),
       b('price-table', {
         heading: '料金プラン',
         subtext: '全プラン無料体験あり',
@@ -271,7 +271,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   hotel: {
     label: 'ホテル・旅館',
-    emoji: '🏨',
+    emoji: '',
     colorScheme: 'elegant-dark',
     bgColor: '#111827',
     schemaType: 'Hotel',
@@ -281,7 +281,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '特別なひとときを、心を込めておもてなしします', ctaText: '空室・料金を確認する', ctaLink: '#booking', bgColor: '#1c1917', textColor: '#ffffff' }),
       b('heading', { text: '施設のご案内', subtext: '{description}', align: 'center' }),
-      b('services', { heading: 'プラン', columns: '3', items: [{ icon: '🌸', title: '素泊まりプラン', description: '気ままに自由な旅を', price: '8,000円〜/泊' }, { icon: '🍽', title: '朝食付きプラン', description: '地産地消の朝食を楽しむ', price: '12,000円〜/泊' }, { icon: '🥂', title: '夕食付きプラン', description: '旬の会席料理で贅沢な夜を', price: '20,000円〜/泊' }] }),
+      b('services', { heading: 'プラン', columns: '3', items: [{ icon: '', title: '素泊まりプラン', description: '気ままに自由な旅を', price: '8,000円〜/泊' }, { icon: '', title: '朝食付きプラン', description: '地産地消の朝食を楽しむ', price: '12,000円〜/泊' }, { icon: '', title: '夕食付きプラン', description: '旬の会席料理で贅沢な夜を', price: '20,000円〜/泊' }] }),
       b('gallery', { heading: '客室・施設', images: ['', '', '', ''], columns: '2' }),
       b('two-col', { col1Title: 'チェックイン・アウト', col1Text: 'チェックイン: 15:00〜\nチェックアウト: 〜11:00\n\n早期チェックインは要相談', col2Title: 'アクセス', col2Text: '{address}\n最寄り駅から徒歩10分\n無料送迎バスあり（要予約）' }),
       mapBlock,
@@ -300,7 +300,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   education: {
     label: '教育・スクール',
-    emoji: '📚',
+    emoji: '',
     colorScheme: 'professional-blue',
     bgColor: '#1e3a8a',
     schemaType: 'EducationalOrganization',
@@ -310,7 +310,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: 'お子様の可能性を最大限に伸ばします', ctaText: '無料体験授業を申し込む', ctaLink: '#booking', bgColor: '#1e3a8a', textColor: '#ffffff' }),
       b('heading', { text: '選ばれる理由', subtext: '{description}', align: 'center' }),
-      b('three-col', { col1Icon: '📈', col1Title: '成績向上実績', col1Text: '通塾3ヶ月で平均20点アップの実績', col2Icon: '👩‍🏫', col2Title: '熟練の講師陣', col2Text: '教育経験豊富な講師が個別に指導', col3Icon: '😊', col3Title: '楽しく続けられる', col3Text: 'やる気を引き出す独自のカリキュラム' }),
+      b('three-col', { col1Icon: '', col1Title: '成績向上実績', col1Text: '通塾3ヶ月で平均20点アップの実績', col2Icon: '', col2Title: '熟練の講師陣', col2Text: '教育経験豊富な講師が個別に指導', col3Icon: '', col3Title: '楽しく続けられる', col3Text: 'やる気を引き出す独自のカリキュラム' }),
       b('price-table', {
         heading: 'コース・料金',
         subtext: '全コース無料体験授業あり',
@@ -337,7 +337,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   wedding: {
     label: 'ウェディング・ブライダル',
-    emoji: '💒',
+    emoji: '',
     colorScheme: 'elegant-dark',
     bgColor: '#1c1917',
     schemaType: 'EventVenue',
@@ -354,7 +354,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         textColor: '#ffffff',
       }),
       b('heading', { text: '私たちのこだわり', subtext: '{description}', align: 'center' }),
-      b('three-col', { col1Icon: '💐', col1Title: 'おふたりだけの式', col1Text: '完全貸切でプライベートな空間をご提供', col2Icon: '👨‍🍳', col2Title: '一流シェフの料理', col2Text: '旬の食材を使ったコース料理でゲストをおもてなし', col3Icon: '📸', col3Title: '専属カメラマン', col3Text: 'プロカメラマンが最高の瞬間を記録します' }),
+      b('three-col', { col1Icon: '', col1Title: 'おふたりだけの式', col1Text: '完全貸切でプライベートな空間をご提供', col2Icon: '', col2Title: '一流シェフの料理', col2Text: '旬の食材を使ったコース料理でゲストをおもてなし', col3Icon: '', col3Title: '専属カメラマン', col3Text: 'プロカメラマンが最高の瞬間を記録します' }),
       b('price-table', {
         heading: 'プランと料金',
         subtext: '全プラン無料見学・相談会あり',
@@ -389,7 +389,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   pet: {
     label: 'ペットサロン・トリミング',
-    emoji: '🐾',
+    emoji: '',
     colorScheme: 'fresh-green',
     bgColor: '#052e16',
     schemaType: 'LocalBusiness',
@@ -399,7 +399,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '大切なペットを、丁寧に心を込めてケアします', ctaText: 'トリミングを予約する', ctaLink: '#booking', bgColor: '#052e16', textColor: '#ffffff' }),
       b('heading', { text: '私たちのこだわり', subtext: '{description}', align: 'center' }),
-      b('three-col', { col1Icon: '✂️', col1Title: '国家資格保有スタッフ', col1Text: 'トリマー国家資格（愛玩動物飼養管理士）保有スタッフが担当', col2Icon: '🛁', col2Title: '低刺激シャンプー', col2Text: '敏感肌・アレルギーのお子にも安心の低刺激・無添加シャンプー使用', col3Icon: '📸', col3Title: '仕上がり写真送付', col3Text: 'トリミング後はLINEでかわいい仕上がり写真をお送りします' }),
+      b('three-col', { col1Icon: '', col1Title: '国家資格保有スタッフ', col1Text: 'トリマー国家資格（愛玩動物飼養管理士）保有スタッフが担当', col2Icon: '', col2Title: '低刺激シャンプー', col2Text: '敏感肌・アレルギーのお子にも安心の低刺激・無添加シャンプー使用', col3Icon: '', col3Title: '仕上がり写真送付', col3Text: 'トリミング後はLINEでかわいい仕上がり写真をお送りします' }),
       b('price-table', {
         heading: 'トリミング料金',
         subtext: 'シャンプー・ブロー・爪切り・耳掃除込み',
@@ -426,7 +426,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
   },
   dental: {
     label: '歯科クリニック',
-    emoji: '🦷',
+    emoji: '',
     colorScheme: 'professional-blue',
     bgColor: '#0c4a6e',
     schemaType: 'Dentist',
@@ -436,8 +436,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '痛みの少ない治療と丁寧な説明で、お口の健康をサポートします', ctaText: '初診のご予約', ctaLink: '#booking', bgColor: '#0c4a6e', textColor: '#ffffff' }),
       b('heading', { text: '当院の特徴', subtext: '患者様に選ばれる理由', align: 'center' }),
-      b('three-col', { col1Icon: '😊', col1Title: '痛みに配慮した治療', col1Text: '表面麻酔＋極細注射針で、注射の痛みを最小限に抑えた治療を行います', col2Icon: '🔬', col2Title: '最新機器完備', col2Text: 'デジタルレントゲン・口腔内カメラで状態を患者様にわかりやすくご説明', col3Icon: '🦷', col3Title: '予防歯科に注力', col3Text: '定期クリーニング・フッ素塗布で虫歯・歯周病の予防を徹底サポート' }),
-      b('services', { heading: '診療メニュー', columns: '3', items: [{ icon: '🦷', title: '一般歯科', description: '虫歯治療・抜歯・詰め物', price: '保険適用' }, { icon: '✨', title: '審美歯科', description: 'ホワイトニング・セラミック', price: '自費診療' }, { icon: '👶', title: '小児歯科', description: 'お子様の歯の定期検診・予防', price: '保険適用' }, { icon: '🔧', title: '矯正歯科', description: 'ワイヤー・マウスピース矯正', price: '要相談' }, { icon: '🦴', title: 'インプラント', description: '天然歯に近い人工歯根', price: '自費診療' }, { icon: '😴', title: '訪問歯科', description: 'ご自宅・施設への往診対応', price: '保険適用' }] }),
+      b('three-col', { col1Icon: '', col1Title: '痛みに配慮した治療', col1Text: '表面麻酔＋極細注射針で、注射の痛みを最小限に抑えた治療を行います', col2Icon: '', col2Title: '最新機器完備', col2Text: 'デジタルレントゲン・口腔内カメラで状態を患者様にわかりやすくご説明', col3Icon: '', col3Title: '予防歯科に注力', col3Text: '定期クリーニング・フッ素塗布で虫歯・歯周病の予防を徹底サポート' }),
+      b('services', { heading: '診療メニュー', columns: '3', items: [{ icon: '', title: '一般歯科', description: '虫歯治療・抜歯・詰め物', price: '保険適用' }, { icon: '', title: '審美歯科', description: 'ホワイトニング・セラミック', price: '自費診療' }, { icon: '', title: '小児歯科', description: 'お子様の歯の定期検診・予防', price: '保険適用' }, { icon: '', title: '矯正歯科', description: 'ワイヤー・マウスピース矯正', price: '要相談' }, { icon: '', title: 'インプラント', description: '天然歯に近い人工歯根', price: '自費診療' }, { icon: '', title: '訪問歯科', description: 'ご自宅・施設への往診対応', price: '保険適用' }] }),
       b('faq', { heading: 'よくある質問', items: [{ q: '初めて受診する場合、何を持参すればいいですか？', a: '健康保険証・医療券（お持ちの方）・お薬手帳をご持参ください。問診票は受付でご記入いただきます。' }, { q: '予約なしでも診てもらえますか？', a: '急患の場合は可能な限り対応いたします。ただし待ち時間が発生する場合がございますので、事前予約をおすすめします。' }, { q: 'クレジットカードは使えますか？', a: '自費診療に限り、主要クレジットカード・PayPayがご利用いただけます。' }] }),
       b('hours', makeHours('9:00〜12:30 / 14:30〜18:30', '9:00〜13:00')),
       b('booking', { heading: '診療のご予約', subtext: 'ネット予約は24時間受付中。お急ぎの方はお電話ください', serviceTypes: ['一般歯科（虫歯・歯石除去）', '定期検診・クリーニング', '審美・ホワイトニング', '矯正相談（無料）', '急患・痛みがある'], timeSlots: ['9:00', '10:00', '11:00', '14:30', '15:30', '16:30', '17:30'], buttonText: '予約を申し込む', buttonColor: '#0c4a6e', bgColor: '#f0f9ff' }),
@@ -448,7 +448,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   photo: {
     label: 'フォトスタジオ・カメラマン',
-    emoji: '📷',
+    emoji: '',
     colorScheme: 'elegant-gray',
     bgColor: '#111827',
     schemaType: 'LocalBusiness',
@@ -458,7 +458,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '大切な瞬間を、美しく永遠に残します', ctaText: '撮影を予約する', ctaLink: '#booking', bgColor: '#111827', textColor: '#ffffff' }),
       b('heading', { text: '撮影メニュー', subtext: '様々なシーンに対応したプロ撮影プラン', align: 'center' }),
-      b('services', { heading: '', columns: '3', items: [{ icon: '👶', title: 'ニューボーン・お宮参り', description: '生後7〜14日以内の記念撮影', price: '30,000円〜' }, { icon: '👨‍👩‍👧', title: '家族写真・七五三', description: 'ご家族の大切な節目を記念に', price: '25,000円〜' }, { icon: '💍', title: 'ウェディング', description: '前撮り・後撮り・フォトウェディング', price: '50,000円〜' }, { icon: '🏢', title: 'ビジネスポートレート', description: 'プロフィール・HP用写真', price: '15,000円〜' }, { icon: '🏪', title: '商品・物件撮影', description: 'EC・不動産向け商品撮影', price: '20,000円〜' }, { icon: '🎓', title: '入学・卒業・成人式', description: '人生の記念日を美しく', price: '20,000円〜' }] }),
+      b('services', { heading: '', columns: '3', items: [{ icon: '', title: 'ニューボーン・お宮参り', description: '生後7〜14日以内の記念撮影', price: '30,000円〜' }, { icon: '', title: '家族写真・七五三', description: 'ご家族の大切な節目を記念に', price: '25,000円〜' }, { icon: '', title: 'ウェディング', description: '前撮り・後撮り・フォトウェディング', price: '50,000円〜' }, { icon: '', title: 'ビジネスポートレート', description: 'プロフィール・HP用写真', price: '15,000円〜' }, { icon: '', title: '商品・物件撮影', description: 'EC・不動産向け商品撮影', price: '20,000円〜' }, { icon: '', title: '入学・卒業・成人式', description: '人生の記念日を美しく', price: '20,000円〜' }] }),
       b('gallery', { heading: 'ポートフォリオ', images: ['', '', '', '', '', ''], columns: '3' }),
       b('paragraph', { text: '{description}', align: 'center' }),
       b('testimonials', { heading: 'お客様の声', items: [{ name: '山田様', age: '30代', rating: 5, text: 'ニューボーン撮影をお願いしました。赤ちゃんのペースに合わせてくれて、とても自然な表情が撮れました。' }, { name: '田中様ご夫婦', age: '20代', rating: 5, text: '前撮りをお願いしました。緊張していましたが、カメラマンさんのリードで自然に笑えました。仕上がりに大満足です。' }] }),
@@ -470,7 +470,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
 
   accounting: {
     label: '税理士・会計事務所',
-    emoji: '📊',
+    emoji: '',
     colorScheme: 'professional-blue',
     bgColor: '#1e3a5f',
     schemaType: 'AccountingService',
@@ -480,8 +480,8 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     blocks: [
       b('hero', { heading: '{name}', subheading: '中小企業の経営をデータで支える、頼れるパートナー', ctaText: '無料相談を予約する', ctaLink: '#booking', bgColor: '#1e3a5f', textColor: '#ffffff' }),
       b('heading', { text: '選ばれる理由', subtext: '数字を通じて、経営者を支援します', align: 'center' }),
-      b('three-col', { col1Icon: '⚡', col1Title: 'レスポンスが速い', col1Text: 'LINEやメールでの相談に原則24時間以内に回答。緊急時も安心です', col2Icon: '💻', col2Title: 'クラウド会計対応', col2Text: 'freee・マネフォワード・弥生クラウド完全対応。テレワーク支援も', col3Icon: '🤝', col3Title: '税務調査も安心', col3Text: '税務調査の立ち会いから対応まで、事務所が全面サポートします' }),
-      b('services', { heading: '対応業務', columns: '3', items: [{ icon: '📝', title: '記帳代行・会計', description: '月次決算・試算表作成', price: '月額20,000円〜' }, { icon: '📊', title: '税務申告', description: '法人税・所得税・消費税申告', price: '年間120,000円〜' }, { icon: '💰', title: '給与計算・社会保険', description: '給与計算・年末調整・労務手続き', price: '月額15,000円〜' }, { icon: '🏢', title: '会社設立・創業支援', description: '設立手続き・創業融資相談', price: '110,000円〜' }, { icon: '📈', title: '経営計画策定', description: '事業計画・資金繰り改善', price: '別途見積り' }, { icon: '🏠', title: '相続税・贈与税', description: '相続対策・申告代行', price: '別途見積り' }] }),
+      b('three-col', { col1Icon: '', col1Title: 'レスポンスが速い', col1Text: 'LINEやメールでの相談に原則24時間以内に回答。緊急時も安心です', col2Icon: '', col2Title: 'クラウド会計対応', col2Text: 'freee・マネフォワード・弥生クラウド完全対応。テレワーク支援も', col3Icon: '', col3Title: '税務調査も安心', col3Text: '税務調査の立ち会いから対応まで、事務所が全面サポートします' }),
+      b('services', { heading: '対応業務', columns: '3', items: [{ icon: '', title: '記帳代行・会計', description: '月次決算・試算表作成', price: '月額20,000円〜' }, { icon: '', title: '税務申告', description: '法人税・所得税・消費税申告', price: '年間120,000円〜' }, { icon: '', title: '給与計算・社会保険', description: '給与計算・年末調整・労務手続き', price: '月額15,000円〜' }, { icon: '', title: '会社設立・創業支援', description: '設立手続き・創業融資相談', price: '110,000円〜' }, { icon: '', title: '経営計画策定', description: '事業計画・資金繰り改善', price: '別途見積り' }, { icon: '', title: '相続税・贈与税', description: '相続対策・申告代行', price: '別途見積り' }] }),
       b('faq', { heading: 'よくある質問', items: [{ q: '顧問契約なしで単発の確定申告だけお願いできますか？', a: '可能です。個人事業主の確定申告のみのご依頼もお受けしております。まずはお気軽にご相談ください。' }, { q: '記帳は自分でやっているのですが、申告だけお願いできますか？', a: 'はい、申告のみのご依頼も承っております。データをご提出いただく形で対応いたします。' }, { q: '創業したばかりで何から始めればいいかわかりません', a: '創業支援パッケージをご用意しております。会社設立手続きから初年度の申告まで、一貫してサポートいたします。' }] }),
       b('testimonials', { heading: 'クライアントの声', items: [{ name: '山田社長（飲食業）', age: '40代', rating: 5, text: '毎月の試算表を分かりやすく説明してもらえるので、経営判断がしやすくなりました。レスポンスも速くて安心です。' }, { name: '鈴木様（個人事業主・デザイナー）', age: '30代', rating: 5, text: '確定申告を任せてから、節税の選択肢を教えてもらえて税負担が減りました。毎年お願いしています。' }] }),
       b('booking', { heading: '無料相談のご予約', subtext: '初回相談は無料です。お気軽にご予約ください', serviceTypes: ['個人の確定申告相談', '法人の税務・会計相談', '会社設立・創業支援', '相続・贈与税相談', '給与計算・社会保険相談'], timeSlots: ['9:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'], buttonText: '無料相談を予約する', buttonColor: '#1e3a5f', bgColor: '#f8fafc' }),
@@ -527,7 +527,7 @@ export function applyTemplateData(template: IndustryTemplate, data: {
     if (block.type === 'services' && data.services.some(s => s.name)) {
       newData['items'] = data.services
         .filter(s => s.name)
-        .map(s => ({ icon: '⭐', title: s.name, description: s.description, price: s.price }));
+        .map(s => ({ icon: '', title: s.name, description: s.description, price: s.price }));
     }
 
     // Inject custom hours if provided

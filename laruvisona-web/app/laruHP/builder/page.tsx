@@ -365,7 +365,7 @@ const defaultBlock = (type: BlockType): Block => {
       lastFetched: '',
     },
     'announcement-bar': {
-      text: '🎉 期間限定キャンペーン開催中！今すぐチェック',
+      text: '期間限定キャンペーン開催中！今すぐチェック',
       link: '#contact',
       bgColor: '#1e40af',
       textColor: '#ffffff',
@@ -406,54 +406,54 @@ const COLOR_SCHEMES = [
 // ─── Block Palette Config ─────────────────────────────────────────────────────
 const BLOCK_PALETTE = [
   { group: 'レイアウト', items: [
-    { type: 'nav' as BlockType, label: 'ナビバー', icon: '🧭' },
-    { type: 'hero' as BlockType, label: 'ヒーロー', icon: '🦸' },
-    { type: 'two-col' as BlockType, label: '2カラム', icon: '⬛' },
-    { type: 'three-col' as BlockType, label: '3カラム', icon: '🔲' },
-    { type: 'divider' as BlockType, label: '区切り線', icon: '〰️' },
+    { type: 'nav' as BlockType, label: 'ナビバー', icon: '案内' },
+    { type: 'hero' as BlockType, label: 'ヒーロー', icon: '主役' },
+    { type: 'two-col' as BlockType, label: '2カラム', icon: '2列' },
+    { type: 'three-col' as BlockType, label: '3カラム', icon: '3列' },
+    { type: 'divider' as BlockType, label: '区切り線', icon: '線' },
   ]},
   { group: 'コンテンツ', items: [
-    { type: 'heading' as BlockType, label: '見出し', icon: '🔤' },
-    { type: 'paragraph' as BlockType, label: 'テキスト', icon: '📝' },
-    { type: 'image' as BlockType, label: '画像', icon: '🖼' },
-    { type: 'gallery' as BlockType, label: 'ギャラリー', icon: '📸' },
-    { type: 'cta' as BlockType, label: 'CTAボタン', icon: '⚡' },
+    { type: 'heading' as BlockType, label: '見出し', icon: '見出' },
+    { type: 'paragraph' as BlockType, label: 'テキスト', icon: '文' },
+    { type: 'image' as BlockType, label: '画像', icon: '写真' },
+    { type: 'gallery' as BlockType, label: 'ギャラリー', icon: '一覧' },
+    { type: 'cta' as BlockType, label: 'CTAボタン', icon: '導線' },
   ]},
   { group: 'ビジネス', items: [
-    { type: 'services' as BlockType, label: 'サービス', icon: '📋' },
-    { type: 'testimonials' as BlockType, label: 'お客様の声', icon: '⭐' },
-    { type: 'faq' as BlockType, label: 'FAQ', icon: '❓' },
-    { type: 'before-after' as BlockType, label: 'Before/After', icon: '🔀' },
-    { type: 'tabs' as BlockType, label: 'タブ', icon: '📑' },
-    { type: 'team' as BlockType, label: 'スタッフ紹介', icon: '👥' },
-    { type: 'free' as BlockType, label: 'フリーキャンバス', icon: '🎨' },
-    { type: 'shop-grid' as BlockType, label: 'ショップ一覧', icon: '🛍️' },
-    { type: 'shop-item' as BlockType, label: '商品（単品）', icon: '🏷️' },
-    { type: 'member-gate' as BlockType, label: '会員限定', icon: '🔒' },
-    { type: 'hours' as BlockType, label: '営業時間', icon: '🕐' },
-    { type: 'contact' as BlockType, label: 'お問合せ', icon: '📞' },
+    { type: 'services' as BlockType, label: 'サービス', icon: '業務' },
+    { type: 'testimonials' as BlockType, label: 'お客様の声', icon: '評価' },
+    { type: 'faq' as BlockType, label: 'FAQ', icon: '質問' },
+    { type: 'before-after' as BlockType, label: 'Before/After', icon: '比較' },
+    { type: 'tabs' as BlockType, label: 'タブ', icon: '切替' },
+    { type: 'team' as BlockType, label: 'スタッフ紹介', icon: '人' },
+    { type: 'free' as BlockType, label: 'フリーキャンバス', icon: '自由' },
+    { type: 'shop-grid' as BlockType, label: 'ショップ一覧', icon: '商品' },
+    { type: 'shop-item' as BlockType, label: '商品（単品）', icon: '単品' },
+    { type: 'member-gate' as BlockType, label: '会員限定', icon: '会員' },
+    { type: 'hours' as BlockType, label: '営業時間', icon: '時間' },
+    { type: 'contact' as BlockType, label: 'お問合せ', icon: '連絡' },
   ]},
   { group: 'メディア', items: [
-    { type: 'video' as BlockType, label: '動画', icon: '▶️' },
-    { type: 'map' as BlockType, label: 'マップ', icon: '📍' },
-    { type: 'countdown' as BlockType, label: 'カウント', icon: '⏱' },
+    { type: 'video' as BlockType, label: '動画', icon: '動画' },
+    { type: 'map' as BlockType, label: 'マップ', icon: '地図' },
+    { type: 'countdown' as BlockType, label: 'カウント', icon: '期限' },
   ]},
   { group: '予約・料金', items: [
-    { type: 'price-table' as BlockType, label: '料金プラン', icon: '💰' },
-    { type: 'booking' as BlockType, label: '予約フォーム', icon: '📅' },
-    { type: 'news' as BlockType, label: 'お知らせ', icon: '📰' },
+    { type: 'price-table' as BlockType, label: '料金プラン', icon: '料金' },
+    { type: 'booking' as BlockType, label: '予約フォーム', icon: '予約' },
+    { type: 'news' as BlockType, label: 'お知らせ', icon: '記事' },
   ]},
   { group: '連携', items: [
-    { type: 'larubot' as BlockType, label: 'LARUbot', icon: '🤖' },
+    { type: 'larubot' as BlockType, label: 'LARUbot', icon: 'AI' },
   ]},
   { group: '集客', items: [
-    { type: 'announcement-bar' as BlockType, label: 'お知らせバー', icon: '📢' },
-    { type: 'popup' as BlockType, label: 'ポップアップ', icon: '💬' },
-    { type: 'newsletter' as BlockType, label: 'メルマガ登録', icon: '📧' },
-    { type: 'share' as BlockType, label: 'SNSシェア', icon: '🔗' },
-    { type: 'stripe-buy' as BlockType, label: '購入ボタン', icon: '🛒' },
-    { type: 'google-reviews' as BlockType, label: 'Google口コミ', icon: '⭐' },
-    { type: 'instagram' as BlockType, label: 'Instagram', icon: '📷' },
+    { type: 'announcement-bar' as BlockType, label: 'お知らせバー', icon: '告知' },
+    { type: 'popup' as BlockType, label: 'ポップアップ', icon: '会話' },
+    { type: 'newsletter' as BlockType, label: 'メルマガ登録', icon: '配信' },
+    { type: 'share' as BlockType, label: 'SNSシェア', icon: '共有' },
+    { type: 'stripe-buy' as BlockType, label: '購入ボタン', icon: '購入' },
+    { type: 'google-reviews' as BlockType, label: 'Google口コミ', icon: '評価' },
+    { type: 'instagram' as BlockType, label: 'Instagram', icon: '投稿' },
   ]},
 ];
 
@@ -889,7 +889,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                   <div className="w-24 h-24 mx-auto rounded-full overflow-hidden bg-gray-100 mb-3">
                     {m.photo
                       ? <img src={m.photo} alt="" className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">👤</div>}
+                      : <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">人物</div>}
                   </div>
                   <p className="font-bold text-gray-800">{m.name}</p>
                   <p className="text-blue-500 text-xs mb-1">{m.role}</p>
@@ -934,7 +934,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
             <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto">
               {[0, 1, 2].map(i => (
                 <div key={i} className="border border-gray-200 rounded-2xl overflow-hidden">
-                  <div className="h-24 bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center text-2xl">🛍️</div>
+                  <div className="h-24 bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center text-2xl">商品</div>
                   <div className="p-3">
                     <div className="h-3 bg-gray-100 rounded mb-2" />
                     <div className="h-3 bg-gray-100 rounded w-2/3 mb-3" />
@@ -943,7 +943,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                 </div>
               ))}
             </div>
-            <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">🛍️ 公開サイトでは「ショップ管理」で登録した商品が、カート・バリエーション付きで表示されます</p>
+            <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">商品 公開サイトでは「ショップ管理」で登録した商品が、カート・バリエーション付きで表示されます</p>
           </div>
         );
 
@@ -951,7 +951,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
         return (
           <div className="px-8 py-12" style={{ backgroundColor: (d.bgColor as string) || '#fff' }}>
             <div className="max-w-md mx-auto border border-gray-200 rounded-2xl overflow-hidden">
-              <div className="h-40 bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center text-4xl">🏷️</div>
+              <div className="h-40 bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center text-4xl">商品</div>
               <div className="p-5">
                 <div className="h-4 bg-gray-100 rounded mb-2 w-1/2" />
                 <div className="h-6 bg-gray-100 rounded mb-4 w-1/3" />
@@ -959,7 +959,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
               </div>
             </div>
             <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">
-              {d.productId ? '🏷️ 公開サイトで選択した商品が表示されます' : '⚠️ 右パネルで商品を選択してください'}
+              {d.productId ? '商品 公開サイトで選択した商品が表示されます' : '確認: 右パネルで商品を選択してください'}
             </p>
           </div>
         );
@@ -969,7 +969,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
           <div className="px-8 py-12" style={{ backgroundColor: (d.bgColor as string) || '#f8fafc' }}>
             {editable('heading', 'h2', 'text-3xl font-black text-gray-800 text-center block mb-3')}
             <div className="max-w-md mx-auto bg-white rounded-2xl border border-gray-200 p-6 text-center shadow-sm">
-              <div className="text-3xl mb-2">🔒</div>
+              <div className="text-3xl mb-2">会員</div>
               {editable('teaser', 'p', 'text-gray-500 text-sm block mb-4')}
               <div className="flex gap-2 justify-center">
                 <span className="px-4 py-2 bg-sky-600 text-white rounded-xl text-sm font-bold">ログイン</span>
@@ -977,7 +977,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
               </div>
               {(d.requirePaid as boolean) && <p className="text-[11px] text-amber-600 mt-3">★ 有料会員限定</p>}
             </div>
-            <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">🔒 本文は公開HTMLに出力されず、ログインした会員だけが閲覧できます（右パネルで本文編集）</p>
+            <p className="text-center text-xs text-sky-600 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mt-6 max-w-md mx-auto">会員 本文は公開HTMLに出力されず、ログインした会員だけが閲覧できます（右パネルで本文編集）</p>
           </div>
         );
 
@@ -1242,7 +1242,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
       case 'popup':
         return (
           <div className="px-8 py-5 border-l-4 border-yellow-400 bg-yellow-50 flex items-start gap-4">
-            <div className="text-2xl">💬</div>
+            <div className="text-2xl">会話</div>
             <div className="flex-1">
               <div className="font-bold text-yellow-900 mb-1">ポップアップ：{d.heading as string}</div>
               <div className="text-yellow-700 text-sm mb-2">{d.text as string}</div>
@@ -1321,7 +1321,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
         return (
           <div className="px-8 py-10 text-center">
             <div className="max-w-sm mx-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
-              <div className="text-2xl mb-2">🛒</div>
+              <div className="text-2xl mb-2">購入</div>
               <div className="font-black text-xl text-gray-800 mb-2">{d.label as string}</div>
               {!!(d.description as string) && <div className="text-gray-500 text-sm mb-4">{d.description as string}</div>}
               {d.priceId
@@ -1362,7 +1362,7 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
               </div>
             )}
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-5 py-2.5 rounded-full font-bold text-sm">
-              📷 {d.username ? `@${d.username}` : 'Instagram'} をフォロー
+              写真 {d.username ? `@${d.username}` : 'Instagram'} をフォロー
             </div>
           </div>
         );
@@ -1401,12 +1401,13 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
   const [genError, setGenError] = useState('');
   const [recentPrompts, setRecentPrompts] = useState<string[]>([]);
 
-  useEffect(() => {
+  const openPanel = () => {
     try {
       const saved = JSON.parse(localStorage.getItem(AI_PROMPT_KEY) || '[]') as string[];
       setRecentPrompts(saved.slice(0, 5));
     } catch { /* ignore */ }
-  }, [open]);
+    setOpen(true);
+  };
 
   const generate = async () => {
     if (!prompt.trim()) return;
@@ -1422,6 +1423,7 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
       if (data.url) {
         const updated = [prompt.trim(), ...recentPrompts.filter(p => p !== prompt.trim())].slice(0, 5);
         localStorage.setItem(AI_PROMPT_KEY, JSON.stringify(updated));
+        setRecentPrompts(updated);
         onGenerated(data.url);
         setOpen(false);
       } else {
@@ -1435,8 +1437,8 @@ function AiImageButton({ onGenerated, defaultPrompt }: { onGenerated: (url: stri
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="mt-1 w-full flex items-center gap-1.5 text-[10px] text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded px-2 py-1.5 transition-all focus:outline-none focus:ring-1 focus:ring-purple-400/60">
-        ✨ AI画像生成
+      <button onClick={openPanel} className="mt-1 w-full flex items-center gap-1.5 text-[10px] text-purple-300 hover:text-purple-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded px-2 py-1.5 transition-all focus:outline-none focus:ring-1 focus:ring-purple-400/60">
+        AI画像生成
       </button>
     );
   }
@@ -1516,14 +1518,14 @@ function GoogleReviewsPanel({ d, blockId, onDataChange }: { d: Record<string, un
       </label>
       <button onClick={fetchReviews} disabled={fetching || !(d.placeId as string)?.trim()}
         className="w-full bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-300 text-xs py-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-        {fetching ? '取得中...' : '⭐ 口コミを取得'}
+        {fetching ? '取得中...' : '★ 口コミを取得'}
       </button>
       {error && <p className="text-red-400 text-xs">{error}</p>}
       {!!(d.lastFetched as string) && (
         <p className="text-slate-600 text-[10px]">最終取得: {new Date(d.lastFetched as string).toLocaleString('ja-JP')}</p>
       )}
       {(d.rating as number) > 0 && (
-        <p className="text-slate-400 text-xs">評価 {d.rating as number} ⭐ ({(d.totalRatings as number).toLocaleString()} 件)</p>
+        <p className="text-slate-400 text-xs">評価 {d.rating as number} ★ ({(d.totalRatings as number).toLocaleString()} 件)</p>
       )}
     </>
   );
@@ -1564,7 +1566,7 @@ function UrlImportModal({ onImport, onClose }: {
       <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div>
-            <h2 className="font-bold text-white">🔗 既存サイトからインポート</h2>
+            <h2 className="font-bold text-white">URL 既存サイトからインポート</h2>
             <p className="text-slate-500 text-[11px] mt-0.5">URLを入力すると、AIが情報を自動抽出してサイトに反映します</p>
           </div>
           <button onClick={onClose} aria-label="URLインポートを閉じる" className="text-slate-500 hover:text-white text-xl focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
@@ -1621,7 +1623,7 @@ function MobileOverlay({ siteId }: { siteId: string | null }) {
   if (dismissed) return null;
   return (
     <div className="md:hidden fixed inset-0 z-[999] bg-[#030712] flex flex-col items-center justify-center p-8 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-3xl mb-6">📱</div>
+      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-3xl mb-6">スマホ</div>
       <h1 className="text-2xl font-bold text-white mb-3">スマホでは編集画面へ</h1>
       <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-xs">
         ドラッグでレイアウトを組むビルダーはパソコン向けです。
@@ -1652,7 +1654,7 @@ function MobileOverlay({ siteId }: { siteId: string | null }) {
 function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
   const [query, setQuery] = useState('');
   const [photos, setPhotos] = useState<{ id: string; url: string; thumb: string; alt: string; credit: string }[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -1665,7 +1667,20 @@ function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => v
     setLoading(false);
   };
 
-  useEffect(() => { search('business interior'); }, []);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/images/unsplash?q=business%20interior')
+      .then(res => res.json())
+      .then(data => {
+        if (!active) return;
+        setPhotos(data.photos || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -1782,7 +1797,7 @@ function AiChatSidebar({ open, onClose, blocks, selectedBlockId, onApplyActions,
     <div className="fixed right-[300px] bottom-4 z-40 w-80 bg-[#0f1729] border border-white/15 rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: '70vh' }} onTouchStart={handleTouchStart} data-lenis-prevent-wheel>
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-lg">✨</span>
+          <span className="text-lg">AI</span>
           <span className="font-bold text-white text-sm">AIアシスタント</span>
         </div>
         <button onClick={onClose} aria-label="AIアシスタントを閉じる" className="text-slate-500 hover:text-white text-lg leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
@@ -2139,7 +2154,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       </span>
                     </label>
                     <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, bgImage: url }))}
-                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像</button>
                   </div>
                   {!!(d.bgImage as string) && <img src={d.bgImage as string} alt="" className="w-full h-12 object-cover rounded opacity-60" />}
                   <AiImageButton
@@ -2178,7 +2193,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       </span>
                     </label>
                     <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, image: url }))}
-                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像</button>
                   </div>
                   {(d.image as string) && <img src={d.image as string} alt="" className="w-full h-12 object-cover rounded mb-1" />}
                 </label>
@@ -2209,7 +2224,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       </span>
                     </label>
                     <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, image: url }))}
-                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像</button>
                   </div>
                   {(d.image as string) && <img src={d.image as string} alt="" className="w-full h-12 object-cover rounded mb-1" />}
                 </label>
@@ -2240,7 +2255,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       </span>
                     </label>
                     <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, col1Image: url }))}
-                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像</button>
                   </div>
                   {(d.col1Image as string) && <img src={d.col1Image as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
                 </label>
@@ -2258,7 +2273,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       </span>
                     </label>
                     <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, col2Image: url }))}
-                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像</button>
                   </div>
                   {(d.col2Image as string) && <img src={d.col2Image as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
                 </label>
@@ -2281,7 +2296,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                         </span>
                       </label>
                       <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, [key]: url }))}
-                        className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
+                        className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像</button>
                     </div>
                     {(d[key] as string) && <img src={d[key] as string} alt="" className="w-full h-10 object-cover rounded mb-1" />}
                   </label>
@@ -2419,7 +2434,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                       </span>
                     </label>
                     <button type="button" onClick={() => onOpenImageLib(url => onDataChange(block.id, { ...d, src: url }))}
-                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼 ライブラリ</button>
+                      className="flex items-center px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像 ライブラリ</button>
                   </div>
                   {!!(d.src as string) && <img src={d.src as string} alt="" className="w-full h-16 object-cover rounded mb-1" />}
                 </label>
@@ -2723,7 +2738,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                           </span>
                         </label>
                         <button type="button" onClick={() => onOpenImageLib(url => { const imgs = [...images]; imgs[idx] = url; onDataChange(block.id, { ...d, images: imgs }); })}
-                          className="flex items-center px-1.5 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">🖼</button>
+                          className="flex items-center px-1.5 py-1 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded text-purple-300 text-[10px] transition-all flex-shrink-0">画像</button>
                         {src && (
                           <button onClick={() => { const imgs = [...images]; imgs[idx] = ''; onDataChange(block.id, { ...d, images: imgs.filter((_, i) => i < imgs.length) }); }}
                             className="text-red-400/50 hover:text-red-400 text-xs px-1">✕</button>
@@ -2748,10 +2763,10 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                   <span className="text-slate-400 block mb-1">表示トリガー</span>
                   <select value={(d.trigger as string) || 'delay'} onChange={e => onDataChange(block.id, { ...d, trigger: e.target.value })}
                     className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
-                    <option value="delay">⏱ 時間経過後</option>
-                    <option value="scroll">📜 スクロール量</option>
-                    <option value="exit">🚪 離脱インテント</option>
-                    <option value="click">👆 ボタンクリック</option>
+                    <option value="delay">時間 時間経過後</option>
+                    <option value="scroll">スクロール量</option>
+                    <option value="exit">離脱インテント</option>
+                    <option value="click">ボタンクリック</option>
                   </select>
                 </label>
                 {(d.trigger as string) === 'delay' && (
@@ -3522,7 +3537,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             {/* AI コピーライティング */}
             {block && AI_COPY_BLOCKS.includes(block.type) && (
               <div className="border-t border-white/10 pt-3 mt-2">
-                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">✨ AI コピーライティング</span>
+                <span className="text-slate-400 block mb-2 text-[11px] font-semibold uppercase tracking-wide">AIコピーライティング</span>
                 <button
                   onClick={handleAiCopy}
                   disabled={aiCopyLoading}
@@ -3736,7 +3751,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             {/* Color Scheme Picker */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🎨</span>
+                <span className="text-lg">配色</span>
                 <span className="font-bold text-sm">カラーテーマ</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
@@ -3760,7 +3775,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             {/* Custom Palette */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🖌️</span>
+                <span className="text-lg">配色</span>
                 <span className="font-bold text-sm">マイカラー（6色）</span>
               </div>
               <p className="text-slate-500 text-[10px] mb-3">色を定義するとブロック編集時のカラー選択に表示されます</p>
@@ -3795,7 +3810,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center flex-shrink-0">
-                          <span className="text-base">🤖</span>
+                          <span className="text-[10px] font-black tracking-tight">LB</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -3820,9 +3835,9 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     {/* Benefits */}
                     <div className="mt-2.5 grid grid-cols-1 gap-1">
                       {[
-                        { icon: '💬', text: '訪問者の質問にAIがリアルタイム回答' },
-                        { icon: '📅', text: '予約・営業時間・料金を自動案内' },
-                        { icon: '📊', text: '会話ログをダッシュボードで分析' },
+                        { icon: '会話', text: '訪問者の質問にAIがリアルタイム回答' },
+                        { icon: '予約', text: '予約・営業時間・料金を自動案内' },
+                        { icon: '分析', text: '会話ログをダッシュボードで分析' },
                       ].map((b, i) => (
                         <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-400">
                           <span className="text-[11px]">{b.icon}</span>
@@ -3851,12 +3866,12 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     )
                   ) : (
                     <div className="px-3 pb-3 border-t border-indigo-500/20 pt-2.5">
-                      <a
+                      <Link
                         href="/laruHP/plans"
                         className="block w-full text-center bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/30 text-indigo-300 text-[11px] font-bold py-2 rounded-lg transition-all"
                       >
                         HP + Bot プランにアップグレード →
-                      </a>
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -3873,7 +3888,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0">
-                          <span className="text-base">📈</span>
+                          <span className="text-[9px] font-black tracking-tight">SEO</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -3898,9 +3913,9 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     {/* Benefits */}
                     <div className="mt-2.5 grid grid-cols-1 gap-1">
                       {[
-                        { icon: '✍️', text: 'ブログ記事の下書きをAIで作成（ブログ管理画面のボタンから、その都度生成）' },
-                        { icon: '🔍', text: '検索キーワードの掲載順位を確認できます' },
-                        { icon: '🎯', text: '改善提案でオーガニック集客を強化' },
+                        { icon: '執筆', text: 'ブログ記事の下書きをAIで作成（ブログ管理画面のボタンから、その都度生成）' },
+                        { icon: '順位', text: '検索キーワードの掲載順位を確認できます' },
+                        { icon: '改善', text: '改善提案でオーガニック集客を強化' },
                       ].map((b, i) => (
                         <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-400">
                           <span className="text-[11px]">{b.icon}</span>
@@ -3929,12 +3944,12 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     )
                   ) : (
                     <div className="px-3 pb-3 border-t border-emerald-500/20 pt-2.5">
-                      <a
+                      <Link
                         href="/laruHP/plans"
                         className="block w-full text-center bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold py-2 rounded-lg transition-all"
                       >
                         HP + Bot + SEO プランにアップグレード →
-                      </a>
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -3955,7 +3970,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🗺</span>
+                <span className="text-lg">地域</span>
                 <span className="font-bold text-sm">Google Maps</span>
               </div>
               <input type="text" placeholder="Maps Embed URL"
@@ -3964,7 +3979,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">📧</span>
+                <span className="text-lg">メール</span>
                 <span className="font-bold text-sm">フォーム通知メール</span>
               </div>
               <input
@@ -3980,7 +3995,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             {/* LINE 通知（Messaging API） — トークンと送信先IDを改行区切りで1フィールドに保持 */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg" style={{ color: '#06c755' }}>💬</span>
+                <span className="text-lg" style={{ color: '#06c755' }}>会話</span>
                 <span className="font-bold text-sm">LINE 通知（Messaging API）</span>
               </div>
               <input
@@ -4003,7 +4018,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             {/* Webhook */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🔗</span>
+                <span className="text-lg">URL</span>
                 <span className="font-bold text-sm">Webhook（Zapier / Make）</span>
               </div>
               <input
@@ -4051,7 +4066,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             {/* Microsoft Clarity */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">👁</span>
+                <span className="text-lg">表示</span>
                 <span className="font-bold text-sm">Microsoft Clarity</span>
               </div>
               <input
@@ -4067,7 +4082,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             {/* サイトパスワード保護 */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🔒</span>
+                <span className="text-lg">会員</span>
                 <span className="font-bold text-sm">パスワード保護</span>
               </div>
               <input
@@ -4082,7 +4097,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">👥</span>
+                <span className="text-lg">権限</span>
                 <span className="font-bold text-sm">エージェンシー管理</span>
               </div>
               <div className="text-slate-500 text-[10px] mb-2">クライアント情報（名前・メール・メモ）はエージェンシー管理画面から設定できます。</div>
@@ -4091,7 +4106,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🔤</span>
+                <span className="text-lg">文字</span>
                 <span className="font-bold text-sm">フォント</span>
               </div>
               <select
@@ -4137,7 +4152,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🎨</span>
+                <span className="text-lg">配色</span>
                 <span className="font-bold text-sm">カスタムCSS</span>
               </div>
               <textarea
@@ -4154,7 +4169,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
             <div className="bg-white/5 border border-white/10 rounded-xl p-3">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">🦶</span>
+                  <span className="text-lg">下部</span>
                   <span className="font-bold text-sm">グローバルフッター</span>
                 </div>
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -5486,7 +5501,7 @@ function BuilderContent() {
     return (
       <div className="h-screen bg-[#030712] flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-3xl mx-auto mb-6">🔒</div>
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-3xl mx-auto mb-6">会員</div>
           <h1 className="text-2xl font-bold text-white mb-3">
             {subscriptionStatus === 'past_due' ? 'お支払いの確認が必要です' : 'サブスクリプションが無効です'}
           </h1>
@@ -5496,18 +5511,18 @@ function BuilderContent() {
               : 'LARU HP のプランに加入するとビルダーを利用できます。サイトのデータは保持されています。'}
           </p>
           <div className="flex flex-col gap-3">
-            <a
+            <Link
               href="/laruHP/plans"
               className="block bg-blue-500 hover:bg-blue-400 text-white font-bold py-3 px-8 rounded-xl transition-colors"
             >
               プランを確認する →
-            </a>
-            <a
+            </Link>
+            <Link
               href="/laruHP/dashboard"
               className="block text-slate-500 hover:text-slate-300 text-sm transition-colors"
             >
               ダッシュボードに戻る
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -5522,7 +5537,7 @@ function BuilderContent() {
       {showBuilderTour && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="bg-[#0f172a] border border-white/10 rounded-3xl p-7 max-w-sm w-full shadow-2xl">
-            <div className="text-2xl mb-3">✨</div>
+            <div className="text-2xl mb-3">AI</div>
             <h2 className="text-lg font-bold text-white mb-1">ビルダーへようこそ</h2>
             <p className="text-slate-400 text-sm mb-5">3つのコツを押さえるだけで、プロ品質のHPが作れます。</p>
             <div className="space-y-3 mb-6">
@@ -5585,7 +5600,7 @@ function BuilderContent() {
       {/* First publish success modal (onboarding flow) */}
       {copyToast && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#1e293b] border border-white/15 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-xl pointer-events-none animate-fadeIn">
-          📋 ブロックをコピーしました — {typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+V で貼り付け
+          コピー ブロックをコピーしました — {typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+V で貼り付け
         </div>
       )}
 
@@ -5601,17 +5616,17 @@ function BuilderContent() {
               <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
                 if (block) { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }
                 setContextMenu(null);
-              }}>📋 コピー</button>
+              }}>コピー コピー</button>
               <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
                 duplicateBlock(contextMenu.blockId); setContextMenu(null);
               }}>⧉ 複製</button>
               <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
                 setSelectedId(contextMenu.blockId); setContextMenu(null);
-              }}>⚙ 設定</button>
+              }}>設定</button>
               <div className="border-t border-white/[0.07] my-1" />
               <button className="w-full text-left px-4 py-2 text-red-400 hover:bg-red-500/10 flex items-center gap-2" onClick={() => {
                 deleteBlock(contextMenu.blockId); setContextMenu(null);
-              }}>🗑 削除</button>
+              }}>削除</button>
             </div>
           </>
         );
@@ -5621,14 +5636,14 @@ function BuilderContent() {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
         const siteUrl = `${appUrl}/hp/${publishedSlug}`;
         const siteName = site.siteName || 'マイサイト';
-        const tweetText = encodeURIComponent(`「${siteName}」のホームページを公開しました！\n\nAI搭載HPビルダー「LARU HP」で5分で作れます 🚀\n\n👉 ${siteUrl}\n\n#LARUHP #ホームページ作成`);
+        const tweetText = encodeURIComponent(`「${siteName}」のホームページを公開しました！\n\nLARU HPで作成しました\n\n${siteUrl}\n\n#LARUHP #ホームページ作成`);
         const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
         const lineUrl = `https://line.me/R/share?text=${encodeURIComponent(`「${siteName}」のホームページを公開しました！ ${siteUrl}`)}`;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
             <div className="bg-[#0f172a] border border-white/10 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
-              <div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-5 text-3xl">
-                🎉
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-green-500/20 bg-green-500/10 text-xs font-black tracking-[0.16em] text-green-300">
+                公開
               </div>
               <h2 className="text-2xl font-bold mb-2">サイトが公開されました！</h2>
               <p className="text-slate-400 text-sm mb-5">
@@ -5646,7 +5661,7 @@ function BuilderContent() {
 
               {/* SNS Share */}
               <div className="mb-5">
-                <p className="text-slate-500 text-xs mb-3">公開を報告しよう 🎊</p>
+                <p className="text-slate-500 text-xs mb-3">公開を報告しよう </p>
                 <div className="flex gap-2 justify-center">
                   <a
                     href={tweetUrl}
@@ -5677,12 +5692,12 @@ function BuilderContent() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <a
+                <Link
                   href="/laruHP/dashboard"
                   className="block bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-colors text-sm"
                 >
                   ダッシュボードへ →
-                </a>
+                </Link>
                 <button
                   onClick={() => setShowPublishSuccess(false)}
                   className="text-slate-500 hover:text-slate-300 text-sm py-2 transition-colors"
@@ -5698,7 +5713,7 @@ function BuilderContent() {
       {showLeaveConfirm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4 text-xl">確認:</div>
             <h2 className="text-white font-bold mb-2">保存されていない変更があります</h2>
             <p className="text-slate-400 text-sm mb-5">このまま移動すると変更が失われます。保存してから移動しますか？</p>
             <div className="flex gap-2">
@@ -5821,7 +5836,7 @@ function BuilderContent() {
           {published && publishedSlug && (
             <a href={`/hp/${publishedSlug}`} target="_blank" rel="noopener noreferrer"
               className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 border border-green-500/30 px-2 py-1 rounded-lg flex-shrink-0">
-              🟢 公開中
+              公開中
             </a>
           )}
         </div>
@@ -5862,14 +5877,14 @@ function BuilderContent() {
             className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showAiChat ? 'bg-blue-500/30 text-blue-200 border-blue-500/40' : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border-blue-500/30'}`}
             title="AIアシスタントでテキストやレイアウトを自然言語で編集"
           >
-            ✨ AIチャット
+            AIチャット
           </button>
           <button
             onClick={() => setShowUrlImport(true)}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
             title="既存サイトURLを入力して情報を自動取り込み"
           >
-            🔗 URLインポート
+            URL URLインポート
           </button>
           <button
             onClick={handleAiLayout}
@@ -5893,7 +5908,7 @@ function BuilderContent() {
             title="このページの既存ブロックをすべて削除して、AIで作り直します"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 disabled:opacity-50 disabled:cursor-wait"
           >
-            {aiGenerating ? '生成中...' : '🗑️ AIで作り直す'}
+            {aiGenerating ? '生成中...' : 'AIで作り直す'}
           </button>
           {preview && (
             <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
@@ -5930,7 +5945,7 @@ function BuilderContent() {
               title="閲覧専用プレビューリンクを発行"
               aria-label="閲覧専用プレビューリンクを発行"
             >
-              🔗
+              URL
             </button>
           )}
           {saveError && (
@@ -5956,7 +5971,7 @@ function BuilderContent() {
               title="サイト速度チェック"
               className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all text-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-400/60"
             >
-              ⚡ 速度
+              速度 速度
             </button>
           )}
           <button
@@ -5996,7 +6011,7 @@ function BuilderContent() {
                           className="flex-1 text-left px-2 py-1.5 rounded-lg hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-all truncate"
                           title={s.name}
                         >
-                          📌 {s.name}
+                          {s.name}
                         </button>
                         <button onClick={() => deleteSnippet(s.id)} className="text-slate-600 hover:text-red-400 text-xs px-1">✕</button>
                       </div>
@@ -6016,7 +6031,7 @@ function BuilderContent() {
                     }}
                     className="w-full text-[10px] text-slate-500 hover:text-slate-300 border border-dashed border-white/10 hover:border-white/20 rounded-lg py-1.5 px-2 transition-all text-left"
                   >
-                    📎 このブロックをスニペット保存
+                    このブロックをスニペット保存
                   </button>
                 </div>
               )}
@@ -6277,7 +6292,7 @@ function BuilderContent() {
                       <button onClick={() => duplicateBlock(block.id)} aria-label="ブロックを複製"
                         className="w-6 h-6 bg-slate-600 text-white rounded text-xs flex items-center justify-center hover:bg-slate-500" title="複製">⧉</button>
                       <button onClick={() => { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }} aria-label="ブロックをコピー"
-                        className="w-6 h-6 bg-slate-700 text-white rounded text-xs flex items-center justify-center hover:bg-slate-600" title="コピー (Ctrl+C)">📋</button>
+                        className="w-6 h-6 bg-slate-700 text-white rounded text-xs flex items-center justify-center hover:bg-slate-600" title="コピー (Ctrl+C)">コピー</button>
                       <button onClick={() => deleteBlock(block.id)} aria-label="ブロックを削除"
                         className="w-6 h-6 bg-red-500 text-white rounded text-xs flex items-center justify-center hover:bg-red-600">✕</button>
                     </div>
@@ -6511,7 +6526,7 @@ function BuilderContent() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowPageSpeed(false)}>
           <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <div className="font-bold text-white text-base flex items-center gap-2">⚡ サイト速度チェック</div>
+              <div className="font-bold text-white text-base flex items-center gap-2">速度 サイト速度チェック</div>
               <button onClick={() => setShowPageSpeed(false)} aria-label="速度チェックを閉じる" className="text-slate-400 hover:text-white text-xl leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">×</button>
             </div>
             {pageSpeedLoading ? (
@@ -6529,7 +6544,7 @@ function BuilderContent() {
                   const scoreBg = (s: number) => s >= 90 ? 'bg-green-500/20' : s >= 50 ? 'bg-amber-500/20' : 'bg-red-500/20';
                   return (
                     <div key={device} className="mb-4">
-                      <div className="text-xs font-bold text-slate-400 mb-2">{device === 'mobile' ? '📱 モバイル' : '🖥 デスクトップ'}</div>
+                      <div className="text-xs font-bold text-slate-400 mb-2">{device === 'mobile' ? 'スマホ モバイル' : 'デスクトップ デスクトップ'}</div>
                       <div className="grid grid-cols-4 gap-2">
                         {([['performance', 'パフォーマンス'], ['accessibility', 'アクセシビリティ'], ['seo', 'SEO'], ['bestPractices', 'ベスプラ']] as [keyof typeof d, string][]).map(([key, label]) => (
                           <div key={key} className={`${scoreBg(d[key])} rounded-xl p-2 text-center`}>
@@ -6633,7 +6648,7 @@ function BuilderContent() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-lg flex-shrink-0">✨</div>
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-lg flex-shrink-0">AI</div>
               <div>
                 <h2 className="text-white font-bold">AIレイアウト提案</h2>
                 <p className="text-slate-500 text-xs mt-0.5">現在のブロックを以下の構成に置き換えます</p>
@@ -6707,7 +6722,7 @@ function BuilderContent() {
         return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-            <h2 className="text-white font-bold text-lg mb-1">⚠️ 公開前の確認</h2>
+            <h2 className="text-white font-bold text-lg mb-1">確認: 公開前の確認</h2>
             <p className="text-slate-400 text-sm mb-4">未設定のまま公開すると訪問者にそのまま表示されます。</p>
             {blocking.length > 0 && (
               <div className="mb-4">
@@ -6815,7 +6830,7 @@ export default function BuilderPage() {
     <Suspense fallback={
       <div className="h-screen bg-[#030712] flex items-center justify-center">
         <div className="text-white text-center">
-          <div className="text-4xl mb-4 animate-spin">⚙️</div>
+          <div className="mx-auto mb-4 h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-white" aria-hidden="true" />
           <div>エディタを読み込み中...</div>
         </div>
       </div>

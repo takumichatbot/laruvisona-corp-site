@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { PLANS, TERMS } from '@/lib/laruhp-facts';
 
 export const metadata = { title: '利用規約 | LARU HP', robots: { index: true, follow: true }, alternates: { canonical: 'https://laruhp.com/terms' } };
 
@@ -14,11 +15,11 @@ const SECTIONS = [
   },
   {
     title: '第3条（料金・支払い）',
-    content: `本サービスの利用料金は、初月0円（無料）、2ヶ月目以降は月額999円（税別）です。支払いはクレジットカードによる自動更新（月次）とし、Stripe, Inc. が決済処理を行います。最低利用期間は6ヶ月とし、期間中の中途解約・返金は原則として行いません。`,
+    content: `本サービスのHP単体プランの利用料金は、${TERMS.firstMonthFree}、2ヶ月目以降は月額${PLANS[0].monthly.toLocaleString('ja-JP')}円（税別）です。支払いはクレジットカードによる自動更新（月次）とし、Stripe, Inc. が決済処理を行います。最低利用期間は${TERMS.minimumMonths}ヶ月とし、期間中の中途解約・返金は原則として行いません。`,
   },
   {
     title: '第4条（解約）',
-    content: `最低利用期間（6ヶ月）経過後、翌月末までに解約申請いただいた場合、翌月より課金を停止します。解約申請はダッシュボード内の「サブスクリプション管理」または、メール（info@laruvisona.jp）にて承ります。`,
+    content: `${TERMS.cancelNote}。${TERMS.cancel}。解約申請はダッシュボード内の「サブスクリプション管理」または、メール（info@laruvisona.jp）にて承ります。`,
   },
   {
     title: '第5条（禁止事項）',

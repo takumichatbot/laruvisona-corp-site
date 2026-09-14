@@ -282,7 +282,7 @@ export default function PlansPage() {
             </div>
           )}
 
-          <p className="text-gray-500 text-base font-normal mt-3">全プラン 初月無料・最低6ヶ月契約・7ヶ月目からいつでも解約可</p>
+          <p className="text-gray-500 text-base font-normal mt-3">{annual ? '年払いは約10ヶ月分を一括請求・途中解約の返金なし' : '月払いは初月無料・最低6ヶ月契約・7ヶ月目からいつでも解約可'}</p>
         </div>
       </section>
 
@@ -305,7 +305,7 @@ export default function PlansPage() {
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hp.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
-                初月無料
+                {annual ? '年払い' : '初月無料'}
               </div>
               <CheckoutButton
                 plan="hp"
@@ -327,7 +327,7 @@ export default function PlansPage() {
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.lite.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
-                初月無料
+                {annual ? '年払い' : '初月無料'}
               </div>
               <CheckoutButton
                 plan="lite"
@@ -354,7 +354,7 @@ export default function PlansPage() {
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hpBot.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
-                初月無料
+                {annual ? '年払い' : '初月無料'}
               </div>
               <CheckoutButton
                 plan="hp-bot"
@@ -381,7 +381,7 @@ export default function PlansPage() {
               <div className="text-gray-600 text-xs mb-1">/ 月（税別）</div>
               {annual && <div className="text-gray-400 text-[10px] mb-2">年間 ¥{ANNUAL_TOTAL.hpBotSeo.toLocaleString()}</div>}
               <div className="inline-block bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-medium px-2 py-0.5 rounded-full mb-3">
-                初月無料
+                {annual ? '年払い' : '初月無料'}
               </div>
               <CheckoutButton
                 plan="hp-bot-seo"
@@ -410,7 +410,7 @@ export default function PlansPage() {
           </div>
 
           <p className="text-center text-gray-500 text-xs mt-6">
-            全プラン 初月無料 / 最低6ヶ月契約 / 7ヶ月目からいつでも解約可 / クレジットカード決済（Stripe）
+            {annual ? '年払いは一括請求 / 途中解約の返金なし' : '月払いは初月無料 / 最低6ヶ月契約 / 7ヶ月目からいつでも解約可'} / クレジットカード決済（Stripe）
           </p>
 
           {/* Agency Plan */}
@@ -450,7 +450,7 @@ export default function PlansPage() {
                 >
                   このプランで始める →
                 </CheckoutButton>
-                <div className="text-gray-400 text-xs mt-2">初月無料 · 7ヶ月目から解約可</div>
+                <div className="text-gray-400 text-xs mt-2">{annual ? '年払い一括・途中返金なし' : '初月無料 · 7ヶ月目から解約可'}</div>
               </div>
             </div>
           </div>

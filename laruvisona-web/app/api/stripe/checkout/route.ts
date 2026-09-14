@@ -67,6 +67,11 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  const couponId = !isAnnual ? process.env.STRIPE_FIRST_MONTH_COUPON_ID : undefined;
+  if (!isAnnual && !couponId) {
+    // 画面で初月無料を約束しているため、クーポン無しの通常請求には退化させない。
+    return NextResponse.json({ error: '初月無料の決済設定を確認中です。時間をおいてお試しください。' }, { status: 503 });
+  }
 
   // Get or create Stripe customer
   const { data: profile } = await supabase
@@ -152,8 +157,6 @@ export async function POST(req: Request) {
   };
 
   // 月払いのみ初月無料クーポン適用（年払いは割引価格自体で節約）
-  const couponId = !isAnnual ? process.env.STRIPE_FIRST_MONTH_COUPON_ID : undefined;
-
   try {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

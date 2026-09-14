@@ -6,13 +6,15 @@
 
 - ブランチ: `codex/domain-onboarding-20260914`
 - `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
-- 全単体テスト: 780件通過
+- 全単体テスト: 783件通過
 - 実HTTP回帰: 28件通過
 - `next build`: exit 0
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
 - SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と170項目が通過。状態確認の最終行もtrue
 - 公開HTML生成版: 18（A/B計測の署名付き経路を含む。本番の保存済み版は未確認）
 - push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
+- 公開面のSEOは `laruhp.com` の正規URLに統一し、管理画面と未検証の旧比較ページは `noindex`。料金表示は共通定数から生成し、月払いの初月無料クーポンが無ければ申込みを停止する
+- 制作画面と既定テンプレートの絵文字は、日本語の機能ラベルに置き換え済み
 
 ## SQLの適用順
 
@@ -49,6 +51,8 @@
 - 公開フォームの共有制限: 任意の `PUBLIC_RATE_LIMIT_SECRET`（未設定時は `ADMIN_SECRET` を使用し、生のIPは保存しない）
 - LARUbot連携: `LARU_HP_API_SECRET`、任意の `LARUBOT_API_URL`（未設定時は `https://larubot.tokyo`）
 - 独自ドメイン: `DOMAIN_PROBE_SECRET`、`RENDER_API_KEY`、`RENDER_SERVICE_ID`、`RENDER_SERVICE_SLUG`、`RENDER_APEX_IP`
+- LARU HP契約: `STRIPE_PRICE_ID`、`STRIPE_LITE_PRICE_ID`、`STRIPE_BUNDLE_BOT_PRICE_ID`、`STRIPE_BUNDLE_FULL_PRICE_ID`、`STRIPE_AGENCY_PRICE_ID`、`STRIPE_FIRST_MONTH_COUPON_ID`
+- 年払いを出す場合: `STRIPE_HP_ANNUAL_PRICE_ID`、`STRIPE_LITE_ANNUAL_PRICE_ID`、`STRIPE_BOT_ANNUAL_PRICE_ID`、`STRIPE_FULL_ANNUAL_PRICE_ID`、`STRIPE_AGENCY_ANNUAL_PRICE_ID`
 - ショップ: `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_CONNECT_WEBHOOK_SECRET`、`HP_SHOP_PAYMENTS_ENABLED=1`
 - 旧購入ボタン（既存の運営商品を残す場合のみ）: `STRIPE_PUBLIC_BUY_PRICE_IDS`
 - 予約事前決済: 上記Stripe設定、`HP_BOOKING_PREPAY_ENABLED=1`
@@ -84,6 +88,7 @@
 - Render Liveが固定SHAにならない
 - 保存・公開・問い合わせのいずれかが失敗する
 - Stripeの環境（test/live）と接続口座の環境が一致しない
+- 月払いを出すのに `STRIPE_FIRST_MONTH_COUPON_ID` が無い、または画面の料金とStripe Priceの金額が一致しない
 - dryRunの対象が1件でない、IDや指紋が変わる、`dryRun:true` が返らない
 - 再生成が `updated=1, conflicts=0, failed=[]` にならない
 

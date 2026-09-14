@@ -8,6 +8,10 @@ const upgrade = readFileSync(new URL('../app/api/stripe/upgrade/route.ts', impor
 const portal = readFileSync(new URL('../app/api/stripe/portal/route.ts', import.meta.url), 'utf8');
 const deletion = readFileSync(new URL('../app/api/account/delete/route.ts', import.meta.url), 'utf8');
 const adminUser = readFileSync(new URL('../app/api/admin/users/[id]/route.ts', import.meta.url), 'utf8');
+const facts = readFileSync(new URL('../lib/laruhp-facts.ts', import.meta.url), 'utf8');
+const plans = readFileSync(new URL('../app/laruHP/plans/page.tsx', import.meta.url), 'utf8');
+const terms = readFileSync(new URL('../app/laruHP/terms/page.tsx', import.meta.url), 'utf8');
+const tokusho = readFileSync(new URL('../app/laruHP/tokusho/page.tsx', import.meta.url), 'utf8');
 
 test('Stripeの戻り先はリクエストOriginではなく固定したアプリoriginを使う', () => {
   const before = process.env.NEXT_PUBLIC_APP_URL;
@@ -91,4 +95,17 @@ test('管理者操作もStripe失敗時にDBだけプラン変更・解約済み
   assert.ok(cancelSection.indexOf('stripe.subscriptions.cancel') < cancelSection.indexOf("subscription_status: 'canceled'"));
   assert.match(cancelSection, /\.eq\('stripe_subscription_id', subscriptionId\)\.select\('id'\)/);
   assert.match(cancelSection, /canceled\.error \|\| canceled\.data\?\.length !== 1/);
+});
+
+test('初月無料を申込画面とStripe Checkoutで同じ条件に保つ', () => {
+  const guard = checkout.indexOf('if (!isAnnual && !couponId)');
+  const create = checkout.indexOf('stripe.checkout.sessions.create');
+  assert.ok(guard > 0 && guard < create, 'クーポン未設定の月払いをCheckout前に止める');
+  assert.match(checkout, /STRIPE_FIRST_MONTH_COUPON_ID/);
+  assert.match(checkout, /discounts: \[\{ coupon: couponId \}\]/);
+  assert.match(facts, /firstMonthFree: '月払いは初月無料/);
+  assert.match(plans, /annual \? '年払い' : '初月無料'/);
+  assert.match(terms, /PLANS, TERMS/);
+  assert.match(tokusho, /PLANS, TERMS/);
+  assert.doesNotMatch(tokusho, /ご契約開始時に初月分を決済/);
 });
