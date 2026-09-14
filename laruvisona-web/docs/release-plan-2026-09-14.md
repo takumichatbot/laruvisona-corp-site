@@ -38,10 +38,13 @@
 14. `hp_scheduling.sql`
 15. `hp_scheduling_notifications.sql`
 16. `hp_scheduling_reminders.sql`
-17. `hp_scheduled_emails.sql`
-18. `hp_push_subscriptions.sql`
+17. `hp_scheduling_payments.sql`
+18. `hp_scheduled_emails.sql`
+19. `hp_push_subscriptions.sql`
 
 適用後に `release_state_check_20260914.sql` を読み取り実行する。最終行 `ALL_REQUIRED_STATE` が `true` でなければコードを有効化しない。この確認は関数本体の業務動作や実データを保証しないため、機能ごとの試験も必要である。
+
+予約事前決済は `hp_scheduling_payments.sql` の2表と6 RPCを使う。総合確認にも表と主要な作成・確定・返金RPCを含め、適用順から抜けたまま `ALL_REQUIRED_STATE=true` にならないようにする。詳細な権限・索引・全6 RPCは `hp_scheduling_payments_state_check.sql` の最終行99でも確認する。
 
 `hp_sites.sql` はサイト作成数をDB内で原子的に確定し、複製も同じ上限へ含める。また、所有者が下書きを保存する権限は保ったまま、`slug`・`published`・`published_html`・`custom_domain`・`user_id` のブラウザからの直接更新を拒否する。URL変更と公開・非公開は所有確認後のサーバー経路だけで行う。
 

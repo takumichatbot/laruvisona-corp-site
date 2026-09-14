@@ -69,6 +69,7 @@ psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_reservations_reminded.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_notifications.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_reminders.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_payments.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduled_emails.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_analytics.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_ai_usage.sql"
@@ -79,6 +80,14 @@ psql -X -A -t -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/release_state_check_20260914.
 if ! grep -qx 'zz|ALL_REQUIRED_STATE|t' "$STATE"; then
   echo "出荷状態の確認に失敗しました:" >&2
   cat "$STATE" >&2
+  exit 1
+fi
+
+PAYMENT_STATE="$WORK/payment-state.txt"
+psql -X -A -t -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_scheduling_payments_state_check.sql" >"$PAYMENT_STATE"
+if ! grep -qx '99|総合|事前決済SQLがこの版の期待と一致|true|true|t' "$PAYMENT_STATE"; then
+  echo "予約事前決済の状態確認に失敗しました:" >&2
+  cat "$PAYMENT_STATE" >&2
   exit 1
 fi
 
