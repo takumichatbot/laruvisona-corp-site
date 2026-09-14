@@ -9,6 +9,8 @@
 - 公開ホストへHSTS（顧客の別サブドメインへ広げない）、MIME sniffing防止、参照元制御を追加
 - sitemap掲載の28 URLをIndexNowへ送信し、HTTP 200で受理された
 - 本番28ページと内部リンクを巡回し、リンク切れ・title・description・canonical・index設定を確認。ページ固有metadataで落ちていたOGP画像を補完した
+- 同じ巡回を `npm run check:production` で再実行できるようにし、sitemap、内部リンク、metadata、OGP、基本セキュリティヘッダーを一度に検査する
+- LARU HP用のチャットは専用の `NEXT_PUBLIC_LARUHP_BOT_PUBLIC_ID` があるときだけ表示する。会社用の「LaruVisona コンシェルジュ」を流用するとブランドが混ざるため、フォールバックは行わない。問い合わせページのLARUbotフォームは継続する
 
 ## 本番DB
 

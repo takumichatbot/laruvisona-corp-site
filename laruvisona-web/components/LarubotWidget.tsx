@@ -6,7 +6,8 @@ import { isLaruHpHost } from '@/lib/laruhp-host';
 /**
  * LARUbot AIチャットボットのランチャーを全ページに読み込むコンポーネント。
  * - 会社用IDは NEXT_PUBLIC_LARUBOT_PUBLIC_ID、LARU HP専用IDは
- *   NEXT_PUBLIC_LARUHP_BOT_PUBLIC_ID から取得する。専用IDを用意するまでは会社用へ戻す。
+ *   NEXT_PUBLIC_LARUHP_BOT_PUBLIC_ID から取得する。ブランドを混在させないため、
+ *   LARU HPホストでは専用IDが無い限りランチャーを出さない。
  * - トップページのイントロ演出中はウィジェットを出さず、完了後に遅延ロードする。
  * - 別プロダクト領域（/laruHP・公開HP /hp）は各自のembedを持つため対象外。
  */
@@ -35,7 +36,7 @@ export default function LarubotWidget() {
     const laruHpHost = isLaruHpHost(window.location.hostname);
     const companyId = process.env.NEXT_PUBLIC_LARUBOT_PUBLIC_ID;
     const id = laruHpHost
-      ? process.env.NEXT_PUBLIC_LARUHP_BOT_PUBLIC_ID || companyId
+      ? process.env.NEXT_PUBLIC_LARUHP_BOT_PUBLIC_ID
       : companyId;
     if (!id) return;
 
