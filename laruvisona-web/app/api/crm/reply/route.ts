@@ -1,25 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
-import { escapeContactHtml, singleLine } from '@/lib/contact-contract';
-
-const replies = new Map<string, number[]>();
-function allowReply(userId: string) {
-  const now = Date.now();
-  const recent = (replies.get(userId) || []).filter(at => now - at < 60 * 60 * 1000);
-  if (recent.length >= 20) return false;
-  replies.set(userId, [...recent, now]);
-  return true;
-}
+import { escapeContactHtml, readContactBody, singleLine } from '@/lib/contact-contract';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!user.email) return NextResponse.json({ error: '送信元メールアドレスを確認できません' }, { status: 400 });
-  if (!allowReply(user.id)) return NextResponse.json({ error: '送信回数が上限に達しました。時間をおいてお試しください' }, { status: 429 });
 
-  const body = await req.json().catch(() => null);
+  const body = await readContactBody(req, 16_000).catch(() => null);
   const contactId = typeof body?.contactId === 'string' ? body.contactId : '';
   const message = typeof body?.message === 'string' ? body.message : '';
   if (!contactId || !message.trim()) {
@@ -52,6 +43,10 @@ export async function POST(req: Request) {
   if (siteResult.error) return NextResponse.json({ error: 'サイトを確認できません' }, { status: 503 });
   const site = siteResult.data;
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const rate = await claimPublicRate(service, 'crm-reply', user.id, 20);
+  if (rate === 'limited') return NextResponse.json({ error: '送信回数が上限に達しました。時間をおいてお試しください' }, { status: 429 });
+  if (rate === 'unavailable') return NextResponse.json({ error: '送信回数を確認できません。時間をおいてお試しください' }, { status: 503 });
 
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json({ error: 'Email not configured' }, { status: 503 });

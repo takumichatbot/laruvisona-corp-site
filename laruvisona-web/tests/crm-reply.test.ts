@@ -19,7 +19,10 @@ test('CRM返信は所有サイトを確認し、DB障害と不存在を分ける
 
 test('CRM返信は送信元確認・本文上限・時間あたり上限を持つ', () => {
   assert.match(route, /if \(!user\.email\)/);
+  assert.match(route, /readContactBody\(req, 16_000\)/);
   assert.match(route, /message\.trim\(\)\.length > 5000/);
-  assert.match(route, /recent\.length >= 20/);
+  assert.match(route, /claimPublicRate\(service, 'crm-reply', user\.id, 20\)/);
+  assert.match(route, /rate === 'unavailable'/);
   assert.match(route, /status: 429/);
+  assert.doesNotMatch(route, /new Map|req\.json\(\)/);
 });
