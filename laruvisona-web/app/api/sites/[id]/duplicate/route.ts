@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { siteCreationAccess } from '@/lib/site-creation-access';
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -17,25 +18,30 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const slug = `${original.slug || 'site'}-copy-${Date.now().toString(36)}`;
+  const { data: profile } = await supabase.from('profiles')
+    .select('plan,subscription_status').eq('id', user.id).single();
+  const access = siteCreationAccess(user.email, profile?.plan ?? null, profile?.subscription_status ?? null,
+    [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]);
+  if (!access.allowed) {
+    return NextResponse.json({ error: 'サブスクリプションが必要です', code: 'no_plan' }, { status: 403 });
+  }
 
-  const { data: newSite, error } = await supabase
-    .from('sites')
-    .insert({
-      user_id: user.id,
-      name: `${original.name} (コピー)`,
-      slug,
-      industry: original.industry,
-      blocks_json: original.blocks_json,
-      settings_json: original.settings_json,
-      seo_json: original.seo_json,
-      published: false,
-      published_html: null,
-    })
-    .select()
-    .single();
+  const slugBase = String(original.slug || 'site').slice(0, 42).replace(/-+$/, '') || 'site';
+  const slug = `${slugBase}-copy-${Date.now().toString(36)}`;
+  const copyName = `${String(original.name || 'サイト').slice(0, 114)} (コピー)`;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ site: newSite });
+  const result = await createServiceClient().rpc('laruhp_create_site', {
+    p_user: user.id, p_limit: access.limit, p_name: copyName, p_slug: slug,
+    p_industry: typeof original.industry === 'string' ? original.industry.slice(0, 80) : null, p_blocks: original.blocks_json,
+    p_seo: original.seo_json, p_settings: original.settings_json,
+  });
+  if (result.error || !result.data || typeof result.data !== 'object') {
+    return NextResponse.json({ error: 'サイトを複製できませんでした' }, { status: 503 });
+  }
+  const outcome = result.data as { ok?: boolean; reason?: string; site?: unknown; count?: number };
+  if (!outcome.ok && outcome.reason === 'site_limit') {
+    return NextResponse.json({ error: `現在のプランではサイトを${access.limit}件まで作成できます`, code: 'site_limit', limit: access.limit, current: outcome.count }, { status: 403 });
+  }
+  if (!outcome.ok || !outcome.site) return NextResponse.json({ error: 'サイトを複製できませんでした' }, { status: 503 });
+  return NextResponse.json({ site: outcome.site }, { status: 201 });
 }

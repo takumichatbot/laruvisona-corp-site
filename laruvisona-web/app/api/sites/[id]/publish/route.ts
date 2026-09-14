@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { exportToHTML } from '@/lib/html-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 
@@ -64,7 +64,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     { name: site.name, industry: site.industry ?? undefined, siteId: site.id, slug: site.slug ?? undefined }
   );
 
-  const { data: updated, error: updateError } = await supabase
+  const service = createServiceClient();
+  const { data: updated, error: updateError } = await service
     .from('sites')
     .update({ published: true, published_html: html })
     .eq('id', id)
@@ -72,13 +73,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .select('slug')
     .single();
 
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (updateError || !updated) return NextResponse.json({ error: 'サイトを公開できませんでした' }, { status: 500 });
 
   // Bust ISR cache for this slug
   if (updated?.slug) revalidatePath(`/hp/${updated.slug}`);
 
   // Save version snapshot (fire-and-forget)
-  void supabase.from('site_versions').insert({
+  void service.from('site_versions').insert({
     site_id: id,
     label: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     blocks_json: site.blocks_json,
@@ -100,12 +101,17 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const { error } = await supabase
+  const { data: owned } = await supabase.from('sites').select('id').eq('id', id).eq('user_id', user.id).maybeSingle();
+  if (!owned) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+
+  const { data: unpublished, error } = await createServiceClient()
     .from('sites')
     .update({ published: false, published_html: null })
     .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select('id')
+    .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !unpublished) return NextResponse.json({ error: 'サイトを非公開にできませんでした' }, { status: 500 });
   return NextResponse.json({ success: true });
 }

@@ -187,7 +187,7 @@ create or replace function public.guard_sites_custom_domain()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare v_role text;
 begin
-  v_role := coalesce(current_setting('request.jwt.claims', true)::json ->> 'role', '');
+  v_role := coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', '');
   -- service_role（サーバー側処理）と、JWTの無い直接SQL（移行・運用）は通す
   if v_role in ('authenticated', 'anon') then
     if tg_op = 'INSERT' and new.custom_domain is not null then

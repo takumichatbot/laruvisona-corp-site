@@ -6,6 +6,8 @@ with checks(section,item,ok) as (
   ('sites','atomic creation RPC',to_regprocedure('public.laruhp_create_site(uuid,integer,text,text,text,jsonb,jsonb,jsonb)') is not null),
   ('sites','browser write closed',not coalesce(has_table_privilege(to_regrole('authenticated'),to_regclass('public.sites'),'INSERT'),false)),
   ('sites','creation RPC closed',not coalesce(has_function_privilege(to_regrole('authenticated'),to_regprocedure('public.laruhp_create_site(uuid,integer,text,text,text,jsonb,jsonb,jsonb)'),'EXECUTE'),false)),
+  ('sites','publication guard function',to_regprocedure('public.laruhp_guard_site_publication()') is not null),
+  ('sites','publication guard enabled',exists(select 1 from pg_trigger where tgrelid=to_regclass('public.sites') and tgname='laruhp_guard_site_publication_trg' and tgenabled in ('O','A'))),
   ('crm','contacts.crm_status',exists(select 1 from information_schema.columns where table_schema='public' and table_name='contacts' and column_name='crm_status')),
   ('shop','hp_orders',to_regclass('public.hp_orders') is not null),
   ('shop','hp_orders.notified_at',exists(select 1 from information_schema.columns where table_schema='public' and table_name='hp_orders' and column_name='notified_at')),

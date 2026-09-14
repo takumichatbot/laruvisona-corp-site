@@ -6,10 +6,10 @@
 
 - ブランチ: `codex/domain-onboarding-20260914`
 - `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
-- 全単体テスト: 757件通過
+- 全単体テスト: 767件通過
 - `next build`: exit 0
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
-- SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と155項目が通過。状態確認の最終行もtrue
+- SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と168項目が通過。状態確認の最終行もtrue
 - 公開HTML生成版: 18（A/B計測の署名付き経路を含む。本番の保存済み版は未確認）
 - push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
 
@@ -37,6 +37,8 @@
 18. `hp_push_subscriptions.sql`
 
 適用後に `release_state_check_20260914.sql` を読み取り実行する。最終行 `ALL_REQUIRED_STATE` が `true` でなければコードを有効化しない。この確認は関数本体の業務動作や実データを保証しないため、機能ごとの試験も必要である。
+
+`hp_sites.sql` はサイト作成数をDB内で原子的に確定し、複製も同じ上限へ含める。また、所有者が下書きを保存する権限は保ったまま、`published`・`published_html`・`custom_domain`・`user_id` のブラウザからの直接更新を拒否する。公開・非公開は所有確認後のサーバー経路だけで行う。
 
 ## Render設定
 
