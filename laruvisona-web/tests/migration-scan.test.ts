@@ -66,3 +66,22 @@ test('同じサイトを上限まで巡回し、途中ページの失敗と外�
   assert.ok(calls.includes('https://example.com/broken'));
   assert.equal(calls.some(url => url.includes('outside.example')), false);
 });
+
+test('複数URLが同じページへ転送されても重複して数えない', async () => {
+  const pages = await crawlMigrationPages('https://example.com/', async url => ({
+    url: url.endsWith('/old') ? 'https://example.com/about' : url,
+    html: url === 'https://example.com/'
+      ? '<a href="/old">旧</a><a href="/about">現在</a>' : '<h1>会社</h1>',
+  }));
+  assert.deepEqual(pages.map(page => page.path), ['/', '/about']);
+});
+
+test('壊れたリンクが大量にあっても取得試行はページ上限の2倍まで', async () => {
+  let calls = 0;
+  await crawlMigrationPages('https://example.com/', async url => {
+    calls++;
+    if (url !== 'https://example.com/') throw new Error('404');
+    return { url, html: Array.from({ length: 100 }, (_, i) => `<a href="/${i}">リンク</a>`).join('') };
+  });
+  assert.ok(calls <= 16, `取得試行: ${calls}`);
+});

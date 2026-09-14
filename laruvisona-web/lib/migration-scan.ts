@@ -111,11 +111,13 @@ export async function crawlMigrationPages(
 ): Promise<MigrationPage[]> {
   const queue = [start];
   const seen = new Set<string>();
+  const completed = new Set<string>();
+  const maxAttempts = maxPages * 2;
   const pages: MigrationPage[] = [];
   let allowedOrigin = '';
-  while (queue.length && pages.length < maxPages) {
+  while (queue.length && pages.length < maxPages && seen.size < maxAttempts) {
     const batch: string[] = [];
-    while (queue.length && batch.length < 3 && pages.length + batch.length < maxPages) {
+    while (queue.length && batch.length < 3 && pages.length + batch.length < maxPages && seen.size < maxAttempts) {
       const next = queue.shift()!;
       if (seen.has(next)) continue;
       seen.add(next);
@@ -132,10 +134,12 @@ export async function crawlMigrationPages(
       const finalUrl = migrationUrl(fetched.url);
       if (!allowedOrigin) allowedOrigin = finalUrl.origin;
       if (finalUrl.origin !== allowedOrigin) continue;
+      if (completed.has(finalUrl.toString())) continue;
+      completed.add(finalUrl.toString());
       const page = inspectMigrationHtml(fetched.html, finalUrl.toString());
       pages.push(page);
       for (const link of page.links) {
-        if (!seen.has(link) && !queue.includes(link) && queue.length < maxPages * 3) queue.push(link);
+        if (!seen.has(link) && !completed.has(link) && !queue.includes(link) && queue.length < maxPages * 3) queue.push(link);
       }
     }
   }
