@@ -15,7 +15,7 @@ export async function GET() {
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'サイトを読み込めませんでした' }, { status: 503 });
   return NextResponse.json({ sites: data });
 }
 
@@ -26,11 +26,15 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Plan limit check
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('plan, subscription_status')
     .eq('id', user.id)
     .single();
+
+  if (profileError || !profile) {
+    return NextResponse.json({ error: 'ご契約を確認できませんでした' }, { status: 503 });
+  }
 
   const plan = profile?.plan as string | null;
   const subStatus = profile?.subscription_status as string | null;

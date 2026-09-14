@@ -9,17 +9,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
 
-  const { data: original } = await supabase
+  const { data: original, error: originalError } = await supabase
     .from('sites')
     .select('*')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
 
+  if (originalError && originalError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const { data: profile } = await supabase.from('profiles')
+  const { data: profile, error: profileError } = await supabase.from('profiles')
     .select('plan,subscription_status').eq('id', user.id).single();
+  if (profileError || !profile) return NextResponse.json({ error: 'ご契約を確認できませんでした' }, { status: 503 });
   const access = siteCreationAccess(user.email, profile?.plan ?? null, profile?.subscription_status ?? null,
     [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]);
   if (!access.allowed) {

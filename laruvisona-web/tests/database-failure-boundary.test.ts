@@ -18,6 +18,23 @@ test('予約とショップはDB障害を不存在や決済準備中へ変換し
   assert.match(shop, /if \(siteError\)[\s\S]*status: 503/);
 });
 
+test('サイト作成・複製・プレビュー発行・外部診断も読取障害と競合を成功にしない', () => {
+  const sites = read('app/api/sites/route.ts');
+  assert.match(sites, /profileError \|\| !profile[\s\S]*status: 503/);
+  assert.doesNotMatch(sites, /error: error\.message/);
+  const duplicate = read('app/api/sites/[id]/duplicate/route.ts');
+  assert.match(duplicate, /originalError[\s\S]*status: 503/);
+  assert.match(duplicate, /profileError \|\| !profile[\s\S]*status: 503/);
+  const preview = read('app/api/sites/[id]/preview-token/route.ts');
+  assert.match(preview, /for \(let attempt = 0; attempt < 4; attempt\+\+\)/);
+  assert.match(preview, /\.eq\('updated_at', site\.updated_at\)[\s\S]*\.select\('id'\)/);
+  assert.match(preview, /updated\?\.length === 1/);
+  assert.match(preview, /status: 409/);
+  assert.doesNotMatch(preview, /error: error\.message/);
+  const pagespeed = read('app/api/sites/[id]/pagespeed/route.ts');
+  assert.match(pagespeed, /siteError[\s\S]*status: 503/);
+});
+
 test('運用画面と破壊的操作はDB障害を権限不足・不存在・空一覧に変換しない', () => {
   const paths = [
     'app/api/account/brand/route.ts',

@@ -7,13 +7,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: site } = await supabase
+  const { data: site, error: siteError } = await supabase
     .from('sites')
     .select('slug, published')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
 
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site || !site.published || !site.slug) {
     return NextResponse.json({ error: 'Site not published' }, { status: 400 });
   }
