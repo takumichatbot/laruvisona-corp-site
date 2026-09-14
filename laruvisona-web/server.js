@@ -322,7 +322,6 @@ app.prepare().then(() => {
       await postCron('/api/retention/send');
       // 毎日呼び、週キーの台帳で月曜の初回送信と翌日以降の失敗再試行を両立する。
       await postCron('/api/digest/send');
-      await postCron('/api/sms/reminders');
     }
   }
   setInterval(maybeDaily, 30 * 60 * 1000); // 30分ごとに判定
