@@ -1,74 +1,55 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
+import { ArrowLeft, ArrowUpRight, Clock3, Mail, ShieldCheck } from 'lucide-react';
+import styles from './page.module.css';
 
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
   title: 'お問い合わせ | LARU HP',
-  description: 'LARU HP（AIホームページビルダー）に関するご質問・ご相談はこちらのフォームからお気軽にお問い合わせください。',
-  alternates: {
-    canonical: 'https://laruhp.com/contact',
-  },
+  description: 'LARU HPの制作、料金、公開、独自ドメインについてご相談いただけます。',
+  alternates: { canonical: 'https://laruhp.com/contact' },
 };
 
 const FORM_URL = 'https://larubot.tokyo/f/d51f2628-df7a-4776-8e58-67c9a453957f';
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="https://laruhp.com/" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
-          </Link>
-          <Link href="/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
-            無料で始める →
-          </Link>
-        </div>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <Link className={styles.wordmark} href="https://laruhp.com/" aria-label="LARU HP トップへ">
+          LARU<span>HP</span><i aria-hidden="true" />
+        </Link>
+        <Link className={styles.start} href="https://laruvisona.jp/laruHP/studio">
+          作りはじめる<ArrowUpRight size={16} aria-hidden="true" />
+        </Link>
       </header>
 
-      <main className="pt-28 pb-20 px-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-10">
-            <span className="inline-block bg-sky-100 text-sky-600 text-xs font-bold px-4 py-1.5 rounded-full mb-4 tracking-wider">CONTACT</span>
-            <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">お問い合わせ</h1>
-            <p className="text-slate-600 text-sm md:text-base leading-relaxed">
-              サービス内容・料金・導入のご相談など、お気軽にお問い合わせください。<br className="hidden md:block" />
-              通常2営業日以内にご返信いたします。
-            </p>
+      <main className={styles.main}>
+        <section className={styles.intro}>
+          <p className={styles.kicker}><span />ご相談・お問い合わせ</p>
+          <h1>まだ言葉になっていないことも、<br />ここから聞かせてください。</h1>
+          <p className={styles.lead}>制作、料金、公開後の運用まで。今の状況に合わせて、一緒に整理します。</p>
+          <div className={styles.notes} aria-label="お問い合わせの案内">
+            <span><Clock3 aria-hidden="true" />通常2営業日以内に返信</span>
+            <span><ShieldCheck aria-hidden="true" />暗号化して送信</span>
           </div>
+        </section>
 
-          {/* LARUbot 埋め込みフォーム */}
-          <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-            <iframe
-              src={FORM_URL}
-              title="LARU HP お問い合わせフォーム"
-              className="w-full"
-              style={{ height: '760px', border: '0' }}
-              loading="lazy"
-            />
+        <section className={styles.formSection} aria-labelledby="form-title">
+          <div className={styles.formHeading}>
+            <div><p>入力フォーム</p><h2 id="form-title">ご相談内容を送る</h2></div>
+            <span>必須項目をご入力ください</span>
           </div>
+          <div className={styles.frame}>
+            <iframe src={FORM_URL} title="LARU HP お問い合わせフォーム" loading="lazy" />
+          </div>
+          <div className={styles.fallback}>
+            <Mail size={18} aria-hidden="true" />
+            <p>フォームが表示されない場合は、<a href={FORM_URL} target="_blank" rel="noopener noreferrer">別画面で開く</a>か、<a href="mailto:info@laruvisona.jp">info@laruvisona.jp</a>へご連絡ください。</p>
+          </div>
+        </section>
 
-          {/* フォールバック連絡先 */}
-          <div className="mt-8 text-center text-sm text-slate-600">
-            <p>
-              フォームがうまく表示されない場合は{' '}
-              <a href={FORM_URL} target="_blank" rel="noopener noreferrer" className="text-sky-700 font-semibold underline underline-offset-2 hover:text-sky-800">
-                こちらのページ
-              </a>{' '}
-              からご入力いただくか、{' '}
-              <a href="mailto:info@laruvisona.jp" className="text-sky-700 font-semibold underline underline-offset-2 hover:text-sky-800">
-                info@laruvisona.jp
-              </a>{' '}
-              までメールでご連絡ください。
-            </p>
-          </div>
-
-          <div className="mt-10 text-center">
-            <Link href="https://laruhp.com/" className="text-sky-700 hover:text-sky-800 text-sm transition-colors">← LARU HP トップに戻る</Link>
-          </div>
-        </div>
+        <Link className={styles.back} href="https://laruhp.com/"><ArrowLeft size={17} aria-hidden="true" />LARU HP トップへ戻る</Link>
       </main>
     </div>
   );
