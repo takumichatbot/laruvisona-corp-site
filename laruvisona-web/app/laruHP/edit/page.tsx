@@ -13,6 +13,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { publishCompletion } from '@/lib/publish-result';
 
 type Block = { id: string; type: string; data: Record<string, unknown> };
 type Page = { id: string; name: string; blocks: Block[] };
@@ -199,8 +200,9 @@ export default function MobileEditPage() {
         setDirty(false);
       }
       const res = await fetch(`/api/sites/${site.id}/publish`, { method: 'POST' });
-      if (!res.ok) throw new Error(`公開エラー (${res.status})`);
-      setNote('公開しました');
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || `公開エラー (${res.status})`);
+      setNote(publishCompletion(result).message);
     } catch (e) {
       setNote(e instanceof Error ? e.message : '公開に失敗しました');
     }

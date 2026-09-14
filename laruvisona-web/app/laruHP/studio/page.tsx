@@ -32,6 +32,7 @@ import {
 import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
 import { cleanIncomingText } from '@/lib/safe-markup';
 import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publish-readiness';
+import { publishCompletion } from '@/lib/publish-result';
 import { withPreviewBridge } from '@/lib/preview-frame';
 import { ImageField, FocalField, ImageUploadContext } from '@/components/studio/ImageField';
 import { editStudioBlock } from '@/lib/studio-image';
@@ -868,7 +869,7 @@ function StudioInner() {
       setPublishedAt(new Date().toISOString());
       // 公開しているあいだに続きを直していたら、「いまの内容が出ている」とは書かない
       setSavedSincePublish(editSeq.current !== seq);
-      setPublishNote('公開しました');
+      setPublishNote(publishCompletion(b).message);
     } catch (e) {
       setPublishNote(e instanceof Error ? e.message : '公開できませんでした');
     }

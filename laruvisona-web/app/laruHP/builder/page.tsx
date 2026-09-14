@@ -8,6 +8,7 @@ import { exportToHTML } from '@/lib/html-export';
 import { createClient } from '@/lib/supabase/client';
 import { hasFeature } from '@/lib/plan-limits';
 import { checkPublishReadiness, blockingItems, adviceItems, type ReadyItem } from '@/lib/publish-readiness';
+import { publishCompletion } from '@/lib/publish-result';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -5329,6 +5330,8 @@ function BuilderContent() {
     if (data.success) {
       setPublished(true);
       setPublishedSlug(data.slug);
+      const completion = publishCompletion(data);
+      if (completion.warning) setBuilderToast(completion.message);
       if (fromOnboarding) setShowPublishSuccess(true);
     } else {
       setSaveError(data.message || data.error || '公開に失敗しました。もう一度お試しください。');

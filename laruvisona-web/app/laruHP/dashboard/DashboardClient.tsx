@@ -11,6 +11,7 @@ import OnboardingTour from '@/components/OnboardingTour';
 import { getSiteLimit } from '@/lib/plan-limits';
 import { track } from '@/lib/analytics';
 import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
+import { publishCompletion } from '@/lib/publish-result';
 
 interface SiteSettings {
   larubot?: boolean;
@@ -501,20 +502,26 @@ export default function DashboardPage() {
 
   const handlePublish = async (siteId: string) => {
     setPublishing(siteId);
-    const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'POST' });
-    const data = await res.json();
-    if (data.error === 'subscription_required') {
-      setPublishing(null);
-      setPendingSiteId(siteId);
-      setShowPlanModal(true);
-      return;
-    }
-    if (data.success) {
+    try {
+      const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (data.error === 'subscription_required') {
+        setPendingSiteId(siteId);
+        setShowPlanModal(true);
+        return;
+      }
+      if (!res.ok || !data.success) {
+        setPublishToast({ message: data.message || data.error || 'サイトを公開できませんでした', type: 'warn' });
+        return;
+      }
       setSites(prev => {
         const updated = prev.map(s => s.id === siteId ? { ...s, published: true, slug: data.slug || s.slug } : s);
         const site = updated.find(s => s.id === siteId);
         const publishedSlug = data.slug || site?.slug;
-        if (site?.settings_json?.larubot && !site.settings_json?.larubotPublicId) {
+        const completion = publishCompletion(data);
+        if (completion.warning) {
+          setPublishToast({ message: completion.message, type: 'warn', slug: publishedSlug });
+        } else if (site?.settings_json?.larubot && !site.settings_json?.larubotPublicId) {
           setPublishToast({ message: 'LARUbot の Public ID が未設定です。ビルダーで設定してください。', type: 'warn' });
         } else if (site?.settings_json?.larubot && site.settings_json?.larubotPublicId) {
           setPublishToast({ message: 'サイトを公開しました。LARUbot も有効です！', type: 'success', slug: publishedSlug });
@@ -524,15 +531,28 @@ export default function DashboardPage() {
         setTimeout(() => setPublishToast(null), 5000);
         return updated;
       });
+    } catch {
+      setPublishToast({ message: '通信に失敗しました。公開状態は変更していません', type: 'warn' });
+    } finally {
+      setPublishing(null);
     }
-    setPublishing(null);
   };
 
   const handleUnpublish = async (siteId: string) => {
     setPublishing(siteId);
-    await fetch(`/api/sites/${siteId}/publish`, { method: 'DELETE' });
-    setSites(prev => prev.map(s => s.id === siteId ? { ...s, published: false } : s));
-    setPublishing(null);
+    try {
+      const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        setPublishToast({ message: data.error || 'サイトを非公開にできませんでした', type: 'warn' });
+        return;
+      }
+      setSites(prev => prev.map(s => s.id === siteId ? { ...s, published: false } : s));
+    } catch {
+      setPublishToast({ message: '通信に失敗しました。公開状態は変更していません', type: 'warn' });
+    } finally {
+      setPublishing(null);
+    }
   };
 
   const handleDelete = (siteId: string) => {

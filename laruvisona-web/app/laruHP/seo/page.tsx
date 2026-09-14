@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Check, RefreshCw, Search } from 'lucide-react';
+import { publishCompletion } from '@/lib/publish-result';
 
 interface Site {
   id: string;
@@ -148,9 +149,10 @@ export default function SeoPage() {
     setRepublishing(true);
     try {
       const res = await fetch(`/api/sites/${selectedSite.id}/publish`, { method: 'POST' });
-      const d = await res.json() as { error?: string; message?: string };
+      const d = await res.json() as { error?: string; message?: string; versionSaved?: boolean; warning?: string };
       if (res.ok) {
-        showMsg('再公開しました。SEO設定が反映されました。');
+        const completion = publishCompletion(d, '再公開しました。SEO設定が反映されました。');
+        showMsg(completion.message, completion.warning ? 'error' : 'success');
         setNeedsRepublish(false);
         localStorage.removeItem(REPUBLISH_KEY(selectedSite.id));
       } else if (res.status === 403) {
