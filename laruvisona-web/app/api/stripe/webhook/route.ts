@@ -195,7 +195,7 @@ export async function POST(req: Request) {
         <div style="color:#64748b;font-size:12px;margin-top:4px">初月無料 / 最低6ヶ月契約</div>
       </div>
       <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/laruHP/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:white;font-weight:800;font-size:15px;text-decoration:none;padding:16px 24px;border-radius:12px;margin-bottom:20px">ダッシュボードを開く →</a>
-      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a> までどうぞ</p>
+      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> までどうぞ</p>
     </div>
   </div>
 </body></html>`);
@@ -273,7 +273,7 @@ export async function POST(req: Request) {
         お支払いが解決されない場合、サービスが一時停止される場合があります。
       </div>
       <a href="${appUrl}/laruHP/settings" style="display:block;text-align:center;background:#dc2626;color:white;font-weight:800;font-size:15px;text-decoration:none;padding:16px 24px;border-radius:12px;margin-bottom:20px">支払い情報を更新する →</a>
-      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a> までどうぞ</p>
+      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> までどうぞ</p>
     </div>
   </div>
 </body></html>`);
@@ -327,7 +327,7 @@ export async function POST(req: Request) {
         <div style="color:#0f172a;font-size:18px;font-weight:800">${planLabel}</div>
       </div>
       <a href="${appUrl}/laruHP/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#7c3aed,#0ea5e9);color:white;font-weight:800;font-size:15px;text-decoration:none;padding:16px 24px;border-radius:12px;margin-bottom:20px">ダッシュボードで確認 →</a>
-      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a> までどうぞ</p>
+      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> までどうぞ</p>
     </div>
   </div>
 </body></html>`);
@@ -380,7 +380,7 @@ export async function POST(req: Request) {
         ご契約期間終了後、公開中のサイトは非公開となります。<br>
         データはしばらく保持されますので、再開される場合はお気軽にご連絡ください。
       </div>
-      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">またのご利用をお待ちしております。<br><a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a></p>
+      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">またのご利用をお待ちしております。<br><a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a></p>
     </div>
   </div>
 </body></html>`);

@@ -28,7 +28,7 @@
 
 ## ローカル検証
 
-- `npm test`: 792 / 792
+- `npm test`: 794 / 794
 - `npm run build`: exit 0（Next.js 16.3.4、本番用ビルド、145静的ページ生成）
 - `npm run test:http`: 28 / 28（顧客ホスト、下層、404、主従308、テナント分離）
 - TypeScript: clean
@@ -45,6 +45,8 @@
 - `laruhp.com` のsitemap 28ページ、内部URL 32件、title、description、canonical、OGP、index設定、基本セキュリティヘッダー、絵文字不使用、問い合わせフォーム、wwwと旧URLの転送・クエリ保持を確認。
 - 本番検査で、管理・定期処理・画像アップロード・Stripe Webhookの未認証書き込み11経路が401/403/400で拒否され、`laruhp.com` の公開ホストではAPI POST自体が405になることを確認。
 - 旧固定枠予約の予約金は停止し、事前決済を店舗ごとのStripe Connectを使う本格予約へ一本化。旧決済Webhookも、支払状態・サイト・Stripeセッションを照合し、通知失敗時にStripeの再送で回収できる形へ修正した。
+- 予約・注文・問い合わせの端末通知は対象サイトを指定した管理画面へ直接開く。Service Workerは管理画面HTML・RSC・APIを保存せず、公開静的資産だけを端末キャッシュへ入れる。
+- 契約開始・支払失敗・解約・継続案内の返信先表記を、実運用窓口 `info@laruvisona.jp` へ統一した。
 - IndexNowへsitemapの28 URLを送信してHTTP 200で受理。
 - LARUbotの問い合わせフォームへ本番確認を1件送信し、完了画面まで到達。
 

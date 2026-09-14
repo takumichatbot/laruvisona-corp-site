@@ -42,7 +42,7 @@ function emailDay1(plan: string) {
       <a href="${APP_URL}/laruHP/dashboard" style="display:block;text-align:center;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:white;font-weight:800;font-size:15px;text-decoration:none;padding:16px 24px;border-radius:12px;margin-top:24px">ダッシュボードを開く →</a>
     </div>
     <div style="background:#f8fafc;padding:16px 40px;text-align:center">
-      <p style="color:#9ca3af;font-size:12px;margin:0">ご不明な点は <a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a> まで</p>
+      <p style="color:#9ca3af;font-size:12px;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> まで</p>
     </div>
   </div>
 </body></html>`,
@@ -99,7 +99,7 @@ function emailDay25() {
       <a href="${APP_URL}/laruHP/settings" style="display:block;text-align:center;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:white;font-weight:800;font-size:15px;text-decoration:none;padding:16px 24px;border-radius:12px">プラン・請求を確認する →</a>
     </div>
     <div style="background:#f8fafc;padding:16px 40px;text-align:center">
-      <p style="color:#9ca3af;font-size:12px;margin:0">ご不明な点は <a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a> まで</p>
+      <p style="color:#9ca3af;font-size:12px;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> まで</p>
     </div>
   </div>
 </body></html>`,

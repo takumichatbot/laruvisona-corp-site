@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       <a href="${origin}/laruHP/studio" style="display:block;text-align:center;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:white;font-weight:800;font-size:15px;text-decoration:none;padding:16px 24px;border-radius:12px;margin-bottom:24px">
         サイト作成を始める →
       </a>
-      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:support@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">support@laruvisona.jp</a> までお気軽にどうぞ</p>
+      <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> までお気軽にどうぞ</p>
     </div>
     <div style="background:#f8fafc;padding:20px 40px;text-align:center">
       <p style="color:#9ca3af;font-size:11px;margin:0">© ${new Date().getFullYear()} 株式会社LaruVisona · <a href="${origin}/laruHP" style="color:#9ca3af">laruvisona.jp</a></p>

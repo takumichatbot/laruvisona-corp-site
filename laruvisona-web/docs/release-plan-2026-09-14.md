@@ -5,7 +5,7 @@
 ## 現在の固定点
 
 - 作業ブランチ: `codex/domain-onboarding-20260914`（内容はGitHub mainへ反映済み）
-- 全単体テスト: 792件通過
+- 全単体テスト: 794件通過
 - 実HTTP回帰: 28件通過
 - 全体eslint: 終了コード0（0 errors、既存warning 106件）
 - `tsc --noEmit`: exit 0
@@ -16,6 +16,8 @@
 - push、本番SQL、Render設定、デプロイ、公開HTML1件の再生成は実施済み。予約・決済を含むアプリコードは2026-09-14 12:02 JSTにGitHub mainとRender Liveの双方へ `18a405d9c7b0bdc68295ce8ea1b4523628c8250a` まで反映した。記録コミット後の最終稼働SHAはRender Deploysを正とする
 - 本番公開検査はsitemap 28ページ・内部URL 32件に加え、未認証の管理・定期処理・アップロード・Stripe系書き込み11経路と、公開ホストでのAPI POST遮断を常設確認する
 - 旧固定枠予約の予約金は停止済み。事前決済は店舗ごとのStripe Connectを使う本格予約だけで扱い、`HP_BOOKING_PREPAY_ENABLED=1` はStripeテスト取引が完了するまで有効化しない
+- 端末通知は対象サイトの予約・注文・問い合わせ管理へ直接開く。Service Worker v6はログイン後のHTML・RSC・APIをキャッシュしない
+- 顧客向けメールの問い合わせ先は、実運用窓口 `info@laruvisona.jp` に統一する
 - 公開面のSEOは `laruhp.com` の正規URLに統一し、管理画面と未検証の旧比較ページは `noindex`。料金表示は共通定数から生成し、月払いの初月無料クーポンが無ければ申込みを停止する
 - 制作画面と既定テンプレートの絵文字は、日本語の機能ラベルに置き換え済み
 
