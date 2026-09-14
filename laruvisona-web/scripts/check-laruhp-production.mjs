@@ -56,6 +56,7 @@ if (sitemapUrls.length === 0) throw new Error('sitemap.xml にURLがありませ
 if (sitemapUrls.some(url => url.origin !== origin)) throw new Error('sitemap.xml に別ホストのURLがあります');
 
 const internalUrls = new Map(sitemapUrls.map(url => [url.href, url]));
+const structuredTypes = new Set();
 for (const url of sitemapUrls) {
   const { response, body } = await fetchPage(url);
   if (response.status !== 200) {
@@ -90,12 +91,39 @@ for (const url of sitemapUrls) {
   if (/noindex/i.test(robots)) addFailure(url.href, 'sitemap掲載ページがnoindexです');
   if (decorativeEmoji.length) addFailure(url.href, `本文に絵文字があります (${decorativeEmoji.join('')})`);
 
+  for (const match of body.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const value = JSON.parse(match[1]);
+      const values = Array.isArray(value) ? value : [value];
+      for (const item of values) {
+        const type = item && typeof item === 'object' ? item['@type'] : null;
+        if (typeof type === 'string') structuredTypes.add(type);
+        if (Array.isArray(type)) type.filter(entry => typeof entry === 'string').forEach(entry => structuredTypes.add(entry));
+      }
+    } catch {
+      addFailure(url.href, 'JSON-LDを構造化データとして読めません');
+    }
+  }
+
   for (const match of body.matchAll(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)) {
     const linked = absolute(decodeHtml(match[1]), url);
     if (!linked || linked.origin !== origin) continue;
     if (!['http:', 'https:'].includes(linked.protocol)) continue;
     internalUrls.set(linked.href, linked);
   }
+}
+
+for (const requiredType of ['SoftwareApplication', 'WebSite']) {
+  if (!structuredTypes.has(requiredType)) addFailure(origin, `構造化データ ${requiredType} がありません`);
+}
+
+const robotsUrl = new URL('/robots.txt', origin);
+const robotsResponse = await fetch(robotsUrl, { redirect: 'error' });
+const robotsBody = await robotsResponse.text();
+if (!robotsResponse.ok) {
+  addFailure(robotsUrl.href, `robots.txtを取得できません (HTTP ${robotsResponse.status})`);
+} else if (!robotsBody.includes(`Sitemap: ${sitemapUrl.href}`)) {
+  addFailure(robotsUrl.href, '公開sitemapの指定がありません');
 }
 
 for (const url of internalUrls.values()) {
@@ -186,5 +214,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件、問い合わせ・PWA・旧入口・保護API ${protectedWrites.length}件）`);
+  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件、SEO構造化データ・問い合わせ・PWA・旧入口・保護API ${protectedWrites.length}件）`);
 }

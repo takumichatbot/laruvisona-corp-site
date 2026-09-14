@@ -11,3 +11,10 @@ test('本番監視はService Workerの認証ページ非保存を検査する', 
   assert.match(monitor, /if \\?\(!cacheableRequest/);
   assert.match(monitor, /_next\\?\/static/);
 });
+
+test('本番監視はrobotsとJSON-LDの実体を検査する', () => {
+  assert.match(monitor, /new URL\('\/robots\.txt', origin\)/);
+  assert.match(monitor, /JSON\.parse\(match\[1\]\)/);
+  assert.match(monitor, /\['SoftwareApplication', 'WebSite'\]/);
+  assert.match(monitor, /Sitemap: \$\{sitemapUrl\.href\}/);
+});

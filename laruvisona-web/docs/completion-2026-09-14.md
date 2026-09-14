@@ -28,7 +28,7 @@
 
 ## ローカル検証
 
-- `npm test`: 798 / 798
+- `npm test`: 799 / 799
 - `npm run build`: exit 0（Next.js 16.3.4、本番用ビルド、145静的ページ生成）
 - `npm run test:http`: 28 / 28（顧客ホスト、下層、404、主従308、テナント分離）
 - TypeScript: clean
@@ -42,7 +42,7 @@
 - 総合状態確認48項目、独自ドメイン状態98/99、本格予約決済状態99がすべてtrue。
 - 予約決済確認、予約通知、予約リマインド、ショップ通知の4つをRender Cronで毎分実行し、複数回すべてHTTP 200・ジョブ正常終了。
 - 公開中1サイトを競合検査付きでHTML v11からv18へ更新し、公開URLで200と版を確認。変更前HTMLと指紋をローカルの非公開バックアップへ保存。
-- `laruhp.com` のsitemap 28ページ、内部URL 32件、title、description、canonical、OGP、index設定、基本セキュリティヘッダー、絵文字不使用、問い合わせフォーム、wwwと旧URLの転送・クエリ保持を確認。
+- `laruhp.com` のsitemap 28ページ、内部URL 32件、title、description、canonical、OGP、index設定、JSON-LD、robots.txt、基本セキュリティヘッダー、絵文字不使用、問い合わせフォーム、wwwと旧URLの転送・クエリ保持を確認。
 - 本番検査で、管理・定期処理・画像アップロード・Stripe Webhookの未認証書き込み11経路が401/403/400で拒否され、`laruhp.com` の公開ホストではAPI POST自体が405になることを確認。アプリ側Service Workerが認証後のHTML・RSC・APIを端末キャッシュへ保存しない規則も本番の配信内容から確認する。
 - 認証後の移動先をLARU HP内の相対URLだけに限定し、ログイン・新規登録・Google認証・共同閲覧の招待復帰を同じ契約へ統一した。
 - 月額契約の開始はプロフィールと既存契約を読み取れた場合だけStripeへ進み、DB障害時に外部顧客や請求を作らない。
