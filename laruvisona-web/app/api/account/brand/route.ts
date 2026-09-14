@@ -8,7 +8,8 @@ export async function PATCH(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const service = await createServiceClient();
-  const { data: profile } = await service.from('profiles').select('plan').eq('id', user.id).single();
+  const { data: profile, error: profileError } = await service.from('profiles').select('plan').eq('id', user.id).single();
+  if (profileError) return NextResponse.json({ error: '契約を確認できませんでした' }, { status: 503 });
   if (profile?.plan !== 'agency') {
     return NextResponse.json({ error: 'Agency plan required' }, { status: 403 });
   }

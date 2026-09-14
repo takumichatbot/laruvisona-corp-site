@@ -10,16 +10,19 @@ export async function GET(_req: Request, { params }: Params) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { data: rows } = await supabase
+  const { data: rows, error: rowsError } = await supabase
     .from('contacts')
     .select('id, name, email, type, created_at, extra_fields')
     .eq('site_id', siteId)
     .not('extra_fields->webhook_status', 'is', null)
     .order('created_at', { ascending: false })
     .limit(20);
+
+  if (rowsError) return NextResponse.json({ error: '配信履歴を読み込めませんでした' }, { status: 503 });
 
   const logs = (rows || []).map(r => ({
     id: r.id,

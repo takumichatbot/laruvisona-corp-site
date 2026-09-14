@@ -23,7 +23,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const { data: site } = await service.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+    const { data: site, error: siteError } = await service.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+    if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
     if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { data, error } = await service
@@ -61,7 +62,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const service = admin();
 
   // 所有権検証（service roleで確実に）
-  const { data: site } = await service.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await service.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   let input;

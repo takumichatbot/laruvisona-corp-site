@@ -10,21 +10,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id, versionId } = await params;
 
   // Verify site ownership
-  const { data: site } = await supabase.from('sites').select('id').eq('id', id).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', id).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   // Get version data
-  const { data: version } = await supabase
+  const { data: version, error: versionError } = await supabase
     .from('site_versions')
     .select('blocks_json, seo_json, settings_json')
     .eq('id', versionId)
     .eq('site_id', id)
     .single();
 
+  if (versionError && versionError.code !== 'PGRST116') return NextResponse.json({ error: '履歴を確認できませんでした' }, { status: 503 });
   if (!version) return NextResponse.json({ error: 'Version not found' }, { status: 404 });
 
   // Restore
-  const { error } = await supabase
+  const { data: restored, error } = await supabase
     .from('sites')
     .update({
       blocks_json: version.blocks_json,
@@ -32,9 +34,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       settings_json: version.settings_json,
     })
     .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select('id');
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || restored?.length !== 1) return NextResponse.json({ error: '履歴を復元できませんでした' }, { status: 503 });
 
   return NextResponse.json({ ok: true });
 }

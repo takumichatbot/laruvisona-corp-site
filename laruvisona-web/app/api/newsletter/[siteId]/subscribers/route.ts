@@ -10,7 +10,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ siteId: 
   const { siteId } = await params;
 
   // Verify site belongs to user
-  const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const { data, error } = await supabase
@@ -38,7 +39,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ siteI
     return NextResponse.json({ error: 'メールアドレスを確認してください' }, { status: 400 });
   }
 
-  const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const { data, error } = await supabase

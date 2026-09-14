@@ -11,7 +11,8 @@ export async function GET(req: Request) {
   if (!siteId) return NextResponse.json({ error: 'siteId required' }, { status: 400 });
 
   // Verify ownership
-  const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { data: campaigns, error } = await supabase

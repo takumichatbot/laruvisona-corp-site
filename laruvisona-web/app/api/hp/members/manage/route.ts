@@ -21,7 +21,8 @@ export async function DELETE(req: Request) {
   catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
 
   const service = admin();
-  const { data: site } = await service.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await service.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { data: deleted, error } = await service.from('hp_members').delete().eq('id', memberId).eq('site_id', siteId).select('id');

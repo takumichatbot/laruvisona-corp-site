@@ -84,27 +84,31 @@ export async function GET(req: Request) {
   }
 
   // Verify site ownership (or membership)
-  const { data: site } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
+  if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) {
     // Check membership
     const service = await createServiceClient();
-    const { data: member } = await service
+    const { data: member, error: memberError } = await service
       .from('site_members')
       .select('id')
       .eq('site_id', siteId)
       .eq('user_id', user.id)
       .eq('status', 'active')
       .single();
+    if (memberError && memberError.code !== 'PGRST116') return NextResponse.json({ error: '権限を確認できませんでした' }, { status: 503 });
     if (!member) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const service = await createServiceClient();
-  const { data: conversations } = await service
+  const { data: conversations, error: conversationsError } = await service
     .from('larubot_conversations')
     .select('id, session_id, messages, summary, created_at, updated_at')
     .eq('site_id', siteId)
     .order('updated_at', { ascending: false })
     .limit(50);
+
+  if (conversationsError) return NextResponse.json({ error: '会話履歴を読み込めませんでした' }, { status: 503 });
 
   return NextResponse.json({ conversations: conversations || [] });
 }
