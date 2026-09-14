@@ -9,6 +9,7 @@ import {
   DOMAIN_REGISTRARS,
 } from '@/lib/domain-guidance';
 import styles from './page.module.css';
+import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
 
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
     url: 'https://laruhp.com/domains',
     siteName: 'LARU HP',
     type: 'website',
+    images: [LARUHP_OG_IMAGE],
   },
 };
 

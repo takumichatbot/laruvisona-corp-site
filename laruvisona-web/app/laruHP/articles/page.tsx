@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { ARTICLES } from './articles-data';
+import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
 
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
     description: '中小企業・個人事業主向けホームページ作成のノウハウ、SEO・集客・AI活用術。',
     url: 'https://laruhp.com/articles',
     type: 'website',
+    siteName: 'LARU HP',
+    images: [LARUHP_OG_IMAGE],
   },
 };
 

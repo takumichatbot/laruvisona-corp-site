@@ -2,10 +2,13 @@
 
 ## コード
 
-- GitHub `main`: `43666b9994ae87a3e8ef4476409bf32a89b42625`
+- 本体反映の基準コミット: `43666b9994ae87a3e8ef4476409bf32a89b42625`
+- 反映後の修正: 予約事前決済SQLの適用漏れ防止、公開ホストの基本セキュリティヘッダー、予約リマインドRPCの本番エラー修正、公開ページのOGP画像補完
 - Renderで確認した根拠: `laruhp.com` が同じ本番ビルドのCSS資産を返し、今回追加した料金文言と比較ページの `noindex` を返した
 - `laruhp.com`、`www.laruhp.com`、料金、規約、特商法、問い合わせ、業種ページ、robots、sitemapをHTTPで確認。`www` はapexへ301
 - 公開ホストへHSTS（顧客の別サブドメインへ広げない）、MIME sniffing防止、参照元制御を追加
+- sitemap掲載の28 URLをIndexNowへ送信し、HTTP 200で受理された
+- 本番28ページと内部リンクを巡回し、リンク切れ・title・description・canonical・index設定を確認。ページ固有metadataで落ちていたOGP画像を補完した
 
 ## 本番DB
 

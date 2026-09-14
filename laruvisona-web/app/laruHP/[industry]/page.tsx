@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowUpRight, Check, Globe2, LayoutTemplate, MessageSquare, Search } from 'lucide-react';
 import { jsonForScript } from '@/lib/safe-markup';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
+import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
 
 const INDUSTRY_DATA = {
   restaurant: {
@@ -132,7 +133,7 @@ export async function generateMetadata({ params }: { params: Promise<{ industry:
     description,
     keywords: [d.keyword, `${d.name} HP制作`, 'LARU HP'],
     alternates: { canonical: `https://laruhp.com/${industry}` },
-    openGraph: { title, description, url: `https://laruhp.com/${industry}`, type: 'website' },
+    openGraph: { title, description, url: `https://laruhp.com/${industry}`, type: 'website', siteName: 'LARU HP', images: [LARUHP_OG_IMAGE] },
   };
 }
 

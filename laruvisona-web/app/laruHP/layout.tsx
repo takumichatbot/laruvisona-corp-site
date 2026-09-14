@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { jsonForScript } from '@/lib/safe-markup';
 import PwaInit from '@/components/PwaInit';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
+import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://laruhp.com/',
     siteName: 'LARU HP',
-    images: [{ url: 'https://laruhp.com/opengraph-image', width: 1200, height: 630, alt: 'LARU HP — AIホームページビルダー' }],
+    images: [LARUHP_OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { ARTICLES, getArticle } from '../articles-data';
 import { jsonForScript } from '@/lib/safe-markup';
+import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
 
 export async function generateStaticParams() {
   return ARTICLES.map(a => ({ slug: a.slug }));
@@ -26,6 +27,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       publishedTime: article.publishedAt,
       modifiedTime: article.updatedAt,
       authors: [article.author],
+      siteName: 'LARU HP',
+      images: [LARUHP_OG_IMAGE],
     },
   };
 }
