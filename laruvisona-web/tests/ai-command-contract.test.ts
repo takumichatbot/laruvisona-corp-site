@@ -31,3 +31,11 @@ test('AI司令室APIは管理者確認後も更新列と添付画像を限定す
   assert.match(upload, /limitInputPixels: 40_000_000/);
   assert.match(page, /useState\(false\)[\s\S]*autoApprove|autoApprove[\s\S]*useState\(false\)/);
 });
+
+test('AI司令室はDB障害を空一覧や削除成功として扱わない', () => {
+  const commands = readFileSync(new URL('../app/api/ai-command/commands/route.ts', import.meta.url), 'utf8');
+  const status = readFileSync(new URL('../app/api/ai-command/status/route.ts', import.meta.url), 'utf8');
+  assert.match(commands, /if \(error\) return NextResponse\.json\(\{ error: '命令の一覧を取得できませんでした' \}/);
+  assert.match(commands, /if \(error\) return NextResponse\.json\(\{ error: '命令を削除できませんでした' \}/);
+  assert.match(status, /if \(health\.error \|\| heartbeat\.error\)/);
+});

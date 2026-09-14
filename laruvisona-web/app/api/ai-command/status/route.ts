@@ -13,6 +13,9 @@ export async function GET(req: Request) {
     service.from('watcher_health').select('*'),
     service.from('watcher_heartbeat').select('last_seen').eq('id', 'main').maybeSingle(),
   ]);
+  if (health.error || heartbeat.error) {
+    return NextResponse.json({ error: '稼働状態を取得できませんでした' }, { status: 503 });
+  }
   return NextResponse.json({
     health: health.data ?? [],
     lastSeen: heartbeat.data?.last_seen ?? null,

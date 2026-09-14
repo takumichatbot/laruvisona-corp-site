@@ -5,7 +5,7 @@
 ## 現在の固定点
 
 - 作業ブランチ: `codex/domain-onboarding-20260914`（内容はGitHub mainへ反映済み）
-- 全単体テスト: 799件通過
+- 全単体テスト: 800件通過
 - 実HTTP回帰: 28件通過
 - 全体eslint: 終了コード0（0 errors、既存warning 106件）
 - `tsc --noEmit`: exit 0

@@ -9,12 +9,13 @@ export async function GET(req: Request) {
   const sessionId = searchParams.get('session_id');
   if (!validSessionId(sessionId)) return NextResponse.json({ error: 'session_id を確認してください' }, { status: 400 });
   const service = await createServiceClient();
-  const { data } = await service
+  const { data, error } = await service
     .from('ai_commands')
     .select('*')
     .eq('session_id', sessionId)
     .order('created_at', { ascending: true })
     .limit(200);
+  if (error) return NextResponse.json({ error: '命令の一覧を取得できませんでした' }, { status: 503 });
   return NextResponse.json(data ?? []);
 }
 
@@ -24,7 +25,8 @@ export async function DELETE(req: Request) {
   const sessionId = searchParams.get('session_id');
   if (!validSessionId(sessionId)) return NextResponse.json({ error: 'session_id を確認してください' }, { status: 400 });
   const service = await createServiceClient();
-  await service.from('ai_commands').delete().eq('session_id', sessionId);
+  const { error } = await service.from('ai_commands').delete().eq('session_id', sessionId);
+  if (error) return NextResponse.json({ error: '命令を削除できませんでした' }, { status: 503 });
   return NextResponse.json({ ok: true });
 }
 
