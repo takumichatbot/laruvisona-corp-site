@@ -41,6 +41,8 @@ function makeStore(opts: {
   failMarkRegisterStarted?: boolean;
   failEnqueueOrphan?: boolean;
   failFinishRelease?: boolean;
+  failPendingQueue?: boolean;
+  failResolveQueue?: boolean;
   /** applyCheck を呼ぶ直前に走らせる（競合の再現用） */
   beforeApply?: () => void;
 }) {
@@ -201,12 +203,14 @@ function makeStore(opts: {
     },
 
     async pendingQueue(host: string) {
+      if (opts.failPendingQueue) throw new Error('db down');
       return queue.filter(q => q.host === host && !q.resolved)
         .map(q => ({ id: q.id, host: q.host, kind: q.kind, render_domain_id: q.render_domain_id,
                      verification_token: q.verification_token, operation_epoch: q.operation_epoch }));
     },
 
     async resolveQueueEntry(id: string) {
+      if (opts.failResolveQueue) return { ok: false };
       const q = queue.find(x => x.id === id && !x.resolved);
       if (!q) return { ok: false };
       q.resolved = true;
@@ -1004,6 +1008,45 @@ test('R1: 実際に消せた外部IDに紐づくキューだけを完了にす�
   const pending = await store.pendingQueue('mixed.example');
   assert.deepEqual(pending.map(q => q.render_domain_id), ['provider-b'],
     '消していない外部IDまで完了にしている');
+});
+
+test('外部解除と行削除の完了後にキュー照合が失敗しても、解除失敗へ戻さない', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: 'cleanup.example' as string | null } };
+  const store = makeStore({
+    sites,
+    rows: [row('cleanup.example', { status: 'connected', render_domain_id: 'provider-a' })],
+    failPendingQueue: true,
+  });
+
+  const res = await releaseDomain(deps(store, makeDns(), makeRender('ok', { unregister: 'ok' }), makeProbe(true)),
+    { siteId: 's1', userId: 'u1', host: 'cleanup.example' });
+
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.equal(res.released, true, '完了済みの外部解除を失敗として返している');
+  assert.match(res.message ?? '', /解除は完了/);
+  assert.equal(store.rows.length, 0, '完了した割当行が残っている');
+});
+
+test('外部IDのキュー完了更新が0件でも、解除済みであることと運用確認を返す', async () => {
+  const sites = { s1: { user_id: 'u1', custom_domain: 'resolve.example' as string | null } };
+  const store = makeStore({
+    sites,
+    rows: [row('resolve.example', { status: 'connected', render_domain_id: 'provider-a' })],
+    failResolveQueue: true,
+  });
+  await store.enqueueOrphanRegistration('s1', 'resolve.example', 'provider-a', TOKEN, 1, 'A');
+
+  const res = await releaseDomain(deps(store, makeDns(), makeRender('ok', { unregister: 'ok' }), makeProbe(true)),
+    { siteId: 's1', userId: 'u1', host: 'resolve.example' });
+
+  assert.equal(res.ok, true);
+  if (!res.ok) return;
+  assert.equal(res.released, true);
+  assert.match(res.message ?? '', /運用側で確認/);
+  assert.equal(store.rows.length, 0);
+  assert.equal(store.queue.some(q => q.render_domain_id === 'provider-a' && !q.resolved), true,
+    '完了できなかったキューが未処理で残っていない');
 });
 
 test('R1: 外部登録の記録を積めなかったら、成功として返さない', async () => {

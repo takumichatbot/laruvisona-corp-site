@@ -618,14 +618,31 @@ export async function releaseDomain(
   // 実際に片付けられたものだけ、キューを完了にする。
   // ホスト名で一括に完了させると、別処理が積んだ未回収の登録まで
   // 「処理済み」になってしまう。
+  let queueCleanupPending = false;
   if (externalDeleted) {
-    const pending = await deps.store.pendingQueue(host);
-    for (const q of pending) {
-      if (q.render_domain_id && q.render_domain_id === externalDeleted) {
-        await deps.store.resolveQueueEntry(q.id, `解除で削除済み（${externalDeleted}）`);
+    try {
+      const pending = await deps.store.pendingQueue(host);
+      for (const q of pending) {
+        if (q.render_domain_id && q.render_domain_id === externalDeleted) {
+          const resolved = await deps.store.resolveQueueEntry(q.id, `解除で削除済み（${externalDeleted}）`);
+          if (!resolved.ok) queueCleanupPending = true;
+        }
       }
+    } catch {
+      // 外部登録と割当行の解除はすでに完了している。ここで例外を返すと、
+      // 利用者の再試行は「登録なし」になり、完了した操作が失敗に見える。
+      // キューは未処理のまま残るので、運用側で再照合できる。
+      queueCleanupPending = true;
     }
   }
 
-  return { ok: true, host, released: true, status: 'release_pending' };
+  return {
+    ok: true,
+    host,
+    released: true,
+    status: 'release_pending',
+    message: queueCleanupPending
+      ? 'ドメインの解除は完了しました。後処理の記録は運用側で確認します'
+      : undefined,
+  };
 }
