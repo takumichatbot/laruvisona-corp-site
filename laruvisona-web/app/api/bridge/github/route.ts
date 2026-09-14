@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { bridgeText, readBridgeJson } from '@/lib/bridge-input';
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
@@ -13,10 +14,11 @@ async function ghFetch(path: string, opts: RequestInit = {}) {
       'X-GitHub-Api-Version': '2022-11-28',
       ...(opts.headers as Record<string, string> || {}),
     },
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`GitHub API ${res.status}: ${body}`);
+    await res.body?.cancel();
+    throw new Error(`GitHub API ${res.status}`);
   }
   return res.json();
 }
@@ -28,6 +30,9 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action');
   const repo = searchParams.get('repo');
+  if (repo && !/^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/.test(repo)) {
+    return NextResponse.json({ error: 'リポジトリを確認してください' }, { status: 400 });
+  }
 
   try {
     if (action === 'list_prs' && repo) {
@@ -51,7 +56,7 @@ export async function GET(req: Request) {
 
     if (action === 'get_pr' && repo) {
       const prNum = searchParams.get('pr');
-      if (!prNum) return NextResponse.json({ error: 'PR番号が必要です' }, { status: 400 });
+      if (!prNum || !/^[1-9][0-9]{0,9}$/.test(prNum)) return NextResponse.json({ error: 'PR番号が必要です' }, { status: 400 });
       const [prData, files] = await Promise.all([
         ghFetch(`/repos/${repo}/pulls/${prNum}`),
         ghFetch(`/repos/${repo}/pulls/${prNum}/files`),
@@ -78,8 +83,8 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ error: '不明なアクション' }, { status: 400 });
-  } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'GitHubエラー' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'GitHub操作に失敗しました' }, { status: 502 });
   }
 }
 
@@ -88,12 +93,22 @@ export async function POST(req: Request) {
   if (denied) return denied;
   if (!GITHUB_TOKEN) return NextResponse.json({ error: 'GITHUB_TOKEN が未設定です' }, { status: 500 });
   try {
-    const { action, repo, pr, body, event } = await req.json();
+    const input = await readBridgeJson(req, 32_000);
+    const action = bridgeText(input.action, 30, true);
+    const repo = bridgeText(input.repo, 201, true);
+    const body = bridgeText(input.body, 20_000);
+    const event = bridgeText(input.event, 30) || 'COMMENT';
+    const pr = Number(input.pr);
+    if (!/^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/.test(repo)
+      || !Number.isSafeInteger(pr) || pr < 1 || pr > 9_999_999_999
+      || !['COMMENT', 'APPROVE', 'REQUEST_CHANGES'].includes(event)) {
+      return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
+    }
 
     if (action === 'post_review' && repo && pr) {
       await ghFetch(`/repos/${repo}/pulls/${pr}/reviews`, {
         method: 'POST',
-        body: JSON.stringify({ body: body || '', event: event || 'COMMENT' }),
+        body: JSON.stringify({ body, event }),
       });
       return NextResponse.json({ ok: true });
     }
@@ -107,7 +122,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: '不明なアクション' }, { status: 400 });
-  } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'GitHubエラー' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'GitHub操作に失敗しました' }, { status: 502 });
   }
 }

@@ -2,26 +2,33 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { bridgeText, readBridgeForm } from '@/lib/bridge-input';
 
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
   try {
-    const formData = await req.formData();
+    const formData = await readBridgeForm(req, 12 * 1024 * 1024);
     const audioBlob = formData.get('audio') as Blob | null;
-    const projectName = (formData.get('projectName') as string | null) ?? '不明';
-    const historyRaw = (formData.get('history') as string | null) ?? '[]';
+    const projectName = bridgeText(formData.get('projectName'), 200) || '不明';
+    const historyRaw = bridgeText(formData.get('history'), 20_000) || '[]';
 
-    if (!audioBlob || audioBlob.size === 0) {
+    if (!audioBlob || audioBlob.size === 0 || audioBlob.size > 10 * 1024 * 1024
+      || !/^audio\/(?:webm|ogg|mpeg|mp4|x-m4a)$/i.test(audioBlob.type || '')) {
       return NextResponse.json({ error: '音声データがありません' }, { status: 400 });
     }
 
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) throw new Error('OPENAI_API_KEY が未設定です');
-    const openai = new OpenAI({ apiKey: openaiKey });
+    const openai = new OpenAI({ apiKey: openaiKey, timeout: 30_000, maxRetries: 1 });
 
     let history: { role: string; text: string }[] = [];
-    try { history = JSON.parse(historyRaw); } catch { /* ignore */ }
+    try {
+      const parsed = JSON.parse(historyRaw);
+      if (Array.isArray(parsed)) history = parsed.slice(-4).flatMap(item =>
+        item && typeof item === 'object' && ['user', 'assistant'].includes(String(item.role)) && typeof item.text === 'string'
+          ? [{ role: String(item.role), text: item.text.slice(0, 2_000) }] : []);
+    } catch { /* ignore */ }
 
     // 1. Whisper 音声認識
     const audioBuffer = Buffer.from(await audioBlob.arrayBuffer());
@@ -57,7 +64,7 @@ export async function POST(req: Request) {
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
     if (anthropicKey) {
-      const anthropic = new Anthropic({ apiKey: anthropicKey });
+      const anthropic = new Anthropic({ apiKey: anthropicKey, timeout: 30_000, maxRetries: 1 });
       const r = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 300,
@@ -96,7 +103,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ transcript, response, directive, audio: base64Audio });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '音声処理エラー';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[bridge/voice] failed', e instanceof Error ? e.name : 'unknown');
+    return NextResponse.json({ error: '音声処理に失敗しました' }, { status: 500 });
   }
 }

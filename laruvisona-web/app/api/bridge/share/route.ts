@@ -1,32 +1,34 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { requireAdmin } from '@/lib/adminAuth';
+import { bridgeText, readBridgeJson } from '@/lib/bridge-input';
+
+declare global {
+  var bridgeShares: Map<string, { content: string; ts: number }> | undefined;
+}
 
 // メモリストア（サーバー再起動で消える）
-// @ts-ignore
 if (!global.bridgeShares) global.bridgeShares = new Map<string, { content: string; ts: number }>();
 
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
-  const { content } = await req.json() as { content: string };
-  if (!content) return NextResponse.json({ error: 'content required' }, { status: 400 });
+  let content: string;
+  try { content = bridgeText((await readBridgeJson(req, 16_000)).content, 10_000, true); }
+  catch { return NextResponse.json({ error: 'content required' }, { status: 400 }); }
+  const shares = global.bridgeShares!;
+  const now = Date.now();
+  for (const [key, value] of shares) if (now - value.ts > 3_600_000) shares.delete(key);
+  while (shares.size >= 100) shares.delete(shares.keys().next().value as string);
   const id = randomBytes(6).toString('hex');
-  // @ts-ignore
-  global.bridgeShares.set(id, { content: content.slice(0, 10000), ts: Date.now() });
-  // 1時間で期限切れ
-  setTimeout(() => {
-    // @ts-ignore
-    global.bridgeShares.delete(id);
-  }, 3600000);
+  shares.set(id, { content, ts: now });
   return NextResponse.json({ id, url: `/bridge/share/${id}` });
 }
 
 export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  // @ts-ignore
+  if (!id || !/^[a-f0-9]{12}$/.test(id)) return NextResponse.json({ error: 'id required' }, { status: 400 });
   const share = global.bridgeShares?.get(id);
-  if (!share) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (!share || Date.now() - share.ts > 3_600_000) return NextResponse.json({ error: 'not found' }, { status: 404 });
   return NextResponse.json({ content: share.content, ts: share.ts });
 }
