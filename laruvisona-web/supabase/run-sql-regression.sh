@@ -54,6 +54,7 @@ export PGHOST="$WORK" PGUSER="$OWNER"
 psql -q -d postgres -c "create database \"$DB\";"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/test-bootstrap.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/schema.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_sites.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_push_subscriptions.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/contacts_crm.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_orders.sql"
@@ -82,6 +83,7 @@ if ! grep -qx 'zz|ALL_REQUIRED_STATE|t' "$STATE"; then
 fi
 
 echo "--- 回帰シナリオ ---"
+psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_sites_regression.sql"
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/contacts_crm_regression.sql"
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_orders_regression.sql"
 psql -d "$DB" -v ON_ERROR_STOP=1 -f "$DIR/hp_loyalty_regression.sql"

@@ -17,23 +17,24 @@
 
 本番に書く操作である。各ファイルを一つずつ実行し、失敗したら次へ進まない。
 
-1. `contacts_crm.sql`
-2. `hp_orders.sql`
-3. `hp_loyalty.sql`
-4. `hp_newsletter.sql`
-5. `hp_sequences.sql`
-6. `hp_members.sql`
-7. `site_members.sql`
-8. `hp_analytics.sql`
-9. `hp_ai_usage.sql`
-10. `hp_public_rate_limits.sql`
-11. `hp_reservations.sql`
-12. `hp_reservations_reminded.sql`
-13. `hp_scheduling.sql`
-14. `hp_scheduling_notifications.sql`
-15. `hp_scheduling_reminders.sql`
-16. `hp_scheduled_emails.sql`
-17. `hp_push_subscriptions.sql`
+1. `hp_sites.sql`
+2. `contacts_crm.sql`
+3. `hp_orders.sql`
+4. `hp_loyalty.sql`
+5. `hp_newsletter.sql`
+6. `hp_sequences.sql`
+7. `hp_members.sql`
+8. `site_members.sql`
+9. `hp_analytics.sql`
+10. `hp_ai_usage.sql`
+11. `hp_public_rate_limits.sql`
+12. `hp_reservations.sql`
+13. `hp_reservations_reminded.sql`
+14. `hp_scheduling.sql`
+15. `hp_scheduling_notifications.sql`
+16. `hp_scheduling_reminders.sql`
+17. `hp_scheduled_emails.sql`
+18. `hp_push_subscriptions.sql`
 
 適用後に `release_state_check_20260914.sql` を読み取り実行する。最終行 `ALL_REQUIRED_STATE` が `true` でなければコードを有効化しない。この確認は関数本体の業務動作や実データを保証しないため、機能ごとの試験も必要である。
 

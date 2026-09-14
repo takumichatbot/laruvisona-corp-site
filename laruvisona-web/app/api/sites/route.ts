@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { siteCreationAccess } from '@/lib/site-creation-access';
+import { readSiteCreate } from '@/lib/site-write-contract';
 
 // GET /api/sites — list user's sites
 export async function GET() {
@@ -43,49 +44,41 @@ export async function POST(req: Request) {
     );
   }
 
-  const limit = access.limit;
-  const { count } = await supabase
-    .from('sites')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id);
-
-  if ((count ?? 0) >= limit) {
-    return NextResponse.json(
-      {
-        error: `現在のプラン（${plan}）ではサイトを${limit}件まで作成できます。プランをアップグレードしてください。`,
-        code: 'site_limit',
-        limit,
-        current: count,
-      },
-      { status: 403 }
-    );
-  }
-
-  const body = await req.json();
-  const { name, industry, blocks_json, seo_json, settings_json } = body;
+  let input;
+  try { input = await readSiteCreate(req); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
 
   // Generate unique slug from name
-  const baseSlug = (name || 'my-site')
+  const normalizedSlug = input.name
     .toLowerCase()
     .replace(/[^a-z0-9ぁ-ん一-龯]/g, '-')
     .replace(/-+/g, '-')
-    .slice(0, 30);
+    .replace(/^-|-$/g, '')
+    .slice(0, 30)
+    .replace(/-$/, '');
+  const baseSlug = normalizedSlug || 'my-site';
   const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
-  const { data, error } = await supabase
-    .from('sites')
-    .insert({
-      user_id: user.id,
-      name: name || 'マイサイト',
-      slug,
-      industry: industry || null,
-      blocks_json: blocks_json || [],
-      seo_json: seo_json || { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' },
-      settings_json: settings_json || {},
-    })
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ site: data }, { status: 201 });
+  const result = await createServiceClient().rpc('laruhp_create_site', {
+    p_user: user.id,
+    p_limit: access.limit,
+    p_name: input.name,
+    p_slug: slug,
+    p_industry: input.industry,
+    p_blocks: input.blocks,
+    p_seo: input.seo,
+    p_settings: input.settings,
+  });
+  if (result.error || !result.data || typeof result.data !== 'object') {
+    return NextResponse.json({ error: 'サイトを作成できませんでした' }, { status: 503 });
+  }
+  const outcome = result.data as { ok?: boolean; reason?: string; site?: unknown; count?: number; limit?: number };
+  if (!outcome.ok && outcome.reason === 'site_limit') {
+    return NextResponse.json({
+      error: `現在のプラン（${plan}）ではサイトを${access.limit}件まで作成できます。プランをアップグレードしてください。`,
+      code: 'site_limit', limit: access.limit, current: outcome.count,
+    }, { status: 403 });
+  }
+  if (!outcome.ok || !outcome.site) return NextResponse.json({ error: 'サイトを作成できませんでした' }, { status: 503 });
+  return NextResponse.json({ site: outcome.site }, { status: 201 });
 }

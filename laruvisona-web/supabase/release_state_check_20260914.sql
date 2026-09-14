@@ -3,6 +3,9 @@
 with checks(section,item,ok) as (
   values
   ('crm','contacts.extra_fields',exists(select 1 from information_schema.columns where table_schema='public' and table_name='contacts' and column_name='extra_fields' and data_type='jsonb')),
+  ('sites','atomic creation RPC',to_regprocedure('public.laruhp_create_site(uuid,integer,text,text,text,jsonb,jsonb,jsonb)') is not null),
+  ('sites','browser write closed',not coalesce(has_table_privilege(to_regrole('authenticated'),to_regclass('public.sites'),'INSERT'),false)),
+  ('sites','creation RPC closed',not coalesce(has_function_privilege(to_regrole('authenticated'),to_regprocedure('public.laruhp_create_site(uuid,integer,text,text,text,jsonb,jsonb,jsonb)'),'EXECUTE'),false)),
   ('crm','contacts.crm_status',exists(select 1 from information_schema.columns where table_schema='public' and table_name='contacts' and column_name='crm_status')),
   ('shop','hp_orders',to_regclass('public.hp_orders') is not null),
   ('shop','hp_orders.notified_at',exists(select 1 from information_schema.columns where table_schema='public' and table_name='hp_orders' and column_name='notified_at')),
