@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { readNewsPost, validNewsId } from '@/lib/news-post-contract';
 
 function admin() {
   return createAdminClient(
@@ -27,6 +28,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ postId:
 
   const service = admin();
   const { postId } = await params;
+  if (!validNewsId(postId)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!(await verifyOwner(service, postId, user.id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const { data } = await service.from('news_posts').select('*').eq('id', postId).single();
@@ -40,15 +42,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ postId
 
   const service = admin();
   const { postId } = await params;
+  if (!validNewsId(postId)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!(await verifyOwner(service, postId, user.id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const updates = await req.json() as Record<string, unknown>;
-  // 改ざん防止: 主要キーは更新不可
-  delete updates.id; delete updates.site_id; delete updates.user_id; delete updates.created_at;
-  updates.updated_at = new Date().toISOString();
+  let updates;
+  try { updates = await readNewsPost(req, false); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
 
-  const { data, error } = await service.from('news_posts').update(updates).eq('id', postId).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { data, error } = await service.from('news_posts')
+    .update({ ...updates, updated_at: new Date().toISOString() }).eq('id', postId).select().single();
+  if (error) return NextResponse.json({ error: '記事を保存できませんでした' }, { status: 503 });
   return NextResponse.json({ post: data });
 }
 
@@ -59,8 +62,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ post
 
   const service = admin();
   const { postId } = await params;
+  if (!validNewsId(postId)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!(await verifyOwner(service, postId, user.id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  await service.from('news_posts').delete().eq('id', postId);
+  const { data, error } = await service.from('news_posts').delete().eq('id', postId).select('id');
+  if (error) return NextResponse.json({ error: '記事を削除できませんでした' }, { status: 503 });
+  if (data?.length !== 1) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
