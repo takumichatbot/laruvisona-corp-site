@@ -73,6 +73,12 @@ for (const url of sitemapUrls) {
   const ogImage = firstMatch(body, /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>/i)
     || firstMatch(body, /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["'][^>]*>/i);
   const robots = firstMatch(body, /<meta[^>]+name=["']robots["'][^>]+content=["']([^"']+)["'][^>]*>/i);
+  const visibleText = body
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
+  const decorativeEmoji = [...new Set(visibleText.match(/\p{Extended_Pictographic}/gu) || [])]
+    .filter(character => !['©', '®', '™'].includes(character));
 
   if (!title) addFailure(url.href, 'titleがありません');
   if (!description) addFailure(url.href, 'descriptionがありません');
@@ -81,6 +87,7 @@ for (const url of sitemapUrls) {
   const ogImageUrl = absolute(ogImage, url);
   if (!ogImageUrl || ogImageUrl.origin !== origin) addFailure(url.href, `og:imageが同一ホストにありません (${ogImage || 'なし'})`);
   if (/noindex/i.test(robots)) addFailure(url.href, 'sitemap掲載ページがnoindexです');
+  if (decorativeEmoji.length) addFailure(url.href, `本文に絵文字があります (${decorativeEmoji.join('')})`);
 
   for (const match of body.matchAll(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)) {
     const linked = absolute(decodeHtml(match[1]), url);
