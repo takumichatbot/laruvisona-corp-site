@@ -46,17 +46,26 @@ begin
   if exists(select 1 from public.sites where slug='atomic-site-1' and published) then
     raise exception 'direct publication changed the row';
   end if; n:=n+1;
-  if n<>3 then raise exception 'assertion count mismatch: %',n; end if;
+  begin
+    update public.sites set slug='bypassed-slug' where slug='atomic-site-1';
+    raise exception 'direct slug update was accepted';
+  exception when others then
+    if sqlerrm<>'site_publication_server_only' then raise; end if;
+  end; n:=n+1;
+  if not exists(select 1 from public.sites where slug='atomic-site-1') then
+    raise exception 'direct slug update changed the row';
+  end if; n:=n+1;
+  if n<>5 then raise exception 'assertion count mismatch: %',n; end if;
   raise notice '公開境界: %項目 OK',n;
 end $$;
 reset role;
 reset request.jwt.claims;
 
 set role service_role;
-update public.sites set published=true,published_html='<!--safe-export-->' where slug='atomic-site-1';
+update public.sites set slug='service-slug',published=true,published_html='<!--safe-export-->' where slug='atomic-site-1';
 reset role;
 do $$ begin
-  if not exists(select 1 from public.sites where slug='atomic-site-1' and published and published_html='<!--safe-export-->') then
+  if not exists(select 1 from public.sites where slug='service-slug' and published and published_html='<!--safe-export-->') then
     raise exception 'service publication was blocked';
   end if;
   raise notice 'サーバー公開: 1項目 OK';

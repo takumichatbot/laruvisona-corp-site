@@ -57,6 +57,7 @@ begin
   request_role:=coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'role','');
   if request_role in ('anon','authenticated') and (
     new.user_id is distinct from old.user_id
+    or new.slug is distinct from old.slug
     or new.published is distinct from old.published
     or new.published_html is distinct from old.published_html
     or new.custom_domain is distinct from old.custom_domain

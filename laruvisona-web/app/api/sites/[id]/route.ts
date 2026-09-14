@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { readSitePatch, readSiteUpdate } from '@/lib/site-write-contract';
 
 // GET /api/sites/[id]
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -13,9 +14,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .select('*')
     .eq('id', id)
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error) return NextResponse.json({ error: 'サイトを読み込めませんでした' }, { status: 503 });
+  if (!data) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   return NextResponse.json({ site: data });
 }
 
@@ -37,15 +39,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try { body = await readSiteUpdate(req); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
   const { name, blocks_json, seo_json, settings_json, settings_json_patch } = body;
-
-  if (settings_json !== undefined && settings_json_patch !== undefined) {
-    return NextResponse.json(
-      { error: 'settings_json と settings_json_patch は同時に送れません' },
-      { status: 400 },
-    );
-  }
 
   const update: Record<string, unknown> = {};
   if (name !== undefined) update.name = name;
@@ -61,19 +58,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   if (settings_json !== undefined) update.settings_json = settings_json;
 
-  if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: '更新する内容がありません' }, { status: 400 });
-  }
-
   const { data, error } = await supabase
     .from('sites')
     .update(update)
     .eq('id', id)
     .eq('user_id', user.id)
     .select()
-    .single();
+    .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'サイトを保存できませんでした' }, { status: 503 });
+  if (!data) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   return NextResponse.json({ site: data });
 }
 
@@ -97,8 +91,9 @@ async function mergeSettingsAndUpdate(
   patch: Record<string, unknown>,
 ) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    const { data: current } = await supabase
-      .from('sites').select('settings_json, updated_at').eq('id', id).eq('user_id', userId).single();
+    const { data: current, error: readError } = await supabase
+      .from('sites').select('settings_json, updated_at').eq('id', id).eq('user_id', userId).maybeSingle();
+    if (readError) return NextResponse.json({ error: 'サイトを読み込めませんでした' }, { status: 503 });
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const merged = { ...(current.settings_json as Record<string, unknown> || {}), ...patch };
@@ -111,7 +106,7 @@ async function mergeSettingsAndUpdate(
       .select()
       .maybeSingle();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'サイトを保存できませんでした' }, { status: 503 });
     if (data) return NextResponse.json({ site: data });
     // 1件も当たらなかった = 間に別の更新が入った。読み直してやり直す
   }
@@ -128,7 +123,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try { body = await readSitePatch(req); }
+  catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
 
   // settings_patch: merge into existing settings_json
   if (body.settings_patch !== undefined) {
@@ -153,24 +150,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { slug } = body;
-  if (!slug || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug) || slug.length < 3 || slug.length > 60 || /--/.test(slug)) {
+  if (typeof slug !== 'string' || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug) || slug.length < 3 || slug.length > 60 || /--/.test(slug)) {
     return NextResponse.json({ error: 'slugは3〜60文字・英数字とハイフン（先頭末尾・連続ハイフン不可）' }, { status: 400 });
   }
 
-  const { data: existing } = await supabase.from('sites').select('id').eq('slug', slug).neq('id', id).limit(1);
+  const { data: existing, error: existingError } = await supabase.from('sites').select('id').eq('slug', slug).neq('id', id).limit(1);
+  if (existingError) return NextResponse.json({ error: 'URLの重複を確認できませんでした' }, { status: 503 });
   if (existing && existing.length > 0) {
     return NextResponse.json({ error: 'このURLは既に使われています' }, { status: 409 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await createServiceClient()
     .from('sites')
     .update({ slug })
     .eq('id', id)
     .eq('user_id', user.id)
     .select()
-    .single();
+    .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'URLを変更できませんでした' }, { status: 503 });
+  if (!data) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   return NextResponse.json({ site: data });
 }
 
@@ -181,12 +180,14 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from('sites')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select('id');
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'サイトを削除できませんでした' }, { status: 503 });
+  if (deleted?.length !== 1) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   return NextResponse.json({ success: true });
 }
