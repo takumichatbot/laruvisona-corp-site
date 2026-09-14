@@ -24,6 +24,7 @@ import { ARTICLES } from './articles/articles-data';
 import './landing.css';
 
 export const metadata: Metadata = {
+  robots: { index: true, follow: true },
   alternates: { canonical: 'https://laruhp.com/' },
   title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
   description:

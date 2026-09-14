@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { ARTICLES } from './articles-data';
 
 export const metadata: Metadata = {
+  robots: { index: true, follow: true },
   title: 'ホームページ作成・HP運用ガイド | LARU HP',
   description: '中小企業・個人事業主向けホームページ作成のノウハウ、SEO・集客・AI活用術を発信するブログです。',
   alternates: { canonical: 'https://laruhp.com/articles' },

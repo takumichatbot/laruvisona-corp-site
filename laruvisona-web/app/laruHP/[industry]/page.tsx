@@ -127,6 +127,7 @@ export async function generateMetadata({ params }: { params: Promise<{ industry:
   const title = `${d.name}のホームページ作成｜LARU HP`;
   const description = `${d.name}に必要なページ構成と公開前の確認事項を解説。完成像を見ながら写真・文章・配色を整え、問い合わせや予約の入口まで作れます。`;
   return {
+    robots: { index: true, follow: true },
     title,
     description,
     keywords: [d.keyword, `${d.name} HP制作`, 'LARU HP'],

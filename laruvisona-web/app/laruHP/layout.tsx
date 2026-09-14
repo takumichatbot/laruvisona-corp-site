@@ -32,6 +32,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://laruhp.com/',
   },
+  // この配下には公開LPとログイン後の管理画面が同居する。公開ページ側で
+  // 明示的に上書きしない限り、検索結果へ管理画面を出さない。
+  robots: { index: false, follow: false, noarchive: true, nosnippet: true },
   // manifest と icons は metadata で指定する。生の <link> を書くと、
   // 入れ子のレイアウト（/laruHP/bridge など）で別の manifest を出したいときに
   // タグが二重になってしまう。metadata なら深いセグメントの指定が勝つ。

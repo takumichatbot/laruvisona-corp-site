@@ -14,6 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const article = getArticle(slug);
   if (!article) return {};
   return {
+    robots: { index: true, follow: true },
     title: `${article.title} | LARU HP`,
     description: article.description,
     alternates: { canonical: `https://laruhp.com/articles/${article.slug}` },

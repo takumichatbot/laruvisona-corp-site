@@ -11,6 +11,7 @@ import {
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
+  robots: { index: true, follow: true },
   title: '独自ドメインの取得と接続 | LARU HP',
   description: 'ドメインを持っていない場合の取得方法と、取得済みドメインをLARU HPへ安全に接続する手順を案内します。',
   alternates: { canonical: 'https://laruhp.com/domains' },

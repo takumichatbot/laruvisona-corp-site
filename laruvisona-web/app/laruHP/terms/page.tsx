@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-export const metadata = { title: '利用規約 | LARU HP', alternates: { canonical: 'https://laruhp.com/terms' } };
+export const metadata = { title: '利用規約 | LARU HP', robots: { index: true, follow: true }, alternates: { canonical: 'https://laruhp.com/terms' } };
 
 const SECTIONS = [
   {

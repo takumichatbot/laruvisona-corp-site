@@ -68,3 +68,16 @@ test('顧客サイトのrobotsとsitemapを仮slugでビルド時生成しない
     assert.match(read(path), /export const dynamic = 'force-dynamic'/);
   }
 });
+
+test('管理画面は既定でnoindexにし、公開ページだけ索引を明示する', () => {
+  const layout = read('app/laruHP/layout.tsx');
+  assert.match(layout, /robots: \{ index: false, follow: false/);
+  for (const path of [
+    'page.tsx', '[industry]/page.tsx', 'articles/page.tsx', 'articles/[slug]/page.tsx',
+    'plans/layout.tsx', 'domains/page.tsx', 'contact/page.tsx', 'privacy/page.tsx',
+    'terms/page.tsx', 'tokusho/page.tsx',
+  ]) {
+    assert.match(read(`app/laruHP/${path}`), /robots: \{ index: true, follow: true \}/, path);
+  }
+  assert.match(read('app/laruHP/vs/[competitor]/page.tsx'), /robots: \{ index: false, follow: false \}/);
+});

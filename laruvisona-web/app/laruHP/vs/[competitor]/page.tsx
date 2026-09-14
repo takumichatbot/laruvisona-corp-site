@@ -71,6 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ competito
   const data = COMPETITORS[competitor as Competitor];
   if (!data) return {};
   return {
+    robots: { index: false, follow: false },
     title: `LARU HP vs ${data.name} 徹底比較 | どちらが中小店舗に向いている？`,
     description: `LARU HP と ${data.name} を料金・機能・使いやすさで比較。AIチャットボット・CRM・予約管理まで完備したLARU HPが月額999円〜。`,
   };
