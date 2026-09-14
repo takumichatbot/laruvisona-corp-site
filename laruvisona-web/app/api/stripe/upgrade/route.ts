@@ -32,11 +32,17 @@ export async function POST(req: Request) {
   if (rate === 'limited') return NextResponse.json({ error: '少し待ってからお試しください' }, { status: 429 });
   if (rate === 'unavailable') return NextResponse.json({ error: '決済受付を確認できません' }, { status: 503 });
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('stripe_customer_id, stripe_subscription_id, plan')
     .eq('id', user.id)
     .single();
+
+  // 契約元を読めないまま「契約なし」とみなすと、利用者には再試行可能な404に見え、
+  // DB復旧後の実状態と食い違う。Stripeへ触る前に障害として止める。
+  if (profileError) {
+    return NextResponse.json({ error: '現在の契約を確認できませんでした' }, { status: 503 });
+  }
 
   if (!profile?.stripe_subscription_id || !profile.stripe_customer_id) {
     return NextResponse.json({ error: 'No active subscription' }, { status: 404 });

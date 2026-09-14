@@ -35,6 +35,14 @@ test('既存契約を読めないとき新しいCheckoutへ進まない', () => 
   assert.match(checkout, /idempotencyKey: `laruhp-checkout-/);
 });
 
+test('プラン変更もプロフィール障害を契約なしへ変換せずStripe操作前に止める', () => {
+  const profileGuard = upgrade.indexOf('if (profileError)');
+  const stripeLookup = upgrade.indexOf('stripe.subscriptions.retrieve');
+  assert.ok(profileGuard > 0 && profileGuard < stripeLookup, 'プロフィール障害をStripe照会前に止める');
+  assert.match(upgrade, /現在の契約を確認できませんでした/);
+  assert.match(upgrade, /status: 503/);
+});
+
 test('Stripe変更後のプロフィール更新と新規顧客紐付けは更新1件を確認する', () => {
   assert.match(checkout, /saved\.data\?\.length !== 1/);
   assert.match(checkout, /linked\.data\?\.length !== 1/);

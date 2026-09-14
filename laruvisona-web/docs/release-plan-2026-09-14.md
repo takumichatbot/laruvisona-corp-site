@@ -13,7 +13,7 @@
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
 - SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と170項目が通過。状態確認の最終行もtrue
 - 公開HTML生成版: 18（A/B計測の署名付き経路を含む。本番で公開中の1サイトもv18へ更新済み）
-- push、本番SQL、Render設定、デプロイ、公開HTML1件の再生成は実施済み。予約・決済を含むアプリコードは2026-09-14 12:02 JSTにGitHub mainとRender Liveの双方へ `18a405d9c7b0bdc68295ce8ea1b4523628c8250a` まで反映した。記録コミット後の最終稼働SHAはRender Deploysを正とする
+- push、本番SQL、Render設定、デプロイ、公開HTML1件の再生成は実施済み。2026-09-14 12:48 JSTにGitHub mainとRender Liveが `5e95a844969280487224df9c3056f03bdcc150bc` で一致し、本番検査も通過した。以後の最終稼働SHAはRender Deploysを正とする
 - 本番公開検査はsitemap 28ページ・内部URL 32件に加え、JSON-LDとrobots.txt、未認証の管理・定期処理・アップロード・Stripe系書き込み11経路、公開ホストでのAPI POST遮断、Service Workerの認証ページ非保存を常設確認する
 - 認証後の移動先はLARU HP内に限定し、招待リンクはログインを挟んでも同じ招待へ戻る
 - Stripe Checkoutはプロフィールと既存契約を確認できない場合、外部作用の前で安全側に停止する
