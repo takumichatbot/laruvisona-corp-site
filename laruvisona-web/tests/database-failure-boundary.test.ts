@@ -35,6 +35,24 @@ test('サイト作成・複製・プレビュー発行・外部診断も読取�
   assert.match(pagespeed, /siteError[\s\S]*status: 503/);
 });
 
+test('公開と外部連携はDB障害を未契約・未接続へ変換せず、完了後の補助保存を区別する', () => {
+  const publish = read('app/api/sites/[id]/publish/route.ts');
+  assert.match(publish, /profileError[\s\S]*status: 503/);
+  assert.match(publish, /fetchError && fetchError\.code !== 'PGRST116'[\s\S]*status: 503/);
+  assert.match(publish, /versionSaved: !versionResult\.error/);
+  assert.match(publish, /ownedError[\s\S]*status: 503/);
+  const portal = read('app/api/stripe/portal/route.ts');
+  assert.match(portal, /profileError[\s\S]*status: 503[\s\S]*billingPortal\.sessions\.create/);
+  const connect = read('app/api/stripe/shop-connect/callback/route.ts');
+  assert.match(connect, /if \(siteError\) return redirect\('failed'\)/);
+  const instagram = read('app/api/instagram/route.ts');
+  assert.match(instagram, /profileError[\s\S]*status: 503/);
+  assert.match(instagram, /cleared\.data\?\.length !== 1/);
+  assert.match(instagram, /updated\?\.length !== 1/);
+  const larubot = read('app/api/larubot/setup/route.ts');
+  assert.match(larubot, /profileError[\s\S]*status: 503/);
+});
+
 test('運用画面と破壊的操作はDB障害を権限不足・不存在・空一覧に変換しない', () => {
   const paths = [
     'app/api/account/brand/route.ts',

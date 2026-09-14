@@ -19,11 +19,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
   const isAdmin = adminEmails.includes((user.email || '').toLowerCase());
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('subscription_status')
     .eq('id', user.id)
     .single();
+
+  if (profileError) return NextResponse.json({ error: '契約を確認できませんでした' }, { status: 503 });
 
   if (!isAdmin && profile?.subscription_status !== 'active') {
     return NextResponse.json(
@@ -39,7 +41,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .eq('user_id', user.id)
     .single();
 
-  if (fetchError || !site) {
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
+  }
+  if (!site) {
     return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   }
 
@@ -78,8 +83,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   // Bust ISR cache for this slug
   if (updated?.slug) revalidatePath(`/hp/${updated.slug}`);
 
-  // Save version snapshot (fire-and-forget)
-  void service.from('site_versions').insert({
+  // 公開自体は完了済みなので、履歴保存だけの失敗を公開失敗には戻さない。
+  // 成否を返して、利用者と運用側が「履歴も保存済み」と誤認しないようにする。
+  const versionResult = await service.from('site_versions').insert({
     site_id: id,
     label: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     blocks_json: site.blocks_json,
@@ -89,6 +95,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   return NextResponse.json({
     success: true,
+    versionSaved: !versionResult.error,
+    ...versionResult.error ? { warning: '公開は完了しましたが、版履歴を保存できませんでした' } : {},
     slug: updated.slug,
     url: `/hp/${updated.slug}`,
   });
@@ -101,7 +109,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const { data: owned } = await supabase.from('sites').select('id').eq('id', id).eq('user_id', user.id).maybeSingle();
+  const { data: owned, error: ownedError } = await supabase.from('sites').select('id').eq('id', id).eq('user_id', user.id).maybeSingle();
+  if (ownedError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!owned) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
 
   const { data: unpublished, error } = await createServiceClient()

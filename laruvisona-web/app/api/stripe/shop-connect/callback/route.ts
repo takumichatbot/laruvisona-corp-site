@@ -17,7 +17,8 @@ export async function GET(req: Request) {
     { status: 303, headers: privateHeaders },
   );
   if (!user || !uuidPattern.test(siteId)) return redirect('invalid');
-  const { data: site } = await auth.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).maybeSingle();
+  const { data: site, error: siteError } = await auth.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).maybeSingle();
+  if (siteError) return redirect('failed');
   if (!site) return redirect('invalid');
   try {
     if (query.get('refresh') === '1') {

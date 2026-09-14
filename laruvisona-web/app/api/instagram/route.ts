@@ -18,11 +18,13 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('instagram_access_token')
     .eq('id', user.id)
     .single();
+
+  if (profileError) return NextResponse.json({ error: 'Instagram設定を確認できませんでした' }, { status: 503 });
 
   const token = (profile as { instagram_access_token?: string } | null)?.instagram_access_token;
   if (!token) return NextResponse.json({ connected: false, media: [] });
@@ -42,7 +44,10 @@ export async function GET() {
     const err = await res.json().catch(() => null);
     if (err?.error?.code === 190) {
       // Token expired — clear it
-      await supabase.from('profiles').update({ instagram_access_token: null }).eq('id', user.id);
+      const cleared = await supabase.from('profiles').update({ instagram_access_token: null }).eq('id', user.id).select('id');
+      if (cleared.error || cleared.data?.length !== 1) {
+        return NextResponse.json({ error: '期限切れの接続情報を更新できませんでした' }, { status: 503 });
+      }
       return NextResponse.json({ connected: false, expired: true, media: [] });
     }
     return NextResponse.json({ error: 'Instagram API error', media: [] }, { status: 500 });
@@ -86,15 +91,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Instagram API response invalid' }, { status: 502 });
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('profiles')
     .update({
       instagram_access_token: access_token,
       instagram_username: igUser.username,
     })
-    .eq('id', user.id);
+    .eq('id', user.id)
+    .select('id');
 
-  if (error) return NextResponse.json({ error: 'Instagram設定を保存できませんでした' }, { status: 503 });
+  if (error || updated?.length !== 1) return NextResponse.json({ error: 'Instagram設定を保存できませんでした' }, { status: 503 });
   return NextResponse.json({ ok: true, username: igUser.username });
 }
 

@@ -16,11 +16,12 @@ export async function POST(req: Request) {
   const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
   if (!isAdmin) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('plan, stripe_customer_id')
       .eq('id', user.id)
       .single();
+    if (profileError) return NextResponse.json({ error: 'plan_lookup_failed' }, { status: 503 });
     if (profile?.plan !== 'agency') {
       return NextResponse.json({ error: 'agency_plan_required' }, { status: 403 });
     }
