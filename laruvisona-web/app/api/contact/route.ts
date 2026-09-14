@@ -270,6 +270,7 @@ export async function POST(req: Request) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ to: lineTarget, messages: [{ type: 'text', text: lineMessage }] }),
+        signal: AbortSignal.timeout(8_000),
       }).then(result => ({ ok: result.ok, channel: 'line' as const }))
         .catch(() => ({ ok: false, channel: 'line' as const })),
     ] : []),

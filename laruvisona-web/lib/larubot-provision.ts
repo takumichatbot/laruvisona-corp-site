@@ -54,10 +54,10 @@ export async function provisionLarubotOnPlan(params: {
       user_id: userId,
       site_id: siteId || '',
     }),
+    signal: AbortSignal.timeout(12_000),
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`LARUbot register failed: ${res.status} ${detail}`);
+    throw new Error(`LARUbot register failed: ${res.status}`);
   }
 }

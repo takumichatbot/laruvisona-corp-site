@@ -23,10 +23,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const apiKey = process.env.PAGESPEED_API_KEY || '';
   const apiBase = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
 
-  const [mobile, desktop] = await Promise.all([
-    fetch(`${apiBase}?url=${encodeURIComponent(targetUrl)}&strategy=mobile${apiKey ? `&key=${apiKey}` : ''}`).then(r => r.json()),
-    fetch(`${apiBase}?url=${encodeURIComponent(targetUrl)}&strategy=desktop${apiKey ? `&key=${apiKey}` : ''}`).then(r => r.json()),
-  ]);
+  let mobile: unknown;
+  let desktop: unknown;
+  try {
+    [mobile, desktop] = await Promise.all([
+      fetch(`${apiBase}?url=${encodeURIComponent(targetUrl)}&strategy=mobile${apiKey ? `&key=${apiKey}` : ''}`, { signal: AbortSignal.timeout(20_000) })
+        .then(async r => r.ok ? r.json() : Promise.reject(new Error('pagespeed_mobile'))),
+      fetch(`${apiBase}?url=${encodeURIComponent(targetUrl)}&strategy=desktop${apiKey ? `&key=${apiKey}` : ''}`, { signal: AbortSignal.timeout(20_000) })
+        .then(async r => r.ok ? r.json() : Promise.reject(new Error('pagespeed_desktop'))),
+    ]);
+  } catch {
+    return NextResponse.json({ error: 'PageSpeed API unavailable' }, { status: 503 });
+  }
 
   const extract = (result: Record<string, unknown>) => {
     const cats = (result as { lighthouseResult?: { categories?: Record<string, { score?: number }> } })?.lighthouseResult?.categories;

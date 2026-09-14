@@ -8,14 +8,22 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const placeId = searchParams.get('placeId');
-  if (!placeId) return NextResponse.json({ error: 'placeId required' }, { status: 400 });
+  if (!placeId || placeId.length > 256 || /[\u0000-\u001f\u007f]/.test(placeId)) {
+    return NextResponse.json({ error: 'placeId required' }, { status: 400 });
+  }
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'Google Places API key not configured' }, { status: 500 });
 
-  const res = await fetch(
-    `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=name,rating,user_ratings_total,reviews&language=ja&key=${apiKey}`
-  );
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=name,rating,user_ratings_total,reviews&language=ja&key=${apiKey}`,
+      { signal: AbortSignal.timeout(12_000) },
+    );
+  } catch {
+    return NextResponse.json({ error: 'Places API unavailable' }, { status: 503 });
+  }
 
   if (!res.ok) return NextResponse.json({ error: 'Places API error' }, { status: 500 });
 
