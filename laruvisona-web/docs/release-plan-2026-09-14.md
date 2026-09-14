@@ -5,7 +5,7 @@
 ## 現在の固定点
 
 - 作業ブランチ: `codex/domain-onboarding-20260914`（内容はGitHub mainへ反映済み）
-- 全単体テスト: 790件通過
+- 全単体テスト: 792件通過
 - 実HTTP回帰: 28件通過
 - 全体eslint: 終了コード0（0 errors、既存warning 106件）
 - `tsc --noEmit`: exit 0
@@ -13,7 +13,9 @@
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
 - SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と170項目が通過。状態確認の最終行もtrue
 - 公開HTML生成版: 18（A/B計測の署名付き経路を含む。本番で公開中の1サイトもv18へ更新済み）
-- push、本番SQL、Render設定、デプロイ、公開HTML1件の再生成は実施済み。2026-09-14 11:44 JSTの確認時点でGitHub mainとRender Liveは `28ac52d7bea779313ee5f7f66cc4c05cdbcbfdcc`
+- push、本番SQL、Render設定、デプロイ、公開HTML1件の再生成は実施済み。予約・決済を含むアプリコードは2026-09-14 12:02 JSTにGitHub mainとRender Liveの双方へ `18a405d9c7b0bdc68295ce8ea1b4523628c8250a` まで反映した。記録コミット後の最終稼働SHAはRender Deploysを正とする
+- 本番公開検査はsitemap 28ページ・内部URL 32件に加え、未認証の管理・定期処理・アップロード・Stripe系書き込み11経路と、公開ホストでのAPI POST遮断を常設確認する
+- 旧固定枠予約の予約金は停止済み。事前決済は店舗ごとのStripe Connectを使う本格予約だけで扱い、`HP_BOOKING_PREPAY_ENABLED=1` はStripeテスト取引が完了するまで有効化しない
 - 公開面のSEOは `laruhp.com` の正規URLに統一し、管理画面と未検証の旧比較ページは `noindex`。料金表示は共通定数から生成し、月払いの初月無料クーポンが無ければ申込みを停止する
 - 制作画面と既定テンプレートの絵文字は、日本語の機能ラベルに置き換え済み
 

@@ -28,7 +28,7 @@
 
 ## ローカル検証
 
-- `npm test`: 790 / 790
+- `npm test`: 792 / 792
 - `npm run build`: exit 0（Next.js 16.3.4、本番用ビルド、145静的ページ生成）
 - `npm run test:http`: 28 / 28（顧客ホスト、下層、404、主従308、テナント分離）
 - TypeScript: clean
@@ -38,11 +38,13 @@
 
 ## 本番で確認済み
 
-- 2026-09-14 11:44 JSTの確認時点で、GitHub mainとRender Liveは `28ac52d7bea779313ee5f7f66cc4c05cdbcbfdcc` で一致。
+- 2026-09-14 12:02 JSTの確認時点で、予約・決済を含むアプリコードはGitHub mainとRender Liveの双方へ `18a405d9c7b0bdc68295ce8ea1b4523628c8250a` まで反映済み。この後に記録だけのコミットを積むため、最終の稼働SHAはRender Deploysを正とする。
 - 総合状態確認48項目、独自ドメイン状態98/99、本格予約決済状態99がすべてtrue。
 - 予約決済確認、予約通知、予約リマインド、ショップ通知の4つをRender Cronで毎分実行し、複数回すべてHTTP 200・ジョブ正常終了。
 - 公開中1サイトを競合検査付きでHTML v11からv18へ更新し、公開URLで200と版を確認。変更前HTMLと指紋をローカルの非公開バックアップへ保存。
 - `laruhp.com` のsitemap 28ページ、内部URL 32件、title、description、canonical、OGP、index設定、基本セキュリティヘッダー、絵文字不使用、問い合わせフォーム、wwwと旧URLの転送・クエリ保持を確認。
+- 本番検査で、管理・定期処理・画像アップロード・Stripe Webhookの未認証書き込み11経路が401/403/400で拒否され、`laruhp.com` の公開ホストではAPI POST自体が405になることを確認。
+- 旧固定枠予約の予約金は停止し、事前決済を店舗ごとのStripe Connectを使う本格予約へ一本化。旧決済Webhookも、支払状態・サイト・Stripeセッションを照合し、通知失敗時にStripeの再送で回収できる形へ修正した。
 - IndexNowへsitemapの28 URLを送信してHTTP 200で受理。
 - LARUbotの問い合わせフォームへ本番確認を1件送信し、完了画面まで到達。
 
