@@ -8,6 +8,8 @@
 - `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
 - 全単体テスト: 783件通過
 - 実HTTP回帰: 28件通過
+- 全体eslint: 終了コード0（0 errors、既存warning 106件）
+- `tsc --noEmit`: exit 0
 - `next build`: exit 0
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
 - SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と170項目が通過。状態確認の最終行もtrue
