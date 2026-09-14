@@ -23,6 +23,8 @@ test('配信APIは認証・事前設定・排他取得・冪等送信・結果�
 test('SQLは予約版ごとの一意性・期限順の排他取得・失効・有限再試行を持つ',()=>{
   const sql=fs.readFileSync(new URL('../supabase/hp_scheduling_reminders.sql',import.meta.url),'utf8');
   assert.match(sql,/unique \(appointment_id,appointment_revision,kind\)/i);
+  assert.equal((sql.match(/on conflict do nothing/g)||[]).length,2);
+  assert.doesNotMatch(sql,/on conflict \(appointment_id/i);
   assert.match(sql,/for update of r skip locked/i);assert.match(sql,/attempts<5/i);
   assert.match(sql,/a\.revision<>r\.appointment_revision/);assert.match(sql,/status='obsolete'/);
   assert.match(sql,/last_error='stale_claim'/);

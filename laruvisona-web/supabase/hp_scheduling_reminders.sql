@@ -56,13 +56,16 @@ begin
   from hp_appointments a
   where a.status='confirmed' and a.starts_at>now()+interval '3 hours'
     and a.starts_at-interval '24 hours'<=now()
-  on conflict (appointment_id,appointment_revision,kind) do nothing;
+  -- RETURNS TABLE の appointment_id 等もPL/pgSQL変数として見えるため、
+  -- 列名だけの conflict target は本番で ambiguous になる。競合対象を省略し、
+  -- この表で定義済みの一意制約に任せる。
+  on conflict do nothing;
   insert into hp_booking_reminders(site_id,appointment_id,appointment_revision,kind,next_attempt_at)
   select a.site_id,a.id,a.revision,'2h',a.starts_at-interval '2 hours'
   from hp_appointments a
   where a.status='confirmed' and a.starts_at>now()
     and a.starts_at-interval '2 hours'<=now()
-  on conflict (appointment_id,appointment_revision,kind) do nothing;
+  on conflict do nothing;
 
   return query
   with picked as (
