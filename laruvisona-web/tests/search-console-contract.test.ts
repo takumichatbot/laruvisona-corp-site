@@ -25,6 +25,8 @@ test('保存するプロパティ入力は本文と長さを制限する',async(
 
 test('設定APIはGoogleが返した一覧との完全一致と更新件数を確認する',()=>{
   const settings=fs.readFileSync(new URL('../app/api/search-console/settings/route.ts',import.meta.url),'utf8');
+  assert.match(settings,/if\(profile\.error\)return NextResponse\.json\(\{error:'Could not load connection'\},\{status:503\}\)/);
+  assert.match(settings,/if\(!profile\.data\?\.google_refresh_token\)return NextResponse\.json\(\{error:'Google account is not connected'\},\{status:409\}\)/);
   assert.match(settings,/available\.includes\(siteUrl\)/);assert.match(settings,/saved\.data\?\.length!==1/);assert.match(settings,/readSearchConsoleSettings/);
   const ui=fs.readFileSync(new URL('../app/laruHP/settings/page.tsx',import.meta.url),'utf8');assert.match(ui,/if \(res\.ok\)[\s\S]*setGscConnected\(false\)/);
 });

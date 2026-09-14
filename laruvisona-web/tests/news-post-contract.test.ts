@@ -22,6 +22,9 @@ test('記事は任意列・危険な画像URL・過大な本文を拒否する',
 
 test('記事APIは本文上限とサイト公開状態を確認し削除0件を成功にしない', () => {
   const item = readFileSync(new URL('../app/api/posts/[postId]/route.ts', import.meta.url), 'utf8');
+  assert.match(item, /post owner unavailable/);
+  assert.match(item, /記事を確認できませんでした[\s\S]*status: 503/);
+  assert.match(item, /if \(error \|\| !data\)[\s\S]*記事を取得できませんでした[\s\S]*status: 503/);
   const list = readFileSync(new URL('../app/api/sites/[id]/posts/route.ts', import.meta.url), 'utf8');
   assert.match(item, /readNewsPost\(req, false\)/);
   assert.match(item, /data\?\.length !== 1/);
