@@ -7,6 +7,7 @@ const client = readFileSync(new URL('../components/PwaInit.tsx', import.meta.url
 const sender = readFileSync(new URL('../lib/push-notification.ts', import.meta.url), 'utf8');
 const worker = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
 const schema = readFileSync(new URL('../supabase/hp_push_subscriptions.sql', import.meta.url), 'utf8');
+const ordersPage = readFileSync(new URL('../app/laruHP/orders/page.tsx', import.meta.url), 'utf8');
 
 test('購読は利用者ごとの複数端末として保存しDB失敗を返す', () => {
   assert.match(route, /hp_push_subscriptions/);
@@ -40,6 +41,13 @@ test('問い合わせ・予約・注文の実イベントから端末通知を�
   }
   const contact = readFileSync(new URL('../app/api/contact/route.ts', import.meta.url), 'utf8');
   const booking = readFileSync(new URL('../lib/scheduling/notify.ts', import.meta.url), 'utf8');
+  const order = readFileSync(new URL('../lib/shop-notification.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(contact, /body: `\$\{name\}/);
   assert.doesNotMatch(booking, /body: `\$\{a\.name\}/);
+  assert.match(booking, /url: `\/laruHP\/booking\/schedule\?siteId=\$\{encodeURIComponent\(siteId\)\}`/);
+  assert.doesNotMatch(booking, /\/laruHP\/scheduling/);
+  assert.match(contact, /url: `\/laruHP\/contacts\?site=\$\{encodeURIComponent\(siteId\)\}`/);
+  assert.match(order, /url: `\/laruHP\/orders\?siteId=\$\{encodeURIComponent\(order\.site_id\)\}`/);
+  assert.match(ordersPage, /searchParams\.get\('siteId'\)/);
+  assert.match(ordersPage, /nextSites\.some\(site => site\.id === requested\)/);
 });

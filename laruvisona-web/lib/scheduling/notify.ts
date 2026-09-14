@@ -86,7 +86,8 @@ export async function notifyAppointment(
     if (completed) await sendUserPush(site.user_id, {
       title: `${site.name} — ${label}`,
       body: `${dateLabel(a.starts_at)}の予約情報を管理画面で確認してください。`,
-      url: '/laruHP/scheduling', tag: `booking-${event.id}`,
+      url: `/laruHP/booking/schedule?siteId=${encodeURIComponent(siteId)}`,
+      tag: `booking-${event.id}`,
     }, db);
     return completed;
   } catch {

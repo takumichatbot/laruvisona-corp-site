@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { MapPin, Package } from 'lucide-react';
 import { nextOrderStatuses, type OrderStatus } from '@/lib/order-contract';
 
@@ -41,6 +41,7 @@ function fmt(iso: string) {
 
 export default function OrdersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -58,13 +59,19 @@ export default function OrdersPage() {
       if (!response.ok) throw new Error(body.error || 'サイトを読み込めませんでした');
       const nextSites = body.sites ?? [];
       setSites(nextSites);
-      if (nextSites.length > 0) setSiteId(prev => prev || nextSites[0].id);
+      if (nextSites.length > 0) {
+        const requested = searchParams.get('siteId');
+        const selected = requested && nextSites.some(site => site.id === requested)
+          ? requested
+          : nextSites[0].id;
+        setSiteId(prev => prev || selected);
+      }
     } catch (e) {
       setErr((e as Error)?.message || '読み込みに失敗しました');
     } finally {
       setLoaded(true);
     }
-  }, [router]);
+  }, [router, searchParams]);
 
   useEffect(() => { load(); }, [load]);
 

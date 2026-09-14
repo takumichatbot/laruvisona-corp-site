@@ -54,7 +54,8 @@ export async function deliverShopOrderNotification(
       await sendUserPush(site.user_id, {
         title: `${site.name}に新しい注文`,
         body: `${items.length}種類・合計${Number(order.amount || 0).toLocaleString()}円の注文を確認してください。`,
-        url: '/laruHP/orders', tag: `order-${order.id}`,
+        url: `/laruHP/orders?siteId=${encodeURIComponent(order.site_id)}`,
+        tag: `order-${order.id}`,
       }, db);
       return true;
     }
