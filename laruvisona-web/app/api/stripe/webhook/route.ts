@@ -18,12 +18,29 @@ const PLAN_LABEL: Record<string, string> = {
   lite: 'HP + LARUbot Lite (¥2,980/月)',
 };
 
-async function sendEmail(to: string, subject: string, html: string) {
-  if (!process.env.RESEND_API_KEY) return;
+async function sendEmail(to: string, subject: string, html: string, idempotencyKey: string) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[stripe/webhook] transactional email is not configured', { idempotencyKey });
+    return false;
+  }
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({ from: 'LARU HP <noreply@laruvisona.jp>', to, subject, html });
-  } catch { /* non-fatal */ }
+    const result = await resend.emails.send(
+      { from: 'LARU HP <noreply@laruvisona.jp>', to, subject, html },
+      { idempotencyKey },
+    );
+    if (result.error) {
+      console.error('[stripe/webhook] transactional email rejected', { idempotencyKey, name: result.error.name });
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[stripe/webhook] transactional email failed', {
+      idempotencyKey,
+      name: error instanceof Error ? error.name : 'unknown',
+    });
+    return false;
+  }
 }
 
 async function syncMemberSubscription(sub: Stripe.Subscription, supabase: SupabaseClient): Promise<boolean> {
@@ -198,7 +215,7 @@ export async function POST(req: Request) {
       <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> までどうぞ</p>
     </div>
   </div>
-</body></html>`);
+</body></html>`, `laruhp-subscription-start-${event.id}`);
       }
 
       // Auto-create LARUbot account for bundle/lite plans（新規契約なので prevPlan なし＝必ず登録）
@@ -276,7 +293,7 @@ export async function POST(req: Request) {
       <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> までどうぞ</p>
     </div>
   </div>
-</body></html>`);
+</body></html>`, `laruhp-payment-failed-${event.id}`);
         }
       }
       break;
@@ -330,7 +347,7 @@ export async function POST(req: Request) {
       <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">ご不明な点は <a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a> までどうぞ</p>
     </div>
   </div>
-</body></html>`);
+</body></html>`, `laruhp-plan-changed-${event.id}`);
           }
         }
       }
@@ -383,7 +400,7 @@ export async function POST(req: Request) {
       <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0">またのご利用をお待ちしております。<br><a href="mailto:info@laruvisona.jp" style="color:#0ea5e9;text-decoration:none">info@laruvisona.jp</a></p>
     </div>
   </div>
-</body></html>`);
+</body></html>`, `laruhp-subscription-canceled-${event.id}`);
         }
       }
       break;

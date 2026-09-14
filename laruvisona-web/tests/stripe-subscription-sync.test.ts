@@ -20,3 +20,13 @@ test('解約通知は対象プロフィールの読み取りと状態保存後�
   assert.match(route, /canceledLookup\.error/);
   assert.ok(route.indexOf('const canceled =') < route.indexOf('// 解約メール'));
 });
+
+test('契約メールはStripeイベントごとの冪等キーを使い失敗を記録する', () => {
+  assert.match(route, /emails\.send\([\s\S]*\{ idempotencyKey \}/);
+  for (const kind of ['subscription-start', 'payment-failed', 'plan-changed', 'subscription-canceled']) {
+    assert.match(route, new RegExp(`laruhp-${kind}-\\$\\{event\\.id\\}`));
+  }
+  assert.match(route, /if \(result\.error\)[\s\S]*transactional email rejected/);
+  assert.match(route, /transactional email failed/);
+  assert.doesNotMatch(route, /catch \{ \/\* non-fatal \*\//);
+});
