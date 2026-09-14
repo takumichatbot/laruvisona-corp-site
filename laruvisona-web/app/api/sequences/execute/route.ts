@@ -1,3 +1,4 @@
+import { requireBearer } from '@/lib/scheduled-email';
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -10,7 +11,7 @@ type Claim = {
 
 export async function POST(req: Request) {
   const expected = process.env.RETENTION_SECRET;
-  if (!expected || req.headers.get('authorization') !== `Bearer ${expected}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!requireBearer(req, expected)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: 'メール送信が設定されていません' }, { status: 503 });
 
   const service = createServiceClient();

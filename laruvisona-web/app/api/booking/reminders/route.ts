@@ -1,3 +1,4 @@
+import { requireBearer } from '@/lib/scheduled-email';
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
 // The current scheduling engine has its own revision-scoped queue.
 export async function POST(req: Request) {
   const secret=process.env.ADMIN_SECRET;
-  if(!secret||req.headers.get('authorization')!==`Bearer ${secret}`){
+  if(!requireBearer(req,secret)){
     return NextResponse.json({error:'Unauthorized'},{status:401});
   }
   if(!process.env.RESEND_API_KEY){

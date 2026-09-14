@@ -1,3 +1,4 @@
+import { requireBearer } from '@/lib/scheduled-email';
 import { createServiceClient } from '@/lib/supabase/server';
 import { deliverShopOrderNotification } from '@/lib/shop-notification';
 
@@ -6,7 +7,7 @@ type Claim = { order_id: string; claim_token: string };
 
 export async function POST(req: Request) {
   const secret = process.env.ADMIN_SECRET;
-  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!requireBearer(req, secret)) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
   if (!process.env.RESEND_API_KEY) return Response.json({ error: 'Mail delivery unavailable' }, { status: 503 });

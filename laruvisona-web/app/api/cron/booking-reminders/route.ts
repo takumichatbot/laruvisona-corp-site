@@ -1,3 +1,4 @@
+import { requireBearer } from '@/lib/scheduled-email';
 import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
 import { bookingReminderMessage, type BookingReminder } from '@/lib/scheduling/reminders';
@@ -7,7 +8,7 @@ export const dynamic='force-dynamic';
 
 export async function POST(req:Request){
   const secret=process.env.ADMIN_SECRET;
-  if(!secret||req.headers.get('authorization')!==`Bearer ${secret}`)return reply({error:'Unauthorized'},401);
+  if(!requireBearer(req,secret))return reply({error:'Unauthorized'},401);
   if(!process.env.RESEND_API_KEY)return reply({error:'Mail delivery unavailable'},503);
   const db=createServiceClient();
   const claimed=await db.rpc('hp_schedule_claim_reminders',{p_limit:20});
