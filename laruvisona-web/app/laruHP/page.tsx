@@ -424,7 +424,7 @@ export default function LaruHPLandingPage() {
             <p>
               迷ったら、お気軽に。
               <br />
-              <Link href="https://laruvisona.jp/contact" className="lp-text-link">
+              <Link href="https://laruhp.com/contact" className="lp-text-link">
                 相談する
                 <ArrowUpRight size={16} />
               </Link>
