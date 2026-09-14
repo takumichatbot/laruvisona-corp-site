@@ -2,6 +2,19 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        // 全公開ホストはHTTPSで配信する。includeSubDomains は顧客の別サブドメインへ
+        // 影響を広げるため付けない。
+        { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+      ],
+    }];
+  },
   // 新LPのプレビューを /laruHP/lp-next で見せつつ、実体はレイアウト配下の外に置く。
   //
   // なぜこうするか:
