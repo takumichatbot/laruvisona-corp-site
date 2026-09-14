@@ -82,6 +82,7 @@ if ! up "$PORT"; then
     NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:$FIXTURE_PORT" \
     NEXT_PUBLIC_SUPABASE_ANON_KEY="anon-stub" \
     SUPABASE_SERVICE_ROLE_KEY="service-stub" \
+    ANALYTICS_SIGNING_SECRET="http-regression-only-signing-secret-20260914" \
     npx next start -p "$PORT" >"$DIR/server.log" 2>&1) &
   SERVER_PID=$!
   for _ in $(seq 1 40); do up "$PORT" && break; sleep 0.5; done

@@ -6,7 +6,8 @@
 
 - ブランチ: `codex/domain-onboarding-20260914`
 - `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
-- 全単体テスト: 768件通過
+- 全単体テスト: 780件通過
+- 実HTTP回帰: 28件通過
 - `next build`: exit 0
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
 - SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と170項目が通過。状態確認の最終行もtrue
