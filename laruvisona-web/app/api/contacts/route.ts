@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { parseContactUpdate, validContactId } from '@/lib/contact-contract';
+import { parseContactUpdate, readContactBody, validContactId } from '@/lib/contact-contract';
 
 const databaseError = () => NextResponse.json(
   { error: '問い合わせ情報を確認できませんでした', code: 'database_error' },
@@ -41,7 +41,7 @@ export async function PATCH(req: Request) {
 
   let parsed;
   try {
-    parsed = parseContactUpdate(await req.json());
+    parsed = parseContactUpdate(await readContactBody(req, 20_000));
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }

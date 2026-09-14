@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { setPrimaryDomain } from '@/lib/domain-service';
 import { buildDeps, requireUser } from '../route';
+import { readContactBody } from '@/lib/contact-contract';
 
 // POST /api/sites/[id]/domain/primary — 確認済みのドメインを「主な公開URL」にする。
 //
@@ -16,13 +17,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json().catch(() => ({}));
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 10_000); } catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  if (Object.keys(body).some(key => key !== 'host')) return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
   const deps = await buildDeps();
 
   const res = await setPrimaryDomain(deps, {
     siteId: id,
     userId: user.id,
-    host: (body as { host?: unknown }).host,
+    host: body.host,
   });
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
   return NextResponse.json({ ok: true, host: res.host });

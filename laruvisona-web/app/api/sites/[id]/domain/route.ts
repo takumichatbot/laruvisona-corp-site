@@ -6,6 +6,7 @@ import { addDomain, releaseDomain, type Deps, type DomainRecord } from '@/lib/do
 import {
   dnsInstructions, statusLabel, forwardTargetFor, DNS_SUPPORT_NOTES, type DomainStatus,
 } from '@/lib/domain';
+import { readContactBody } from '@/lib/contact-contract';
 
 // 独自ドメインの一覧・追加・解除。処理の本体は lib/domain-service.ts にある。
 // このファイルは認証と入出力の変換だけを行う。
@@ -112,13 +113,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json().catch(() => ({}));
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 10_000); } catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  if (Object.keys(body).some(key => key !== 'customDomain')) return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
   const deps = await buildDeps();
 
   const res = await addDomain(deps, {
     siteId: id,
     userId: user.id,
-    input: (body as { customDomain?: unknown }).customDomain,
+    input: body.customDomain,
   });
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { canMoveOrder, isOrderStatus, parseOrderUpdate, validOrderId } from '@/lib/order-contract';
+import { readContactBody } from '@/lib/contact-contract';
 
 const databaseError = () => NextResponse.json(
   { error: '注文情報を確認できませんでした', code: 'database_error' },
@@ -43,7 +44,7 @@ export async function PATCH(req: Request) {
 
   let update;
   try {
-    update = parseOrderUpdate(await req.json());
+    update = parseOrderUpdate(await readContactBody(req, 10_000));
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }

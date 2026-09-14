@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { readContactBody } from '@/lib/contact-contract';
 
 type PushSubscriptionInput = {
   endpoint?: unknown;
@@ -27,9 +28,10 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  let raw: unknown;
-  try { raw = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
-  const subscription = parseSubscription((raw as { subscription?: unknown })?.subscription);
+  let raw: Record<string, unknown>;
+  try { raw = await readContactBody(req, 20_000); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
+  if (Object.keys(raw).some(key => key !== 'subscription')) return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 });
+  const subscription = parseSubscription(raw.subscription);
   if (!subscription) return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 });
   const { error } = await supabase.from('hp_push_subscriptions').upsert({
     user_id: user.id, endpoint: subscription.endpoint, subscription, disabled_at: null,
@@ -43,13 +45,15 @@ export async function DELETE(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  let endpoint = '';
-  try {
-    const body = await req.json() as { endpoint?: unknown };
-    if (typeof body.endpoint === 'string') endpoint = body.endpoint;
-  } catch { /* endpoint省略時はこの利用者の全端末を解除 */ }
-  let query = supabase.from('hp_push_subscriptions').delete().eq('user_id', user.id);
-  if (endpoint) query = query.eq('endpoint', endpoint);
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 4_000); } catch { return NextResponse.json({ error: 'Invalid endpoint' }, { status: 400 }); }
+  if (Object.keys(body).some(key => key !== 'endpoint') || typeof body.endpoint !== 'string' || body.endpoint.length > 2_048) {
+    return NextResponse.json({ error: 'Invalid endpoint' }, { status: 400 });
+  }
+  let endpoint: URL;
+  try { endpoint = new URL(body.endpoint); } catch { return NextResponse.json({ error: 'Invalid endpoint' }, { status: 400 }); }
+  if (endpoint.protocol !== 'https:') return NextResponse.json({ error: 'Invalid endpoint' }, { status: 400 });
+  const query = supabase.from('hp_push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', endpoint.toString());
   const { error } = await query;
   if (error) return NextResponse.json({ error: 'Subscription storage unavailable' }, { status: 503 });
   return NextResponse.json({ ok: true });

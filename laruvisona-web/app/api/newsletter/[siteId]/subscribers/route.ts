@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { readContactBody } from '@/lib/contact-contract';
 
 export async function GET(req: Request, { params }: { params: Promise<{ siteId: string }> }) {
   const supabase = await createClient();
@@ -29,8 +30,10 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ siteI
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { siteId } = await params;
-  let email = '';
-  try { ({ email } = await req.json() as { email: string }); } catch {}
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 2_000); } catch { return NextResponse.json({ error: 'メールアドレスを確認してください' }, { status: 400 }); }
+  if (Object.keys(body).some(key => key !== 'email')) return NextResponse.json({ error: 'メールアドレスを確認してください' }, { status: 400 });
+  const email = body.email;
   if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return NextResponse.json({ error: 'メールアドレスを確認してください' }, { status: 400 });
   }

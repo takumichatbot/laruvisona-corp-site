@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyDomain } from '@/lib/domain-service';
 import { statusLabel, dnsInstructions, DNS_SUPPORT_NOTES } from '@/lib/domain';
 import { buildDeps, requireUser, expectedTargets } from '../route';
+import { readContactBody } from '@/lib/contact-contract';
 
 // POST /api/sites/[id]/domain/verify — 所有確認 → 外部登録 → 到達確認
 // 判定と副作用の順序は lib/domain-service.ts の verifyDomain にある。
@@ -13,13 +14,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json().catch(() => ({}));
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 10_000); } catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  if (Object.keys(body).some(key => key !== 'host')) return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
   const deps = await buildDeps();
 
   const res = await verifyDomain(deps, {
     siteId: id,
     userId: user.id,
-    host: (body as { host?: unknown }).host,
+    host: body.host,
   });
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
 

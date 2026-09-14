@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { readContactBody } from '@/lib/contact-contract';
 
 async function currentUser() {
   const auth = await createClient();
@@ -18,8 +19,9 @@ export async function GET() {
 export async function PATCH(req: Request) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const body = await req.json().catch(() => null);
-  if (typeof body?.enabled !== 'boolean') return NextResponse.json({ error: 'Invalid enabled' }, { status: 400 });
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 1_000); } catch { return NextResponse.json({ error: 'Invalid enabled' }, { status: 400 }); }
+  if (typeof body.enabled !== 'boolean' || Object.keys(body).some(key => key !== 'enabled')) return NextResponse.json({ error: 'Invalid enabled' }, { status: 400 });
   const result = await createServiceClient().from('profiles')
     .update({ digest_enabled: body.enabled }).eq('id', user.id).select('id');
   if (result.error || result.data?.length !== 1) return NextResponse.json({ error: '設定を保存できません' }, { status: 503 });
