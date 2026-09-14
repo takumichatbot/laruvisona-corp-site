@@ -88,11 +88,8 @@ export default function ProductionPanel({ projectName, macOnline, onSend, monito
 
   useEffect(() => {
     const saved = localStorage.getItem(`prod_url_${projectName}`);
-    if (saved) setUrl(saved);
-    else {
-      const def = DEFAULT_URLS[projectName.toLowerCase().split(' ')[0]] || '';
-      setUrl(def);
-    }
+    const nextUrl = saved || DEFAULT_URLS[projectName.toLowerCase().split(' ')[0]] || '';
+    queueMicrotask(() => setUrl(nextUrl));
   }, [projectName]);
 
   const startMonitor = () => {

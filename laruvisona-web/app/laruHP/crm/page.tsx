@@ -68,6 +68,7 @@ function statusBadge(status: CRMStatus) {
 }
 
 export default function CRMPage() {
+  const [renderedAt] = useState(Date.now);
   const supabase = createClient();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -103,11 +104,15 @@ export default function CRMPage() {
     setLoading(false);
   }, [supabase]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => { if (active) void load(); });
+    return () => { active = false; };
+  }, [load]);
 
   // Default to list view on narrow screens
   useEffect(() => {
-    if (window.innerWidth < 768) setViewMode('list');
+    if (window.innerWidth < 768) queueMicrotask(() => setViewMode('list'));
   }, []);
 
   const openDetail = (c: Contact) => {
@@ -441,7 +446,7 @@ export default function CRMPage() {
                     const hasNote = !!c.extra_fields?.crm_note;
                     const followupOverdue = followup && isPast(followup) && !isToday(followup);
                     const followupToday = followup && isToday(followup);
-                    const isRecent24h = Date.now() - new Date(c.created_at).getTime() < 86400000;
+                    const isRecent24h = renderedAt - new Date(c.created_at).getTime() < 86400000;
                     return (
                       <div
                         key={c.id}
@@ -507,7 +512,7 @@ export default function CRMPage() {
                 const status = getStatus(c);
                 const followup = c.extra_fields?.followup_at;
                 const followupOverdue = followup && isPast(followup) && !isToday(followup) && status !== '成約' && status !== 'NG';
-                const isRecent24h = Date.now() - new Date(c.created_at).getTime() < 86400000;
+                const isRecent24h = renderedAt - new Date(c.created_at).getTime() < 86400000;
                 return (
                   <div
                     key={c.id}

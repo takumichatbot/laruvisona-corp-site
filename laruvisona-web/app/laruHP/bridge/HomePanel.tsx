@@ -132,9 +132,14 @@ export default function HomePanel({ projects, currentProject, macOnline, macCoun
   const [prompts, setPrompts] = useState<SavedPrompt[]>(() => getPrompts({ starred: true }));
 
   useEffect(() => {
-    setStats(getStats(currentProject?.name));
-    setRecent(getRecords(undefined, 8));
-    setPrompts(getPrompts({ starred: true }));
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setStats(getStats(currentProject?.name));
+      setRecent(getRecords(undefined, 8));
+      setPrompts(getPrompts({ starred: true }));
+    });
+    return () => { active = false; };
   }, [currentProject]);
 
   const today = new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' });

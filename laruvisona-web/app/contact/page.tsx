@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import LarubotContactForm from '@/components/LarubotContactForm';
 
 export const metadata: Metadata = {
@@ -12,9 +13,9 @@ export default function ContactPage() {
     <main className="min-h-screen bg-[#030712] text-white flex flex-col">
       <header className="p-4 md:p-6">
         <div className="container mx-auto max-w-7xl">
-          <a href="/" className="inline-flex items-center">
+          <Link href="/" className="inline-flex items-center">
             <img src="/images/logo_dark.png" alt="LaruVisona" className="h-9 w-auto" />
-          </a>
+          </Link>
         </div>
       </header>
 
@@ -34,7 +35,7 @@ export default function ContactPage() {
           </div>
 
           <div className="mt-8 text-center">
-            <a href="/" className="text-blue-400 hover:text-blue-300 text-sm transition-colors">← トップに戻る</a>
+            <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm transition-colors">← トップに戻る</Link>
           </div>
         </div>
       </section>

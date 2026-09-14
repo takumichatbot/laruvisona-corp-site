@@ -104,7 +104,11 @@ export default function AdminPage() {
     setPinVerified(true);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => { if (active) void loadData(); });
+    return () => { active = false; };
+  }, []);
 
   const handlePin = async (e: React.FormEvent) => {
     e.preventDefault();

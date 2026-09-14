@@ -41,11 +41,16 @@ export default function ShopClient({ products, siteId, shopUrl }: { products: Pr
   const storeKey = `laru_cart_${siteId}`;
 
   useEffect(() => {
-    try { const s = localStorage.getItem(storeKey); if (s) setCart(JSON.parse(s)); } catch {}
-    // バリエーション初期選択（各商品の先頭）
-    const init: Record<string, string> = {};
-    products.forEach(p => { if (p.variants?.length) init[p.id] = p.variants[0].id; });
-    setChosen(init);
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      try { const s = localStorage.getItem(storeKey); if (s) setCart(JSON.parse(s)); } catch {}
+      // バリエーション初期選択（各商品の先頭）
+      const init: Record<string, string> = {};
+      products.forEach(p => { if (p.variants?.length) init[p.id] = p.variants[0].id; });
+      setChosen(init);
+    });
+    return () => { active = false; };
   }, [storeKey, products]);
 
   const persist = useCallback((next: Record<string, number>) => {
@@ -103,7 +108,7 @@ export default function ShopClient({ products, siteId, shopUrl }: { products: Pr
         }),
       });
       const data = await res.json() as { url?: string; error?: string };
-      if (data.url) { try { localStorage.removeItem(storeKey); } catch {} window.location.href = data.url; }
+      if (data.url) { try { localStorage.removeItem(storeKey); } catch {} window.location.assign(data.url); }
       else { setError(data.error || '決済の開始に失敗しました'); setLoading(false); }
     } catch { setError('ネットワークエラーが発生しました'); setLoading(false); }
   };

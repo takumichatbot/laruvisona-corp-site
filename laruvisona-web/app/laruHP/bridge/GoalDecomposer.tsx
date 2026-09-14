@@ -96,10 +96,11 @@ export default function GoalDecomposer({ goal, plan, statuses, outputs, running,
 
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (!running) { setElapsed(0); return; }
+    if (!running) return;
     const id = setInterval(() => setElapsed(s => s + 1), 1000);
     return () => clearInterval(id);
   }, [running]);
+  const shownElapsed = running ? elapsed : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(30,41,59,0.5)', backdropFilter: 'blur(12px)' }}>
@@ -134,7 +135,7 @@ export default function GoalDecomposer({ goal, plan, statuses, outputs, running,
               {doneCount}/{total} 完了 · {plan.tasks.filter(t => statuses[t.id] === 'running').length} 実行中
             </span>
             <span className="text-xs" style={{ color: LC.textMuted }}>
-              {running ? `${elapsed}s` : allDone ? (failCount > 0 ? `${failCount}件失敗` : '全完了') : ''}
+              {running ? `${shownElapsed}s` : allDone ? (failCount > 0 ? `${failCount}件失敗` : '全完了') : ''}
             </span>
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: LC.beigeAlt }}>

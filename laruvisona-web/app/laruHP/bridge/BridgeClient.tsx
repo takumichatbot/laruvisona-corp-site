@@ -250,6 +250,7 @@ export default function BridgeClient() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [copiedShortcutStep, setCopiedShortcutStep] = useState<number | null>(null);
 
   const loadHistory = (projectId: string): Message[] => {
     try { return JSON.parse(localStorage.getItem(`bridge_hist_${projectId}`) || '[]'); } catch { return []; }
@@ -2838,8 +2839,7 @@ export default function BridgeClient() {
               {(() => {
                 const apiUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/bridge/quick` : '';
                 const exampleBody = JSON.stringify({ secret: '(Bridge PIN)', project: currentProject?.id || '(project ID)', input: '(指示内容)' }, null, 2);
-                const [cpStep, setCpStep] = useState<number | null>(null);
-                const copyStep = (text: string, i: number) => { navigator.clipboard.writeText(text).catch(() => {}); setCpStep(i); setTimeout(() => setCpStep(null), 1500); };
+                const copyStep = (text: string, i: number) => { navigator.clipboard.writeText(text).catch(() => {}); setCopiedShortcutStep(i); setTimeout(() => setCopiedShortcutStep(null), 1500); };
                 return (
                   <div className="rounded-2xl p-4 space-y-3" style={{ background: LC.beige, border: `1px solid ${LC.border}` }}>
                     <p className="font-semibold text-sm" style={{ color: LC.text }}>📱 iOS ショートカット設定</p>
@@ -2857,8 +2857,8 @@ export default function BridgeClient() {
                         {step.copy && (
                           <button onClick={() => copyStep(step.copy!, i)}
                             className="flex-shrink-0 text-[10px] px-2 py-1 rounded-lg active:scale-90 transition-all"
-                            style={{ background: cpStep === i ? 'rgba(16,185,129,0.15)' : LC.beigeAlt, color: cpStep === i ? LC.success : LC.textSub, border: `1px solid ${LC.border}` }}>
-                            {cpStep === i ? '✓' : 'コピー'}
+                            style={{ background: copiedShortcutStep === i ? 'rgba(16,185,129,0.15)' : LC.beigeAlt, color: copiedShortcutStep === i ? LC.success : LC.textSub, border: `1px solid ${LC.border}` }}>
+                            {copiedShortcutStep === i ? '✓' : 'コピー'}
                           </button>
                         )}
                       </div>

@@ -1,14 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Mic } from 'lucide-react';
+
+type SpeechResultEvent = { results: { 0: { 0: { transcript: string } } } };
+type SpeechErrorEvent = { error: string };
+type SpeechRecognitionInstance = {
+  lang: string;
+  continuous: boolean;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechResultEvent) => void) | null;
+  onerror: ((event: SpeechErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+};
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 export default function VoiceUI() {
   const [isListening, setIsListening] = useState(false);
   const [text, setText] = useState("SYSTEM_STANDBY");
 
   const startListening = () => {
-    // @ts-ignore
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setText("お使いのブラウザは音声認識に非対応です");
@@ -24,11 +43,11 @@ export default function VoiceUI() {
       setText("LISTENING...");
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechResultEvent) => {
       const transcript = event.results[0][0].transcript;
       setText(`「${transcript}」`);
       
-      // 🌟 音声コマンドによるスクロールルーティング
+      // 音声コマンドによるスクロールルーティング
       if (transcript.includes('サービス') || transcript.includes('事業')) {
         document.querySelector('#services')?.scrollIntoView({ behavior: 'smooth' });
       } else if (transcript.includes('問い合わせ') || transcript.includes('コンタクト')) {
@@ -40,7 +59,7 @@ export default function VoiceUI() {
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechErrorEvent) => {
       setIsListening(false);
       if (event.error === 'not-allowed' || event.error === 'permission-denied') {
         setText("マイクの許可が必要です");

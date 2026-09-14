@@ -324,9 +324,11 @@ export default function Scene({ introDone = true }: { introDone?: boolean }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    setIsMobile(window.innerWidth < 768);
-    setReady(true);
+    queueMicrotask(() => {
+      setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      setIsMobile(window.innerWidth < 768);
+      setReady(true);
+    });
     // デバッグ/検証用フック（コスト無視できるため常時公開）
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__lvStory = story.current;

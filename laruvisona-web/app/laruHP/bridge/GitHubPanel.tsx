@@ -220,7 +220,7 @@ export default function GitHubPanel({ githubRepo }: Props) {
       {!repo && (
         <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)' }}>
           <p className="text-gray-600 text-sm">config.py の github_repo にリポジトリを設定してください</p>
-          <p className="text-gray-700 text-xs mt-1">例: "owner/repo-name"</p>
+          <p className="text-gray-700 text-xs mt-1">例: &quot;owner/repo-name&quot;</p>
         </div>
       )}
 

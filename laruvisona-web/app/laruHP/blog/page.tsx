@@ -72,7 +72,14 @@ export default function BlogPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedSiteId) { loadPosts(selectedSiteId); setCategoryFilter(null); }
+    if (!selectedSiteId) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      void loadPosts(selectedSiteId);
+      setCategoryFilter(null);
+    });
+    return () => { active = false; };
   }, [selectedSiteId, loadPosts]);
 
   const openCreate = () => {
@@ -242,7 +249,7 @@ export default function BlogPage() {
                         <div className="h-full bg-white/60 rounded-full transition-all duration-1000" style={{ width: `${(aiStep / 4) * 100}%` }} />
                       </div>
                     </span>
-                  ) : '✨ AI記事生成'}
+                  ) : 'AI記事生成'}
                 </button>
                 <button
                   onClick={openCreate}
@@ -261,15 +268,15 @@ export default function BlogPage() {
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-3 text-xs">
                 <p className="font-bold text-amber-400 mb-1">今月の生成上限に達しました</p>
                 <p className="text-amber-300/80 mb-2">上位プランにアップグレードすると毎月100件まで生成できます。</p>
-                <a href="/laruHP/plans" className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-1.5 rounded-lg transition-all">
+                <Link href="/laruHP/plans" className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-1.5 rounded-lg transition-all">
                   プランを確認する →
-                </a>
+                </Link>
               </div>
             )}
             {firstPostToast && (
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 mb-3 text-xs text-emerald-400">
-                <p className="font-bold mb-1">🎉 最初の記事を作成しました！</p>
-                <p>次のステップ: <a href="/laruHP/seo" className="underline hover:text-emerald-300">SEO設定</a>でビジネス情報を登録すると検索結果に強くなります。</p>
+                <p className="font-bold mb-1">最初の記事を作成しました</p>
+                <p>次のステップ: <Link href="/laruHP/seo" className="underline hover:text-emerald-300">SEO設定</Link>でビジネス情報を登録すると検索結果に強くなります。</p>
               </div>
             )}
 

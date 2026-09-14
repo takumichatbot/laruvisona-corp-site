@@ -205,7 +205,8 @@ export default function AbTestPage() {
                 <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">実施中のA/Bテスト</h2>
                 <div className="space-y-4">
                   {activeSites.map(site => {
-                    const stats = site.settings_json?.abStats!;
+                    const stats = site.settings_json?.abStats;
+                    if (!stats) return null;
                     const aCount = stats.a || 0;
                     const bCount = stats.b || 0;
                     const total = aCount + bCount;

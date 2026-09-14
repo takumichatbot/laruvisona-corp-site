@@ -20,7 +20,7 @@ function LoginForm() {
   useEffect(() => {
     // パスワードリセット後の自動 prefill
     const prefill = searchParams.get('prefill');
-    if (prefill) setEmail(prefill);
+    if (prefill) queueMicrotask(() => setEmail(prefill));
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email) setExistingEmail(user.email);

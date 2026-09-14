@@ -257,6 +257,7 @@ function VideoLibraryCard() {
 }
 
 export default function AdminPage() {
+  const [renderedAt] = useState(Date.now);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -423,7 +424,7 @@ export default function AdminPage() {
             <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">最近の登録（30日以内）</h2>
               {(() => {
-                const thirtyDaysAgo = Date.now() - 30 * 86400000;
+                const thirtyDaysAgo = renderedAt - 30 * 86400000;
                 const recent = users
                   .filter(u => new Date(u.created_at).getTime() > thirtyDaysAgo)
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

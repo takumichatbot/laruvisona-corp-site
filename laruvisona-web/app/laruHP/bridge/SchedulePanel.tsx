@@ -44,7 +44,7 @@ export default function SchedulePanel({ projects, onExecute }: Props) {
   const [form, setForm] = useState({ projectId: '', instruction: '', time: '09:00', days: 'daily' });
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
-  useEffect(() => { setSchedules(loadSchedules()); }, []);
+  useEffect(() => { queueMicrotask(() => setSchedules(loadSchedules())); }, []);
 
   // Scheduler: check every minute
   useEffect(() => {

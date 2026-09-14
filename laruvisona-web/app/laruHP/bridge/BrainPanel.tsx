@@ -42,12 +42,12 @@ export default function BrainPanel({ projectName, macOnline, onSend, brainStatus
   }, [macOnline]);
 
   useEffect(() => {
-    if (brainSearchResults.length > 0) setSearching(false);
+    if (brainSearchResults.length > 0) queueMicrotask(() => setSearching(false));
   }, [brainSearchResults]);
 
   useEffect(() => {
     const saved = localStorage.getItem('brain_auto_inject');
-    if (saved !== null) setAutoInject(saved === '1');
+    if (saved !== null) queueMicrotask(() => setAutoInject(saved === '1'));
   }, []);
 
   const handleSearch = () => {
