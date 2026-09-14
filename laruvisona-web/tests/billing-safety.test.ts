@@ -24,6 +24,9 @@ test('Stripeの戻り先はリクエストOriginではなく固定したアプ�
 });
 
 test('既存契約を読めないとき新しいCheckoutへ進まない', () => {
+  const profileGuard = checkout.indexOf('if (profileError || !profile)');
+  const customerCreate = checkout.indexOf('stripe.customers.create');
+  assert.ok(profileGuard > 0 && profileGuard < customerCreate, 'プロフィールを読めない場合はStripe顧客作成前に止める');
   assert.match(checkout, /二重請求になり得る/);
   assert.match(checkout, /現在の契約を確認できませんでした/);
   assert.doesNotMatch(checkout, /falling back to new checkout/);

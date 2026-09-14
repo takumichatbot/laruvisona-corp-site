@@ -74,11 +74,16 @@ export async function POST(req: Request) {
   }
 
   // Get or create Stripe customer
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('stripe_customer_id, business_name, stripe_subscription_id, subscription_status, plan')
     .eq('id', user.id)
     .single();
+  // 契約状態を読めないままStripe側へ進むと、既存顧客・契約を見落として
+  // 外部に重複した顧客や請求を作り得る。読み取り失敗時は外部作用の前で止める。
+  if (profileError || !profile) {
+    return NextResponse.json({ error: '現在の契約を確認できませんでした。時間をおいてお試しください。' }, { status: 503 });
+  }
 
   // 既に契約中なら「新規サブスク作成」ではなく既存サブスクの価格を差し替える（日割り）。
   // これをしないと2本目のサブスクが作られて二重課金になる（旧サブスクは請求され続ける）。

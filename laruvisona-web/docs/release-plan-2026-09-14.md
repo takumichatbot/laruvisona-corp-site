@@ -16,6 +16,7 @@
 - push、本番SQL、Render設定、デプロイ、公開HTML1件の再生成は実施済み。予約・決済を含むアプリコードは2026-09-14 12:02 JSTにGitHub mainとRender Liveの双方へ `18a405d9c7b0bdc68295ce8ea1b4523628c8250a` まで反映した。記録コミット後の最終稼働SHAはRender Deploysを正とする
 - 本番公開検査はsitemap 28ページ・内部URL 32件に加え、未認証の管理・定期処理・アップロード・Stripe系書き込み11経路、公開ホストでのAPI POST遮断、Service Workerの認証ページ非保存を常設確認する
 - 認証後の移動先はLARU HP内に限定し、招待リンクはログインを挟んでも同じ招待へ戻る
+- Stripe Checkoutはプロフィールと既存契約を確認できない場合、外部作用の前で安全側に停止する
 - 旧固定枠予約の予約金は停止済み。事前決済は店舗ごとのStripe Connectを使う本格予約だけで扱い、`HP_BOOKING_PREPAY_ENABLED=1` はStripeテスト取引が完了するまで有効化しない
 - 端末通知は対象サイトの予約・注文・問い合わせ管理へ直接開く。Service Worker v6はログイン後のHTML・RSC・APIをキャッシュしない
 - 顧客向けメールの問い合わせ先は、実運用窓口 `info@laruvisona.jp` に統一する
