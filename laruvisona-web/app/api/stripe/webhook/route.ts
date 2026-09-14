@@ -78,26 +78,39 @@ export async function POST(req: Request) {
       const bmeta = (session.metadata || {}) as Record<string, string>;
       if (session.mode === 'payment' && bmeta.kind === 'booking') {
         const reservationId = bmeta.reservation_id;
-        if (reservationId) {
-          const { data: resv } = await supabase
-            .from('hp_reservations')
-            .select('*')
-            .eq('id', reservationId)
-            .single();
-          if (resv && resv.status !== 'confirmed') {
-            await supabase.from('hp_reservations').update({ status: 'confirmed' }).eq('id', reservationId);
-            await finalizeBooking({
-              siteId: resv.site_id,
-              name: resv.name,
-              email: resv.email,
-              phone: resv.phone,
-              service: resv.service,
-              slotId: resv.slot_id,
-              slotDatetime: resv.slot_datetime,
-              prepaid: true,
-              amount: resv.amount,
-            });
+        const siteId = bmeta.site_id;
+        if (!reservationId || !siteId || session.payment_status !== 'paid') break;
+
+        // 同じイベントの並行配送でも1本だけが pending → confirmed を獲得する。
+        // Stripeセッションとサイトも結び、別の支払いで予約を確定させない。
+        const claimed = await supabase.from('hp_reservations').update({ status: 'confirmed' })
+          .eq('id', reservationId).eq('site_id', siteId).eq('stripe_session_id', session.id)
+          .eq('status', 'pending').select('*').maybeSingle();
+        if (claimed.error) return NextResponse.json({ error: 'Booking could not be synchronized' }, { status: 500 });
+        const resv = claimed.data;
+        if (!resv) break;
+
+        const notified = await finalizeBooking({
+          siteId: resv.site_id,
+          name: resv.name,
+          email: resv.email,
+          phone: resv.phone,
+          service: resv.service,
+          slotId: resv.slot_id,
+          slotDatetime: resv.slot_datetime,
+          prepaid: true,
+          amount: resv.amount,
+        });
+        if (!notified) {
+          // 通知が届かなければ pending に戻して500を返し、Stripeの再送で回収する。
+          // 条件付き更新なので、その間に別処理が状態を変えた予約は巻き戻さない。
+          const released = await supabase.from('hp_reservations').update({ status: 'pending' })
+            .eq('id', reservationId).eq('site_id', siteId).eq('stripe_session_id', session.id)
+            .eq('status', 'confirmed').select('id');
+          if (released.error || released.data?.length !== 1) {
+            return NextResponse.json({ error: 'Booking notification recovery failed' }, { status: 500 });
           }
+          return NextResponse.json({ error: 'Booking notification incomplete' }, { status: 500 });
         }
         break;
       }
