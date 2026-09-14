@@ -1539,6 +1539,11 @@ function UrlImportModal({ onImport, onClose }: {
   const [url, setUrl] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [migration, setMigration] = useState<{
+    sourceUrl: string;
+    summary: { pageCount: number; imageCount: number; missingTitleCount: number; missingDescriptionCount: number; missingHeadingCount: number };
+    pages: Array<{ path: string; title: string; heading: string; imageCount: number }>;
+  } | null>(null);
   const [error, setError] = useState('');
 
   const handleScan = async () => {
@@ -1546,25 +1551,33 @@ function UrlImportModal({ onImport, onClose }: {
     setScanning(true);
     setError('');
     setResult(null);
-    const res = await fetch('/api/ai/scan-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url.trim() }),
-    });
-    const data = await res.json();
-    setScanning(false);
-    if (data.extracted) {
-      setResult(data.extracted);
-    } else {
-      setError(data.error === 'fetch_failed' ? 'サイトへのアクセスに失敗しました。URLを確認してください。'
-        : data.error === 'no_content' ? 'コンテンツを取得できませんでした。'
-        : 'スキャンに失敗しました。');
+    setMigration(null);
+    try {
+      const res = await fetch('/api/ai/scan-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.extracted) {
+        setResult(data.extracted);
+        setMigration(data.migration || null);
+      } else {
+        setError(data.error === 'fetch_failed' ? 'サイトへのアクセスに失敗しました。URLを確認してください。'
+          : data.error === 'no_content' ? 'コンテンツを取得できませんでした。'
+          : data.error === 'blocked_url' ? '安全のため、このURLは読み込めません。'
+          : data.error || 'スキャンに失敗しました。');
+      }
+    } catch {
+      setError('通信に失敗しました。入力内容はそのままです。');
+    } finally {
+      setScanning(false);
     }
   };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl">
+      <div className="bg-[#0f1729] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div>
             <h2 className="font-bold text-white">URL 既存サイトからインポート</h2>
@@ -1586,8 +1599,37 @@ function UrlImportModal({ onImport, onClose }: {
           </div>
           {error && <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-300 text-sm">{error}</div>}
           {result && (
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-              <p className="text-emerald-400 text-sm font-semibold mb-3">✓ 情報を取得しました</p>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+              <p className="text-emerald-400 text-sm font-semibold">移行元を診断しました</p>
+              {migration && (
+                <div className="space-y-2" data-migration-report>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      ['確認したページ', `${migration.summary.pageCount}件`],
+                      ['見つけた画像', `${migration.summary.imageCount}件`],
+                      ['タイトル未設定', `${migration.summary.missingTitleCount}件`],
+                      ['説明文未設定', `${migration.summary.missingDescriptionCount}件`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg bg-black/20 px-2.5 py-2">
+                        <span className="block text-[9px] text-slate-500">{label}</span>
+                        <strong className="text-xs text-white">{value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="max-h-28 overflow-auto rounded-lg border border-white/10 divide-y divide-white/5">
+                    {migration.pages.map((page, index) => (
+                      <div key={`${page.path}-${index}`} className="flex items-center gap-2 px-2.5 py-2 text-[10px]">
+                        <code className="text-emerald-300 shrink-0 max-w-24 truncate">{page.path}</code>
+                        <span className="text-slate-300 truncate flex-1">{page.title || page.heading || 'タイトル未設定'}</span>
+                        <span className="text-slate-500 shrink-0">画像 {page.imageCount}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-slate-400">
+                    ここでは文章と基本情報だけを下書きへ移します。画像・URL・検索設定は確認後に移すため、元サイトは変更されません。
+                  </p>
+                </div>
+              )}
               {([
                 ['店舗・会社名', result.businessName],
                 ['電話番号', result.phone],
