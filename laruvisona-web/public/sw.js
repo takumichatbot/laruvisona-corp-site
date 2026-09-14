@@ -1,7 +1,8 @@
 // 以前は install 時に 1.9MB の巨大ロゴPNGを必ず取りに行っていた。
 // LPを開いただけの人にも降ってくるので、軽いアイコンに差し替えた。
-const CACHE_NAME = 'laruhp-v5';
+const CACHE_NAME = 'laruhp-v6';
 const STATIC_ASSETS = ['/laruhp-manifest.json', '/laruhp-icon-192.png'];
+const STATIC_PATHS = new Set(STATIC_ASSETS);
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)));
@@ -15,13 +16,17 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+function cacheableRequest(request) {
+  if (request.method !== 'GET') return false;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return false;
+  return STATIC_PATHS.has(url.pathname) || url.pathname.startsWith('/_next/static/');
+}
+
 self.addEventListener('fetch', e => {
-  if (e.request.url.includes('/api/') || e.request.url.includes('/relay')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
-    return;
-  }
-  // network-first: 常に最新を取りに行き、オフライン時のみキャッシュへフォールバック。
-  // （cache-first だと新しいデプロイが反映されず、古い JS が動き続けてしまう）
+  // 管理画面のHTML・RSC・API応答は、認証状態や利用者の内容を含み得る。
+  // 端末のCache Storageへ残さず、ハッシュ付きの静的資産と自前アイコンだけを扱う。
+  if (!cacheableRequest(e.request)) return;
   e.respondWith(
     fetch(e.request).then(res => {
       if (res.ok && res.type !== 'opaque') {

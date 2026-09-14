@@ -34,6 +34,16 @@ test('無効な購読先を除外しLARU HPの正しい画面を開く', () => {
   assert.doesNotMatch(worker, /data\.title \|\| 'Bridge'/);
 });
 
+test('Service Workerはログイン後のHTML・RSC・APIを端末キャッシュへ残さない', () => {
+  assert.match(worker, /const CACHE_NAME = 'laruhp-v6'/);
+  assert.match(worker, /request\.method !== 'GET'/);
+  assert.match(worker, /url\.origin !== self\.location\.origin/);
+  assert.match(worker, /STATIC_PATHS\.has\(url\.pathname\)/);
+  assert.match(worker, /url\.pathname\.startsWith\('\/_next\/static\/'\)/);
+  assert.match(worker, /if \(!cacheableRequest\(e\.request\)\) return/);
+  assert.doesNotMatch(worker, /request\.url\.includes\('\/api\/'\)/);
+});
+
 test('問い合わせ・予約・注文の実イベントから端末通知を送る', () => {
   for (const path of ['../app/api/contact/route.ts','../lib/scheduling/notify.ts','../lib/shop-notification.ts']) {
     const source = readFileSync(new URL(path, import.meta.url), 'utf8');
