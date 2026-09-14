@@ -63,6 +63,12 @@ export async function POST(req: Request) {
   } catch { return NextResponse.json({ error: '予約設定を確認できません' }, { status: 503 }); }
 
   const cfg = ((site.data as Record<string, unknown>)?.bookingConfig as BookingConfig) || {};
+  if (cfg.prepayEnabled && (cfg.prepayAmount || 0) > 0) {
+    return NextResponse.json({
+      error: '旧予約金は受付を停止しました。店舗ごとの入金先を確認できる新しい予約管理へ移行してください。',
+      manageUrl: `/laruHP/booking/schedule?siteId=${encodeURIComponent(siteId)}`,
+    }, { status: 409 });
+  }
   const slot = (cfg.slots || []).find(s => s.id === slotId);
   if (!slot || !slot.available) {
     return NextResponse.json({ error: 'この枠は予約できません' }, { status: 400 });
@@ -80,8 +86,8 @@ export async function POST(req: Request) {
     .eq('status', 'pending')
     .lt('created_at', new Date(Date.now() - HOLD_MS).toISOString());
 
-  const prepay = !!cfg.prepayEnabled && (cfg.prepayAmount || 0) > 0;
-  const amount = prepay ? Math.round(cfg.prepayAmount || 0) : 0;
+  const prepay = false;
+  const amount = 0;
 
   // 予約を作成（部分ユニークインデックスで二重予約を防止）
   const { data: reservation, error: insErr } = await supabase

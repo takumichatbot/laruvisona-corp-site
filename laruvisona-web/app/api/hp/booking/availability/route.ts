@@ -72,7 +72,9 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     slots,
-    prepay: !!cfg.prepayEnabled && (cfg.prepayAmount || 0) > 0,
-    prepayAmount: cfg.prepayAmount || 0,
+    // 旧固定枠の予約金はプラットフォーム本体のStripeへ入金されるため閉じる。
+    // 店舗ごとのStripe Connectを使う新しい予約管理だけが事前決済を提供する。
+    prepay: false,
+    prepayAmount: 0,
   });
 }

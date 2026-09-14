@@ -60,6 +60,24 @@ test('旧予約の決済Webhookは支払いと予約を結び、通知失敗を�
     '通知失敗を成功扱いにせず、Stripeの再送で回収できること');
 });
 
+test('旧予約金は店舗別Stripeを通る新しい予約管理へ一本化する', () => {
+  const availability = read('app/api/hp/booking/availability/route.ts');
+  assert.match(availability, /prepay: false/);
+  assert.match(availability, /prepayAmount: 0/);
+  assert.doesNotMatch(availability, /prepay:\s*!!cfg\.prepayEnabled/);
+
+  const reserve = read('app/api/hp/booking/reserve/route.ts');
+  const stoppedAt = reserve.indexOf('旧予約金は受付を停止しました');
+  const insertedAt = reserve.indexOf(".from('hp_reservations')\n    .insert");
+  assert.ok(stoppedAt >= 0 && insertedAt > stoppedAt, '予約を作る前に旧予約金を止めること');
+  assert.match(reserve, /manageUrl: `\/laruHP\/booking\/schedule\?siteId=/);
+
+  const page = read('app/laruHP/booking/page.tsx');
+  assert.match(page, /新しい予約管理を開く/);
+  assert.match(page, /\/laruHP\/booking\/schedule/);
+  assert.doesNotMatch(page, /事前決済（予約金）を有効化/);
+});
+
 test('旧購入APIは運営が許可した価格だけを扱い、新規販売を店舗ショップへ分ける', () => {
   const buy = read('app/api/stripe/buy/route.ts');
   assert.match(buy, /STRIPE_PUBLIC_BUY_PRICE_IDS/);
