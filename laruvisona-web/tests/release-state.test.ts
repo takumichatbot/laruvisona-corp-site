@@ -27,7 +27,8 @@ test('統合SQL回帰は出荷対象を同じ一時DBへ適用し、状態確認
   const runner = readFileSync(new URL('../supabase/run-sql-regression.sh', import.meta.url), 'utf8');
   for (const file of [
     'hp_scheduling.sql','hp_scheduling_notifications.sql','hp_scheduling_reminders.sql',
-    'hp_scheduled_emails.sql','hp_analytics.sql','release_state_check_20260914.sql',
+    'hp_scheduled_emails.sql','hp_analytics.sql','hp_scheduling_regression.sql',
+    'hp_public_rate_limits_regression.sql','hp_analytics_regression.sql','release_state_check_20260914.sql',
   ]) assert.match(runner, new RegExp(file.replace('.', '\\.')));
   assert.match(runner, /ALL_REQUIRED_STATE\|t/);
 });

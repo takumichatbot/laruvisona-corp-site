@@ -25,7 +25,7 @@ test('ヒートマップ入力は座標・画面・パス・セッションを�
 });
 
 test('公開スクリプトはページ全体の縦位置とセッション最大到達率を送る',()=>{
-  const script=analyticsTrackingScript(slug,token);assert.match(script,/e\.clientY\+scrollY/);assert.match(script,/documentElement\.scrollHeight/);assert.match(script,/scrollDepth:0/);assert.match(script,/path:C\.path/);assert.match(script,/"path":"\/"/);assert.match(script,/sessionId:I/);assert.match(script,/x-laruhp-analytics/);assert.doesNotMatch(script,/token=/);assert.match(script,/pagehide/);assert.doesNotMatch(script,/beforeunload/);
+  const script=analyticsTrackingScript(slug,token);assert.match(script,/window\.__LHPA=\{slug:C\.slug,token:C\.token\}/);assert.match(script,/e\.clientY\+scrollY/);assert.match(script,/documentElement\.scrollHeight/);assert.match(script,/scrollDepth:0/);assert.match(script,/path:C\.path/);assert.match(script,/"path":"\/"/);assert.match(script,/sessionId:I/);assert.match(script,/x-laruhp-analytics/);assert.doesNotMatch(script,/token=/);assert.match(script,/pagehide/);assert.doesNotMatch(script,/beforeunload/);
 });
 
 test('クリックはページ全体比率、スクロールは同じ閲覧の最大値を1人として集計する',()=>{
@@ -39,13 +39,15 @@ test('クリックはページ全体比率、スクロールは同じ閲覧の�
 });
 
 test('APIは署名・公開サイト・端末絞り込み・DB失敗を扱う',()=>{
-  const heatmap=fs.readFileSync(new URL('../app/api/heatmap/route.ts',import.meta.url),'utf8');const pageview=fs.readFileSync(new URL('../app/api/pageview/route.ts',import.meta.url),'utf8');
+  const heatmap=fs.readFileSync(new URL('../app/api/heatmap/route.ts',import.meta.url),'utf8');const pageview=fs.readFileSync(new URL('../app/api/pageview/route.ts',import.meta.url),'utf8');const ab=fs.readFileSync(new URL('../app/api/sites/ab-track/route.ts',import.meta.url),'utf8');
   assert.match(heatmap,/verifyAnalyticsSite/);assert.match(heatmap,/\.eq\('published',true\)/);assert.match(heatmap,/viewport_w',768/);assert.match(heatmap,/result\.error/);assert.match(heatmap,/session_id/);
   assert.match(pageview,/parsePageview/);assert.match(pageview,/result\.error/);assert.match(pageview,/claimPublicRate/);
+  assert.match(ab,/verifyAnalyticsSite/);assert.match(ab,/readAnalyticsJson/);assert.match(ab,/claimPublicRate/);assert.match(ab,/laruhp_ab_increment/);assert.doesNotMatch(ab,/settings_json|siteId/);
+  const exporter=fs.readFileSync(new URL('../lib/html-export.ts',import.meta.url),'utf8');assert.match(exporter,/window\.__LHPA/);assert.match(exporter,/x-laruhp-analytics/);assert.doesNotMatch(exporter,/ab-track[^\n]+siteId/);
 });
 
 test('SQLは公開ロールから計測表と加算RPCを閉じる',()=>{
-  const sql=fs.readFileSync(new URL('../supabase/hp_analytics.sql',import.meta.url),'utf8');assert.match(sql,/revoke all on public\.heatmap_events from public,anon,authenticated/i);assert.match(sql,/revoke all on function public\.increment_view_count/);assert.match(sql,/session_id uuid/);
+  const sql=fs.readFileSync(new URL('../supabase/hp_analytics.sql',import.meta.url),'utf8');assert.match(sql,/revoke all on public\.heatmap_events from public,anon,authenticated/i);assert.match(sql,/revoke all on function public\.increment_view_count/);assert.match(sql,/revoke all on function public\.laruhp_ab_increment\(text,text\) from public,anon,authenticated/i);assert.match(sql,/for update/);assert.match(sql,/session_id uuid/);
 });
 
 test('ヒートマップ画面は絵文字を使わず、端末の選択をAPIへ渡す',()=>{

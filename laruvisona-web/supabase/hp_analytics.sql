@@ -10,6 +10,22 @@ create index if not exists heatmap_events_lookup on public.heatmap_events(site_i
 alter table public.heatmap_events enable row level security;
 revoke all on public.heatmap_events from public,anon,authenticated;
 grant all on public.heatmap_events to service_role;
+create or replace function public.laruhp_ab_increment(p_slug text,p_variant text)
+returns boolean language plpgsql security definer set search_path=public as $$
+declare current_count bigint;
+begin
+ if p_slug is null or length(p_slug)>160 or p_variant not in ('a','b') then return false; end if;
+ select case when settings_json#>>array['abStats',p_variant] ~ '^[0-9]+$'
+   then (settings_json#>>array['abStats',p_variant])::bigint else 0 end
+ into current_count from public.sites where slug=p_slug and published for update;
+ if not found then return false; end if;
+ update public.sites set settings_json=coalesce(settings_json,'{}'::jsonb)||jsonb_build_object(
+   'abStats',coalesce(settings_json->'abStats','{}'::jsonb)||jsonb_build_object(p_variant,current_count+1)
+ ) where slug=p_slug and published;
+ return found;
+end $$;
 revoke all on function public.increment_view_count(text),public.increment_view_count_by_domain(text) from public,anon,authenticated;
 grant execute on function public.increment_view_count(text),public.increment_view_count_by_domain(text) to service_role;
+revoke all on function public.laruhp_ab_increment(text,text) from public,anon,authenticated;
+grant execute on function public.laruhp_ab_increment(text,text) to service_role;
 commit;

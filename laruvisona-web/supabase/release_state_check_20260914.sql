@@ -18,6 +18,7 @@ with checks(section,item,ok) as (
   ('members','hp_members',to_regclass('public.hp_members') is not null),
   ('members','site_members',to_regclass('public.site_members') is not null),
   ('analytics','heatmap_events.session_id',exists(select 1 from information_schema.columns where table_schema='public' and table_name='heatmap_events' and column_name='session_id' and data_type='uuid')),
+  ('analytics','A/B increment RPC',to_regprocedure('public.laruhp_ab_increment(text,text)') is not null),
   ('booking','hp_booking_calendars',to_regclass('public.hp_booking_calendars') is not null),
   ('booking','legacy reminder lease',exists(select 1 from information_schema.columns where table_schema='public' and table_name='hp_reservations' and column_name='reminder_claim_token')),
   ('booking','legacy reminder claim RPC',to_regprocedure('public.hp_legacy_claim_reminders(integer)') is not null),

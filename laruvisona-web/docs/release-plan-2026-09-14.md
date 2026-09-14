@@ -9,7 +9,8 @@
 - 全単体テスト: 757件通過
 - `next build`: exit 0
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
-- SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と146項目が通過。状態確認の最終行もtrue
+- SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と155項目が通過。状態確認の最終行もtrue
+- 公開HTML生成版: 18（A/B計測の署名付き経路を含む。本番の保存済み版は未確認）
 - push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
 
 ## SQLの適用順

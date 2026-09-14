@@ -56,5 +56,5 @@ test('購入完了表示も文体をそろえ、公開HTMLの版を更新する'
   const published = readFileSync(new URL('../components/PublishedSite.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(published, pictographs);
   assert.match(published, /ご購入ありがとうございます。確認メールをお送りしました。/);
-  assert.equal(EXPORT_VERSION, 17);
+  assert.equal(EXPORT_VERSION, 18);
 });

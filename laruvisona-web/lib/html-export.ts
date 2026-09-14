@@ -7,7 +7,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 17;
+export const EXPORT_VERSION = 18;
 
 
 function renderEditorialMark(value: unknown, index: number): string {
@@ -1841,7 +1841,7 @@ window.addEventListener('popstate',function(){
     if(el.getAttribute('data-ab')!==v)el.style.display='none';
   });
   if(isNew&&window.__LHPSID){
-    fetch('/api/sites/ab-track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID,variant:v})}).catch(function(){});
+    var a=window.__LHPA;if(a&&a.slug&&a.token)fetch('/api/sites/ab-track',{method:'POST',headers:{'Content-Type':'application/json','x-laruhp-analytics':a.token},body:JSON.stringify({slug:a.slug,variant:v})}).catch(function(){});
   }
 })();
 </script>` : '';

@@ -1,39 +1,30 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceClient } from '@/lib/supabase/server';
+import { readAnalyticsJson, verifyAnalyticsSite } from '@/lib/analytics-contract';
+import { claimPublicRate } from '@/lib/public-rate-limit';
+import { clientIp } from '@/lib/rate-limit';
 
-function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-// POST /api/sites/ab-track — increment AB variant view counter in settings_json
 export async function POST(req: Request) {
-  const { siteId, variant } = await req.json().catch(() => ({}));
-  if (!siteId || !variant || !['a', 'b'].includes(variant)) {
-    return NextResponse.json({ ok: false });
+  let input: { slug: string; variant: 'a' | 'b' };
+  try {
+    const raw = await readAnalyticsJson(req, 2048);
+    if (!raw || typeof raw !== 'object') throw new Error('invalid_input');
+    const value = raw as Record<string, unknown>;
+    const slug = typeof value.slug === 'string' ? value.slug.trim() : '';
+    const variant = value.variant === 'a' || value.variant === 'b' ? value.variant : null;
+    const token = req.headers.get('x-laruhp-analytics') || '';
+    if (!slug || slug.length > 160 || !variant || !verifyAnalyticsSite(slug, token)) throw new Error('invalid_input');
+    input = { slug, variant };
+  } catch {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  const supabase = getAdminClient();
+  const service = createServiceClient();
+  const rate = await claimPublicRate(service, 'ab-view', `${input.slug}:${clientIp(req)}`, 120);
+  if (rate === 'limited') return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  if (rate === 'unavailable') return NextResponse.json({ error: 'Analytics unavailable' }, { status: 503 });
 
-  const { data: site } = await supabase
-    .from('sites')
-    .select('settings_json')
-    .eq('id', siteId)
-    .single();
-
-  if (!site) return NextResponse.json({ ok: false });
-
-  const settings = site.settings_json as Record<string, unknown> || {};
-  const abStats = (settings.abStats as Record<string, number>) || { a: 0, b: 0 };
-  abStats[variant] = (abStats[variant] || 0) + 1;
-
-  await supabase
-    .from('sites')
-    .update({ settings_json: { ...settings, abStats } })
-    .eq('id', siteId);
-
+  const result = await service.rpc('laruhp_ab_increment', { p_slug: input.slug, p_variant: input.variant });
+  if (result.error || result.data !== true) return NextResponse.json({ error: 'Analytics unavailable' }, { status: 503 });
   return NextResponse.json({ ok: true });
 }
