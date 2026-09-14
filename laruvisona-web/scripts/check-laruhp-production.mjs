@@ -1,6 +1,7 @@
 import process from 'node:process';
 
 const origin = new URL(process.env.LARUHP_ORIGIN || 'https://laruhp.com').origin;
+const apiOrigin = new URL(process.env.LARUHP_API_ORIGIN || 'https://laruvisona.jp').origin;
 const failures = [];
 const checked = new Map();
 
@@ -108,6 +109,41 @@ if (!/https:\/\/larubot\.tokyo\/f\/[A-Za-z0-9-]+/.test(contact.body)) {
   addFailure(contactUrl.href, 'LARUbotの問い合わせフォームがありません');
 }
 
+// 認証や署名が必要な書き込み口を、値を渡さずに確認する。
+// ここで成功応答が返ると、本番データを第三者が変更できる可能性がある。
+const protectedWrites = [
+  { path: '/api/admin/republish-all', expected: [401, 403] },
+  { path: '/api/sequences/execute', expected: [401] },
+  { path: '/api/digest/send', expected: [401] },
+  { path: '/api/retention/send', expected: [401] },
+  { path: '/api/cron/booking-payments', expected: [401] },
+  { path: '/api/cron/booking-notifications', expected: [401] },
+  { path: '/api/cron/booking-reminders', expected: [401] },
+  { path: '/api/cron/shop-notifications', expected: [401] },
+  { path: '/api/images/upload', expected: [401] },
+  { path: '/api/stripe/webhook', expected: [400], headers: { 'stripe-signature': 'invalid' } },
+  { path: '/api/stripe/scheduling-webhook', expected: [400], headers: { 'stripe-signature': 'invalid' } },
+];
+for (const item of protectedWrites) {
+  const url = new URL(item.path, apiOrigin);
+  const response = await fetch(url, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'user-agent': 'LARUHP-Production-Check/1.0', ...item.headers },
+  });
+  if (!item.expected.includes(response.status)) {
+    addFailure(url.href, `未認証・不正署名を拒否しません (HTTP ${response.status})`);
+  }
+}
+
+if (origin !== apiOrigin) {
+  const publicApiUrl = new URL('/api/sequences/execute', origin);
+  const response = await fetch(publicApiUrl, { method: 'POST', redirect: 'manual' });
+  if (response.status !== 405) {
+    addFailure(publicApiUrl.href, `公開ホストでAPIのPOSTが遮断されていません (HTTP ${response.status})`);
+  }
+}
+
 // 本番ホストを検査するときは、移行前後の入口とクエリ保持も固定する。
 if (origin === 'https://laruhp.com') {
   const redirectCases = [
@@ -128,5 +164,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件、問い合わせ・旧入口）`);
+  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件、問い合わせ・旧入口・保護API ${protectedWrites.length}件）`);
 }
