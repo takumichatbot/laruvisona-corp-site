@@ -22,11 +22,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (Object.keys(body).some(key => key !== 'host')) return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
   const deps = await buildDeps();
 
-  const res = await setPrimaryDomain(deps, {
-    siteId: id,
-    userId: user.id,
-    host: body.host,
-  });
+  let res;
+  try {
+    res = await setPrimaryDomain(deps, {
+      siteId: id,
+      userId: user.id,
+      host: body.host,
+    });
+  } catch {
+    return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 });
+  }
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
   return NextResponse.json({ ok: true, host: res.host });
 }

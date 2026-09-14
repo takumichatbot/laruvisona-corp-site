@@ -17,6 +17,20 @@ const COLS = 'id, site_id, host, status, verification_token, render_domain_id, l
 
 type Rpc = { ok?: boolean; reason?: string; switched?: boolean; row?: DomainRecord; entries?: QueueEntry[] };
 
+export class DomainStoreReadError extends Error {
+  readonly code: string | undefined;
+  constructor(code: string | undefined) {
+    super('domain store unavailable');
+    this.name = 'DomainStoreReadError';
+    this.code = code;
+  }
+}
+
+export function isDomainMigrationMissing(error: unknown): boolean {
+  const code = error instanceof DomainStoreReadError ? error.code : undefined;
+  return code === '42P01' || code === 'PGRST205';
+}
+
 export async function createDomainStore(): Promise<DomainStore> {
   const user = await createClient();
   const admin = createServiceClient();
@@ -29,31 +43,34 @@ export async function createDomainStore(): Promise<DomainStore> {
 
   return {
     async getOwnedSite(siteId, userId): Promise<OwnedSite | null> {
-      const { data } = await user
+      const { data, error } = await user
         .from('sites')
         .select('id, custom_domain')
         .eq('id', siteId)
         .eq('user_id', userId)
         .maybeSingle();
+      if (error) throw new DomainStoreReadError((error as { code?: string }).code);
       return (data as OwnedSite | null) ?? null;
     },
 
     async listDomains(siteId): Promise<DomainRecord[]> {
-      const { data } = await user
+      const { data, error } = await user
         .from('site_domains')
         .select(COLS)
         .eq('site_id', siteId)
         .order('created_at', { ascending: true });
+      if (error) throw new DomainStoreReadError((error as { code?: string }).code);
       return (data ?? []) as DomainRecord[];
     },
 
     async getDomain(siteId, host): Promise<DomainRecord | null> {
-      const { data } = await user
+      const { data, error } = await user
         .from('site_domains')
         .select(COLS)
         .eq('site_id', siteId)
         .eq('host', host)
         .maybeSingle();
+      if (error) throw new DomainStoreReadError((error as { code?: string }).code);
       return (data as DomainRecord | null) ?? null;
     },
 
@@ -184,7 +201,8 @@ export async function createDomainStore(): Promise<DomainStore> {
     },
 
     async pendingQueue(host) {
-      const { data } = await rpc('laruhp_domain_pending_queue', { p_host: host });
+      const { data, error } = await rpc('laruhp_domain_pending_queue', { p_host: host });
+      if (error) throw new DomainStoreReadError(undefined);
       const entries = (data as { entries?: QueueEntry[] } | null)?.entries;
       return Array.isArray(entries) ? entries : [];
     },
@@ -199,11 +217,12 @@ export async function createDomainStore(): Promise<DomainStore> {
       // 代理店の管理画面ドメインは profiles 側で登録される別経路。
       // 候補として登録できてしまうと、そのまま外部解除まで進める。
       // service role で見る（他人の profiles 行なので利用者からは読めない）。
-      const { data } = await admin
+      const { data, error } = await admin
         .from('profiles')
         .select('id')
         .eq('agency_admin_domain', host)
         .limit(1);
+      if (error) throw new DomainStoreReadError((error as { code?: string }).code);
       return Array.isArray(data) && data.length > 0;
     },
   };

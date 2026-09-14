@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createDomainStore } from '@/lib/domain-store-supabase';
+import { createDomainStore, isDomainMigrationMissing } from '@/lib/domain-store-supabase';
 import { dnsPort, renderPort, probePort } from '@/lib/domain-ports';
 import { addDomain, releaseDomain, type Deps, type DomainRecord } from '@/lib/domain-service';
 import {
@@ -47,7 +47,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   const deps = await buildDeps();
-  const site = await deps.store.getOwnedSite(id, user.id);
+  let site;
+  try { site = await deps.store.getOwnedSite(id, user.id); }
+  catch { return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 }); }
   if (!site) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const e = expectedTargets();
@@ -56,7 +58,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   let migrationPending = false;
   try {
     rows = await deps.store.listDomains(id);
-  } catch {
+  } catch (error) {
+    if (!isDomainMigrationMissing(error)) {
+      return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 });
+    }
     rows = [];
     migrationPending = true;
   }
@@ -118,11 +123,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (Object.keys(body).some(key => key !== 'customDomain')) return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
   const deps = await buildDeps();
 
-  const res = await addDomain(deps, {
-    siteId: id,
-    userId: user.id,
-    input: body.customDomain,
-  });
+  let res;
+  try {
+    res = await addDomain(deps, {
+      siteId: id,
+      userId: user.id,
+      input: body.customDomain,
+    });
+  } catch {
+    return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 });
+  }
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
 
   return NextResponse.json({
@@ -142,7 +152,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const host = new URL(req.url).searchParams.get('host');
   const deps = await buildDeps();
 
-  const res = await releaseDomain(deps, { siteId: id, userId: user.id, host });
+  let res;
+  try { res = await releaseDomain(deps, { siteId: id, userId: user.id, host }); }
+  catch { return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 }); }
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
 
   return NextResponse.json({
