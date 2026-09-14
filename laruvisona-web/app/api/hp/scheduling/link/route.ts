@@ -7,12 +7,14 @@ export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("siteId") || "";
   if (!uuidPattern.test(id))
     return new NextResponse("Not found", { status: 404 });
-  const { data } = await createServiceClient()
+  const { data, error } = await createServiceClient()
     .from("sites")
     .select("slug,custom_domain")
     .eq("id", id)
     .eq("published", true)
-    .single();
+    .maybeSingle();
+  if (error)
+    return new NextResponse("Service unavailable", { status: 503 });
   if (!data?.slug) return new NextResponse("Not found", { status: 404 });
   return NextResponse.redirect(
     new URL(siteUrl(canonicalBase(data), "reserve")),

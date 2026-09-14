@@ -34,8 +34,9 @@ export async function GET(req: Request) {
     .from("sites")
     .select("name,published")
     .eq("id", siteId)
-    .single();
-  if (se || !site?.published)
+    .maybeSingle();
+  if (se) return fail(se);
+  if (!site?.published)
     return reply({ error: "予約ページが見つかりません" }, 404);
   const { data: calendar, error } = await db
     .from("hp_booking_calendars")
@@ -150,7 +151,8 @@ export async function POST(req: Request) {
     const calendar = await db.from("hp_booking_calendars").select("config").eq("site_id",b.siteId).maybeSingle();
     if(calendar.error)return fail(calendar.error);
     if(calendar.data?.config?.paymentMode === "prepay") {
-      const site=await db.from("sites").select("user_id").eq("id",b.siteId).single();
+      const site=await db.from("sites").select("user_id").eq("id",b.siteId).maybeSingle();
+      if(site.error)return fail(site.error);
       try { if (!site.data || !(await merchantStatus(site.data.user_id)).ready) return reply({error:"事前決済を一時停止しています。お店へお問い合わせください"},409); } catch {return reply({error:"決済の状態を確認できませんでした"},503);}
     }
     const result = await db.rpc("hp_schedule_book", {
@@ -177,7 +179,8 @@ export async function POST(req: Request) {
       const payments=paymentService(db);
       if(b.action==="checkout"){
         if(!paymentsAvailable())return reply({error:"事前決済を一時停止しています"},503);
-        const {data:site}=await db.from("sites").select("slug,custom_domain").eq("id",b.siteId).single();
+        const {data:site,error:siteError}=await db.from("sites").select("slug,custom_domain").eq("id",b.siteId).maybeSingle();
+        if(siteError)return fail(siteError);
         if(!site)return reply({error:"サイトが見つかりません"},404);
         return reply(await payments.checkout(b.siteId,b.id,token,bookingReturnUrl(req.headers.get("origin"),site)));
       }

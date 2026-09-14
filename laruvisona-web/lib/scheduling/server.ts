@@ -85,8 +85,10 @@ export async function owner(siteId: string) {
     .select("id,name,slug,custom_domain,published")
     .eq("id", siteId)
     .eq("user_id", user.id)
-    .single();
-  if (error || !site)
+    .maybeSingle();
+  if (error)
+    return { response: fail(error) };
+  if (!site)
     return { response: reply({ error: "サイトが見つかりません" }, 404) };
   return { db: createServiceClient(), user, site };
 }

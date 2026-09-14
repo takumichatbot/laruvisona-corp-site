@@ -63,7 +63,8 @@ export async function POST(req: Request) {
   if (process.env.HP_SHOP_PAYMENTS_ENABLED !== '1' || !stripeConnectAvailable()) {
     return NextResponse.json({ error: 'オンライン決済は現在準備中です' }, { status: 503 });
   }
-  const { data: site } = await service.from('sites').select('name, user_id, settings_json, slug, custom_domain').eq('id', siteId).eq('published', true).single();
+  const { data: site, error: siteError } = await service.from('sites').select('name, user_id, settings_json, slug, custom_domain').eq('id', siteId).eq('published', true).maybeSingle();
+  if (siteError) return NextResponse.json({ error: 'ショップを確認できません' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   const { data: merchant, error: merchantError } = await service.from('hp_payment_accounts')
     .select('account_id,livemode,charges_enabled,payouts_enabled')
