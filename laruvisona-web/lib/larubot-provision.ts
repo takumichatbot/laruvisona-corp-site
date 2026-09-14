@@ -58,6 +58,8 @@ export async function provisionLarubotOnPlan(params: {
   });
 
   if (!res.ok) {
+    await res.body?.cancel();
     throw new Error(`LARUbot register failed: ${res.status}`);
   }
+  await res.body?.cancel();
 }
