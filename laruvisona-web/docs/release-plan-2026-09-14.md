@@ -4,17 +4,16 @@
 
 ## 現在の固定点
 
-- ブランチ: `codex/domain-onboarding-20260914`
-- `origin/main` からのコミット数と先端SHAはpush直前に数え直して固定する
-- 全単体テスト: 783件通過
+- 作業ブランチ: `codex/domain-onboarding-20260914`（内容はGitHub mainへ反映済み）
+- 全単体テスト: 790件通過
 - 実HTTP回帰: 28件通過
 - 全体eslint: 終了コード0（0 errors、既存warning 106件）
 - `tsc --noEmit`: exit 0
 - `next build`: exit 0
 - `npm audit --omit=dev`: 既知の本番依存脆弱性 0件
 - SQL回帰: ネットワークを切った使い捨てPostgreSQL 16で全移行と170項目が通過。状態確認の最終行もtrue
-- 公開HTML生成版: 18（A/B計測の署名付き経路を含む。本番の保存済み版は未確認）
-- push、本番SQL、DNS、Render設定、デプロイ、公開HTML再生成は未実施
+- 公開HTML生成版: 18（A/B計測の署名付き経路を含む。本番で公開中の1サイトもv18へ更新済み）
+- push、本番SQL、Render設定、デプロイ、公開HTML1件の再生成は実施済み。2026-09-14 11:44 JSTの確認時点でGitHub mainとRender Liveは `28ac52d7bea779313ee5f7f66cc4c05cdbcbfdcc`
 - 公開面のSEOは `laruhp.com` の正規URLに統一し、管理画面と未検証の旧比較ページは `noindex`。料金表示は共通定数から生成し、月払いの初月無料クーポンが無ければ申込みを停止する
 - 制作画面と既定テンプレートの絵文字は、日本語の機能ラベルに置き換え済み
 
@@ -69,6 +68,8 @@
 - `REPUBLISH_ON_BOOT` は設定しない。公開HTMLの再生成は対象を確認して手動で行う。
 
 ## 出荷の順番
+
+以下は実施時に使った順序の記録である。2026-09-14の反映結果は `release-execution-2026-09-14.md` を正とする。未確認の外部結合試験だけを再実行し、適用済みSQLや公開HTML再生成を繰り返さない。
 
 1. GitHub main、Render Live SHA、公開HTML版分布、既存独自ドメイン割当、必要な環境変数の有無を読み取りで再確認する。
    旧 `settings_json.payment_links` の保有サイトと件数も控え、該当者にはショップ移行前に個別案内する。
