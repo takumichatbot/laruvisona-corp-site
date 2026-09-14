@@ -135,7 +135,7 @@ await page.waitForTimeout(2500);
 
 const afterPublish = (await siteRows()).find(s => s.id === made?.id);
 check('公開すると、公開用HTMLが書かれる', (afterPublish?.published_html || '').length > 1000, `${(afterPublish?.published_html || '').length} 文字`);
-check('公開用HTMLの版が新しい', (afterPublish?.published_html || '').includes('<!--lhpv:12-->'));
+check('公開用HTMLの版が新しい', (afterPublish?.published_html || '').includes('<!--lhpv:18-->'));
 check('青の直書きが残っていない',
   !(afterPublish?.published_html || '').replace(/var\([^)]*\)/g, '').includes('#2563eb'));
 
