@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     ownedSiteId = owned.data.id;
   }
 
-  const rate = await claimPublicRate(createServiceClient(), 'plan-checkout', user.id, 10);
+  const rate = await claimPublicRate(createServiceClient(), 'plan-billing', user.id, 1, 60);
   if (rate === 'limited') return NextResponse.json({ error: '少し待ってからお試しください' }, { status: 429 });
   if (rate === 'unavailable') return NextResponse.json({ error: '決済受付を確認できません' }, { status: 503 });
 

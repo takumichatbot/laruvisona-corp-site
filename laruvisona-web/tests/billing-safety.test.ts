@@ -35,6 +35,25 @@ test('Stripe変更後のプロフィール更新と新規顧客紐付けは更�
   assert.match(upgrade, /saved\.data\?\.length !== 1/);
 });
 
+test('すべてのプラン変更経路が同じ共有枠と専用Lite価格を使う', () => {
+  assert.match(checkout, /claimPublicRate\(createServiceClient\(\), 'plan-billing', user\.id, 1, 60\)/);
+  assert.match(upgrade, /claimPublicRate\(createServiceClient\(\), 'plan-billing', user\.id, 1, 60\)/);
+  assert.match(upgrade, /readContactBody\(req, 10_000\)/);
+  assert.match(checkout, /lite: process\.env\.STRIPE_LITE_PRICE_ID/);
+  assert.match(upgrade, /lite: process\.env\.STRIPE_LITE_PRICE_ID/);
+  assert.match(adminUser, /lite: process\.env\.STRIPE_LITE_PRICE_ID/);
+  assert.doesNotMatch(adminUser, /lite: process\.env\.STRIPE_BUNDLE_BOT_PRICE_ID/);
+});
+
+test('プラン変更と管理解約はStripe顧客の一致と冪等キーを確認する', () => {
+  assert.match(upgrade, /customerId !== profile\.stripe_customer_id/);
+  assert.match(upgrade, /idempotencyKey: `laruhp-upgrade-/);
+  assert.match(adminUser, /customerId !== expectedCustomer/);
+  assert.match(adminUser, /idempotencyKey: `laruhp-admin-upgrade-/);
+  assert.match(adminUser, /customerId !== profileResult\.data\.stripe_customer_id/);
+  assert.match(adminUser, /idempotencyKey: `laruhp-admin-cancel-/);
+});
+
 test('有効なStripe契約を残したままアカウントを削除できない', () => {
   assert.match(deletion, /stripe\.subscriptions\.list/);
   assert.match(deletion, /active_subscription/);

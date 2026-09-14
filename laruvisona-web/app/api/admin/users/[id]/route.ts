@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { Resend } from 'resend';
+import { readContactBody } from '@/lib/contact-contract';
+import { billingAppOrigin } from '@/lib/billing-url';
+import { claimPublicRate } from '@/lib/public-rate-limit';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: 'HP単体 (¥999/月)',
@@ -22,8 +25,10 @@ const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   'hp-bot': process.env.STRIPE_BUNDLE_BOT_PRICE_ID,
   'hp-bot-seo': process.env.STRIPE_BUNDLE_FULL_PRICE_ID,
   agency: process.env.STRIPE_AGENCY_PRICE_ID,
-  lite: process.env.STRIPE_BUNDLE_BOT_PRICE_ID,
+  lite: process.env.STRIPE_LITE_PRICE_ID,
 };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -32,16 +37,30 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { id } = await params;
-  const body = await req.json();
+  if (!UUID.test(id)) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  let body: Record<string, unknown>;
+  try { body = await readContactBody(req, 64_000); }
+  catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
+  const allowedKeys = new Set(['plan', 'force_cancel', 'features', 'is_suspended', 'admin_notes']);
+  if (Object.keys(body).some(key => !allowedKeys.has(key))) {
+    return NextResponse.json({ error: '入力を確認してください' }, { status: 400 });
+  }
+  const billingActions = Number(body.plan !== undefined) + Number(body.force_cancel === true);
+  if (billingActions > 1 || (body.force_cancel !== undefined && body.force_cancel !== true)) {
+    return NextResponse.json({ error: '契約操作を1つ選んでください' }, { status: 400 });
+  }
   const service = await createServiceClient();
 
   // プラン変更
   if (body.plan !== undefined) {
+    if (typeof body.plan !== 'string') return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     const priceId = PLAN_PRICE_MAP[body.plan];
     if (!priceId) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    const rate = await claimPublicRate(service, 'admin-plan-billing', id, 1, 60);
+    if (rate !== 'allowed') return NextResponse.json({ error: rate === 'limited' ? '少し待ってからお試しください' : '決済受付を確認できません' }, { status: rate === 'limited' ? 429 : 503 });
 
     const profileResult = await service.from('profiles')
-      .select('stripe_subscription_id')
+      .select('stripe_subscription_id,stripe_customer_id')
       .eq('id', id)
       .maybeSingle();
     if (profileResult.error) {
@@ -59,11 +78,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!itemId || sub.items.data.length !== 1 || ['canceled', 'incomplete_expired'].includes(sub.status)) {
         return NextResponse.json({ error: 'Stripe契約の内容を確認してください' }, { status: 409 });
       }
+      const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
+      const expectedCustomer = profileResult.data.stripe_customer_id;
+      if (!expectedCustomer || customerId !== expectedCustomer) {
+        return NextResponse.json({ error: 'Stripe契約の所有者を確認できません' }, { status: 409 });
+      }
+      const currentPrice = sub.items.data[0].price.id;
+      if (currentPrice === priceId) return NextResponse.json({ error: '既にこのプランです' }, { status: 400 });
       await stripe.subscriptions.update(subscriptionId, {
         items: [{ id: itemId, price: priceId }],
         proration_behavior: 'create_prorations',
-        metadata: { plan: body.plan },
-      });
+        metadata: { ...(sub.metadata || {}), plan: body.plan },
+      }, { idempotencyKey: `laruhp-admin-upgrade-${subscriptionId}-${currentPrice}-${priceId}` });
     } catch (err) {
       console.error('[admin/plan] stripe error:', err instanceof Error ? err.message : 'unknown');
       return NextResponse.json({ error: 'Stripeのプラン変更を確定できませんでした' }, { status: 502 });
@@ -84,7 +110,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const { data: { user: targetUser } } = await service.auth.admin.getUserById(id);
         if (targetUser?.email) {
           const resend = new Resend(process.env.RESEND_API_KEY);
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
+          const appUrl = billingAppOrigin();
           await resend.emails.send({
             from: 'LARU HP <noreply@laruvisona.jp>',
             to: targetUser.email,
@@ -114,8 +140,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // 強制解約
   if (body.force_cancel) {
+    const rate = await claimPublicRate(service, 'admin-plan-billing', id, 1, 60);
+    if (rate !== 'allowed') return NextResponse.json({ error: rate === 'limited' ? '少し待ってからお試しください' : '決済受付を確認できません' }, { status: rate === 'limited' ? 429 : 503 });
     const profileResult = await service.from('profiles')
-      .select('stripe_subscription_id,subscription_status,plan')
+      .select('stripe_subscription_id,stripe_customer_id,subscription_status,plan')
       .eq('id', id)
       .maybeSingle();
     if (profileResult.error) {
@@ -130,7 +158,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Stripe契約を特定できないため解約できません' }, { status: 409 });
     }
     try {
-      await stripe.subscriptions.cancel(subscriptionId);
+      const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
+      if (!profileResult.data.stripe_customer_id || customerId !== profileResult.data.stripe_customer_id) {
+        return NextResponse.json({ error: 'Stripe契約の所有者を確認できません' }, { status: 409 });
+      }
+      if (sub.status !== 'canceled') {
+        await stripe.subscriptions.cancel(subscriptionId, {}, { idempotencyKey: `laruhp-admin-cancel-${subscriptionId}` });
+      }
     } catch (err) {
       console.error('[admin/cancel] stripe error:', err instanceof Error ? err.message : 'unknown');
       return NextResponse.json({ error: 'Stripeの解約を確定できませんでした' }, { status: 502 });
@@ -148,9 +183,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // 通常の更新（features / is_suspended / admin_notes）
   const updates: Record<string, unknown> = {};
-  if (body.features !== undefined) updates.features = body.features;
-  if (body.is_suspended !== undefined) updates.is_suspended = body.is_suspended;
-  if (body.admin_notes !== undefined) updates.admin_notes = body.admin_notes;
+  if (body.features !== undefined) {
+    if (!body.features || typeof body.features !== 'object' || Array.isArray(body.features)) return NextResponse.json({ error: '機能設定を確認してください' }, { status: 400 });
+    updates.features = body.features;
+  }
+  if (body.is_suspended !== undefined) {
+    if (typeof body.is_suspended !== 'boolean') return NextResponse.json({ error: '停止状態を確認してください' }, { status: 400 });
+    updates.is_suspended = body.is_suspended;
+  }
+  if (body.admin_notes !== undefined) {
+    if (body.admin_notes !== null && (typeof body.admin_notes !== 'string' || body.admin_notes.length > 10_000)) return NextResponse.json({ error: '管理メモを確認してください' }, { status: 400 });
+    updates.admin_notes = body.admin_notes;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: '更新項目がありません' }, { status: 400 });
