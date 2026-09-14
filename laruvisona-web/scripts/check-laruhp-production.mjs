@@ -95,10 +95,31 @@ for (const url of internalUrls.values()) {
   if (response.status >= 400) addFailure(url.href, `内部リンクがHTTP ${response.status}`);
 }
 
+const contactUrl = new URL('/contact', origin);
+const contact = await fetchPage(contactUrl);
+if (!/https:\/\/larubot\.tokyo\/f\/[A-Za-z0-9-]+/.test(contact.body)) {
+  addFailure(contactUrl.href, 'LARUbotの問い合わせフォームがありません');
+}
+
+// 本番ホストを検査するときは、移行前後の入口とクエリ保持も固定する。
+if (origin === 'https://laruhp.com') {
+  const redirectCases = [
+    ['https://www.laruhp.com/domains?source=production-check', 'https://laruhp.com/domains?source=production-check'],
+    ['https://laruvisona.jp/laruHP/domains?source=production-check', 'https://laruhp.com/domains?source=production-check'],
+  ];
+  for (const [from, expected] of redirectCases) {
+    const response = await fetch(from, { redirect: 'manual' });
+    const location = absolute(response.headers.get('location') || '', from);
+    if (![301, 308].includes(response.status) || location?.href !== expected) {
+      addFailure(from, `転送が不正です (HTTP ${response.status}, ${location?.href || 'Locationなし'})`);
+    }
+  }
+}
+
 if (failures.length) {
   console.error(`LARU HP 本番検査: ${failures.length}件の不一致`);
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件）`);
+  console.log(`LARU HP 本番検査: OK（sitemap ${sitemapUrls.length}ページ、内部URL ${internalUrls.size}件、問い合わせ・旧入口）`);
 }
