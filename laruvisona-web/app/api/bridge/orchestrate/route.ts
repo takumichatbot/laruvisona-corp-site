@@ -1,7 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAdmin } from '@/lib/adminAuth';
+import { bridgeText, readBridgeJson } from '@/lib/bridge-input';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 60_000, maxRetries: 1 });
+const MODELS = new Set(['claude-haiku-4-5-20251001', 'claude-sonnet-4-6', 'claude-opus-4-8']);
 
 function parsePlan(text: string) {
   let s = text.trim();
@@ -15,11 +17,13 @@ function parsePlan(text: string) {
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
-  const { directive, projectName, fileTree, model = 'claude-sonnet-4-6', agentConfig = '' } = await req.json();
-
-  if (!directive?.trim()) {
-    return new Response(JSON.stringify({ error: 'ディレクティブが必要です' }), { status: 400 });
-  }
+  const body = await readBridgeJson(req, 256_000);
+  const directive = bridgeText(body.directive, 100_000, true);
+  const projectName = bridgeText(body.projectName, 200);
+  const fileTree = bridgeText(body.fileTree, 100_000);
+  const agentConfig = bridgeText(body.agentConfig, 20_000);
+  const model = body.model == null ? 'claude-sonnet-4-6' : String(body.model);
+  if (!MODELS.has(model)) return new Response(JSON.stringify({ error: 'モデルを確認してください' }), { status: 400 });
 
   const systemPrompt = `あなたはAIソフトウェアチームのリードアーキテクトです。
 ユーザーの開発指示を分析し、複数のAIエージェントが段階的・並列実行できる高品質なタスク計画を立案します。
@@ -99,8 +103,8 @@ JSONのみ返してください（コードブロックも説明も不要）:
         if (!plan?.phases?.length) throw new Error('プランの生成に失敗しました');
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', plan })}\n\n`));
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'オーケストレーターエラー';
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: msg })}\n\n`));
+        console.error('[bridge/orchestrate] failed', e instanceof Error ? e.name : 'unknown');
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: 'オーケストレーターエラー' })}\n\n`));
       } finally {
         controller.close();
       }

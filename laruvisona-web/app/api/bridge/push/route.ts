@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { requireAdmin } from '@/lib/adminAuth';
+import { readBridgeJson } from '@/lib/bridge-input';
 
 // Push subscription を /tmp/bridge_push_sub.json に永続化（Render の ephemeral FS で十分）
 const SUB_FILE = path.join('/tmp', 'bridge_push_sub.json');
@@ -9,7 +10,7 @@ const SUB_FILE = path.join('/tmp', 'bridge_push_sub.json');
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
-  const { subscription } = await req.json();
+  const { subscription } = await readBridgeJson(req, 16_000);
   if (!subscription) return NextResponse.json({ error: 'subscription required' }, { status: 400 });
   fs.writeFileSync(SUB_FILE, JSON.stringify(subscription));
   return NextResponse.json({ ok: true });

@@ -41,3 +41,13 @@ test('一時共有は本文と保持件数と期限を制限する', () => {
   assert.match(source, /3_600_000/);
   assert.doesNotMatch(source, /req\.json\(\)|setTimeout\(/);
 });
+
+test('管理AIの全JSON入口は本文上限を通り、利用者指定モデルを限定する', () => {
+  for (const name of ['claude', 'decompose', 'gemini', 'openai', 'orchestrate', 'pm', 'push', 'quantum']) {
+    const source = read(`../app/api/bridge/${name}/route.ts`);
+    assert.match(source, /readBridgeJson/);
+    assert.doesNotMatch(source, /req\.json\(\)/);
+  }
+  for (const name of ['claude', 'orchestrate']) assert.match(read(`../app/api/bridge/${name}/route.ts`), /MODELS\.has/);
+  assert.match(read('../app/api/bridge/gemini/route.ts'), /allowed\.has/);
+});

@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAdmin } from '@/lib/adminAuth';
 import { safeErrorMessage, logError } from '@/lib/api-error';
+import { bridgeText, readBridgeJson } from '@/lib/bridge-input';
 
-const client = new Anthropic();
+const client = new Anthropic({ timeout: 60_000, maxRetries: 1 });
 
 const QUANTUM_BASES = [
   {
@@ -56,10 +57,10 @@ export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
   try {
-    const { goal, project, numBranches = 3 } = await req.json() as {
-      goal: string; project: string; numBranches?: number;
-    };
-    if (!goal?.trim()) return NextResponse.json({ error: 'goal required' }, { status: 400 });
+    const body = await readBridgeJson(req, 64_000);
+    const goal = bridgeText(body.goal, 40_000, true), project = bridgeText(body.project, 200);
+    const numBranches = body.numBranches == null ? 3 : Number(body.numBranches);
+    if (!Number.isInteger(numBranches)) return NextResponse.json({ error: '分岐数を確認してください' }, { status: 400 });
 
     const bases = QUANTUM_BASES.slice(0, Math.min(Math.max(numBranches, 2), 5));
 

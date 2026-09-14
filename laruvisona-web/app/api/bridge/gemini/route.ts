@@ -1,6 +1,24 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { bridgeText, readBridgeJson } from '@/lib/bridge-input';
+
+function textHistory(value: unknown, limit: number) {
+  if (value == null) return [];
+  if (!Array.isArray(value) || value.length > 50) throw Error('invalid');
+  return value.slice(-limit).map(entry => {
+    if (!entry || typeof entry !== 'object') throw Error('invalid');
+    const item = entry as Record<string, unknown>;
+    if (item.role !== 'user' && item.role !== 'assistant') throw Error('invalid');
+    return { role: item.role, content: bridgeText(item.content, 10_000, true) };
+  });
+}
+
+function base64(value: unknown, max: number) {
+  const text = bridgeText(value, max, true);
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(text)) throw Error('invalid');
+  return text;
+}
 
 function getModel(modelName = 'gemini-2.0-flash') {
   const key = process.env.GEMINI_API_KEY;
@@ -12,16 +30,16 @@ export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
   try {
-    const body = await req.json();
+    const body = await readBridgeJson(req, 8 * 1024 * 1024);
     const { action } = body;
 
     // ── 1. 指示を強化 ────────────────────────────────────────────────────────
     if (action === 'enhance') {
-      const { input, projectName, recentHistory } = body;
-      const ctx = (recentHistory as { role: string; content: string }[])
-        ?.slice(-4)
+      const input = bridgeText(body.input, 20_000, true);
+      const projectName = bridgeText(body.projectName, 200);
+      const ctx = textHistory(body.recentHistory, 4)
         .map(m => `${m.role === 'user' ? 'User' : 'Claude'}: ${m.content.slice(0, 300)}`)
-        .join('\n') || '';
+        .join('\n');
       const prompt = `あなたはClaude Code（AIコーディングアシスタント）への指示を最適化する専門家です。
 プロジェクト: ${projectName}
 ${ctx ? `\n直近の会話:\n${ctx}\n` : ''}
@@ -38,9 +56,11 @@ ${ctx ? `\n直近の会話:\n${ctx}\n` : ''}
 
     // ── 2. 画像解析 ──────────────────────────────────────────────────────────
     if (action === 'image') {
-      const { imageBase64, mimeType } = body;
+      const imageBase64 = base64(body.imageBase64, 7_500_000);
+      const mimeType = bridgeText(body.mimeType, 100) || 'image/jpeg';
+      if (!/^image\/(?:jpeg|png|webp|gif)$/.test(mimeType)) throw Error('invalid');
       const result = await getModel().generateContent([
-        { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
+        { inlineData: { mimeType, data: imageBase64 } },
         `このスクリーンショット/画像を見て、Claude Code（AIコーディングアシスタント）への具体的なコーディング指示を日本語で生成してください。
 UIのデザイン、エラーメッセージ、コードなどを分析して「〜を実装して」「〜を修正して」という形式の指示を1つ出力してください。
 指示のみ出力（説明不要）。`,
@@ -50,9 +70,11 @@ UIのデザイン、エラーメッセージ、コードなどを分析して「
 
     // ── 3. 音声文字起こし ────────────────────────────────────────────────────
     if (action === 'transcribe') {
-      const { audioBase64, mimeType } = body;
+      const audioBase64 = base64(body.audioBase64, 7_500_000);
+      const mimeType = bridgeText(body.mimeType, 100) || 'audio/webm';
+      if (!/^audio\/(?:webm|mpeg|mp4|wav|ogg)$/.test(mimeType)) throw Error('invalid');
       const result = await getModel().generateContent([
-        { inlineData: { mimeType: mimeType || 'audio/webm', data: audioBase64 } },
+        { inlineData: { mimeType, data: audioBase64 } },
         '音声を正確に書き起こして日本語テキストのみ出力してください。',
       ]);
       return NextResponse.json({ result: result.response.text() });
@@ -60,7 +82,8 @@ UIのデザイン、エラーメッセージ、コードなどを分析して「
 
     // ── 4. 出力要約 ──────────────────────────────────────────────────────────
     if (action === 'summarize') {
-      const { content, projectName } = body;
+      const content = bridgeText(body.content, 100_000, true);
+      const projectName = bridgeText(body.projectName, 200);
       const prompt = `以下はClaude Code（AIコーディングアシスタント）の実行結果です。プロジェクト: ${projectName}
 
 ${content.slice(0, 4000)}
@@ -75,11 +98,11 @@ ${content.slice(0, 4000)}
 
     // ── 5. Gemini Live 指示生成（音声会話からコーディング指示に変換）────────
     if (action === 'live_intent') {
-      const { transcript, projectName, recentHistory } = body;
-      const ctx = (recentHistory as { role: string; content: string }[])
-        ?.slice(-4)
+      const transcript = bridgeText(body.transcript, 20_000, true);
+      const projectName = bridgeText(body.projectName, 200);
+      const ctx = textHistory(body.recentHistory, 4)
         .map(m => `${m.role === 'user' ? 'User' : 'Claude'}: ${m.content.slice(0, 200)}`)
-        .join('\n') || '';
+        .join('\n');
       const prompt = `あなたはClaude Code（AIコーディングアシスタント）への指示を生成する専門家です。
 プロジェクト: ${projectName}
 ${ctx ? `\n直近の会話:\n${ctx}\n` : ''}
@@ -93,7 +116,8 @@ ${ctx ? `\n直近の会話:\n${ctx}\n` : ''}
 
     // ── 6. エラー自動診断 ────────────────────────────────────────────────────
     if (action === 'diagnose') {
-      const { error, projectName } = body;
+      const error = bridgeText(body.error, 100_000, true);
+      const projectName = bridgeText(body.projectName, 200);
       const prompt = `以下のエラーを分析して原因と修正方法を教えてください。
 プロジェクト: ${projectName}
 エラー:
@@ -109,8 +133,13 @@ ${error}
 
     // ── 7. プロジェクト概要生成 ──────────────────────────────────────────────
     if (action === 'project_summary') {
-      const { files, projectName } = body;
-      const fileContents = (files as { path: string; content: string }[])
+      const projectName = bridgeText(body.projectName, 200);
+      if (!Array.isArray(body.files) || body.files.length > 50) throw Error('invalid');
+      const fileContents = body.files.map(entry => {
+        if (!entry || typeof entry !== 'object') throw Error('invalid');
+        const file = entry as Record<string, unknown>;
+        return { path: bridgeText(file.path, 500, true), content: bridgeText(file.content, 20_000) };
+      })
         .map(f => `## ${f.path}\n${f.content.slice(0, 1500)}`)
         .join('\n\n');
       const prompt = `以下のファイルを元にプロジェクト「${projectName}」の概要を日本語でまとめてください。
@@ -123,7 +152,8 @@ ${fileContents}`;
 
     // ── 8. コミットメッセージ生成 ────────────────────────────────────────────
     if (action === 'commit_message') {
-      const { diff, projectName } = body;
+      const diff = bridgeText(body.diff, 100_000, true);
+      const projectName = bridgeText(body.projectName, 200);
       const prompt = `以下のgit diffを見て、適切なコミットメッセージを生成してください。
 プロジェクト: ${projectName}
 
@@ -137,9 +167,13 @@ ${diff.slice(0, 4000)}
 
     // ── 9. Visual → AI Team ディレクティブ変換 ───────────────────────────────
     if (action === 'visual_to_directive') {
-      const { imageBase64, mimeType, projectName, fileTree } = body;
+      const imageBase64 = base64(body.imageBase64, 7_500_000);
+      const mimeType = bridgeText(body.mimeType, 100) || 'image/jpeg';
+      if (!/^image\/(?:jpeg|png|webp|gif)$/.test(mimeType)) throw Error('invalid');
+      const projectName = bridgeText(body.projectName, 200);
+      const fileTree = bridgeText(body.fileTree, 50_000);
       const result = await getModel('gemini-2.5-flash-preview-05-20').generateContent([
-        { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
+        { inlineData: { mimeType, data: imageBase64 } },
         `あなたはソフトウェア開発の要件定義専門家です。
 プロジェクト: ${projectName}
 ${fileTree ? `\nプロジェクト構造の一部:\n${(fileTree as string).slice(0, 1200)}\n` : ''}
@@ -162,7 +196,9 @@ AIソフトウェアチームへの包括的な開発指示を生成してくだ
 
     // ── 10. PM ビジョン → エピック/ストーリー分解 ────────────────────────────
     if (action === 'pm_breakdown') {
-      const { vision, projectName, model: mdl } = body;
+      const vision = bridgeText(body.vision, 100_000, true);
+      const projectName = bridgeText(body.projectName, 200);
+      const mdl = body.model;
       const prompt = `あなたはアジャイル開発のプロダクトマネージャーです。
 プロジェクト: ${projectName}
 
@@ -193,9 +229,11 @@ ${vision}
     }
   ]
 }`;
-      const client2 = new (await import('@anthropic-ai/sdk')).default({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const allowed = new Set(['claude-haiku-4-5-20251001', 'claude-sonnet-4-6']);
+      if (mdl != null && !allowed.has(String(mdl))) return NextResponse.json({ error: 'モデルを確認してください' }, { status: 400 });
+      const client2 = new (await import('@anthropic-ai/sdk')).default({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 60_000, maxRetries: 1 });
       const resp = await client2.messages.create({
-        model: (mdl as string) || 'claude-sonnet-4-6',
+        model: mdl == null ? 'claude-sonnet-4-6' : String(mdl),
         max_tokens: 4000,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -214,9 +252,8 @@ ${vision}
 
     // ── 11. Chat → AI Team 指示変換 ─────────────────────────────────────────
     if (action === 'chat_to_directive') {
-      const { messages: msgs, projectName: pn } = body;
-      const conv = (msgs as { role: string; content: string }[])
-        .slice(-12)
+      const pn = bridgeText(body.projectName, 200);
+      const conv = textHistory(body.messages, 12)
         .map(m => `${m.role === 'user' ? 'User' : 'Claude'}: ${m.content.slice(0, 400)}`)
         .join('\n');
       const prompt = `以下のClaude Codeとの会話を分析して、AIソフトウェアチームへの包括的な実装指示を生成してください。
@@ -238,7 +275,7 @@ ${conv}
 
     return NextResponse.json({ error: '不明なアクション' }, { status: 400 });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Gemini APIエラー';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[bridge/gemini] failed', e instanceof Error ? e.name : 'unknown');
+    return NextResponse.json({ error: 'Gemini APIエラー' }, { status: 502 });
   }
 }

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { readBridgeJson } from '@/lib/bridge-input';
 
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
-  const body = await req.json();
+  const body = await readBridgeJson(req, 128_000);
   const { action } = body;
 
   if (action === 'breakdown') {
@@ -19,7 +20,9 @@ export async function POST(req: Request) {
         ...(process.env.ADMIN_SECRET ? { 'x-admin-secret': process.env.ADMIN_SECRET } : {}),
       },
       body: JSON.stringify({ action: 'pm_breakdown', ...body }),
+      signal: AbortSignal.timeout(65_000),
     });
+    if (!res.ok) { await res.body?.cancel(); return NextResponse.json({ error: 'プラン生成に失敗しました' }, { status: 502 }); }
     return NextResponse.json(await res.json());
   }
 

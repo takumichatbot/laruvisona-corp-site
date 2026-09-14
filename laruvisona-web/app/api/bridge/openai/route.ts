@@ -1,26 +1,53 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { bridgeText, readBridgeJson } from '@/lib/bridge-input';
+
+type PlanPhase = { name: string; tasks: { title: string; files_to_create?: string[]; files_to_modify?: string[] }[] };
+
+function planPhases(value: unknown): PlanPhase[] {
+  if (!value || typeof value !== 'object') throw Error('invalid');
+  const phases = (value as Record<string, unknown>).phases;
+  if (!Array.isArray(phases) || phases.length > 30) throw Error('invalid');
+  return phases.map(phase => {
+    if (!phase || typeof phase !== 'object') throw Error('invalid');
+    const item = phase as Record<string, unknown>;
+    if (!Array.isArray(item.tasks) || item.tasks.length > 100) throw Error('invalid');
+    return {
+      name: bridgeText(item.name, 500, true),
+      tasks: item.tasks.map(task => {
+        if (!task || typeof task !== 'object') throw Error('invalid');
+        const entry = task as Record<string, unknown>;
+        const stringList = (value: unknown) => value == null ? undefined
+          : Array.isArray(value) && value.length <= 100
+            ? value.map(path => bridgeText(path, 500, true))
+            : (() => { throw Error('invalid'); })();
+        return { title: bridgeText(entry.title, 1_000, true), files_to_create: stringList(entry.files_to_create), files_to_modify: stringList(entry.files_to_modify) };
+      }),
+    };
+  });
+}
 
 function getClient() {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error('OPENAI_API_KEY が未設定です');
-  return new OpenAI({ apiKey: key });
+  return new OpenAI({ apiKey: key, timeout: 60_000, maxRetries: 1 });
 }
 
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
   if (denied) return denied;
   try {
-    const body = await req.json();
+    const body = await readBridgeJson(req, 1024 * 1024);
     const { action } = body;
 
     // ── U: o4-mini プラン検証 ────────────────────────────────────────────────
     if (action === 'verify_plan') {
-      const { plan, directive } = body;
+      const phases = planPhases(body.plan);
+      const directive = bridgeText(body.directive, 100_000, true);
       const openai = getClient();
 
-      const phasesSummary = plan.phases.map((p: { name: string; tasks: { title: string; files_to_create?: string[]; files_to_modify?: string[] }[] }, i: number) =>
+      const phasesSummary = phases.map((p, i: number) =>
         `Phase ${i + 1} "${p.name}": ${p.tasks.map((t: { title: string; files_to_create?: string[]; files_to_modify?: string[] }) =>
           `[${t.title} | creates:${(t.files_to_create || []).join(',')||'none'} modifies:${(t.files_to_modify || []).join(',')||'none'}]`
         ).join(', ')}`
@@ -59,7 +86,7 @@ export async function POST(req: Request) {
 
     // ── V: Realtime API セッショントークン ──────────────────────────────────
     if (action === 'realtime_session') {
-      const { projectName } = body;
+      const projectName = bridgeText(body.projectName, 200);
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) throw new Error('OPENAI_API_KEY が未設定です');
 
@@ -67,6 +94,7 @@ export async function POST(req: Request) {
       // OpenAI-Beta ヘッダーが必要、sessions API は最小パラメータのみ受け付ける
       const resp = await fetch('https://api.openai.com/v1/realtime/sessions', {
         method: 'POST',
+        signal: AbortSignal.timeout(30_000),
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
@@ -80,8 +108,8 @@ export async function POST(req: Request) {
       });
 
       if (!resp.ok) {
-        const errText = await resp.text();
-        throw new Error(`Realtime sessions ${resp.status}: ${errText.slice(0, 200)}`);
+        await resp.body?.cancel();
+        throw new Error(`Realtime sessions ${resp.status}`);
       }
       const session = await resp.json() as { client_secret: { value: string } };
       return NextResponse.json({ client_secret: session.client_secret });
@@ -89,7 +117,8 @@ export async function POST(req: Request) {
 
     // ── W: Semantic Embedding (Brain 用) ────────────────────────────────────
     if (action === 'embedding') {
-      const { texts } = body as { texts: string[] };
+      if (!Array.isArray(body.texts) || body.texts.length > 100) throw Error('invalid');
+      const texts = body.texts.map(text => bridgeText(text, 8_000, true));
       const openai = getClient();
       const resp = await openai.embeddings.create({
         model: 'text-embedding-3-small',
@@ -100,7 +129,9 @@ export async function POST(req: Request) {
 
     // ── X: Code 静的解析 (o4-mini) ──────────────────────────────────────────
     if (action === 'analyze_code') {
-      const { code, language, context } = body;
+      const code = bridgeText(body.code, 500_000, true);
+      const language = bridgeText(body.language, 100);
+      const context = bridgeText(body.context, 20_000);
       const openai = getClient();
       const resp = await openai.chat.completions.create({
         model: 'o4-mini',
@@ -127,7 +158,10 @@ export async function POST(req: Request) {
 
     // ── Y: TTS 音声合成 ─────────────────────────────────────────────────────
     if (action === 'tts') {
-      const { text, voice = 'shimmer' } = body;
+      const text = bridgeText(body.text, 4_096, true);
+      const voice = bridgeText(body.voice, 50) || 'shimmer';
+      const voices = new Set(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']);
+      if (!voices.has(voice)) throw Error('invalid');
       const openai = getClient();
       const mp3 = await openai.audio.speech.create({
         model: 'tts-1',
@@ -144,7 +178,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: '不明なアクション' }, { status: 400 });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'OpenAI APIエラー';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[bridge/openai] failed', e instanceof Error ? e.name : 'unknown');
+    return NextResponse.json({ error: 'OpenAI APIエラー' }, { status: 502 });
   }
 }
