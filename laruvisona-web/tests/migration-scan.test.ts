@@ -85,3 +85,14 @@ test('壊れたリンクが大量にあっても取得試行はページ上限�
   });
   assert.ok(calls <= 16, `取得試行: ${calls}`);
 });
+
+test('SNS用の説明文でmeta descriptionの欠落を隠さず、タグ順にも依存しない', () => {
+  const og = '<meta property="og:description" content="SNS用の説明">';
+  const meta = '<meta name="description" content="検索向けの説明">';
+  const onlyOg = inspectMigrationHtml(og, 'https://example.com/');
+  assert.equal(onlyOg.description, '');
+  assert.equal(migrationSummary([onlyOg]).missingDescriptionCount, 1);
+  for (const html of [og + meta, meta + og]) {
+    assert.equal(inspectMigrationHtml(html, 'https://example.com/').description, '検索向けの説明');
+  }
+});

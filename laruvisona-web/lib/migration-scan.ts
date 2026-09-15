@@ -61,9 +61,8 @@ export function inspectMigrationHtml(html: string, pageUrl: string): MigrationPa
   let canonical = '';
   for (const tag of withoutCode.match(/<(?:meta|link)\b[^>]*>/gi) ?? []) {
     const name = attr(tag, 'name').toLowerCase();
-    const property = attr(tag, 'property').toLowerCase();
     const rel = attr(tag, 'rel').toLowerCase().split(/\s+/);
-    if (!description && (name === 'description' || property === 'og:description')) description = plain(attr(tag, 'content'));
+    if (!description && name === 'description') description = plain(attr(tag, 'content'));
     if (!canonical && rel.includes('canonical')) {
       try { canonical = new URL(attr(tag, 'href'), base).toString(); } catch { /* malformed source */ }
     }
