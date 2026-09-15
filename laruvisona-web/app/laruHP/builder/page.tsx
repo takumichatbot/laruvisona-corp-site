@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { hasFeature } from '@/lib/plan-limits';
 import { checkPublishReadiness, blockingItems, adviceItems, type ReadyItem } from '@/lib/publish-readiness';
 import { publishCompletion } from '@/lib/publish-result';
+import { migrationBlockData } from '@/lib/migration-block';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -4578,40 +4579,19 @@ function BuilderContent() {
   }, []);
 
   const handleUrlImport = useCallback((extracted: Record<string, unknown>) => {
+    pushHistory(siteRef.current);
     setSite(prev => {
       const updated = structuredClone(prev);
       if (extracted.businessName) updated.siteName = extracted.businessName as string;
       const firstPage = updated.pages[0];
       if (firstPage) {
-        firstPage.blocks = firstPage.blocks.map((b) => {
-          if (b.type === 'hero') {
-            return {
-              ...b, data: {
-                ...b.data,
-                ...(extracted.catchphrase ? { title: extracted.catchphrase } : {}),
-                ...(extracted.description ? { subtitle: extracted.description } : {}),
-              }
-            };
-          }
-          if (b.type === 'contact') {
-            return {
-              ...b, data: {
-                ...b.data,
-                ...(extracted.phone ? { phone: extracted.phone } : {}),
-                ...(extracted.address ? { address: extracted.address } : {}),
-                ...(extracted.email ? { email: extracted.email } : {}),
-              }
-            };
-          }
-          if (b.type === 'hours' && Array.isArray(extracted.hours) && (extracted.hours as unknown[]).length > 0) {
-            return { ...b, data: { ...b.data, hours: extracted.hours } };
-          }
-          return b;
-        });
+        firstPage.blocks = firstPage.blocks.map(b => ({
+          ...b, data: migrationBlockData(b.type, b.data, extracted),
+        }));
       }
       return updated;
     });
-  }, []);
+  }, [pushHistory]);
 
   const deleteSelectedBlocks = useCallback(() => {
     if (selectedIds.size === 0) return;
