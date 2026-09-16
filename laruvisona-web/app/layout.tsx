@@ -3,6 +3,7 @@ import { jsonForScript } from '@/lib/safe-markup';
 import SmoothScroll from '@/components/SmoothScroll';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import LarubotWidget from '@/components/LarubotWidget';
+import { organizationLd, websiteLd } from '@/lib/organization-ld';
 
 // フォントはここで読まない。
 // 共通レイアウトに置くと、日本語の @font-face 宣言だけで CSS 100KB（転送後）が
@@ -37,21 +38,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja">
       {/* 背景を真っ黒にして、文字を白ベースに設定 */}
       <body className="bg-[#030712] text-slate-100 antialiased selection:bg-blue-500 selection:text-white">
-        {/* Organization 構造化データ（Googleにロゴ・社名を認識させる） */}
+        {/* 会社とサイトの構造化データ。定義は lib/organization-ld.ts の1か所。
+            以前は layout と /local の2か所にあり、住所・説明・sameAs が食い違っていた。 */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonForScript({
-              '@context': 'https://schema.org',
-              '@type': 'Organization',
-              name: '株式会社LaruVisona',
-              alternateName: 'LaruVisona',
-              url: 'https://laruvisona.jp',
-              logo: 'https://laruvisona.jp/images/logo_light.png',
-              description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
-              sameAs: ['https://larubot.tokyo'],
-            }),
-          }}
+          dangerouslySetInnerHTML={{ __html: jsonForScript([organizationLd(), websiteLd()]) }}
         />
         <GoogleAnalytics />
         <SmoothScroll>

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import LarubotContactForm from '@/components/LarubotContactForm';
+import { jsonForScript } from '@/lib/safe-markup';
+import { serviceOffersLd, breadcrumbLd } from '@/lib/organization-ld';
 
 export const metadata: Metadata = {
   title: '受託開発サービスと料金 | 株式会社LaruVisona',
@@ -225,8 +227,19 @@ function Check() {
 }
 
 export default function ServicesPage() {
+  // 料金は画面の SERVICES から取り出す。書き写すと、料金表を直したときに
+  // 構造化データだけ古い額が残る。
+  const ld = [
+    serviceOffersLd(SERVICES),
+    breadcrumbLd([
+      { name: 'ホーム', path: '/' },
+      { name: '受託開発サービスと料金', path: '/services' },
+    ]),
+  ];
+
   return (
     <div className="min-h-screen bg-[#030712] text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonForScript(ld) }} />
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#030712]/85 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">

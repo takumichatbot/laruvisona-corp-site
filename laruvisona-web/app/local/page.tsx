@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
+import { organizationWithAreaLd, AREAS_SERVED } from '@/lib/organization-ld';
 
 export const dynamic = 'force-static';
 
@@ -23,23 +24,10 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://laruvisona.jp/local' },
 };
 
-const AREAS = ['板橋区', '足立区', '豊島区', '北区', '練馬区', '荒川区', '文京区', '川口市'];
+// 対応地域は lib/organization-ld.ts と共有する（画面と構造化データを食い違わせない）
+const AREAS = AREAS_SERVED;
 
-const orgLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: '株式会社LaruVisona',
-  url: 'https://laruvisona.jp',
-  address: {
-    '@type': 'PostalAddress',
-    postalCode: '174-0072',
-    addressRegion: '東京都',
-    addressLocality: '板橋区',
-    streetAddress: '南常盤台1丁目11-6-101号室',
-    addressCountry: 'JP',
-  },
-  areaServed: AREAS.map(a => ({ '@type': 'AdministrativeArea', name: a })),
-};
+const orgLd = organizationWithAreaLd();
 
 export default function LocalPage() {
   return (

@@ -2,6 +2,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { WORKS, ACCENT_STYLES } from '@/lib/works-data';
+import { jsonForScript } from '@/lib/safe-markup';
+import { breadcrumbLd } from '@/lib/organization-ld';
 
 // ここは以前 `/#works` への転送だった。
 // ところが会社トップに #works という目印は無く、転送先ではただトップが
@@ -18,6 +20,7 @@ export const metadata: Metadata = {
 export default function WorksIndexPage() {
   return (
     <div className="min-h-screen bg-[#030712] text-white selection:bg-blue-500 selection:text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonForScript(breadcrumbLd([{ name: 'ホーム', path: '/' }, { name: '開発実績', path: '/works' }])) }} />
       <header className="fixed w-full z-50 p-4 md:p-6">
         <div className="container mx-auto max-w-5xl flex justify-between items-center bg-[#030712]/60 backdrop-blur-xl rounded-2xl p-3 pl-5 border border-white/10 shadow-2xl">
           <Link href="/" className="flex items-center group">
