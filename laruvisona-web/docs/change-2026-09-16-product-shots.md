@@ -20,10 +20,13 @@ LARUbot・LARUSEO・FLASTAL は手で描いた紹介イメージだった。
 | --- | --- | --- |
 | `public/company/products/larubot.jpg` | https://larubot.tokyo/ | 1376×868 → 1200×750 |
 | `public/company/products/laruseo.jpg` | https://larubot.tokyo/laru-seo | 1568×777 → 中央 1243×777 を切り出して 1200×750 |
-| `public/company/products/flastal.jpg` | https://www.flastal.com/ | 1568×777 → 左 1243×777 を切り出して 1200×750 |
+| `public/company/products/flastal.jpg` | https://www.flastal.com/ | 1568×777 → 切り出さず 1200×595 |
 
-- 既にある `/lp/studio-edit.jpg` が 1200×750 なので、4枚とも同じ 8:5 に揃えた。
-- JPEG 品質82・プログレッシブ。66〜129KB。
+- 既にある `/lp/studio-edit.jpg` が 1200×750 なので、LARUbot・LARUSEO はそれに合わせて 8:5 に揃えた。
+- FLASTAL だけは横幅を切らずに入れている。8:5 に合わせると右端（ログイン・登録と写真の右側）が落ちるため、
+  撮ったままの比率で置いた。カードの高さは `lv-product-art` の `min-height` で決まるので、
+  タブを切り替えてもページの高さは動かない。
+- JPEG 品質82・プログレッシブ。66〜129KB。画像の寸法は `shots` の表に持たせている。
 - 撮影は実ブラウザの表示そのままで、合成・加筆はしていない。
 - LARUbot は、チャットの窓を閉じた素の状態で撮っている
   （前の会話が残った窓を写さないため。会話の削除はしていない）。

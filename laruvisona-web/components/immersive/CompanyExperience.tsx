@@ -105,6 +105,8 @@ const products = [
 const shots = {
   hp: {
     src: "/lp/studio-edit.jpg",
+    w: 1200,
+    h: 750,
     alt: "LARU HPの制作画面",
     bar: "LARU HP ／ 制作画面",
     word: "つくる。",
@@ -112,6 +114,8 @@ const shots = {
   },
   bot: {
     src: "/company/products/larubot.jpg",
+    w: 1200,
+    h: 750,
     alt: "LARUbotのサービス画面",
     bar: "larubot.tokyo",
     word: "こたえる。",
@@ -119,6 +123,8 @@ const shots = {
   },
   seo: {
     src: "/company/products/laruseo.jpg",
+    w: 1200,
+    h: 750,
     alt: "LARUSEOの画面",
     bar: "larubot.tokyo ／ LARU SEO",
     word: "とどく。",
@@ -126,6 +132,8 @@ const shots = {
   },
   flastal: {
     src: "/company/products/flastal.jpg",
+    w: 1200,
+    h: 595,
     alt: "FLASTALのサービス画面",
     bar: "flastal.com",
     word: "あつまる。",
@@ -150,8 +158,8 @@ function ProductVisual({ id }: { id: keyof typeof shots }) {
         <Image
           src={shot.src}
           alt={shot.alt}
-          width={1200}
-          height={750}
+          width={shot.w}
+          height={shot.h}
           sizes="(max-width: 760px) 90vw, 55vw"
         />
       </div>
