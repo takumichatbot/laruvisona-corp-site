@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 export const metadata = { title: 'プライバシーポリシー | LARU HP', robots: { index: true, follow: true }, alternates: { canonical: 'https://laruhp.com/privacy' } };
 
@@ -85,6 +86,7 @@ export default function PrivacyPage() {
           <Link href="https://laruhp.com/" className="text-blue-400 hover:text-blue-300 text-sm">← LARU HP トップに戻る</Link>
         </div>
       </main>
+      <PublicFooter dark />
     </div>
   );
 }

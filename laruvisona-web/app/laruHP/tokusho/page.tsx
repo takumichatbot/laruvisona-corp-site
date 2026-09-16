@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 export const metadata = { title: '特定商取引法に基づく表記 | LARU HP', robots: { index: true, follow: true }, alternates: { canonical: 'https://laruhp.com/tokusho' } };
 
@@ -56,6 +57,7 @@ export default function TokushoPage() {
           <Link href="https://laruhp.com/" className="text-blue-400 hover:text-blue-300 text-sm">← LARU HP トップに戻る</Link>
         </div>
       </main>
+      <PublicFooter dark />
     </div>
   );
 }

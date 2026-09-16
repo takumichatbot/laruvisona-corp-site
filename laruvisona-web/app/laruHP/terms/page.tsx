@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 export const metadata = { title: '利用規約 | LARU HP', robots: { index: true, follow: true }, alternates: { canonical: 'https://laruhp.com/terms' } };
 
@@ -86,6 +87,7 @@ export default function TermsPage() {
           <Link href="https://laruhp.com/" className="text-blue-400 hover:text-blue-300 text-sm">← LARU HP トップに戻る</Link>
         </div>
       </main>
+      <PublicFooter dark />
     </div>
   );
 }

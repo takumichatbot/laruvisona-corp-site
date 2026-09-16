@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, ArrowUpRight, Clock3, Mail, ShieldCheck } from 'lucide-react';
 import styles from './page.module.css';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
@@ -51,6 +52,7 @@ export default function ContactPage() {
 
         <Link className={styles.back} href="https://laruhp.com/"><ArrowLeft size={17} aria-hidden="true" />LARU HP トップへ戻る</Link>
       </main>
+      <PublicFooter />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { jsonForScript } from '@/lib/safe-markup';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
 import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
 import { INDUSTRY_DETAIL } from '@/lib/laruhp-industry-detail';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 const INDUSTRY_DATA = {
   restaurant: {
@@ -324,14 +325,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
         </section>
       </main>
 
-      <footer className="bg-slate-950 px-5 py-10 text-sm text-slate-400">
-        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-6 sm:flex-row">
-          <p>© 株式会社LaruVisona</p>
-          <nav className="flex flex-wrap gap-5" aria-label="フッター">
-            <Link href="https://laruhp.com/articles">HP作成ガイド</Link><Link href="https://laruhp.com/plans">料金</Link><Link href="https://laruhp.com/contact">お問い合わせ</Link><Link href="https://laruhp.com/privacy">プライバシー</Link>
-          </nav>
-        </div>
-      </footer>
+      <PublicFooter dark />
     </div>
   );
 }

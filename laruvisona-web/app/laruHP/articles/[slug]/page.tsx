@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { ARTICLES, getArticle } from '../articles-data';
 import { jsonForScript } from '@/lib/safe-markup';
 import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 export async function generateStaticParams() {
   return ARTICLES.map(a => ({ slug: a.slug }));
@@ -236,10 +237,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         </div>
       </main>
 
-      <footer className="border-t border-gray-200 bg-white py-8 text-center text-xs text-gray-400">
-        © 2026 株式会社LaruVisona. All Rights Reserved. ·{' '}
-        <Link href="https://laruhp.com/" className="hover:text-gray-600">LARU HP トップ</Link>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

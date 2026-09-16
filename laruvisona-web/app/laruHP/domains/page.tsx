@@ -10,6 +10,7 @@ import {
 } from '@/lib/domain-guidance';
 import styles from './page.module.css';
 import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
@@ -91,6 +92,7 @@ export default function DomainsPage() {
           <small>接続後も、ドメインの契約と更新は登録事業者で管理します。</small>
         </section>
       </main>
+      <PublicFooter />
     </div>
   );
 }

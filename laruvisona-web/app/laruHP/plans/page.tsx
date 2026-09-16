@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { track } from '@/lib/analytics';
 import { hasServiceAccess } from '@/lib/subscription-access';
+import PublicFooter from '@/components/laruhp/PublicFooter';
 
 // ログイン中ユーザーの現契約。既存契約者はボタンを「このプランに変更／ご利用中」に切り替える。
 const CurrentPlanContext = createContext<{ plan: string | null; subscribed: boolean }>({ plan: null, subscribed: false });
@@ -480,12 +481,7 @@ export default function PlansPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 py-8 text-gray-500 text-sm">
-        <div className="max-w-6xl mx-auto px-6 text-center text-xs">
-          © 2026 株式会社LaruVisona. All Rights Reserved.
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
     </CurrentPlanContext.Provider>
   );
