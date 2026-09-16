@@ -13,14 +13,11 @@ export interface Work {
   highlights: string[];
   /** 外部/内部リンク。null なら非表示（準備中など） */
   link: { label: string; url: string; external: boolean } | null;
-  /** スクリーンショット枠。画像は /public/images/works/<slug>-<n>.png|jpg に配置して差し替える */
-  screenshots: {
-    count: number;
-    /** 推奨サイズ（px） */
-    recommended: string;
-    /** 縦長（iOSアプリ等）なら true */
-    portrait: boolean;
-  };
+  /**
+   * 実際の画面。枠だけ置いて「準備中」と出すのはやめた。
+   * 実績を見に来た人に空の枠を見せるのは、何も無いのと同じか、それ以下である。
+   */
+  shots: { src: string; alt: string; w: number; h: number; caption: string }[];
   /** コンテンツ未確定（クライアント提供待ち）の場合 true */
   placeholder: boolean;
   accent: 'indigo' | 'cyan' | 'purple';
@@ -43,7 +40,10 @@ export const WORKS: Work[] = [
       'WordPress連携のSEO記事自動生成エンジン',
     ],
     link: { label: 'larubot.tokyo を見る', url: 'https://larubot.tokyo', external: true },
-    screenshots: { count: 2, recommended: '1600×1000px（16:10）', portrait: false },
+    shots: [
+      { src: '/company/products/larubot.jpg', alt: 'LARUbotのサービス画面', w: 1200, h: 750, caption: 'larubot.tokyo（実際の画面）' },
+      { src: '/company/products/larubot-sp.jpg', alt: 'LARUbotのスマートフォン表示', w: 390, h: 844, caption: 'スマートフォンでの表示' },
+    ],
     placeholder: false,
     accent: 'indigo',
   },
@@ -62,7 +62,10 @@ export const WORKS: Work[] = [
       'エージェンシーモード（代理店向けマルチクライアント管理）',
     ],
     link: { label: 'LARU HP サービスサイトへ', url: '/laruHP', external: false },
-    screenshots: { count: 2, recommended: '1600×1000px（16:10）', portrait: false },
+    shots: [
+      { src: '/lp/studio-edit.jpg', alt: 'LARU HPの制作画面', w: 1200, h: 750, caption: '実際の制作画面' },
+      { src: '/company/products/laruhp-sp.jpg', alt: 'LARU HPで作ったサイトのスマートフォン表示', w: 390, h: 844, caption: '作ったサイトのスマートフォン表示' },
+    ],
     placeholder: false,
     accent: 'cyan',
   },
@@ -77,10 +80,13 @@ export const WORKS: Work[] = [
     overview:
       '推しへフラワースタンドを贈るためのクラウドファンディングサービス。ファン同士が費用を出し合い、匿名のまま会場へ届けられます。画面の実装から決済、公開後の運用までを担当しています。',
     tech: ['Next.js', 'Stripe決済', 'PostgreSQL', 'Prisma'],
-    highlights: ['ファン同士で費用を出し合う企画の仕組み', 'Stripeによる集金と返金の処理', '匿名配送と会場への手配', '紹介コンテンツ準備中'],
+    highlights: ['ファン同士で費用を出し合う企画の仕組み', 'Stripeによる集金と返金の処理', '匿名配送と会場への手配'],
     link: { label: 'flastal.com を見る', url: 'https://www.flastal.com', external: true },
-    screenshots: { count: 2, recommended: '1600×1000px（16:10）', portrait: false },
-    placeholder: true,
+    shots: [
+      { src: '/company/products/flastal.jpg', alt: 'FLASTALのトップページ', w: 1200, h: 595, caption: 'flastal.com（実際の画面）' },
+      { src: '/company/products/flastal-sp.jpg', alt: 'FLASTALのスマートフォン表示', w: 390, h: 844, caption: 'スマートフォンでの表示' },
+    ],
+    placeholder: false,
     accent: 'purple',
   },
 ];

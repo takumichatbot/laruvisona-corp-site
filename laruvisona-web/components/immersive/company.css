@@ -501,6 +501,18 @@
   min-height: 510px;
   border: 1px solid #afbdc633;
 }
+/* 製品の下に置く、実績ページへの入口。控えめに、でも見落とさない位置に。 */
+.lv-products-more {
+  display: flex;
+  justify-content: flex-end;
+  padding: 18px 0 0;
+}
+@media (max-width: 820px) {
+  .lv-products-more {
+    justify-content: flex-start;
+    padding: 16px 0 0;
+  }
+}
 .lv-product-art {
   position: relative;
   min-height: 510px;

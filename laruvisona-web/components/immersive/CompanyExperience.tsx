@@ -279,6 +279,14 @@ function Products({
           </a>
         </div>
       </div>
+      <div className="lv-products-more">
+        {/* 実績の詳細ページ（/works）はどこからもリンクされていなかった。
+            受託を探している人がいちばん読みたい種類のページなので、入口を置く。 */}
+        <Link href="/works" className="lv-text-link">
+          つくったものを、技術と画面つきで見る
+          <Arrow />
+        </Link>
+      </div>
     </section>
   );
 }
@@ -815,6 +823,8 @@ function Experience() {
       <footer className="lv-footer lv-solid">
         <span>© {new Date().getFullYear()} LaruVisona Inc.</span>
         <nav aria-label="フッターナビゲーション">
+          <Link href="/works">開発実績</Link>
+          <Link href="/services">サービスと料金</Link>
           <Link href="/privacy">プライバシーポリシー</Link>
           <Link href="/contact">お問い合わせ</Link>
           <Link href="/brand">ロゴについて</Link>

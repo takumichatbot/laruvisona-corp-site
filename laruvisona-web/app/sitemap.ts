@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
+import { WORKS } from '@/lib/works-data';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = 'https://laruvisona.jp';
@@ -28,6 +29,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: 'monthly' as const,
       priority: 0.8,
+    })),
+
+    // 開発実績。以前ここに無かったため、書いてある3ページを検索側が
+    // 一度も見ていなかった。受託を探している人がいちばん見たい種類のページである。
+    { url: `${base}/works`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    ...WORKS.map(w => ({
+      url: `${base}/works/${w.slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
     })),
 
     { url: `${base}/contact`, lastModified: now, changeFrequency: 'yearly', priority: 0.6 },

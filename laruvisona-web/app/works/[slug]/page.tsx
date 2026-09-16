@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { WORKS, getWork, ACCENT_STYLES } from '@/lib/works-data';
 
@@ -40,7 +41,7 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
       <main className="pt-32 pb-24 px-6">
         <div className="container mx-auto max-w-4xl">
           {/* Breadcrumb */}
-          <Link href="/#works" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-300 text-xs font-bold tracking-widest transition-colors mb-10">
+          <Link href="/works" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-300 text-xs font-bold tracking-widest transition-colors mb-10">
             ← WORKS 一覧へ戻る
           </Link>
 
@@ -108,24 +109,26 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
             </div>
           </section>
 
-          {/* Screenshots (placeholder) */}
+          {/* Screenshots */}
           <section className="mb-14">
             <h2 className="flex items-center gap-4 text-xs font-bold tracking-[0.3em] text-blue-500 mb-5">
-              <span className="h-[1px] w-10 bg-blue-500" />スクリーンショット
+              <span className="h-[1px] w-10 bg-blue-500" />実際の画面
             </h2>
-            <div className={`grid gap-4 ${work.screenshots.portrait ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
-              {Array.from({ length: work.screenshots.count }, (_, i) => (
-                <div
-                  key={i}
-                  className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/15 rounded-2xl bg-white/[0.03] text-center p-4 ${work.screenshots.portrait ? 'aspect-[9/19.5]' : 'aspect-[16/10]'}`}
-                >
-                  <span className="text-2xl opacity-40">🖼</span>
-                  <span className="text-slate-500 text-[11px] leading-relaxed">
-                    スクリーンショット {i + 1}<br />
-                    推奨 {work.screenshots.recommended}<br />
-                    <span className="font-mono text-[10px] text-slate-600">/images/works/{work.slug}-{i + 1}.png</span>
-                  </span>
-                </div>
+            <div className="grid gap-5 sm:grid-cols-2 items-start">
+              {work.shots.map(shot => (
+                <figure key={shot.src} className="m-0">
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                    <Image
+                      src={shot.src}
+                      alt={shot.alt}
+                      width={shot.w}
+                      height={shot.h}
+                      className="w-full h-auto"
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                    />
+                  </div>
+                  <figcaption className="mt-2 text-[11px] text-slate-500">{shot.caption}</figcaption>
+                </figure>
               ))}
             </div>
           </section>
