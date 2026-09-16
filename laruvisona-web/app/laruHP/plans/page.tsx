@@ -39,7 +39,9 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: 'Google Analytics連携',    hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'お問い合わせフォーム',    hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: '空き枠・担当者・設備の予約', hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'サポート',                hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  // プランごとにサポート内容を分ける仕組みは実装していない。
+  // 「チャットサポート」「優先サポート」と書き分けると、実態と合わなくなる。
+  { label: 'サポート（メール）',      hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
 ];
 
 function Cell({ value }: { value: Availability }) {

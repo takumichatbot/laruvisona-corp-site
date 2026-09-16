@@ -22,7 +22,7 @@ export const PLANS = [
       'お問い合わせフォーム',
       '空き枠・担当者・設備の予約管理',
       'Google Analytics 連携',
-      'メールサポート',
+      'メールでのサポート',
     ],
     excludes: ['LARUbot Lite（AIチャットボット）', 'LARUSEO（AIブログ）'],
     badge: null as string | null,
@@ -54,7 +54,7 @@ export const PLANS = [
     includes: [
       'HP単体プランのすべて',
       'LARUbot Lite（AIチャットボット）',
-      'チャットサポート',
+      'メールでのサポート（同じ窓口）',
     ],
     excludes: ['LARUSEO（AIブログ）'],
     // 「よく選ばれています」等、他の顧客の行動についての主張は書かない。
@@ -72,7 +72,7 @@ export const PLANS = [
     includes: [
       'HP + Bot プランのすべて',
       'LARUSEO（AIブログ）',
-      '優先サポート',
+      'メールでのサポート（同じ窓口）',
     ],
     excludes: [],
     badge: null,
@@ -89,7 +89,7 @@ export const PLANS = [
       'HP + Bot + SEO プランのすべて',
       'クライアントサイトを1アカウントで管理（999サイトまで）',
       'クライアント別のダッシュボード',
-      '優先サポート',
+      'メールでのサポート（同じ窓口）',
     ],
     excludes: [],
     badge: null,

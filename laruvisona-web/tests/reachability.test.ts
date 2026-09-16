@@ -112,3 +112,13 @@ test('画面に出しているFAQを、構造化データでも同じ内容で�
   assert.match(services, /SERVICE_FAQ/);
   assert.match(services, /FAQPage/);
 });
+
+test('案内サイトの公開ページは、CDNに置いてよいと伝える', () => {
+  const proxy = code('proxy.ts');
+  // /laruHP 配下は force-dynamic のため既定で private,no-store。
+  // 検索から人が来るページだけ、CDNに短く置けるようにする（個人のデータは含まない）。
+  assert.match(proxy, /s-maxage=\d+/);
+  assert.match(proxy, /stale-while-revalidate/);
+  // 端末側には残さない
+  assert.match(proxy, /max-age=0/);
+});

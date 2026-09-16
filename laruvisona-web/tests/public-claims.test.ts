@@ -151,3 +151,12 @@ test('契約条件を変えたら、法定表記の日付も変わっている',
   assert.match(code('app/laruHP/tokusho/page.tsx'), /最終更新日: 2026年9月17日/);
   assert.match(code('app/laruHP/terms/page.tsx'), /最終更新日: 2026年9月17日/);
 });
+
+test('実装で差がついていないサポートを、差があるように書かない', () => {
+  const facts = code('lib/laruhp-facts.ts');
+  // プランごとにサポート内容を分ける仕組みはコードに無い（窓口は1つ）。
+  assert.doesNotMatch(facts, /チャットサポート/, '実装に無いサポート区分を売らない');
+  assert.doesNotMatch(facts, /優先サポート/);
+  const plans = code('app/laruHP/plans/page.tsx');
+  assert.match(plans, /サポート（メール）/);
+});

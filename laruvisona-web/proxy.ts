@@ -158,7 +158,14 @@ export async function proxy(request: NextRequest) {
     if (publicRoute) {
       const to = request.nextUrl.clone();
       to.pathname = publicRoute;
-      return NextResponse.rewrite(to);
+      const response = NextResponse.rewrite(to);
+      // 案内サイトの公開ページは、誰が見ても同じ内容で、個人のデータを含まない。
+      // /laruHP 配下は force-dynamic のため、既定では private, no-store が付き、
+      // CDNに一切乗らない。検索から人が来るページほど、その差が効く。
+      // ここだけ、CDNには5分置いてよい・裏で更新してよい、と伝える。
+      // 端末側には残さない（s-maxage はCDN向け、max-age=0 は利用者のブラウザ向け）。
+      response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400');
+      return response;
     }
     // 公開画像・映像・JS/CSSだけを同じoriginで配る。制作・認証は既存originへ。
     const staticFile = /^\/(?:lp|studio|salon|company|brand|images)\/.*\.(?:avif|webp|png|jpe?g|svg|mp4|webm|woff2?)$/i.test(pathname);
