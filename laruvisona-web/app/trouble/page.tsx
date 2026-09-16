@@ -41,6 +41,13 @@ export default function TroubleIndexPage() {
             切り分けられなかったときだけ、声をかけてください。
           </p>
 
+          <div className="mb-8 bg-[#0f172a] border border-white/5 rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p className="text-slate-300 text-sm">板橋区・足立区とその周辺の方へは、直接お伺いできます。</p>
+            <Link href="/local" className="flex-shrink-0 text-blue-400 text-sm font-bold hover:text-blue-300 transition-colors">
+              お伺いできる範囲 →
+            </Link>
+          </div>
+
           <div className="space-y-4">
             {TROUBLES.map(t => (
               <Link

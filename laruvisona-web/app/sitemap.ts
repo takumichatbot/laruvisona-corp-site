@@ -18,6 +18,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // ブログ（LARU SEO 記事一覧）
     { url: `${base}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
 
+    // 地域。1本だけ。量産すると誘導ページ扱いになる。
+    { url: `${base}/local`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+
     // 困りごと別の入口。検索から直接ここへ降りてくることを狙っている。
     { url: `${base}/trouble`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     ...TROUBLES.map(t => ({
