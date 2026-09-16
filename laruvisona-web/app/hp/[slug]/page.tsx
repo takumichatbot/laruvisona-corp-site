@@ -162,6 +162,11 @@ export default async function PublishedSitePage({ params }: Props) {
   const { larubotPublicId, laruseoPublicId, gaTrackingId, clarityId } = settings;
   const hasActivePopup = (settings.popups || []).some(p => p.enabled);
 
+  // 署名鍵が用意できないときは、計測だけ諦める（顧客の公開サイトは出す）。
+  let analyticsToken = '';
+  try { analyticsToken = signAnalyticsSite(slug); }
+  catch { console.error('[hp] アクセス計測の署名鍵が使えないため、計測を止めて表示します'); }
+
   const seo = (site.seo_json ?? {}) as { description?: string };
 
   // このホストでこのサイトを配信してよいか。
@@ -201,8 +206,13 @@ export default async function PublishedSitePage({ params }: Props) {
       {laruseoPublicId && (
         <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
       )}
-      {/* Signed first-party pageview and heatmap tracking. */}
-      <script dangerouslySetInnerHTML={{ __html: analyticsTrackingScript(slug,signAnalyticsSite(slug)) }} />
+      {/* Signed first-party pageview and heatmap tracking.
+          署名鍵が無い・短いときは analytics_unavailable を投げる作りなので、
+          そのままだと顧客の公開サイトが丸ごと500になる。落とすべきなのは
+          アクセス計測だけで、顧客のサイトではない。計測を諦めて本文を出す。 */}
+      {analyticsToken && (
+        <script dangerouslySetInnerHTML={{ __html: analyticsTrackingScript(slug,analyticsToken) }} />
+      )}
       {/* Popup */}
       {hasActivePopup && (
         <script src={`/api/popup?slug=${slug}`} defer />

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hasServiceAccess } from '@/lib/subscription-access';
 import { createClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { readAiJson, requireAiAccess } from '@/lib/ai-access';
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
   const plan = profile.plan;
   const status = profile.subscription_status;
   const allowedPlans = ['hp-bot-seo', 'agency'];
-  if (!['active', 'trialing'].includes(status) || !allowedPlans.includes(plan)) {
+  if (!hasServiceAccess(status) || !allowedPlans.includes(plan)) {
     return NextResponse.json({ error: 'このプランではAIブログ生成は利用できません。HP + Bot + SEOプラン以上が必要です。' }, { status: 403 });
   }
 

@@ -7,6 +7,7 @@ import { starterTemplate } from '@/lib/starter-template';
 import { exportToHTML } from '@/lib/html-export';
 import { createClient } from '@/lib/supabase/client';
 import { hasFeature } from '@/lib/plan-limits';
+import { hasServiceAccess } from '@/lib/subscription-access';
 import { checkPublishReadiness, blockingItems, adviceItems, type ReadyItem } from '@/lib/publish-readiness';
 import { publishCompletion } from '@/lib/publish-result';
 import { migrationBlockData } from '@/lib/migration-block';
@@ -4463,6 +4464,47 @@ function BuilderContent() {
         }
       });
     });
+  }, []);
+
+  // 決済から戻ってきたとき。
+  //
+  // Stripeは支払いが済んだ瞬間にここへ返すが、契約状態を書くのは webhook なので、
+  // 戻ってきた時点ではまだ未契約に見えることがある。そのまま「公開」を押すと
+  // また料金画面が出て、払ったのに払えていないように見える。
+  // 数秒だけ様子を見て、反映されたら公開できることを伝える。
+  useEffect(() => {
+    if (searchParams.get('payment') !== 'success') return;
+    let alive = true;
+    let tries = 0;
+    setBuilderToast('お支払いを確認しています…');
+    const supabase = createClient();
+    const check = async () => {
+      if (!alive) return;
+      tries += 1;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('profiles')
+        .select('plan, subscription_status').eq('id', user.id).single();
+      if (!alive) return;
+      if (data && hasServiceAccess(data.subscription_status)) {
+        setUserPlan(data.plan);
+        setSubscriptionStatus(data.subscription_status);
+        setShowPlanModal(false);
+        setBuilderToast('ご契約ありがとうございます。「公開」を押すと公開できます');
+        setTimeout(() => { if (alive) setBuilderToast(''); }, 6000);
+        return;
+      }
+      if (tries >= 10) {
+        setBuilderToast('お支払いは受け付けました。反映まで少しかかることがあります');
+        setTimeout(() => { if (alive) setBuilderToast(''); }, 8000);
+        return;
+      }
+      setTimeout(check, 2000);
+    };
+    check();
+    return () => { alive = false; };
+    // searchParams は初回の値だけ見る
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 保存する中身は1か所で作る。

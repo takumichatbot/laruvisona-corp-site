@@ -49,24 +49,39 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', e => errors.push(String(e)));
 
-/* ── 1. 案内ページ → 見せ方を選んで、そのまま作りはじめる ── */
-await page.goto(`${BASE}/laruHP`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('[role="radiogroup"]', { timeout: 20000 });
-await page.locator('[role="radio"]:has-text("やわらかい")').click();
-await page.waitForTimeout(1200);
-check('案内のデモで見せ方を選べる', (await page.locator('[role="radio"][aria-checked="true"]:has-text("やわらかい")').count()) === 1);
+/* ── 1. 案内ページの試作 → そのまま制作へ ──
+   案内ページの試作（CreationLab）は、選んだ内容を sessionStorage に置いて
+   /laruHP/studio?creation=<id> へ渡し、制作画面はいきなり編集から始まる。
+   下書きが localStorage に残るので、この確認だけ別の文脈で行い、
+   そのあとの通し確認（案内を通らない入口）に影響させない。 */
+{
+  const lpCtx = await browser.newContext({ viewport: { width: 1440, height: 950 }, locale: 'ja-JP' });
+  await lpCtx.addCookies(['sb-127-auth-token', 'sb-localhost-auth-token'].map(name => ({ name, value: cookieValue, domain: '127.0.0.1', path: '/' })));
+  await lpCtx.route(/larubot\.tokyo|googletagmanager|clarity\.ms/, r => r.abort());
+  const lp = await lpCtx.newPage();
+  await lp.goto(`${BASE}/laruHP`, { waitUntil: 'domcontentloaded' });
+  await lp.waitForSelector('.cl-moods button', { timeout: 20000 });
+  await lp.locator('.cl-moods button:has-text("やわらかい")').click();
+  await lp.waitForTimeout(800);
+  check('案内の試作で見せ方を選べる',
+    (await lp.locator('.cl-moods button[aria-pressed="true"]:has-text("やわらかい")').count()) === 1);
 
-const startCta = page.locator('a:has-text("この見せ方で作りはじめる")');
-check('選んだ見せ方のまま作りはじめる入口がある', (await startCta.count()) === 1);
-const startHref = await startCta.getAttribute('href');
-check('入口が、選んだ見せ方を持っていく', startHref === '/laruHP/studio?mood=warm', String(startHref));
-if (args.shots) await page.screenshot({ path: `${args.shots}/01-lp-demo.png` });
-await startCta.click();
+  const startCta = lp.locator('button.cl-continue');
+  check('試作から制作へ進む入口がある', (await startCta.count()) === 1);
+  if (args.shots) await lp.screenshot({ path: `${args.shots}/01-lp-demo.png` });
+  await startCta.click();
+  await lp.waitForURL(/\/laruHP\/studio/, { timeout: 20000 });
+  check('案内から制作画面へ、やり直さずに入れる', /[?&]creation=/.test(lp.url()), lp.url());
+  await lp.waitForSelector('.sc-creation-note', { timeout: 20000 });
+  check('試作の内容を引き継いだことが画面に出る',
+    (await lp.locator('text=案内ページでつくった内容を引き継ぎました').count()) > 0);
+  await lpCtx.close();
+}
 
-/* ── 2. 制作画面：選んだ見せ方が引き継がれている ── */
-await page.waitForURL(/\/laruHP\/studio/, { timeout: 20000 });
+/* ── 2. 案内を通らない入口：見せ方だけ持って制作画面へ ── */
+await page.goto(`${BASE}/laruHP/studio?mood=warm`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('text=何のお店ですか', { timeout: 20000 });
-check('案内から制作画面へ、やり直さずに入れる', page.url().includes('mood=warm'));
+check('見せ方を持ったまま、最初の質問から始められる', page.url().includes('mood=warm'));
 
 /* ── 3. きく（4つの質問）── */
 await page.locator('select').first().selectOption('clinic');

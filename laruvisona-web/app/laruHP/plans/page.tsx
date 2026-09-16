@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { track } from '@/lib/analytics';
+import { hasServiceAccess } from '@/lib/subscription-access';
 
 // ログイン中ユーザーの現契約。既存契約者はボタンを「このプランに変更／ご利用中」に切り替える。
 const CurrentPlanContext = createContext<{ plan: string | null; subscribed: boolean }>({ plan: null, subscribed: false });
@@ -201,8 +202,11 @@ export default function PlansPage() {
         if (!user) return;
         const { data } = await supabase.from('profiles').select('plan, subscription_status').eq('id', user.id).single();
         if (data) {
-          setSubscribed(data.subscription_status === 'active');
-          setCurrentPlan(data.subscription_status === 'active' ? data.plan : null);
+          // trialing も契約中として扱う。ここを active 限定にすると、
+          // 試用中の人に「未契約」の画面を出して二重契約へ誘導してしまう。
+          const using = hasServiceAccess(data.subscription_status);
+          setSubscribed(using);
+          setCurrentPlan(using ? data.plan : null);
         }
       } catch { /* Supabase 未設定・未ログイン等でも購入導線は生かす */ }
     })();

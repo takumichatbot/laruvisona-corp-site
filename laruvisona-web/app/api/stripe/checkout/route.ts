@@ -177,7 +177,12 @@ export async function POST(req: Request) {
           billing: billing,
         },
       },
-      success_url: `${origin}/laruHP/dashboard?payment=success`,
+      // 契約したあとは、作りかけのサイトへ戻す。
+      // 「公開」を押して料金画面が出て、支払ったのにダッシュボードへ放り出されると、
+      // 何を押せば公開できるのかが分からないまま終わる。
+      success_url: ownedSiteId
+        ? `${origin}/laruHP/builder?siteId=${ownedSiteId}&payment=success`
+        : `${origin}/laruHP/dashboard?payment=success`,
       cancel_url: `${origin}/laruHP/plans?payment=canceled`,
       locale: 'ja',
     }, { idempotencyKey: `laruhp-checkout-${user.id}-${plan}-${billing}` });

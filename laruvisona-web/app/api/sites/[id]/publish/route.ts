@@ -3,6 +3,10 @@ import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { exportToHTML } from '@/lib/html-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
+import { hasServiceAccess } from '@/lib/subscription-access';
+import { canonicalBase } from '@/lib/public-site-url';
+import { sitePublishedEmail } from '@/lib/site-published-email';
+import { Resend } from 'resend';
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -27,7 +31,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   if (profileError) return NextResponse.json({ error: '契約を確認できませんでした' }, { status: 503 });
 
-  if (!isAdmin && profile?.subscription_status !== 'active') {
+  // trialing も通す。ここだけ active 限定にしていたため、試用中の人は
+  // サイトを作れるのに公開だけできなかった（lib/subscription-access.ts）。
+  if (!isAdmin && !hasServiceAccess(profile?.subscription_status)) {
     return NextResponse.json(
       { error: 'subscription_required', message: 'サイトの公開にはサブスクリプションが必要です' },
       { status: 403 }
@@ -82,6 +88,30 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   // Bust ISR cache for this slug
   if (updated?.slug) revalidatePath(`/hp/${updated.slug}`);
+
+  // はじめての公開だけ、本人へURLを送る。
+  // 公開できたのに何も残らないと、タブを閉じた時点で自分のサイトの場所が
+  // 分からなくなる。公開そのものは終わっているので、送信の失敗で
+  // 公開を失敗扱いにはしない。
+  if (!site.published && user.email) {
+    try {
+      if (process.env.RESEND_API_KEY) {
+        const mail = sitePublishedEmail({
+          siteName: site.name,
+          url: canonicalBase({ slug: updated.slug, custom_domain: site.custom_domain }),
+        });
+        await new Resend(process.env.RESEND_API_KEY).emails.send(
+          { from: 'LARU HP <noreply@laruvisona.jp>', to: user.email, subject: mail.subject, html: mail.html },
+          // 何度公開し直しても、最初の1通だけ。
+          { idempotencyKey: `laruhp-site-published-${id}` },
+        );
+      }
+    } catch (error) {
+      console.error('[sites/publish] 公開のお知らせを送れませんでした', {
+        name: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+  }
 
   // 公開自体は完了済みなので、履歴保存だけの失敗を公開失敗には戻さない。
   // 成否を返して、利用者と運用側が「履歴も保存済み」と誤認しないようにする。

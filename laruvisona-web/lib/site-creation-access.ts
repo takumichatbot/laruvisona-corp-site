@@ -1,4 +1,5 @@
 import { getSiteLimit } from './plan-limits';
+import { hasServiceAccess } from './subscription-access';
 
 /** Call with auth.getUser()'s email and server configuration, never request-body roles. */
 export function siteCreationAccess(
@@ -12,7 +13,7 @@ export function siteCreationAccess(
   // Same trusted allowlist as the existing publish route. Does not change billing records.
   const admin = !!email && admins.includes(email.trim().toLowerCase());
   return {
-    allowed: admin || !!(plan && (!status || status === 'active' || status === 'trialing')),
+    allowed: admin || !!(plan && (!status || hasServiceAccess(status))),
     limit: getSiteLimit(admin ? 'agency' : plan),
   };
 }

@@ -944,16 +944,21 @@ export default function DashboardPage() {
         const unread = contacts.filter(c => !c.read).length;
         const isPastDue = profile?.subscription_status === 'past_due';
         const isCanceled = profile?.subscription_status === 'canceled';
+        // contract_ends_at は「いまの請求期間の終わり」で、支払うたびに翌月へ動く。
+        // つまり契約中の人は毎月かならず、更新日の2週間前から
+        // 「契約終了まであと◯日です」という嘘の警告を見ることになっていた。
+        // 自動更新されるのだから、これは終了ではない。
+        // 本当に終わるのは解約済みのときだけなので、そのときだけ出す。
         const contractEnd = profile?.contract_ends_at ? new Date(profile.contract_ends_at) : null;
         const daysLeft = contractEnd ? Math.ceil((contractEnd.getTime() - Date.now()) / 86400000) : null;
-        const nearExpiry = daysLeft !== null && daysLeft > 0 && daysLeft <= 14;
+        const nearExpiry = isCanceled && daysLeft !== null && daysLeft > 0 && daysLeft <= 14;
         const overdueFollowups = contacts.filter(c => c.crm_followup_at && new Date(c.crm_followup_at) < new Date()).length;
         const notifs: { id: string; type: 'info' | 'warn' | 'error'; title: string; body: string; href?: string }[] = [];
         if (unread > 0) notifs.push({ id: 'unread', type: 'info', title: `未読の問い合わせが${unread}件あります`, body: '早めに確認・返信しましょう', href: '/laruHP/contacts' });
         if (overdueFollowups > 0) notifs.push({ id: 'followup', type: 'warn', title: `フォローアップ期限超過 ${overdueFollowups}件`, body: '期限を過ぎた問い合わせがあります', href: '/laruHP/contacts?overdue=1' });
         if (isPastDue) notifs.push({ id: 'pastdue', type: 'error', title: '支払いが遅延しています', body: '決済情報を更新してサービスを継続してください', href: '/laruHP/settings' });
         if (isCanceled) notifs.push({ id: 'canceled', type: 'warn', title: 'サブスクリプションが解約済みです', body: '再契約すると公開サイトを復旧できます', href: '/laruHP/settings' });
-        if (nearExpiry) notifs.push({ id: 'expiry', type: 'warn', title: `契約終了まであと${daysLeft}日です`, body: '自動更新されない場合はご確認ください', href: '/laruHP/settings' });
+        if (nearExpiry) notifs.push({ id: 'expiry', type: 'warn', title: `ご利用できるのはあと${daysLeft}日です`, body: '解約済みのため、この日を過ぎると公開サイトが止まります', href: '/laruHP/settings' });
         if (notifs.length === 0) notifs.push({ id: 'ok', type: 'info', title: '特に通知はありません', body: 'サイトとプランは正常です' });
         const badgeCount = notifs.filter(n => n.id !== 'ok').length;
 

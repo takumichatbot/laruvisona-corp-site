@@ -181,6 +181,45 @@ http.createServer((req, res) => {
     return send(200, { user: null, data: { user: null } });
   }
 
+  /* RPC。いまサイトの新規作成は laruhp_create_site を通る（supabase/hp_sites.sql）。
+     これが無いと「はじめての人が1件作る」経路を一度も通せない。
+     本物のSQLと同じ判断をここでもする——入力の形を確かめ、所有数の上限を見て、
+     上限なら ok:false + reason:'site_limit'、通れば作った行を返す。
+     v2 ドキュメント（{v:2,pages:[]}）を配列と同じく受けるところが肝心で、
+     ここを取り違えると新規作成が必ず400で落ちる。 */
+  if (req.method === 'POST' && url.pathname === '/rest/v1/rpc/laruhp_create_site') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      let a = {};
+      try { a = JSON.parse(body || '{}'); } catch { /* noop */ }
+      if (CONTROL.failWrites) return send(500, { message: 'fixture: 書き込みを失敗させています' });
+      const isObject = v => !!v && typeof v === 'object' && !Array.isArray(v);
+      const blocksOk = Array.isArray(a.p_blocks)
+        || (isObject(a.p_blocks) && String(a.p_blocks.v) === '2' && Array.isArray(a.p_blocks.pages));
+      const limit = Number(a.p_limit);
+      const valid = !!a.p_user && limit >= 1 && limit <= 999
+        && typeof a.p_name === 'string' && a.p_name.length >= 1 && a.p_name.length <= 120
+        && typeof a.p_slug === 'string' && /^[a-z0-9ぁ-ん一-龯]([a-z0-9ぁ-ん一-龯-]{0,58}[a-z0-9ぁ-ん一-龯])?$/.test(a.p_slug)
+        && (a.p_industry == null || String(a.p_industry).length <= 80)
+        && blocksOk && isObject(a.p_seo) && isObject(a.p_settings);
+      // 本物は raise exception。PostgREST は 400 を返す。
+      if (!valid) return send(400, { message: 'invalid_site_input', code: 'P0001' });
+      const count = SITES.filter(x => x.user_id === a.p_user).length;
+      if (count >= limit) return send(200, { ok: false, reason: 'site_limit', count, limit });
+      const row = {
+        id: `new-site-${SITES.length + 1}-${Math.random().toString(36).slice(2, 8)}`,
+        user_id: a.p_user, name: a.p_name, slug: a.p_slug, industry: a.p_industry ?? null,
+        blocks_json: a.p_blocks, seo_json: a.p_seo, settings_json: a.p_settings,
+        custom_domain: null, published: false, published_html: '',
+        view_count: 0, created_at: new Date().toISOString(), updated_at: touch(),
+      };
+      SITES.push(row);
+      return send(200, { ok: true, site: row });
+    });
+    return;
+  }
+
   // 書き込み。公開ルートが published_html を保存できるようにする。
   if (req.method === 'PATCH' || req.method === 'POST') {
     const t = (url.pathname.match(/^\/rest\/v1\/([a-z_]+)$/) || [])[1];

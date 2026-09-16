@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hasServiceAccess } from '@/lib/subscription-access';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { hasFeature } from '@/lib/plan-limits';
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     error ||
     !profile ||
     !hasFeature(profile.plan, 'builder') ||
-    !['active', 'trialing'].includes(profile.subscription_status)
+    !hasServiceAccess(profile.subscription_status)
   )
     return NextResponse.json(
       { error: 'ご契約の状態を確認してください。' },
