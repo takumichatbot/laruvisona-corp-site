@@ -247,8 +247,8 @@ export default function ServicesPage() {
             <img src="/images/logo_dark.png" alt="株式会社LaruVisona" className="h-7 w-auto object-contain" />
           </Link>
           <nav className="flex items-center gap-2 sm:gap-5 text-sm">
-            <Link href="/#about" className="hidden sm:inline text-slate-300 hover:text-white transition-colors">会社概要</Link>
-            <Link href="/#product" className="hidden sm:inline text-slate-300 hover:text-white transition-colors">プロダクト</Link>
+            <Link href="/#company" className="hidden sm:inline text-slate-300 hover:text-white transition-colors">会社概要</Link>
+            <Link href="/#products" className="hidden sm:inline text-slate-300 hover:text-white transition-colors">プロダクト</Link>
             <a href="#contact" className="bg-white text-black px-4 py-2 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-50 transition-all">
               無料で相談する
             </a>
@@ -540,7 +540,7 @@ export default function ServicesPage() {
           <img src="/images/logo_dark.png" alt="株式会社LaruVisona" className="h-7 w-auto object-contain opacity-80" />
           <div className="flex flex-wrap justify-center gap-6 text-xs font-bold tracking-widest uppercase">
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <Link href="/#about" className="hover:text-white transition-colors">Company</Link>
+            <Link href="/#company" className="hover:text-white transition-colors">Company</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
           </div>

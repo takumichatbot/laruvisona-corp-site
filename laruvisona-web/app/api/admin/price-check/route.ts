@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireBearer } from '@/lib/scheduled-email';
 import { stripe } from '@/lib/stripe';
 import { MONTHLY, ANNUAL_TOTAL } from '@/lib/laruhp-facts';
+import { verifyFirstMonthCoupon } from '@/lib/price-integrity';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,10 +79,35 @@ export async function GET(req: Request) {
   }
 
   const problems = rows.filter(r => r.status !== 'ok');
-  const coupon = process.env.STRIPE_FIRST_MONTH_COUPON_ID;
+
+  // 「初月無料」はクーポン1枚で全プランに出している。割合100%でないと、
+  // 高いプランでは初月が無料にならない。set/未設定だけでは足りない。
+  const couponId = process.env.STRIPE_FIRST_MONTH_COUPON_ID;
+  let firstMonthCoupon: Record<string, unknown>;
+  if (!couponId) {
+    firstMonthCoupon = { status: 'MISSING', note: '月払いの決済が全部503になります' };
+  } else {
+    try {
+      const coupon = await stripe.coupons.retrieve(couponId);
+      const perPlan = PLANS.map(p => {
+        const verdict = verifyFirstMonthCoupon(p.plan, coupon);
+        return { plan: p.plan, ok: verdict.ok, reason: verdict.ok ? undefined : verdict.reason };
+      });
+      firstMonthCoupon = {
+        status: perPlan.every(x => x.ok) ? 'ok' : 'MISMATCH',
+        percentOff: coupon.percent_off ?? null,
+        amountOff: coupon.amount_off ?? null,
+        duration: coupon.duration ?? null,
+        perPlan: perPlan.filter(x => !x.ok),
+      };
+    } catch (err) {
+      firstMonthCoupon = { status: 'unreadable', note: (err as Error)?.message };
+    }
+  }
+
   return NextResponse.json({
-    ok: problems.length === 0,
-    firstMonthCoupon: coupon ? 'set' : 'MISSING（月払いの決済が全部503になります）',
+    ok: problems.length === 0 && firstMonthCoupon.status === 'ok',
+    firstMonthCoupon,
     problems,
     rows,
   });

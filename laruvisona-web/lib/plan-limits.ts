@@ -29,3 +29,21 @@ export function hasFeature(plan: string | null, feature: string): boolean {
   if (!plan) return false;
   return (PLAN_FEATURES[plan] ?? []).includes(feature);
 }
+
+// メールシーケンスの本数。料金ページ（app/laruHP/plans/page.tsx）の
+// 「メールシーケンス」の行と必ず一致させること。
+// 2026-09-17: 料金表では hp:− / lite:3件 / hp-bot・hp-bot-seo:5件 と売っていたのに、
+// app/api/sequences/route.ts にプラン判定も本数の上限も無く、どのプランでも
+// 無制限に作れていた。表に書いた線引きは、必ずAPI側にも置く。
+export const PLAN_SEQUENCE_LIMIT: Record<string, number> = {
+  hp: 0,
+  lite: 3,
+  'hp-bot': 5,
+  'hp-bot-seo': 5,
+  agency: 5,
+};
+
+export function getSequenceLimit(plan: string | null): number {
+  if (!plan) return 0;
+  return PLAN_SEQUENCE_LIMIT[plan] ?? 0;
+}

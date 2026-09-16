@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { getSequenceLimit } from '@/lib/plan-limits';
 import {
   parseSequenceCreate, parseSequencePatch, readSequenceBody, sequenceId, sequenceSiteId,
   type SequenceRecord, type SequenceStep, type SequenceTrigger,
@@ -13,7 +14,46 @@ async function owner(siteId: string) {
   if (!user) return { response: NextResponse.json({ error: 'ログインしてください' }, { status: 401 }) };
   const { data, error } = await db.from('sites').select('id').eq('id', siteId).eq('user_id', user.id).single();
   if (error || !data) return { response: NextResponse.json({ error: 'サイトが見つかりません' }, { status: 404 }) };
-  return { user };
+  return { user, db };
+}
+
+/**
+ * 料金ページで売っている本数を、作る側でも守る。
+ * すでに上限を超えて持っている人からは取り上げない（増やせないだけ）。
+ */
+async function sequenceQuota(
+  db: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  email: string | undefined,
+  siteId: string,
+): Promise<{ response?: NextResponse }> {
+  const adminEmails = [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]
+    .filter(Boolean).join(',').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  if (adminEmails.includes((email || '').toLowerCase())) return {};
+
+  const { data: profile, error: profileError } = await db
+    .from('profiles').select('plan').eq('id', userId).single();
+  if (profileError) return { response: NextResponse.json({ error: 'ご契約を確認できませんでした' }, { status: 503 }) };
+
+  const limit = getSequenceLimit((profile?.plan as string | null) ?? null);
+  if (limit === 0) {
+    return { response: NextResponse.json({
+      error: 'plan_required',
+      message: 'メールシーケンスは Lite 以上のプランでご利用いただけます。',
+    }, { status: 403 }) };
+  }
+
+  const { count, error: countError } = await createServiceClient()
+    .from('hp_sequences').select('id', { count: 'exact', head: true })
+    .eq('site_id', siteId).is('deleted_at', null);
+  if (countError) return { response: NextResponse.json({ error: '本数を確認できませんでした' }, { status: 503 }) };
+  if ((count ?? 0) >= limit) {
+    return { response: NextResponse.json({
+      error: 'limit_reached',
+      message: `このプランで作成できるメールシーケンスは${limit}件までです。`,
+    }, { status: 403 }) };
+  }
+  return {};
 }
 
 function output(row: DbSequence, count = 0): SequenceRecord {
@@ -45,6 +85,8 @@ export async function POST(req: Request) {
   catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
   const auth = await owner(input.siteId);
   if (auth.response) return auth.response;
+  const quota = await sequenceQuota(auth.db!, auth.user!.id, auth.user!.email, input.siteId);
+  if (quota.response) return quota.response;
   const { data, error } = await createServiceClient().from('hp_sequences').insert({
     id: input.id, site_id: input.siteId, user_id: auth.user!.id, name: input.name, trigger: input.trigger, steps: input.steps, active: false,
   }).select('id,name,trigger,steps,active,created_at').single();

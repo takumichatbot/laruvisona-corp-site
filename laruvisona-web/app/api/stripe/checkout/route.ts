@@ -5,7 +5,7 @@ import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { readContactBody } from '@/lib/contact-contract';
-import { verifyPrice } from '@/lib/price-integrity';
+import { verifyPrice, verifyFirstMonthCoupon } from '@/lib/price-integrity';
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   hp: process.env.STRIPE_PRICE_ID,
@@ -86,6 +86,21 @@ export async function POST(req: Request) {
   if (!isAnnual && !couponId) {
     // 画面で初月無料を約束しているため、クーポン無しの通常請求には退化させない。
     return NextResponse.json({ error: '初月無料の決済設定を確認中です。時間をおいてお試しください。' }, { status: 503 });
+  }
+  // クーポンが本当に「そのプランを無料にする」ものかを、売る前に確かめる。
+  // 固定額クーポンだと、高いプランでは初月無料にならない。
+  if (couponId) {
+    try {
+      const coupon = await stripe.coupons.retrieve(couponId);
+      const couponVerdict = verifyFirstMonthCoupon(plan, coupon);
+      if (!couponVerdict.ok) {
+        console.error('[stripe/checkout] 初月無料のクーポンが表示と一致しません', { plan, reason: couponVerdict.reason });
+        return NextResponse.json({ error: '初月無料の設定を確認しています。少し時間をおいてお試しください。' }, { status: 503 });
+      }
+    } catch (err) {
+      console.error('[stripe/checkout] クーポンを確認できませんでした:', (err as Error)?.message);
+      return NextResponse.json({ error: '初月無料の設定を確認できませんでした。時間をおいてお試しください。' }, { status: 503 });
+    }
   }
 
   // Get or create Stripe customer

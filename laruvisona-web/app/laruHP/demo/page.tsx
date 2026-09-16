@@ -50,7 +50,7 @@ export default function DemoPage() {
                   業種を選んでプレビュー
                 </h1>
                 <p className="text-gray-500 text-base max-w-xl mx-auto">
-                  あなたのお店・事務所の業種を選ぶと、AIが作るサイトのイメージをプレビューできます。
+                  業種を選ぶと、その業種でよく使う構成の見本を表示します。実際の下書きは、制作スタジオで業種と屋号を入れると作られます。
                 </p>
               </div>
 
@@ -127,7 +127,7 @@ export default function DemoPage() {
                     {/* LARUbot badge */}
                     <div className="mt-4 flex items-center gap-2 bg-indigo-600 text-white rounded-xl px-3 py-2 text-xs">
                       <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center font-bold text-[10px]">AI</div>
-                      <span>AIチャットボットがお客様の質問に24時間対応</span>
+                      <span>AIチャットボットがお客様の質問に24時間対応（Lite以上のプラン）</span>
                     </div>
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export default function DemoPage() {
                   <div className="space-y-3">
                     {[
                       'AI がコンテンツを自動生成',
-                      'チャットボットが24時間対応',
+                      'チャットボットが24時間対応（Lite以上のプラン）',
                       'SEO対策・Googleマップ連携',
                       '問い合わせ・予約をまとめて管理',
                     ].map(f => (
@@ -161,7 +161,7 @@ export default function DemoPage() {
 
                   <div className="bg-sky-50 border border-sky-200 rounded-xl p-4">
                     <div className="text-2xl font-black text-sky-600 mb-0.5">¥999<span className="text-base font-normal text-gray-500">/月〜</span></div>
-                    <div className="text-xs text-gray-500">初月無料 · 最低6ヶ月契約 · いつでも解約可</div>
+                    <div className="text-xs text-gray-500">初月無料 · 最低6ヶ月 · 7ヶ月目から月単位で解約できます</div>
                   </div>
 
                   <Link

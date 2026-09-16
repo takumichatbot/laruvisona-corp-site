@@ -459,7 +459,7 @@ export default function PlansPage() {
                 <p className="text-gray-500 text-sm mb-4">Web制作会社・フリーランス向け。複数クライアントのサイトを1アカウントで一元管理。</p>
                 <ul className="space-y-2">
                   {[
-                    'クライアント数無制限',
+                    'クライアントサイト 999件まで',
                     '全機能（HP + LARUbot Lite + LARUSEO）込み',
                     'クライアント別ダッシュボード・管理画面',
                     'PV・問い合わせを全サイトまとめて確認',
@@ -479,7 +479,7 @@ export default function PlansPage() {
                   <span className="text-gray-500 text-sm">/ 月（税別）</span>
                 </div>
                 {annual && <div className="text-gray-400 text-xs md:text-right mb-1">年間 ¥{ANNUAL_TOTAL.agency.toLocaleString()}</div>}
-                <div className="text-purple-600 text-xs font-medium mb-5">クライアント数無制限</div>
+                <div className="text-purple-600 text-xs font-medium mb-5">クライアントサイト 999件まで</div>
                 <CheckoutButton
                   plan="agency"
                   annual={annual}

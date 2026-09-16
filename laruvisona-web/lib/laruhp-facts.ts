@@ -27,6 +27,23 @@ export const PLANS = [
     excludes: ['LARUbot Lite（AIチャットボット）', 'LARUSEO（AIブログ）'],
     badge: null as string | null,
     highlight: false,
+    landing: true,
+  },
+  {
+    id: 'lite',
+    name: 'Lite',
+    monthly: 2980,
+    annualPerMonth: 2483,
+    lead: 'ホームページに、小さくAIを足してみる',
+    includes: [
+      'HP単体プランのすべて',
+      'LARUbot Lite（AIチャットボット）',
+      'メールシーケンス（3件まで）',
+    ],
+    excludes: ['LARUSEO（AIブログ）'],
+    badge: null,
+    highlight: false,
+    landing: false,
   },
   {
     id: 'hp-bot',
@@ -44,6 +61,7 @@ export const PLANS = [
     // 販売者としての推奨であることが分かる言い方にする。
     badge: 'おすすめ',
     highlight: true,
+    landing: true,
   },
   {
     id: 'hp-bot-seo',
@@ -59,6 +77,24 @@ export const PLANS = [
     excludes: [],
     badge: null,
     highlight: false,
+    landing: true,
+  },
+  {
+    id: 'agency',
+    name: 'エージェンシー',
+    monthly: 19800,
+    annualPerMonth: 16500,
+    lead: '複数のクライアントサイトを、1つのアカウントで持つ',
+    includes: [
+      'HP + Bot + SEO プランのすべて',
+      'クライアントサイトを1アカウントで管理（999サイトまで）',
+      'クライアント別のダッシュボード',
+      '優先サポート',
+    ],
+    excludes: [],
+    badge: null,
+    highlight: false,
+    landing: false,
   },
 ] as const;
 
@@ -100,9 +136,11 @@ export const PRIMARY_CTA = {
   sub: 'クレジットカード決済・最低6ヶ月',
 } as const;
 
+// 飛び先はページに実在する id を指すこと。2026-09-17 まで '#works' を指していたが
+// LARU HP のLPに id="works" の節は無く、押しても何も起きなかった。
 export const SECONDARY_CTA = {
   label: '作れるサイトを見る',
-  href: '#works',
+  href: '#experience',
 } as const;
 
 export const FAQ = [

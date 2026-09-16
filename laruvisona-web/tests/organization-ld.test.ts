@@ -20,7 +20,10 @@ test('指名検索で会社を言い当てられるだけの情報がある', ()
   for (const key of ['name', 'legalName', 'url', 'logo', 'description', 'foundingDate', 'email', 'address', 'sameAs']) {
     assert.ok(o[key], `${key} が無い`);
   }
-  assert.deepEqual(o.sameAs, ['https://larubot.tokyo', 'https://laruhp.com', 'https://www.flastal.com']);
+  assert.deepEqual(o.sameAs, ['https://larubot.tokyo', 'https://laruhp.com']);
+  // sameAs は同一主体の宣言。受託で作ったクライアントのサービスを入れると、
+  // 他社のサイトを自社だと検索側へ伝えることになる。
+  assert.ok(!(o.sameAs as string[]).some(u => u.includes('flastal')), '受託案件のURLが sameAs に入っている');
   assert.equal((o.address as Record<string, string>).addressLocality, '板橋区');
 });
 

@@ -3925,7 +3925,9 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 
             {/* LARUSEO */}
             {(() => {
-              const canUse = userPlan === 'hp-bot-seo';
+              const canUse = hasFeature(userPlan, 'seo'); // hp-bot-seo/agency（PLAN_FEATURESと同期）
+              // agency は料金ページで「全機能込み」として売っている。ここを 'hp-bot-seo' と
+              // 直書きしていたため、契約済みの agency に「アップグレード →」を出していた。
               return (
                 <div className="rounded-xl mb-3 overflow-hidden border border-emerald-500/20" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.10) 0%, rgba(17,24,39,0.8) 100%)' }}>
                   {/* Header */}

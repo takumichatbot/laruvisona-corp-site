@@ -18,6 +18,12 @@ export interface Work {
    * 実績を見に来た人に空の枠を見せるのは、何も無いのと同じか、それ以下である。
    */
   shots: { src: string; alt: string; w: number; h: number; caption: string }[];
+  /**
+   * 開発体制。案件ごとに、どこからどこまでを自分たちがやったのかが違う。
+   * ページ側で「企画から運用まで1名で」と決め打ちしていたため、企画を担当していない
+   * クライアント案件の詳細ページにも同じ文が出ていた。案件のデータとして持つ。
+   */
+  structure: { headline: string; detail: string };
   /** コンテンツ未確定（クライアント提供待ち）の場合 true */
   placeholder: boolean;
   accent: 'indigo' | 'cyan' | 'purple';
@@ -44,6 +50,10 @@ export const WORKS: Work[] = [
       { src: '/company/products/larubot.jpg', alt: 'LARUbotのサービス画面', w: 1200, h: 750, caption: 'larubot.tokyo（実際の画面）' },
       { src: '/company/products/larubot-sp.jpg', alt: 'LARUbotのスマートフォン表示', w: 390, h: 844, caption: 'スマートフォンでの表示' },
     ],
+    structure: {
+      headline: '企画・設計・開発・運用まで、1名でフルスタック開発',
+      detail: '要件定義からUI/UX設計、フロントエンド・バックエンド実装、インフラ構築、リリース後の運用改善までを一気通貫で担当。自社サービスなので、決めてから直すまでが速い。',
+    },
     placeholder: false,
     accent: 'indigo',
   },
@@ -66,6 +76,10 @@ export const WORKS: Work[] = [
       { src: '/lp/studio-edit.jpg', alt: 'LARU HPの制作画面', w: 1200, h: 750, caption: '実際の制作画面' },
       { src: '/company/products/laruhp-sp.jpg', alt: 'LARU HPで作ったサイトのスマートフォン表示', w: 390, h: 844, caption: '作ったサイトのスマートフォン表示' },
     ],
+    structure: {
+      headline: '企画・設計・開発・運用まで、1名でフルスタック開発',
+      detail: '要件定義からUI/UX設計、フロントエンド・バックエンド実装、インフラ構築、リリース後の運用改善までを一気通貫で担当。自社サービスなので、決めてから直すまでが速い。',
+    },
     placeholder: false,
     accent: 'cyan',
   },
@@ -86,6 +100,10 @@ export const WORKS: Work[] = [
       { src: '/company/products/flastal.jpg', alt: 'FLASTALのトップページ', w: 1200, h: 595, caption: 'flastal.com（実際の画面）' },
       { src: '/company/products/flastal-sp.jpg', alt: 'FLASTALのスマートフォン表示', w: 390, h: 844, caption: 'スマートフォンでの表示' },
     ],
+    structure: {
+      headline: '画面の実装から決済、公開後の運用までを担当',
+      detail: 'クライアントの企画に対して、フロントエンド・バックエンドの実装、Stripeによる集金と返金の処理、公開後の運用改善を担当しています。企画そのものはクライアント側です。',
+    },
     placeholder: false,
     accent: 'purple',
   },

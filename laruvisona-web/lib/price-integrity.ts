@@ -50,3 +50,35 @@ export function verifyPrice(
   if (interval !== wantInterval) return { ok: false, reason: `請求間隔が${interval}` };
   return { ok: true };
 }
+
+/**
+ * 「初月無料」は全プランで同じ1枚のクーポンを使っている。
+ * 固定額（例 999円オフ）のクーポンだと、HP単体では無料になるが
+ * エージェンシー（19,800円）では18,801円請求される。画面は全プランに
+ * 「初月無料」と出しているので、割合100%でなければ売ってはいけない。
+ * 価格だけ照らし合わせても、この食い違いは見つからない。
+ */
+export type CouponFacts = {
+  valid?: boolean | null;
+  percent_off?: number | null;
+  amount_off?: number | null;
+  currency?: string | null;
+  duration?: string | null;
+};
+
+export function verifyFirstMonthCoupon(plan: string, coupon: CouponFacts): PriceVerdict {
+  if (coupon.valid === false) return { ok: false, reason: 'クーポンが無効' };
+  if (coupon.duration && coupon.duration !== 'once') {
+    return { ok: false, reason: `初月だけのつもりが duration=${coupon.duration}` };
+  }
+  if (coupon.percent_off === 100) return { ok: true };
+  const shown = SHOWN_AMOUNT[plan];
+  if (coupon.amount_off != null) {
+    if (!shown) return { ok: true, unchecked: true };
+    if ((coupon.currency || 'jpy').toLowerCase() !== 'jpy') return { ok: false, reason: `クーポンの通貨が${coupon.currency}` };
+    if (coupon.amount_off >= shown.monthly) return { ok: true };
+    return { ok: false, reason: `初月無料と出しているが、割引は${coupon.amount_off}円で月額${shown.monthly}円に足りない` };
+  }
+  if (coupon.percent_off != null) return { ok: false, reason: `初月無料と出しているが、割引は${coupon.percent_off}%` };
+  return { ok: false, reason: '割引の内容を確認できない' };
+}

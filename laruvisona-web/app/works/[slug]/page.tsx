@@ -35,7 +35,7 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
           <Link href="/" className="flex items-center group">
             <img src="/images/logo_dark.png" alt="LaruVisona" className="h-9 w-auto transition-transform duration-300 group-hover:scale-105" />
           </Link>
-          <Link href="/#contact" className="bg-white text-black px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all">
+          <Link href="/#lv-contact" className="bg-white text-black px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all">
             お問い合わせ
           </Link>
         </div>
@@ -104,11 +104,8 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
               <span className="h-[1px] w-10 bg-blue-500" />開発体制
             </h2>
             <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl p-6 md:p-8">
-              <p className="text-white font-bold text-lg mb-2">企画・設計・開発・運用まで、1名でフルスタック開発</p>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                要件定義からUI/UX設計、フロントエンド・バックエンド実装、インフラ構築、リリース後の運用改善までを一気通貫で担当。
-                コミュニケーションコストを最小化し、スピーディな意思決定と開発を実現しています。
-              </p>
+              <p className="text-white font-bold text-lg mb-2">{work.structure.headline}</p>
+              <p className="text-slate-400 text-sm leading-relaxed">{work.structure.detail}</p>
             </div>
           </section>
 
@@ -154,13 +151,13 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
           {/* CTA */}
           <div className="bg-gradient-to-br from-blue-600/20 via-indigo-600/10 to-transparent border border-blue-500/20 rounded-[2rem] p-10 md:p-12 text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">同様のシステム開発のご相談はこちら</h2>
-            <p className="text-slate-400 text-sm mb-8">AI SaaS・Webアプリ・モバイルアプリの受託開発を、企画から運用まで一気通貫でお手伝いします。</p>
+            <p className="text-slate-400 text-sm mb-8">AI SaaSとWebアプリの受託開発を、企画から運用までお手伝いします。</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/#contact" className="bg-white text-black font-bold py-4 px-10 rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.15)] inline-flex items-center justify-center gap-2">
+              <Link href="/#lv-contact" className="bg-white text-black font-bold py-4 px-10 rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.15)] inline-flex items-center justify-center gap-2">
                 無料で相談する →
               </Link>
-              <Link href="/#estimator" className="border border-white/20 text-slate-300 hover:text-white hover:border-white/40 font-bold py-4 px-10 rounded-full transition-all inline-flex items-center justify-center">
-                概算見積もりを試す
+              <Link href="/services#services" className="border border-white/20 text-slate-300 hover:text-white hover:border-white/40 font-bold py-4 px-10 rounded-full transition-all inline-flex items-center justify-center">
+                料金の目安を見る
               </Link>
             </div>
           </div>

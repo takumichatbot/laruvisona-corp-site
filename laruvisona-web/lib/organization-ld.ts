@@ -36,8 +36,10 @@ export const ORGANIZATION = {
     streetAddress: '南常盤台1丁目11-6-101号室',
     addressCountry: 'JP',
   },
-  // 自社で運用しているものと、手がけたもの。ばらばらに書くと同一性が伝わらない。
-  sameAs: ['https://larubot.tokyo', 'https://laruhp.com', 'https://www.flastal.com'],
+  // sameAs は「これも同じ主体である」という宣言。自社で運用しているものだけを並べる。
+  // 受託で手がけたサービス（flastal.com）はクライアントのものなので、ここには入れない。
+  // 実績は /works に、担当した範囲つきで書く。
+  sameAs: ['https://larubot.tokyo', 'https://laruhp.com'],
 } as const;
 
 export function organizationLd(extra: Record<string, unknown> = {}) {

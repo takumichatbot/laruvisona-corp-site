@@ -42,7 +42,7 @@ export default function WorksIndexPage() {
           <div className="mb-14">
             <h1 className="text-5xl md:text-7xl font-black font-en tracking-tight mb-5">WORKS</h1>
             <p className="text-slate-300 leading-relaxed text-base md:text-lg">
-              企画から設計、実装、公開後の運用まで、一貫して手がけたものだけを載せています。
+              実装から公開後の運用まで、自分たちが手を動かしたものだけを載せています。担当した範囲は、それぞれのページに書いています。
               <br className="hidden md:block" />
               数字の実績は、確かめられるものだけを書いています。
             </p>

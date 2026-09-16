@@ -96,7 +96,7 @@ export default function LaruHPLandingPage() {
           <i aria-hidden="true" />
         </Link>
         <nav aria-label="ページの案内">
-          <a href="#works">作れるサイト</a>
+          <a href="#experience">作れるサイト</a>
           <a href="#experience">作り心地</a>
           <a href="#price">料金</a>
         </nav>
@@ -339,7 +339,7 @@ export default function LaruHPLandingPage() {
             </p>
           </div>
           <div className="lp-plan-grid">
-            {PLANS.map((p) => (
+            {PLANS.filter((p) => p.landing).map((p) => (
               <article
                 key={p.id}
                 className={`lp-plan ${p.highlight ? 'lp-plan-featured' : ''}`}

@@ -16,7 +16,7 @@ const SECTIONS = [
   },
   {
     title: '第3条（料金・支払い）',
-    content: `本サービスのHP単体プランの利用料金は、${TERMS.firstMonthFree}、2ヶ月目以降は月額${PLANS[0].monthly.toLocaleString('ja-JP')}円（税別）です。支払いはクレジットカードによる自動更新（月次）とし、Stripe, Inc. が決済処理を行います。最低利用期間は${TERMS.minimumMonths}ヶ月とし、期間中の中途解約・返金は原則として行いません。`,
+    content: `本サービスの利用料金は、プランごとに料金ページに表示するとおりとします（HP単体プランは月額${PLANS[0].monthly.toLocaleString('ja-JP')}円（税別）から）。${TERMS.firstMonthFree}。支払いはクレジットカードによる自動更新とし、Stripe, Inc. が決済処理を行います。最低利用期間は${TERMS.minimumMonths}ヶ月とし、期間中の中途解約・返金は原則として行いません。\n年払いを選択した場合は、1年分を契約時に一括してお支払いいただき、以後1年ごとに自動更新します。${TERMS.annualNote}。\n${TERMS.taxNote}。`,
   },
   {
     title: '第4条（解約）',
