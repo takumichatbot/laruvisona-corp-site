@@ -135,10 +135,12 @@ const BUILT: {
     link: { href: 'https://laruhp.com/', label: 'LARU HP を見る', external: true },
   },
   {
+    // iOSアプリはまだ出していない。出していないものを実績に書かない。
     name: 'FLASTAL',
-    role: 'iOSネイティブアプリの開発',
-    desc: 'Webアプリをネイティブアプリ化し、App Store配信に対応させました。',
-    tags: ['Capacitor', 'iOS', 'App Store'],
+    role: 'クライアントのサービス開発',
+    desc: 'フラワースタンドを贈るためのクラウドファンディングサービス。画面の実装から決済、公開後の運用まで担当しています。',
+    tags: ['Next.js', 'Stripe決済', 'PostgreSQL'],
+    link: { href: 'https://www.flastal.com', label: 'FLASTAL を見る', external: true },
   },
 ];
 

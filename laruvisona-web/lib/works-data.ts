@@ -69,15 +69,17 @@ export const WORKS: Work[] = [
   {
     slug: 'flastal',
     name: 'FLASTAL',
-    category: 'iOSアプリ',
-    tagline: 'iOSネイティブアプリ（詳細準備中）',
-    // TODO: クライアントから概要・ハイライト・App Storeリンク・スクリーンショットの提供待ち
+    category: 'Webサービス',
+    tagline: '応援する気持ちを、ひとつの花に',
+    // iOSアプリはまだ出していない。出すまでは、実際に動いているWebサービスとして書く。
+    // 出していないものを実績に書かない。
+    // TODO: クライアントの許可を得たうえで、詳細とスクリーンショットを足す
     overview:
-      'WebアプリをCapacitorでiOSネイティブ化し、App Store配信に対応したモバイルアプリ。詳細な紹介コンテンツは近日公開予定です。',
-    tech: ['Capacitor', 'Xcode', 'iOS'],
-    highlights: ['WebアプリのiOSネイティブ化（Capacitor）', '紹介コンテンツ準備中'],
-    link: null, // TODO: App Store リンク提供待ち
-    screenshots: { count: 3, recommended: '1290×2796px（iPhone縦・9:19.5）', portrait: true },
+      '推しへフラワースタンドを贈るためのクラウドファンディングサービス。ファン同士が費用を出し合い、匿名のまま会場へ届けられます。画面の実装から決済、公開後の運用までを担当しています。',
+    tech: ['Next.js', 'Stripe決済', 'PostgreSQL', 'Prisma'],
+    highlights: ['ファン同士で費用を出し合う企画の仕組み', 'Stripeによる集金と返金の処理', '匿名配送と会場への手配', '紹介コンテンツ準備中'],
+    link: { label: 'flastal.com を見る', url: 'https://www.flastal.com', external: true },
+    screenshots: { count: 2, recommended: '1600×1000px（16:10）', portrait: false },
     placeholder: true,
     accent: 'purple',
   },
