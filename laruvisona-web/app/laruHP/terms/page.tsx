@@ -67,7 +67,7 @@ export default function TermsPage() {
 
       <main className="max-w-4xl mx-auto px-6 py-16">
         <h1 className="text-3xl font-black mb-2">利用規約</h1>
-        <p className="text-slate-500 text-sm mb-12">最終更新日: 2026年6月17日</p>
+        <p className="text-slate-500 text-sm mb-12">最終更新日: 2026年9月17日</p>
 
         <div className="space-y-8">
           {SECTIONS.map((section, i) => (

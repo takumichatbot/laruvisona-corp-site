@@ -127,3 +127,27 @@ test('記事の金額が、初月無料を計算に入れている', () => {
   assert.doesNotMatch(src, /35,964円/, '999×36も同じ。実際は34,965円');
   assert.match(src, /4,995円/);
 });
+
+test('月額のサービスを、構造化データで単発の費用として出さない', async () => {
+  const { serviceOffersLd } = await import('../lib/organization-ld');
+  const ld = serviceOffersLd([
+    { title: '保守・運用', price: '月額 ¥30,000〜', desc: '公開して終わりにしません' },
+    { title: 'ホームページ制作', price: '¥150,000〜', desc: '作ります' },
+  ]) as { hasOfferCatalog: { itemListElement: { priceSpecification?: Record<string, unknown> }[] } };
+  const [monthly, oneOff] = ld.hasOfferCatalog.itemListElement;
+  assert.equal(monthly.priceSpecification?.['@type'], 'UnitPriceSpecification');
+  assert.equal(monthly.priceSpecification?.unitCode, 'MON');
+  assert.equal(oneOff.priceSpecification?.['@type'], 'PriceSpecification');
+});
+
+test('税別だと構造化データで言うなら、画面にも書く', () => {
+  const page = code('app/services/page.tsx');
+  assert.match(page, /税別/, '画面が言っていないことを構造化データだけが主張している状態にしない');
+});
+
+test('契約条件を変えたら、法定表記の日付も変わっている', () => {
+  // 2026-09-17 に特商法・規約の中身を直した。最終更新日が古いままだと、
+  // 「いつの条件に同意したのか」が読み手から分からない。
+  assert.match(code('app/laruHP/tokusho/page.tsx'), /最終更新日: 2026年9月17日/);
+  assert.match(code('app/laruHP/terms/page.tsx'), /最終更新日: 2026年9月17日/);
+});

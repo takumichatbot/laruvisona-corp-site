@@ -331,7 +331,7 @@ export default function ServicesPage() {
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight">お手伝いできること</h2>
               <p className="text-slate-400 text-sm mt-4">
-                料金はいずれも目安です。内容を伺ったうえで、正式なお見積もりをお出しします。
+                料金はいずれも目安です（すべて税別）。内容を伺ったうえで、正式なお見積もりをお出しします。
               </p>
             </div>
 

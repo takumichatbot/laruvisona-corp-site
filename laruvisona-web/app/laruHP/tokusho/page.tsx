@@ -51,7 +51,7 @@ export default function TokushoPage() {
 
       <main className="max-w-4xl mx-auto px-6 py-16">
         <h1 className="text-3xl font-black mb-2">特定商取引法に基づく表記</h1>
-        <p className="text-slate-500 text-sm mb-12">最終更新日: 2026年6月17日</p>
+        <p className="text-slate-500 text-sm mb-12">最終更新日: 2026年9月17日</p>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
           {items.map((item, i) => (

@@ -103,6 +103,9 @@ export function serviceOffersLd(services: { title: string; price: string; desc: 
       name: '受託開発サービスと料金',
       itemListElement: services.map(s => {
         const price = priceFrom(s.price);
+        // 「月額 ¥30,000〜」を一度きりの30,000円として出すと、
+        // 検索結果に月額が単発の費用として並ぶ。画面の書き方から読み取る。
+        const monthly = s.price.includes('月額');
         return {
           '@type': 'Offer',
           itemOffered: { '@type': 'Service', name: s.title, description: s.desc },
@@ -111,12 +114,23 @@ export function serviceOffersLd(services: { title: string; price: string; desc: 
                 price,
                 priceCurrency: 'JPY',
                 // 「〜」からの参考価格なので、確定額ではないことを示す
-                priceSpecification: {
-                  '@type': 'PriceSpecification',
-                  minPrice: price,
-                  priceCurrency: 'JPY',
-                  valueAddedTaxIncluded: false,
-                },
+                priceSpecification: monthly
+                  ? {
+                      '@type': 'UnitPriceSpecification',
+                      minPrice: price,
+                      priceCurrency: 'JPY',
+                      valueAddedTaxIncluded: false,
+                      billingIncrement: 1,
+                      billingDuration: 1,
+                      unitCode: 'MON',
+                      referenceQuantity: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MON' },
+                    }
+                  : {
+                      '@type': 'PriceSpecification',
+                      minPrice: price,
+                      priceCurrency: 'JPY',
+                      valueAddedTaxIncluded: false,
+                    },
               }
             : {}),
         };
