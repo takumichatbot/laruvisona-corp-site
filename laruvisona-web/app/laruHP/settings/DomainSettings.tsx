@@ -238,7 +238,10 @@ export default function DomainSettings() {
         <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
           <p className="text-xs font-bold text-sky-950">ドメインを持っている</p>
           <p className="mt-1 text-[11px] leading-5 text-sky-900">
-            移管は不要です。下の欄へ入力すると、そのドメイン専用のDNS設定を表示します。
+            {/* 「入力すると表示します」と書いてあったが、実際には「追加」を押すまで出ない。
+                所有確認のTXTに入れる値はサーバーが発行するので、押す前には出しようがない。
+                入力しても何も起きず、壊れていると思われていた。手順どおりに書き直す。 */}
+            移管は不要です。下の欄にドメインを入れて「追加」を押すと、そのドメイン専用のDNS設定を表示します。
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">

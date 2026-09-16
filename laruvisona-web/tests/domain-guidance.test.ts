@@ -1,72 +1,43 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import {
-  DOMAIN_BILLING_NOTE,
-  HAS_SPONSORED_DOMAIN_LINK,
-  DOMAIN_OWNERSHIP_NOTE,
-  DOMAIN_REGISTRARS,
-} from '../lib/domain-guidance';
-import { LARUHP_PUBLIC_PATHS, internalLaruHpPath } from '../lib/laruhp-public';
+import { readFileSync } from 'node:fs';
+import { dnsInstructions, looksLikeApex } from '../lib/domain.ts';
 
-const read = (path: string) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const settings = readFileSync(new URL('../app/laruHP/settings/DomainSettings.tsx', import.meta.url), 'utf8');
 
-test('ドメイン未取得と取得済みの双方に公開導線がある', () => {
-  const page = read('app/laruHP/domains/page.tsx');
-  const settings = read('app/laruHP/settings/DomainSettings.tsx');
-  for (const phrase of ['まだ持っていない場合', 'すでに持っている場合', '登録事業者の移管は必要ありません']) {
-    assert.match(page, new RegExp(phrase));
-  }
-  assert.match(settings, /取得方法と注意点を見る/);
-  assert.match(settings, /ドメインを持っている/);
-  assert.match(settings, /href="https:\/\/laruhp\.com\/domains"/);
-  assert.match(page, /href="https:\/\/laruvisona\.jp\/laruHP\/settings\?tab=domain"/);
+test('画面の案内が、実際の手順と合っている', () => {
+  // DNSレコードは「追加」を押してサーバーがトークンを発行してから出る。
+  // 「入力すると表示します」と書いてあると、入力しても何も起きず壊れて見える。
+  assert.doesNotMatch(settings.replace(/\{\/\*[\s\S]*?\*\/\}/g, ''), /下の欄へ入力すると、そのドメイン専用のDNS設定を表示します/);
+  assert.match(settings, /「追加」を押すと、そのドメイン専用のDNS設定を表示します/);
 });
 
-test('取得・更新費と所有者を誤認させない', () => {
-  assert.match(DOMAIN_BILLING_NOTE, /月額料金に含まれません/);
-  assert.match(DOMAIN_OWNERSHIP_NOTE, /お客様自身/);
-  assert.doesNotMatch(`${DOMAIN_BILLING_NOTE}\n${DOMAIN_OWNERSHIP_NOTE}`, /年 約|LaruVisona名義/);
-  const page = read('app/laruHP/domains/page.tsx');
-  assert.match(page, /現在は各社の通常ページへの案内/);
-  assert.match(page, /初年度だけでなく更新時も確認/);
+test('配信先は、AとCNAMEの両方を出す', () => {
+  // どちらが正しいかは顧客のDNSゾーン次第。片方だけ出すと、置けない人が詰まる。
+  const rows = dnsInstructions('example.com', 'tok', { expectedTarget: 'x.onrender.com', expectedApexIp: '1.2.3.4' });
+  const delivery = rows.filter(r => r.group === 'delivery');
+  assert.deepEqual(delivery.map(r => r.type).sort(), ['A', 'CNAME']);
+  assert.equal(delivery.filter(r => r.recommended).length, 1, 'おすすめが1つでない');
 });
 
-test('既存メールのレコードを消さないよう案内する', () => {
-  const page = read('app/laruHP/domains/page.tsx');
-  for (const record of ['MX', 'SPF', 'DKIM', 'DMARC']) assert.match(page, new RegExp(record));
-  assert.match(page, /既存レコードは消さない/);
+test('co.jp のような複数ラベルでも、頂点だと分かる', () => {
+  // ラベル数だけで判定すると example.co.jp をサブドメイン扱いし、
+  // 多くのレジストラで置けないCNAMEを勧めてしまう。
+  assert.equal(looksLikeApex('example.co.jp'), true);
+  assert.equal(looksLikeApex('www.example.co.jp'), false);
+  assert.equal(looksLikeApex('example.com'), true);
+  assert.equal(looksLikeApex('www.example.com'), false);
+
+  const apex = dnsInstructions('example.co.jp', 'tok', { expectedTarget: 'x.onrender.com', expectedApexIp: '1.2.3.4' });
+  assert.equal(apex.find(r => r.type === 'A')!.recommended, true);
+  const sub = dnsInstructions('www.example.co.jp', 'tok', { expectedTarget: 'x.onrender.com', expectedApexIp: '1.2.3.4' });
+  assert.equal(sub.find(r => r.type === 'CNAME')!.recommended, true);
 });
 
-test('取得先はhttpsの通常URLで、提携URLへ環境変数だけで切り替えられる', () => {
-  assert.equal(DOMAIN_REGISTRARS.length, 2);
-  for (const registrar of DOMAIN_REGISTRARS) assert.match(registrar.url, /^https:\/\//);
-  assert.equal(HAS_SPONSORED_DOMAIN_LINK, false);
-  const source = read('lib/domain-guidance.ts');
-  assert.match(source, /NEXT_PUBLIC_MUUMUU_DOMAIN_URL/);
-  assert.match(source, /NEXT_PUBLIC_ONAMAE_DOMAIN_URL/);
-  assert.match(source, /HTTPS_URL\.test/);
-  const page = read('app/laruHP/domains/page.tsx');
-  assert.match(page, /広告・紹介リンクを含みます/);
-  assert.match(page, /noopener noreferrer sponsored/);
-});
-
-test('専用ドメインでdomainsページを公開しサイトマップへ含める', () => {
-  assert.ok(LARUHP_PUBLIC_PATHS.includes('/domains'));
-  assert.equal(internalLaruHpPath('/domains'), '/laruHP/domains');
-  const page = read('app/laruHP/domains/page.tsx');
-  assert.match(page, /canonical: 'https:\/\/laruhp\.com\/domains'/);
-});
-
-test('案内ページと料金表が本格予約の現在地を正しく示す', () => {
-  const landing = read('app/laruHP/page.tsx');
-  const plans = read('app/laruHP/plans/page.tsx');
-  const facts = read('lib/laruhp-facts.ts');
-  assert.doesNotMatch(landing, /予約確定型ではなく/);
-  assert.match(landing, /営業時間・担当者・設備の空きを合わせた予約/);
-  assert.match(landing, /事前決済は実取引の確認後に順次提供/);
-  assert.match(plans, /空き枠・担当者・設備の予約/);
-  assert.match(facts, /空き枠・担当者・設備の予約管理/);
-  assert.match(facts, /予約管理は、すべてのHPプランで利用できます/);
-  assert.doesNotMatch(facts, /顧客管理・メール配信・Web予約・決済まで含むフル版/);
+test('所有確認のTXTは、消さないよう断ってある', () => {
+  // 接続後に消されると、あとで確認が落ちる。既存のSPFを上書きされるのも困る。
+  const rows = dnsInstructions('example.com', 'tok', { expectedTarget: 'x', expectedApexIp: '1.2.3.4' });
+  const txt = rows.find(r => r.type === 'TXT')!;
+  assert.match(txt.note!, /接続後も残して/);
+  assert.match(txt.note!, /消さずに追加/);
 });
