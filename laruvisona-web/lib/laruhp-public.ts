@@ -12,6 +12,10 @@ export const LARUHP_ARTICLE_SLUGS = [
   'hp-mitsumori-mikata',
   'hp-getsugaku-ikkatsu',
   'hp-tool-hikaku',
+  // 公開まで行かずに止まる二大理由（文章・写真）と、依頼するかの判断
+  'hp-bunshou-kakenai',
+  'hp-shashin-nai',
+  'hp-jibun-ka-irai-ka',
   'hp-hitsuyou-riyuu',
   'ai-hp-jidou-seisaku',
   'seo-chiiki-meo',
