@@ -34,7 +34,8 @@ export default async function TroublePage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const t = getTrouble(slug);
   if (!t) notFound();
-  const others = TROUBLES.filter(o => o.slug !== t.slug);
+  // 全部並べると選べなくなる。隣の3本だけ見せる。
+  const others = TROUBLES.filter(o => o.slug !== t.slug).slice(0, 3);
 
   // 検索結果にそのまま出る形。読む前に答えが見えるほうが、読む人の得になる。
   const faqLd = {
