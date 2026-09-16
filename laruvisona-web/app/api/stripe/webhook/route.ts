@@ -172,8 +172,13 @@ export async function POST(req: Request) {
       contractEnd.setMonth(contractEnd.getMonth() + 6);
       if (subId) {
         try {
-          const sub = await stripe.subscriptions.retrieve(subId) as unknown as { current_period_start: number; current_period_end: number };
-          if (sub.current_period_start) contractStart = new Date(sub.current_period_start * 1000);
+          const sub = await stripe.subscriptions.retrieve(subId) as unknown as { start_date?: number; current_period_start: number; current_period_end: number };
+          // 契約の始まりは start_date（契約が始まった日）で固定する。
+          // current_period_start は請求のたびに翌月へ動くため、最低利用期間の
+          // 判定（lib/billing-portal-mode.ts）が明けなくなる。定期同期
+          // （app/api/cron/subscription-sync）も start_date を正としている。
+          const startedAt = sub.start_date || sub.current_period_start;
+          if (startedAt) contractStart = new Date(startedAt * 1000);
           if (sub.current_period_end) contractEnd = new Date(sub.current_period_end * 1000);
         } catch { /* fall through to default */ }
       }
