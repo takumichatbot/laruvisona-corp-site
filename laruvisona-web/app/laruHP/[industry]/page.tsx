@@ -5,6 +5,7 @@ import { ArrowUpRight, Check, Globe2, LayoutTemplate, MessageSquare, Search } fr
 import { jsonForScript } from '@/lib/safe-markup';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
 import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
+import { INDUSTRY_DETAIL } from '@/lib/laruhp-industry-detail';
 
 const INDUSTRY_DATA = {
   restaurant: {
@@ -126,7 +127,11 @@ export async function generateMetadata({ params }: { params: Promise<{ industry:
   const d = INDUSTRY_DATA[industry as IndustryId];
   if (!d) return { title: 'LARU HP' };
   const title = `${d.name}のホームページ作成｜LARU HP`;
-  const description = `${d.name}に必要なページ構成と公開前の確認事項を解説。完成像を見ながら写真・文章・配色を整え、問い合わせや予約の入口まで作れます。`;
+  // 説明文も業種ごとに変える。ここが同じだと、検索結果で15件が同じ顔になる。
+  const detail = INDUSTRY_DETAIL[industry];
+  const description = detail
+    ? `${d.name}のサイトでよく起きる「${detail.problems[0].q}」への対処から、載せる情報とその理由、${detail.rules[0].law}など公開前に確かめる点までまとめました。完成像を見ながら作れます。`.slice(0, 120)
+    : `${d.name}に必要なページ構成と公開前の確認事項を解説。完成像を見ながら写真・文章・配色を整え、問い合わせや予約の入口まで作れます。`;
   return {
     robots: { index: true, follow: true },
     title,
@@ -142,15 +147,28 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
   const d = INDUSTRY_DATA[industry as IndustryId];
   if (!d) notFound();
   const canonical = `https://laruhp.com/${industry}`;
-  const jsonLd = jsonForScript({
-    '@context': 'https://schema.org',
-    '@type': 'Service',
-    name: `${d.name}向けホームページ作成`,
-    serviceType: 'ホームページ作成サービス',
-    provider: { '@type': 'Organization', name: '株式会社LaruVisona', url: 'https://laruvisona.jp/' },
-    url: canonical,
-    areaServed: 'JP',
-  });
+  const detail = INDUSTRY_DETAIL[industry];
+  const jsonLd = jsonForScript([
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Service',
+      name: `${d.name}向けホームページ作成`,
+      serviceType: 'ホームページ作成サービス',
+      provider: { '@type': 'Organization', name: '株式会社LaruVisona', url: 'https://laruvisona.jp/' },
+      url: canonical,
+      areaServed: 'JP',
+    },
+    // 実際に聞かれることを、そのまま検索結果へ出す。
+    ...(detail ? [{
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: detail.faq.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    }] : []),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#f7f8fb] text-slate-950">
@@ -177,22 +195,51 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
-          <div className="grid gap-12 md:grid-cols-[0.8fr_1.2fr]">
+        {detail && (
+          <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
+            <p className="text-xs font-bold tracking-[0.16em] text-sky-700">{d.name}でよくあること</p>
+            <h2 className="mt-4 max-w-3xl text-3xl font-black leading-tight tracking-[-0.04em] md:text-5xl">たいてい、<br />同じところで止まっている。</h2>
+            <div className="mt-12 grid gap-5 md:grid-cols-3">
+              {detail.problems.map(p => (
+                <article key={p.q} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-[0_18px_60px_rgba(15,23,42,.06)]">
+                  <h3 className="text-base font-bold leading-7">{p.q}</h3>
+                  <p className="mt-4 text-sm leading-7 text-slate-600">{p.a}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="bg-white px-5 py-20 md:py-28">
+          <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-[0.8fr_1.2fr]">
             <div>
               <p className="text-xs font-bold tracking-[0.16em] text-sky-700">載せる内容</p>
               <h2 className="mt-4 text-3xl font-black leading-tight tracking-[-0.04em] md:text-5xl">必要な情報を、<br />迷わない順番へ。</h2>
+              <p className="mt-6 max-w-lg leading-7 text-slate-600">{d.intro}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {d.sections.map((section, index) => (
-                <article key={section} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,.06)]">
+              {(detail ? detail.musts : d.sections.map(s => ({ title: s, why: '' }))).map((m, index) => (
+                <article key={m.title} className="rounded-3xl border border-slate-200 bg-[#f7f8fb] p-6">
                   <span className="text-xs font-bold text-sky-700">0{index + 1}</span>
-                  <h3 className="mt-8 text-lg font-bold">{section}</h3>
+                  <h3 className="mt-6 text-lg font-bold leading-7">{m.title}</h3>
+                  {m.why && <p className="mt-3 text-sm leading-7 text-slate-600">{m.why}</p>}
                 </article>
               ))}
             </div>
           </div>
         </section>
+
+        {detail && (
+          <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
+            <div className="grid gap-12 md:grid-cols-[0.8fr_1.2fr]">
+              <div>
+                <p className="text-xs font-bold tracking-[0.16em] text-sky-700">問い合わせ・予約の受け方</p>
+                <h2 className="mt-4 text-3xl font-black leading-tight tracking-[-0.04em] md:text-5xl">届く形に、<br />しておく。</h2>
+              </div>
+              <p className="text-base leading-8 text-slate-700">{detail.inquiry}</p>
+            </div>
+          </section>
+        )}
 
         <section className="bg-white px-5 py-20 md:py-28">
           <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-2">
@@ -200,12 +247,55 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
               <p className="text-xs font-bold tracking-[0.16em] text-sky-700">公開前の確認</p>
               <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] md:text-5xl">きれいなだけで、<br />公開しない。</h2>
               <p className="mt-6 max-w-lg leading-7 text-slate-600">AIが作るのは下書きです。事業の事実、法令、掲載許可を確認し、見本の文章や数字を自分の内容へ置き換えてから公開します。</p>
+              <p className="mt-5 max-w-lg text-sm leading-7 text-slate-500">
+                以下は{d.name}でとくに関わる決まりごとです。法的な助言ではなく、自分の内容を照らし合わせるための一覧として置いています。判断に迷うときは所管の窓口やその分野の専門家にご確認ください。
+              </p>
             </div>
             <ul className="space-y-4">
-              {d.checks.map(check => <li key={check} className="flex gap-4 rounded-2xl bg-slate-50 p-5 font-medium"><Check className="mt-0.5 shrink-0 text-sky-700" size={20} />{check}</li>)}
+              {(detail ? detail.rules : d.checks.map(c => ({ law: '', check: c }))).map(r => (
+                <li key={r.check} className="flex gap-4 rounded-2xl bg-slate-50 p-5">
+                  <Check className="mt-0.5 shrink-0 text-sky-700" size={20} />
+                  <span>
+                    {r.law && <strong className="block text-sm font-bold text-slate-900">{r.law}</strong>}
+                    <span className="mt-1 block text-sm leading-7 text-slate-700">{r.check}</span>
+                  </span>
+                </li>
+              ))}
             </ul>
           </div>
         </section>
+
+        {detail && (
+          <section className="bg-slate-950 px-5 py-20 text-white md:py-28">
+            <div className="mx-auto max-w-6xl">
+              <p className="text-xs font-bold tracking-[0.16em] text-sky-300">はじめの一歩</p>
+              <h2 className="mt-4 max-w-3xl text-3xl font-black leading-tight tracking-[-0.04em] md:text-5xl">この順でやれば、<br />形にはなる。</h2>
+              <ol className="mt-12 grid gap-5 md:grid-cols-3 list-none p-0">
+                {detail.firstStep.map((step, i) => (
+                  <li key={step} className="rounded-3xl border border-white/10 bg-white/[0.04] p-7">
+                    <span className="text-xs font-bold text-sky-300">STEP {i + 1}</span>
+                    <p className="mt-6 text-sm leading-8 text-slate-200">{step}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+        )}
+
+        {detail && (
+          <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
+            <p className="text-xs font-bold tracking-[0.16em] text-sky-700">よくいただく質問</p>
+            <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] md:text-5xl">{d.name}の方から、<br />実際に聞かれること。</h2>
+            <dl className="mt-12 space-y-4">
+              {detail.faq.map(f => (
+                <div key={f.q} className="rounded-3xl border border-slate-200 bg-white p-7">
+                  <dt className="text-base font-bold leading-7">{f.q}</dt>
+                  <dd className="mt-4 text-sm leading-8 text-slate-600">{f.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
 
         <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
