@@ -332,6 +332,13 @@ export const INDUSTRY_CHOICES: Array<{ value: string; label: string }> = [
   { value: 'photo', label: '写真・制作' },
   { value: 'pet', label: 'ペット' },
   { value: 'realestate', label: '不動産' },
+  // 公開している業種ページ（lib/laruhp-public.ts の LARUHP_INDUSTRIES）と
+  // ここが食い違うと、その業種の「この業種で試す」が黙って美容室になる。
+  // 実際、hotel・wedding・accounting の3つが抜けていて、旅館や式場の人が
+  // 押すと髪を切る店の下書きが出ていた。検査で一致を縛っている。
+  { value: 'hotel', label: 'ホテル・旅館' },
+  { value: 'wedding', label: 'ウェディング' },
+  { value: 'accounting', label: '税理士・会計士' },
 ];
 
 /** 目的に合わせて、節の並びを入れ替える */

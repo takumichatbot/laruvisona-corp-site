@@ -94,8 +94,14 @@ async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promi
       body: JSON.stringify({ plan, billing }),
     });
     if (res.status === 401) {
+      // 料金ページから「始める」を押す人は、ほとんどが初めての人である。
+      // これまではログイン画面へ送っていたので、持っていないアカウントの
+      // 入力欄を最初に見せていた。新規登録へ送る。
+      // 登録画面には「既にアカウントをお持ちの方は ログイン」があり、
+      // どちらの画面も redirectTo（?checkout= を含む）を保つので、
+      // 戻ってきたところで決済が再開される。
       const back = `/laruHP/plans?checkout=${plan}&billing=${billing}`;
-      window.location.href = `/laruHP/auth/login?redirectTo=${encodeURIComponent(back)}`;
+      window.location.href = `/laruHP/auth/signup?redirectTo=${encodeURIComponent(back)}`;
       return null;
     }
     if (res.status === 402) return '支払い情報に問題があります。設定からご確認ください。';

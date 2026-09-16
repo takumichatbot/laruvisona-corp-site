@@ -56,3 +56,18 @@ test('「料金ページに戻る」で料金ページから出ていかない',
   assert.doesNotMatch(code, /laruHP#pricing/);
   assert.ok(LARUHP_APP_ORIGIN === 'https://laruvisona.jp');
 });
+
+test('未契約の人は、ログインではなく新規登録へ送る', () => {
+  // 料金ページから来る人はほとんどが初めて。持っていないアカウントの
+  // 入力欄を先に見せない。どちらの画面も redirectTo を保つので、
+  // 既存の利用者も1クリックでログインへ移れる。
+  const plans = src('app/laruHP/plans/page.tsx');
+  assert.match(plans, /auth\/signup\?redirectTo=/);
+  assert.doesNotMatch(plans, /auth\/login\?redirectTo=/);
+
+  for (const p of ['app/laruHP/auth/signup/SignupClient.tsx', 'app/laruHP/auth/login/LoginClient.tsx']) {
+    let body: string;
+    try { body = src(p); } catch { continue; }
+    assert.match(body, /safeLaruHpRedirect/, `${p}: redirectTo を検証していない`);
+  }
+});
