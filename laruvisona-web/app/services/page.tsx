@@ -307,13 +307,25 @@ export default function ServicesPage() {
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight">対応できること</h2>
             </div>
-            <div className="grid sm:grid-cols-2 gap-3 mb-12">
+            <div className="grid sm:grid-cols-2 gap-3 mb-8">
               {TROUBLES.map(t => (
                 <div key={t} className="flex items-start gap-3 bg-[#0f172a] border border-white/5 rounded-xl px-5 py-4">
                   <span className="text-blue-400 mt-0.5"><Check /></span>
                   <span className="text-slate-200 text-sm leading-relaxed">{t}</span>
                 </div>
               ))}
+            </div>
+            {/* 頼む前に自分で切り分けたい人の行き先。ここで解決してくれて構わない。 */}
+            <div className="mb-12 bg-[#0f172a] border border-white/5 rounded-2xl p-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+              <div>
+                <h3 className="font-bold mb-2">まず、自分で確かめてみたい方へ</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  よくある不調は、原因の当たりが付いています。確認する手順をまとめました。
+                </p>
+              </div>
+              <Link href="/trouble" className="flex-shrink-0 border border-white/20 text-white px-6 py-3 rounded-xl font-bold text-sm text-center hover:bg-white/5 transition-all">
+                よくある困りごと →
+              </Link>
             </div>
             <div>
               <p className="text-slate-500 text-xs font-bold tracking-widest mb-3">対応範囲</p>
