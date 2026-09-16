@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { track } from '@/lib/analytics';
 import { hasServiceAccess } from '@/lib/subscription-access';
 import PublicFooter from '@/components/laruhp/PublicFooter';
+import { LARUHP_APP_ORIGIN } from '@/lib/laruhp-host';
 
 // ログイン中ユーザーの現契約。既存契約者はボタンを「このプランに変更／ご利用中」に切り替える。
 const CurrentPlanContext = createContext<{ plan: string | null; subscribed: boolean }>({ plan: null, subscribed: false });
@@ -61,8 +62,31 @@ function Cell({ value }: { value: Availability }) {
 // 未ログイン(401)の場合は、選択中のプラン・課金区分を redirectTo に含めてログインへ誘導し、
 // ログイン後にこの /laruHP/plans に戻って自動的に決済を再開できるようにする。
 // 戻り値: エラーメッセージ（画面遷移する場合は null）
+/**
+ * 案内サイト（laruhp.com）からは、決済APIを直接叩けない。
+ *
+ * このページは laruhp.com/plans としても配信されるが、そのときの origin は
+ * laruhp.com である。決済APIは laruvisona.jp 側にしかなく、proxy が
+ * laruhp.com の /api/* を通さないため、POST は 405 で返ってくる。
+ * 405 は 401 でも 402 でもないので、下のコードは最後まで落ちて
+ * 「エラーが発生しました」を出す——つまり案内サイトの「始める」は、
+ * 誰が押しても必ず失敗していた（2026-09-13 に laruhp.com を公開して以降）。
+ *
+ * ログインCookieも laruvisona.jp のものなので、CORSで繋ぐ手も安全ではない。
+ * 決済はアプリ側の origin で始める。?checkout= を付けて渡せば、
+ * 向こうの CheckoutResume が続きを引き受ける。
+ */
+function checkoutOnAppOrigin(plan: string, billing: 'monthly' | 'annual'): boolean {
+  if (typeof window === 'undefined') return false;
+  if (window.location.origin === LARUHP_APP_ORIGIN) return false;
+  const to = `${LARUHP_APP_ORIGIN}/laruHP/plans?checkout=${encodeURIComponent(plan)}&billing=${billing}`;
+  window.location.href = to;
+  return true;
+}
+
 async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promise<string | null> {
   track('begin_checkout', { plan, billing });
+  if (checkoutOnAppOrigin(plan, billing)) return null;
   try {
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
@@ -252,8 +276,10 @@ export default function PlansPage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.10),transparent_65%)]" />
         </div>
         <div className="max-w-3xl mx-auto relative">
-          <Link href="/laruHP#pricing" className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-600 text-sm mb-8 transition-colors">
-            ← 料金ページに戻る
+          {/* 料金ページで「料金ページに戻る」と言っていた。行き先も #pricing が
+              laruhp.com 側に存在しないため、押すとトップへ飛ぶだけだった。 */}
+          <Link href="https://laruhp.com/" className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-600 text-sm mb-8 transition-colors">
+            ← LARU HP トップへ
           </Link>
           <div className="block">
             <span className="text-sky-600 font-bold text-xs tracking-[0.2em] uppercase">PLAN COMPARISON</span>
@@ -474,8 +500,8 @@ export default function PlansPage() {
             まずはHPプランで始める（初月無料） →
           </CheckoutButton>
           <div className="mt-8">
-            <Link href="/laruHP#pricing" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">
-              ← 料金ページに戻る
+            <Link href="https://laruhp.com/" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">
+              ← LARU HP トップへ
             </Link>
           </div>
         </div>
