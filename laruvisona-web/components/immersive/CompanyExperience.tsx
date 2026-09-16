@@ -333,6 +333,60 @@ const concepts = [
     types: "企業サイト ／ 製品検索 ／ 見積もり導線",
   },
 ] as const;
+// 導入先。本人から社名掲載の許可を得たものだけを置く。
+// 効果の数値はまだ計測していないので、書けるのは「何に使われているか」まで。
+// 数字が取れたらここに足す。取れていない数字を書かない。
+const users = [
+  {
+    name: "日本エンドレス株式会社",
+    place: "東京都板橋区・創業50年以上",
+    field: "業務用マット・モップのレンタル／衛生用品の販売",
+    use: "営業案件の管理に。案件ボードで商談の段階を追い、保留にした案件は理由と次回確認日を残す。動きの止まった案件は通知で拾い上げる。",
+    product: "LARUbot",
+  },
+  {
+    name: "アールフラワー",
+    place: "東京都板橋区",
+    field: "推し活イベントのフラワースタンド・楽屋花をオーダーメイドで制作",
+    use: "問い合わせから注文までのやりとりに。一件ずつ内容の違う注文を、取りこぼさずに受ける。",
+    product: "LARUbot",
+  },
+] as const;
+
+function Users() {
+  return (
+    <section className="lv-users lv-solid" aria-labelledby="users-title">
+      <div className="lv-section-top">
+        <span className="lv-index">導入先</span>
+        <span className="lv-small-note">社名掲載の許可をいただいています。</span>
+      </div>
+      <div className="lv-section-heading">
+        <h2 id="users-title">
+          つくったものは、
+          <br />
+          <span>もう現場で動いています。</span>
+        </h2>
+        <p>
+          業種も、会社の大きさも違う。
+          <br />
+          それぞれの仕事の形に合わせて使われています。
+        </p>
+      </div>
+      <ul className="lv-user-list">
+        {users.map((u) => (
+          <li key={u.name} className="lv-user">
+            <span className="lv-user-product">{u.product}</span>
+            <h3>{u.name}</h3>
+            <p className="lv-user-field">{u.field}</p>
+            <p className="lv-user-use">{u.use}</p>
+            <span className="lv-user-place">{u.place}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Concepts() {
   const [index, setIndex] = useState(0);
   const c = concepts[index];
@@ -692,6 +746,7 @@ function Experience() {
           ))}
         </div>
         <Products index={product} setIndex={setProduct} />
+        <Users />
         <Concepts />
         <Services />
         <section

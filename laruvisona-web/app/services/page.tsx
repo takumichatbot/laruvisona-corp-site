@@ -142,8 +142,33 @@ const BUILT: {
   },
 ];
 
-// 導入事例。許可が取れた時点で1件目をここに追加する。現時点では空＝非表示。
-const CASE_STUDIES: { title: string; body: string }[] = [];
+// 導入事例。社名掲載の許可をいただいた分だけを置く。
+// 効果の数値はまだ計測していないため、書けるのは「何に使われているか」まで。
+// 数字が取れた時点で metrics を足す。取れていない数字は書かない。
+const CASE_STUDIES: {
+  company: string;
+  product: string;
+  field: string;
+  area: string;
+  body: string;
+}[] = [
+  {
+    company: '日本エンドレス株式会社',
+    product: 'LARUbot',
+    field: '業務用マット・モップのレンタル／衛生用品の販売',
+    area: '東京都板橋区・創業50年以上',
+    body:
+      '営業案件の管理にお使いいただいています。案件ボードで商談がどの段階にあるかを追い、保留にした案件には理由と次回の確認予定日を残す。しばらく動いていない案件は通知で拾い上げる。運用しながらご要望をうかがい、機能を足しています。',
+  },
+  {
+    company: 'アールフラワー',
+    product: 'LARUbot',
+    field: '推し活イベントのフラワースタンド・楽屋花をオーダーメイドで制作',
+    area: '東京都板橋区',
+    body:
+      '問い合わせから注文までのやりとりにお使いいただいています。一件ずつ内容の違うオーダーメイドの注文を、取りこぼさずに受けるための入口として使われています。',
+  },
+];
 
 function Check() {
   return (
@@ -327,7 +352,7 @@ export default function ServicesPage() {
           </div>
         </section>
 
-        {/* 導入事例（許可取得後に1件目を掲載。現時点では非表示） */}
+        {/* 導入事例（社名掲載の許可をいただいた分のみ） */}
         {CASE_STUDIES.length > 0 && (
           <section className="px-6 py-16 md:py-24 border-t border-white/5 bg-white/[0.02]">
             <div className="max-w-6xl mx-auto">
@@ -336,13 +361,19 @@ export default function ServicesPage() {
                   <div className="h-[1px] w-10 bg-blue-500" />
                   <span className="text-blue-400 font-bold text-xs tracking-[0.3em]">導入事例</span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">導入事例</h2>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">使っていただいています</h2>
+                <p className="mt-4 text-slate-400 text-sm leading-relaxed">社名の掲載について、ご本人の許可をいただいています。</p>
               </div>
               <div className="grid md:grid-cols-2 gap-5">
                 {CASE_STUDIES.map(c => (
-                  <div key={c.title} className="bg-[#0f172a] border border-white/5 rounded-2xl p-7">
-                    <h3 className="text-xl font-bold mb-3">{c.title}</h3>
+                  <div key={c.company} className="bg-[#0f172a] border border-white/5 rounded-2xl p-7 flex flex-col">
+                    <span className="self-start text-blue-400 text-[10px] font-bold tracking-[0.2em] border border-blue-400/30 rounded-full px-3 py-1 mb-4">
+                      {c.product}
+                    </span>
+                    <h3 className="text-xl font-bold mb-2">{c.company}</h3>
+                    <p className="text-slate-400 text-xs leading-relaxed mb-4">{c.field}</p>
                     <p className="text-slate-300 text-sm leading-relaxed">{c.body}</p>
+                    <span className="mt-auto pt-5 text-slate-500 text-[11px]">{c.area}</span>
                   </div>
                 ))}
               </div>

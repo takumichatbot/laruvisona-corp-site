@@ -380,6 +380,7 @@
   color: #688697;
 }
 .lv-products,
+.lv-users,
 .lv-concepts,
 .lv-services {
   padding: 112px 7% 120px;
@@ -674,6 +675,63 @@
 }
 .lv-flastal-art .lv-art-word {
   color: #a8737d24;
+}
+/* 導入先。プロダクトの直後に置き、「つくった」と「使われている」を続けて見せる。
+   数字がまだ無いので、読ませるのは業種と使い道。飾りは足さない。 */
+.lv-users {
+  background: #e4ebec;
+  color: var(--lv-ink);
+  padding-top: 96px;
+  padding-bottom: 104px;
+}
+.lv-user-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: #9db0b566;
+  border: 1px solid #9db0b566;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.lv-user {
+  background: #f3f7f7;
+  padding: 38px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.lv-user-product {
+  align-self: flex-start;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #46707f;
+  border: 1px solid #46707f4d;
+  border-radius: 20px;
+  padding: 5px 11px;
+}
+.lv-user h3 {
+  font-size: clamp(19px, 1.7vw, 24px);
+  font-weight: 560;
+  letter-spacing: -0.04em;
+  line-height: 1.5;
+}
+.lv-user-field {
+  font-size: 12px;
+  line-height: 1.95;
+  color: #546b77;
+}
+.lv-user-use {
+  font-size: 13px;
+  line-height: 2.05;
+  letter-spacing: 0.02em;
+}
+.lv-user-place {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: #6d848f;
 }
 .lv-concepts {
   background: #08121b;
@@ -1362,6 +1420,13 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+  }
+  .lv-user-list {
+    grid-template-columns: 1fr;
+  }
+  .lv-user {
+    padding: 28px 22px 26px;
+    gap: 11px;
   }
   .lv-product-art {
     min-height: 315px;
