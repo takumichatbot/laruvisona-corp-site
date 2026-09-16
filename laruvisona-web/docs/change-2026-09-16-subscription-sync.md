@@ -84,6 +84,18 @@ Content-Type: application/json
 **初回は必ず `dryRun: true` で実行し、`fixed` と `stopped` の中身を見てから
 本番実行する。**
 
+### 鍵を手で扱わずに確かめる
+
+管理者（`ADMIN_EMAIL`）でログインした状態なら、ブラウザで
+
+```
+https://laruvisona.jp/api/cron/subscription-sync
+```
+
+を開くだけで中身が見られる。**GETは必ず空打ちで、何も書かない。**
+共有の鍵を画面やログへ写さずに済ませるための口である。実際に直すときだけ
+POST（鍵つき、または管理者ログイン）を使う。
+
 定期実行は1日1回で足りる。Render の Cron Job から叩く。
 
 ## 確認したこと

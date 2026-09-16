@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireBearer } from '@/lib/scheduled-email';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { readContactBody } from '@/lib/contact-contract';
 import {
@@ -25,20 +25,48 @@ const MAX_PAGES = 10;
  * webhookが1回落ちただけで「課金されているのに使えない人」が永久に
  * 残るのを防ぐ。Stripeを正とし、DBを合わせる。
  *
- * 呼び方: POST /api/cron/subscription-sync
- *   Authorization: Bearer <CRON_SECRET または ADMIN_SECRET>
- *   本文 {"dryRun":true} で、書かずに差分だけ見る。
+ * 呼び方は2つ。
+ *
+ *   1. 定期実行（Render の Cron Job など）
+ *        POST /api/cron/subscription-sync
+ *        Authorization: Bearer <CRON_SECRET または ADMIN_SECRET>
+ *        本文 {"dryRun":true} で、書かずに差分だけ見る
+ *
+ *   2. 管理者がブラウザで確かめる
+ *        GET /api/cron/subscription-sync   … 管理者でログインしていれば開ける
+ *        こちらは必ず空打ち（読むだけ）。鍵を手で扱わずに中身を見るための口。
+ *
+ * 鍵を画面やログへ写さずに済むよう、この2つ目を用意してある。
  */
+async function allowed(req: Request): Promise<boolean> {
+  if (requireBearer(req, process.env.CRON_SECRET) || requireBearer(req, process.env.ADMIN_SECRET)) return true;
+  // 管理者本人のログイン。共有の鍵を持ち出さずに確かめられるようにする。
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const admin = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    return !!admin && (user?.email || '').trim().toLowerCase() === admin;
+  } catch { return false; }
+}
+
+/** 管理者がブラウザで開いたとき。書かない。 */
+export async function GET(req: Request) {
+  if (!await allowed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  return run(true);
+}
+
 export async function POST(req: Request) {
-  if (!requireBearer(req, process.env.CRON_SECRET) && !requireBearer(req, process.env.ADMIN_SECRET)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!await allowed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let dryRun = false;
   try {
     const body = await readContactBody(req, 1_000);
     dryRun = body?.dryRun === true;
   } catch { /* 本文なしは通常実行 */ }
+  return run(dryRun);
+}
+
+async function run(dryRun: boolean) {
 
   const db = createServiceClient();
 

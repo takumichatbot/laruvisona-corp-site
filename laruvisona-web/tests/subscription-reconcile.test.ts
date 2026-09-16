@@ -121,3 +121,15 @@ test('書き込む状態は、DBのcheck制約に収まる値だけ', () => {
     assert.ok(allowed.includes(value), `${value} は profiles.subscription_status に入れられない`);
   }
 });
+
+test('鍵を持ち出さずに確かめられる口がある', () => {
+  const route = readFileSync(new URL('../app/api/cron/subscription-sync/route.ts', import.meta.url), 'utf8');
+  // 管理者がブラウザで開くGETは、必ず空打ち（書かない）
+  assert.match(route, /export async function GET[\s\S]*?return run\(true\)/);
+  // 認可は、共有の鍵か、管理者本人のログインのどちらか
+  assert.match(route, /requireBearer\(req, process\.env\.CRON_SECRET\) \|\| requireBearer\(req, process\.env\.ADMIN_SECRET\)/);
+  assert.match(route, /=== admin/);
+  // 認可を通らないものが run\(\) へ届かない
+  const guards = route.match(/if \(!await allowed\(req\)\) return NextResponse\.json\(\{ error: 'Unauthorized' \}, \{ status: 401 \}\);/g) || [];
+  assert.equal(guards.length, 2);
+});
