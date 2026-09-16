@@ -162,7 +162,11 @@ export async function proxy(request: NextRequest) {
     }
     // 公開画像・映像・JS/CSSだけを同じoriginで配る。制作・認証は既存originへ。
     const staticFile = /^\/(?:lp|studio|salon|company|brand|images)\/.*\.(?:avif|webp|png|jpe?g|svg|mp4|webm|woff2?)$/i.test(pathname);
-    if (pathname.startsWith('/_next/') || staticFile ||
+    // 検索エンジンの所有権確認ファイル。これを通さないと laruhp.com を
+    // Search Console に登録できず、案内サイト側の検索状況を一切測れない。
+    // （laruvisona.jp では配信できているが、この分岐に無いため laruhp.com では 404 になっていた）
+    const siteVerification = /^\/google[0-9a-f]{16}\.html$/i.test(pathname);
+    if (pathname.startsWith('/_next/') || staticFile || siteVerification ||
         ['/favicon.ico', '/laruhp-icon-192.png', '/laruhp-icon-512.png', '/apple-touch-icon.png', '/laruhp-manifest.json', '/indexnow-key.txt', '/laruHP/opengraph-image', '/api/domain-probe'].includes(pathname)) {
       return NextResponse.next();
     }

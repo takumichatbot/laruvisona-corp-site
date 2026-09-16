@@ -38,3 +38,8 @@ hidden.example	/	404	-	-	-
 pending.example	/	404	-	-	-
 # 基盤パスは転送しない（所有確認の往復と静的配信を壊さない）
 www.salon-a.example	/_next/static/does-not-exist.js	404	-	-	-
+# ── 案内サイト laruhp.com ──
+laruhp.com	/googleeacf3d1df863e622.html	200	-	-	-
+laruhp.com	/robots.txt	200	-	-	-
+laruhp.com	/sitemap.xml	200	-	-	-
+laruhp.com	/laruHP/dashboard	307	https://laruvisona.jp/laruHP/dashboard	-	-
