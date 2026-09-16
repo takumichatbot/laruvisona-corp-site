@@ -634,149 +634,22 @@
 .lv-bot-art {
   background: #dce3ef;
 }
-.lv-dialog-orbit {
-  position: absolute;
-  width: 330px;
-  height: 330px;
-  border: 1px solid #617fc842;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 45px #7f9bdf0b,
-    0 0 0 90px #7f9bdf08;
-}
-.lv-dialog {
-  width: 77%;
-  padding: 25px;
-  background: #fdfefefa;
-  box-shadow: 10px 30px 70px #4861942e;
-  border: 1px solid white;
-  border-radius: 12px;
-  position: relative;
-  transform: rotate(-3deg);
-}
-.lv-dialog-head {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding-bottom: 20px;
-  font-size: 19px;
-  letter-spacing: -0.04em;
-}
-.lv-dialog-head small {
-  display: block;
-  font-size: 8px;
-  letter-spacing: 0;
-  margin-top: 5px;
-  color: #82949e;
-}
-.lv-bot-icon {
-  display: grid;
-  place-items: center;
-  background: #546fc0;
-  color: white;
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  font-size: 24px;
-}
-.lv-bubble {
-  font-size: 11px;
-  line-height: 1.8;
-  padding: 14px !important;
-  border-radius: 11px;
-  margin-top: 13px !important;
-  max-width: 90%;
-}
-.lv-bubble.user {
-  background: #e9eef4;
-  margin-left: auto !important;
-}
-.lv-bubble.bot {
-  background: #e2e9fb;
-}
-.lv-dialog-options {
-  display: flex;
-  gap: 7px;
-  margin-top: 18px;
-  font-size: 9px;
-  color: #637bab;
-}
-.lv-dialog-options span {
-  border: 1px solid #a6b7d5;
-  padding: 7px 10px;
-  border-radius: 20px;
-}
 .lv-seo-art {
   background: #e0e7dc;
 }
-.lv-paper {
-  position: relative;
-  background: #fafbf7;
-  width: 65%;
-  padding: 35px 30px 27px;
-  box-shadow: 10px 22px 44px #46543a21;
-  transform: rotate(-4deg);
-  min-height: 310px;
-}
-.lv-paper-back {
-  position: absolute;
-  transform: rotate(7deg);
-  background: #c5d1b9;
-  min-height: 310px;
-}
-.lv-paper-kicker {
-  font-size: 8px;
-  color: #718264;
-}
-.lv-paper h4 {
-  font-family: serif;
-  line-height: 1.9;
-  font-weight: 400;
-  font-size: 25px;
-  margin: 30px 0 20px;
-}
-.lv-paper h4 em {
-  font-style: normal;
-  color: #6c8460;
-}
-.lv-text-lines {
-  display: grid;
-  gap: 7px;
-}
-.lv-text-lines i {
-  height: 2px;
-  background: #dce1d4;
-  width: 100%;
-}
-.lv-text-lines i:last-child {
-  width: 60%;
-}
-.lv-paper-footer {
-  display: block;
-  font-size: 11px;
-  margin-top: 25px;
-  color: #839375;
-  letter-spacing: 0.07em;
-}
-.lv-flower-art {
+.lv-flastal-art {
   background: radial-gradient(ellipse at 50% 30%, #fff9f4, #f0e2e0);
 }
-.lv-flower {
-  width: 92%;
-  height: 90%;
-  position: absolute;
-  right: -10%;
-  top: 8%;
+/* The word behind the screenshot borrows each product's own hue so it stays a
+   tint of the background, never a second thing to read. */
+.lv-bot-art .lv-art-word {
+  color: #5d7bb824;
 }
-.lv-flower-title {
-  position: absolute;
-  left: 35px;
-  top: 35px;
-  font-family: serif;
-  font-size: 32px;
-  line-height: 1.65;
-  letter-spacing: 0.07em;
-  color: #635052;
+.lv-seo-art .lv-art-word {
+  color: #6d8a6026;
+}
+.lv-flastal-art .lv-art-word {
+  color: #a8737d24;
 }
 .lv-concepts {
   background: #08121b;
@@ -1497,48 +1370,6 @@
     font-size: 8px;
     bottom: 14px;
     left: 18px;
-  }
-  .lv-dialog {
-    padding: 19px;
-    width: 82%;
-  }
-  .lv-dialog-head {
-    font-size: 17px;
-    padding-bottom: 12px;
-  }
-  .lv-bubble {
-    font-size: 10px;
-    padding: 10px !important;
-  }
-  .lv-dialog-options {
-    font-size: 8px;
-  }
-  .lv-paper {
-    padding: 23px;
-    width: 65%;
-    min-height: 260px;
-  }
-  .lv-paper-back {
-    min-height: 260px;
-  }
-  .lv-paper h4 {
-    font-size: 21px;
-    margin: 20px 0 15px;
-  }
-  .lv-paper-footer {
-    margin-top: 17px;
-  }
-  .lv-paper-kicker {
-    font-size: 7px;
-  }
-  .lv-flower-title {
-    font-size: 25px;
-    top: 25px;
-    left: 23px;
-  }
-  .lv-flower {
-    width: 110%;
-    right: -20%;
   }
   .lv-concept-heading {
     display: block;

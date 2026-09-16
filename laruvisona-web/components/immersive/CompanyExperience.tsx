@@ -70,7 +70,7 @@ const products = [
     id: "seo",
     name: "LARUSEO",
     label: "見つけてもらう",
-    role: "開発プロダクト",
+    role: "LARUbotのオプション",
     title: (
       <>
         伝える言葉を、
@@ -78,10 +78,10 @@ const products = [
         見つかるきっかけに。
       </>
     ),
-    text: "AIを活用した記事づくりで、事業の魅力を届ける。ホームページをつくった後の、情報発信と集客を支えます。",
-    tags: ["AI記事制作", "情報発信"],
-    href: "/contact",
-    link: "LARUSEOについて相談する",
+    text: "AIを活用した記事づくりで、事業の魅力を届ける。LARUbotに追加して使うオプションとして、公開したあとの情報発信と集客を支えます。",
+    tags: ["AI記事制作", "LARUbotに追加"],
+    href: "https://larubot.tokyo/laru-seo",
+    link: "LARUSEOを見る",
   },
   {
     id: "flastal",
@@ -102,127 +102,60 @@ const products = [
   },
 ] as const;
 
-function ProductVisual({ id }: { id: string }) {
-  if (id === "hp")
-    return (
-      <div className="lv-product-art lv-hp-art">
-        <span className="lv-art-word" aria-hidden="true">
-          つくる。
-        </span>
-        <div className="lv-browser">
-          <div className="lv-browser-bar">
-            <i />
-            <i />
-            <i />
-            <span>LARU HP ／ 制作画面</span>
-          </div>
-          <Image
-            src="/lp/studio-edit.jpg"
-            alt="LARU HPの制作画面"
-            width={1440}
-            height={900}
-            sizes="(max-width: 760px) 90vw, 55vw"
-          />
-        </div>
-        <span className="lv-art-note">実際の制作画面</span>
-      </div>
-    );
-  if (id === "bot")
-    return (
-      <div className="lv-product-art lv-bot-art">
-        <div className="lv-dialog-orbit" aria-hidden="true" />
-        <div className="lv-dialog">
-          <div className="lv-dialog-head">
-            <span className="lv-bot-icon">L</span>
-            <span>
-              LARUbot<small>あなたのビジネスを、対話で支える。</small>
-            </span>
-          </div>
-          <p className="lv-bubble user">サービスについて知りたいです。</p>
-          <p className="lv-bubble bot">
-            どのようなことをお考えですか？
-            <br />
-            ご希望に合わせてご案内します。
-          </p>
-          <div className="lv-dialog-options">
-            <span>サービスについて</span>
-            <span>相談したい</span>
-          </div>
-        </div>
-        <span className="lv-art-note">
-          機能の紹介イメージ・実際のチャットは画面右下から
-        </span>
-      </div>
-    );
-  if (id === "seo")
-    return (
-      <div className="lv-product-art lv-seo-art">
-        <span className="lv-art-word" aria-hidden="true">
-          とどく。
-        </span>
-        <div className="lv-paper lv-paper-back" aria-hidden="true" />
-        <div className="lv-paper">
-          <span className="lv-paper-kicker">事業の言葉を、読みものに。</span>
-          <h4>
-            知ってほしいことが、
-            <br />
-            きっと、誰かの
-            <br />
-            <em>知りたいこと。</em>
-          </h4>
-          <div className="lv-text-lines" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-            <i />
-          </div>
-          <span className="lv-paper-footer">LARUSEO</span>
-        </div>
-        <span className="lv-art-note">記事制作の紹介イメージ</span>
-      </div>
-    );
+const shots = {
+  hp: {
+    src: "/lp/studio-edit.jpg",
+    alt: "LARU HPの制作画面",
+    bar: "LARU HP ／ 制作画面",
+    word: "つくる。",
+    note: "実際の制作画面",
+  },
+  bot: {
+    src: "/company/products/larubot.jpg",
+    alt: "LARUbotのサービス画面",
+    bar: "larubot.tokyo",
+    word: "こたえる。",
+    note: "実際の画面・チャットは画面右下から試せます",
+  },
+  seo: {
+    src: "/company/products/laruseo.jpg",
+    alt: "LARUSEOの画面",
+    bar: "larubot.tokyo ／ LARU SEO",
+    word: "とどく。",
+    note: "実際の画面・LARUbotに追加して使います",
+  },
+  flastal: {
+    src: "/company/products/flastal.jpg",
+    alt: "FLASTALのサービス画面",
+    bar: "flastal.com",
+    word: "あつまる。",
+    note: "実際の画面",
+  },
+} as const;
+
+function ProductVisual({ id }: { id: keyof typeof shots }) {
+  const shot = shots[id];
   return (
-    <div className="lv-product-art lv-flower-art">
-      <svg viewBox="0 0 600 400" aria-hidden="true" className="lv-flower">
-        <defs>
-          <radialGradient id="lv-petal">
-            <stop stopColor="#fff8ed" />
-            <stop offset="1" stopColor="#e99ca5" />
-          </radialGradient>
-        </defs>
-        {Array.from({ length: 13 }, (_, i) => {
-          const x = 300 + Math.cos(i * 2.4) * Math.sqrt(i) * 39;
-          const y = 175 + Math.sin(i * 2.4) * Math.sqrt(i) * 28;
-          return (
-            <g key={i} transform={`translate(${x} ${y})`}>
-              <path
-                d={`M0 0 Q${(300 - x) * 0.5} 120 ${300 - x} ${370 - y}`}
-                stroke="#71846b"
-                fill="none"
-                strokeWidth="2"
-              />
-              {Array.from({ length: 7 }, (_, j) => (
-                <ellipse
-                  key={j}
-                  cy="-17"
-                  rx="13"
-                  ry="24"
-                  transform={`rotate(${(j * 360) / 7})`}
-                  fill="url(#lv-petal)"
-                  opacity=".94"
-                />
-              ))}
-              <circle r="8" fill="#d9b97b" />
-            </g>
-          );
-        })}
-      </svg>
-      <div className="lv-flower-title">
-        想いを束ねて、
-        <br />
-        ステージへ。
+    <div className={`lv-product-art lv-${id}-art`}>
+      <span className="lv-art-word" aria-hidden="true">
+        {shot.word}
+      </span>
+      <div className="lv-browser">
+        <div className="lv-browser-bar">
+          <i />
+          <i />
+          <i />
+          <span>{shot.bar}</span>
+        </div>
+        <Image
+          src={shot.src}
+          alt={shot.alt}
+          width={1200}
+          height={750}
+          sizes="(max-width: 760px) 90vw, 55vw"
+        />
       </div>
-      <span className="lv-art-note">プロダクトの紹介イメージ</span>
+      <span className="lv-art-note">{shot.note}</span>
     </div>
   );
 }
