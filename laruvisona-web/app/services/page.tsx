@@ -5,11 +5,11 @@ import LarubotContactForm from '@/components/LarubotContactForm';
 export const metadata: Metadata = {
   title: '受託開発サービスと料金 | 株式会社LaruVisona',
   description:
-    'AIシステムの安全点検、サイト・システムの修理、ホームページ制作、AI組み込み・システム開発、保守。Python・JavaScript・AI連携で「つくる・直す・組み込む」をワンストップで。まずは無料でご相談ください。',
+    '自社サービスを作って、課金して、毎日運用している会社が受託も請けています。だから納品後に何が起きるかを知っています。安全点検・修理・ホームページ制作・業務の仕組みづくり・サービス開発・保守。料金の目安つき。',
   alternates: { canonical: 'https://laruvisona.jp/services' },
   openGraph: {
     title: '受託開発サービスと料金 | 株式会社LaruVisona',
-    description: 'つくる・直す・組み込む。AIとモダンWeb技術の受託開発。まずは無料でご相談ください。',
+    description: '自社サービスを作って、課金して、運用している会社の受託開発。納品して終わりにしません。',
     url: 'https://laruvisona.jp/services',
     siteName: '株式会社LaruVisona',
     type: 'website',
@@ -122,6 +122,36 @@ const TROUBLES = [
   'システムが時々止まる・原因が追えない',
 ];
 
+// 相見積もりで比べられる前に、比べる軸を置く。
+// ここに書くのは、自社サービスで実際に起きて直したことだけ。
+// 一般論や、起きていないことは書かない（書いた瞬間に他社と同じになる）。
+const OPERATIONS: { title: string; body: string }[] = [
+  {
+    title: '決済の通知が1回落ちると、課金されているのに使えない人ができる',
+    body: '契約状態を決済サービスからの通知だけで書いていると、通知が1回届かなかった人は、お金を払っているのに機能が開きません。しかも契約し直そうとすると「既存の契約があります」で弾かれ、本人には直しようがない。定期的に決済側と突き合わせて直す処理が要ります。',
+  },
+  {
+    title: '画面に出している金額と、実際に請求される額がずれる',
+    body: '料金は画面の文言と決済サービスの設定の2か所にあり、片方だけ直すとずれます。1円のずれでも、広告と違う額を請求したことになります。人が目で照らし合わせる運用では必ず抜けるので、決済を作る直前に機械が突き合わせる形にしています。',
+  },
+  {
+    title: '「最低6ヶ月」の契約が、7ヶ月目以降も解約できなくなる',
+    body: '最低利用期間の判定に「いまの請求期間の終わり」を使うと、支払うたびに日付が未来へ動きます。契約中はいつ見ても未来なので、規約で約束した期日を過ぎても解約画面が開きません。買う前に規約を読む人は、守られていない約束を見つけます。',
+  },
+  {
+    title: '書いたページが、誰からも辿れない場所に置かれている',
+    body: '公開したつもりのページが、サイトのどこからもリンクされておらず、サイトマップにも入っていない。開けば表示されるので、気づく機会がありません。書いた本人だけが「ある」と思っている状態になります。',
+  },
+  {
+    title: 'アクセス計測の設定ひとつで、公開サイトが全部落ちる',
+    body: '計測用の署名鍵が短いだけで例外が投げられ、顧客の公開ページがまるごとエラーになる作りでした。止めるべきは計測だけで、顧客のサイトではありません。付帯機能の失敗が本体を巻き込まない設計が要ります。',
+  },
+  {
+    title: '自動更新の契約者に、毎月「もうすぐ終わります」と通知していた',
+    body: '契約終了日として請求期間の終わりを見ていたため、自動更新される人が毎月、更新日の2週間前から終了予告を受け取っていました。動いてはいるが、嘘をついている。この種の不具合は、テストでは落ちません。',
+  },
+];
+
 const SCOPE = ['Python', 'JavaScript', 'データベース', 'AI連携', 'サーバー構築', '既存システムの改修'];
 
 const PROCESS = [
@@ -226,12 +256,12 @@ export default function ServicesPage() {
               <div className="h-[1px] w-10 bg-blue-500" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.15] mb-6">
-              つくる・直す・<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">組み込む。</span>
+              つくって、売って、<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">運用している。</span>
             </h1>
             <p className="text-slate-300 text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-10">
-              AIとモダンWeb技術で、御社の「困った」を解決します。<br className="hidden md:block" />
-              点検・修理から、ホームページ、業務の仕組みづくり、サービス開発、保守まで。<br className="hidden md:block" />
-              代表エンジニアが直接担当します。小さな修理からでも、お気軽にどうぞ。
+              受託開発の会社の多くは、自社のサービスを持っていません。納品して終わりだからです。<br className="hidden md:block" />
+              私たちは自分で作ったサービスに自分で課金し、毎日動かしています。<br className="hidden md:block" />
+              だから、公開したあとに何が起きるかを知っています。
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               <a href="#contact" className="w-full sm:w-auto bg-white text-black px-8 py-4 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all">
@@ -241,6 +271,40 @@ export default function ServicesPage() {
                 サービスと料金を見る
               </a>
             </div>
+          </div>
+        </section>
+
+        {/* 運用していないと気づけないこと。
+            相見積もりで比べられる前に、比べる軸を置いておくための節。
+            ここに書いてあるのは、すべて自社サービスで実際に起きて直したことである。
+            起きていないことは書かない。 */}
+        <section className="px-6 py-16 md:py-24 border-t border-white/5 bg-white/[0.02]">
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-12">
+              <div className="flex items-center gap-4 mb-5">
+                <div className="h-[1px] w-10 bg-blue-500" />
+                <span className="text-blue-400 font-bold text-xs tracking-[0.3em]">作るだけでは終わらない</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                運用していないと、<br className="md:hidden" />気づけないこと。
+              </h2>
+              <p className="text-slate-400 text-sm mt-4 max-w-2xl leading-relaxed">
+                以下はすべて、自社サービスで実際に起きて、直したことです。
+                作って納めるだけの体制では、そもそも見つかりません。
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-5">
+              {OPERATIONS.map(o => (
+                <div key={o.title} className="bg-[#0f172a] border border-white/5 rounded-2xl p-7">
+                  <h3 className="text-base font-bold leading-7 mb-3">{o.title}</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">{o.body}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-slate-500 text-xs mt-8 max-w-2xl leading-relaxed">
+              どれも、公開した時点では誰にも見えません。使われはじめて、しばらく経ってから出てきます。
+              自分のサービスで一度踏んでいるかどうかは、設計の段階から差が出ます。
+            </p>
           </div>
         </section>
 

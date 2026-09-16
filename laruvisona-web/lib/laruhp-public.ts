@@ -6,6 +6,12 @@ export const LARUHP_INDUSTRIES = [
 
 export const LARUHP_ARTICLE_SLUGS = [
   'hp-sakusei-cost',
+  // 実際に検索された言葉に合わせて足したもの（Search Console 2026-09-17）。
+  //   「工務店 ホームページ 見積り」「リフォーム会社 ホームページ 月額料金」
+  //   「ホームページ作成ツール 比較」
+  'hp-mitsumori-mikata',
+  'hp-getsugaku-ikkatsu',
+  'hp-tool-hikaku',
   'hp-hitsuyou-riyuu',
   'ai-hp-jidou-seisaku',
   'seo-chiiki-meo',
