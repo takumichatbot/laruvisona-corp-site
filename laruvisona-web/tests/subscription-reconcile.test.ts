@@ -133,3 +133,13 @@ test('鍵を持ち出さずに確かめられる口がある', () => {
   const guards = route.match(/if \(!await allowed\(req\)\) return NextResponse\.json\(\{ error: 'Unauthorized' \}, \{ status: 401 \}\);/g) || [];
   assert.equal(guards.length, 2);
 });
+
+test('Stripeに契約が1件も無いときは、DB側を一斉に止めない', () => {
+  // 「全員解約された」より「鍵の環境(test/live)が入れ替わっている」ほうが
+  // ありそう。その状態で走らせると、払っている人を全員止めてしまう。
+  const route = readFileSync(new URL('../app/api/cron/subscription-sync/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /if \(complete && planSubs\.length === 0 && !force\)/);
+  assert.match(route, /stopWithoutStripeSubscriptions/);
+  // 空打ちでも本実行でも、同じ判断を通ってから停止処理に入る
+  assert.match(route, /\} else if \(complete\) \{/);
+});

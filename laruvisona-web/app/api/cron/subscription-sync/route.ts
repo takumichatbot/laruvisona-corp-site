@@ -59,14 +59,16 @@ export async function POST(req: Request) {
   if (!await allowed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let dryRun = false;
+  let force = false;
   try {
     const body = await readContactBody(req, 1_000);
     dryRun = body?.dryRun === true;
+    force = body?.stopWithoutStripeSubscriptions === true;
   } catch { /* 本文なしは通常実行 */ }
-  return run(dryRun);
+  return run(dryRun, force);
 }
 
-async function run(dryRun: boolean) {
+async function run(dryRun: boolean, force = false) {
 
   const db = createServiceClient();
 
@@ -134,8 +136,16 @@ async function run(dryRun: boolean) {
 
   // 3) 逆向き: DBだけが有効だと思っている人を止める
   //    Stripeを全部読み切れたときだけ行う（読み残しを解約と誤認しない）。
+  //    Stripeの契約が1件も無いのに、DBには有効な人が居る——これは
+  //    「全員解約された」よりも「鍵の環境（test/live）が入れ替わっている」
+  //    ほうがずっとありそうである。その状態で逆向きを走らせると、
+  //    実際に払っている人を全員止めてしまう。ここで一度止まる。
+  //    分かったうえで進めるときだけ {"stopWithoutStripeSubscriptions":true}。
   const stopped: string[] = [];
-  if (complete) {
+  let stopSkipped: string | null = null;
+  if (complete && planSubs.length === 0 && !force) {
+    stopSkipped = 'Stripeに契約が1件も見つからないため、DB側の停止は行いませんでした（鍵の環境が違う可能性）';
+  } else if (complete) {
     const liveIds = new Set(planSubs.filter(s => !isTerminal(s.status)).map(s => s.id));
     const { data, error } = await db
       .from('profiles')
@@ -164,5 +174,6 @@ async function run(dryRun: boolean) {
   return NextResponse.json({
     dryRun, scanned: planSubs.length, complete, inSync,
     fixed, stopped, conflicts, unlinked,
+    ...(stopSkipped ? { stopSkipped } : {}),
   });
 }
