@@ -1,4 +1,6 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
+import { schemaTypeFor } from './industry-schema';
+import { autoDescription } from './auto-description';
 import { designCss } from '@/lib/site-design';
 import { COMPOSITION_CSS } from '@/lib/composition-css';
 import { isDirection } from '@/lib/studio-direction';
@@ -7,7 +9,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 18;
+export const EXPORT_VERSION = 19;
 
 
 function renderEditorialMark(value: unknown, index: number): string {
@@ -1721,14 +1723,15 @@ export function exportToHTML(
   const firstPage = pages[0] ?? { blocks: [], seo: {} as SEOSettings };
   const effectiveSeo = firstPage.seo?.title ? firstPage.seo : seo;
   const title = effectiveSeo.title || siteName;
-  const desc = effectiveSeo.description || '';
+  // 自分で書いた説明文を必ず優先する。空のときだけ本文から作る（空タグで公開しない）。
+  const desc = effectiveSeo.description || autoDescription(firstPage.blocks || [], siteName);
   const multiPage = pages.length > 1;
 
   // Per-page SEO data for dynamic title/description switching
   const pageSeoMap = pages.reduce<Record<string, { title: string; desc: string }>>((acc, p) => {
     acc[p.id] = {
       title: escapeHtml(p.seo?.title || seo.title || siteName),
-      desc: escapeHtml(p.seo?.description || seo.description || ''),
+      desc: escapeHtml(p.seo?.description || seo.description || autoDescription(p.blocks || [], siteName)),
     };
     return acc;
   }, {});
@@ -1864,25 +1867,22 @@ window.addEventListener('popstate',function(){
   document.body.style.overflow='hidden';
 })();</script>` : '';
 
-  const schemaType = businessInfo?.industry === 'restaurant' ? 'Restaurant'
-    : businessInfo?.industry === 'beauty' ? 'BeautySalon'
-    : businessInfo?.industry === 'clinic' ? 'MedicalClinic'
-    : businessInfo?.industry === 'fitness' ? 'ExerciseGym'
-    : businessInfo?.industry === 'hotel' ? 'Hotel'
-    : 'LocalBusiness';
+  // 業種 → schema.org の型は lib/industry-schema.ts に置く。
+  // ここに直書きしていたため、15業種を売りながら5業種しか対応していなかった。
+  const schemaType = schemaTypeFor(businessInfo?.industry);
 
+  // 空の値を出さない。url:'' や telephone:'' は、
+  // 「電話番号が無い」ではなく「空文字が電話番号」と読まれる。
   const schema = {
     '@context': 'https://schema.org',
     '@type': schemaType,
     name: businessInfo?.name || siteName,
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: businessInfo?.address || '',
-      addressCountry: 'JP',
-    },
-    telephone: businessInfo?.phone || '',
-    email: businessInfo?.email || '',
-    url: '',
+    ...(businessInfo?.address
+      ? { address: { '@type': 'PostalAddress', streetAddress: businessInfo.address, addressCountry: 'JP' } }
+      : {}),
+    ...(businessInfo?.phone ? { telephone: businessInfo.phone } : {}),
+    ...(businessInfo?.email ? { email: businessInfo.email } : {}),
+    ...(businessInfo?.slug ? { url: `${appUrl}/hp/${businessInfo.slug}` } : {}),
   };
 
   const laruBotScript = (settings.larubot && settings.larubotPublicId)

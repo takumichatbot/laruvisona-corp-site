@@ -28,7 +28,15 @@ export async function provisionLarubotOnPlan(params: {
 
   if (!isBotPlan(plan)) return;
   if (isBotPlan(prevPlan)) return; // 既に LARUbot 利用中 → 再登録不要
-  if (!process.env.LARU_HP_API_SECRET) return;
+
+  // 鍵が無いときに黙って戻っていた。課金は通っているのにボットだけ用意されず、
+  // 本人にも運用にも何も出ない状態が成立していた。決済は止めないが、
+  // 「気づけない失敗」にはしない（呼び出し側が必ずログに出す）。
+  if (!process.env.LARU_HP_API_SECRET) {
+    throw new Error(
+      `LARUbotの用意を飛ばしました: LARU_HP_API_SECRET が未設定です（plan=${plan} user=${userId}）`,
+    );
+  }
 
   const supabase = createServiceClient();
 

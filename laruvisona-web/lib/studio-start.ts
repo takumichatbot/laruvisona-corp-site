@@ -317,6 +317,7 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
       larubot: false,
       laruseo: false,
       notifyEmail: "",
+      gaTrackingId: "",
       customCss: "",
       design: { ...preset.design },
       designPreset: preset.id,

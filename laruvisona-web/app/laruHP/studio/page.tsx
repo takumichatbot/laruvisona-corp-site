@@ -66,6 +66,9 @@ interface StudioSettings {
   larubot: boolean;
   laruseo: boolean;
   notifyEmail: string;
+  /* アクセス解析（GA4）の測定ID。旧エディタにしか入力欄が無く、
+     制作スタジオから公開した人は設定する場所に辿り着けなかった。 */
+  gaTrackingId: string;
   customCss: string;
   /* 「サイト全体の設定」。null は未設定。
      以前からある作品には、この設定そのものが無い。無いものに既定値を入れて
@@ -111,6 +114,7 @@ function toExportSettings(s: StudioSettings) {
     larubot: s.larubot,
     laruseo: s.laruseo,
     notifyEmail: s.notifyEmail,
+    gaTrackingId: s.gaTrackingId,
     customCss: s.customCss,
     /* 未設定なら、鍵ごと送らない。settings_json_patch は差分の合成なので、
        送らなければ保存されている状態（未設定）のまま残る。 */
@@ -431,7 +435,7 @@ function StudioInner() {
     name: '', pages: [], settings: {
       colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
       accentColor: '#2563eb', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
-      larubot: false, laruseo: false, notifyEmail: '', customCss: '',
+      larubot: false, laruseo: false, notifyEmail: '', gaTrackingId: '', customCss: '',
       design: { ...DEFAULT_DESIGN }, designPreset: '',
     },
   }));
@@ -663,6 +667,7 @@ function StudioInner() {
             animLevel: (st.animLevel as StudioSettings['animLevel']) || 'subtle',
             larubot: !!st.larubot, laruseo: !!st.laruseo,
             notifyEmail: (st.notifyEmail as string) || '',
+            gaTrackingId: (st.gaTrackingId as string) || '',
             customCss: (st.customCss as string) || '',
             // 無いものは無いまま持つ。既定値を入れて保存すると見え方が変わる
             design: st.design ? normalizeDesign(st.design) : null,
@@ -1346,6 +1351,10 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
       <Row label="問い合わせの届け先（メール）">
         <input className={inputCls} type="email" value={site.settings.notifyEmail}
           onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, notifyEmail: e.target.value.trim() } }))} />
+      </Row>
+      <Row label="アクセス解析の測定ID（任意）" hint="Google アナリティクスの G- から始まるID。入れると公開したページの閲覧数が測れます">
+        <input className={inputCls} type="text" placeholder="G-XXXXXXXXXX" value={site.settings.gaTrackingId}
+          onChange={e => setSite(prev => ({ ...prev, settings: { ...prev.settings, gaTrackingId: e.target.value.trim().slice(0, 32) } }))} />
       </Row>
     </>
   );
