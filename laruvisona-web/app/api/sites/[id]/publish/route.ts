@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { exportToHTML } from '@/lib/html-export';
+import { pagesFromBlocksJson } from '@/lib/site-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { hasServiceAccess } from '@/lib/subscription-access';
 import { canonicalBase } from '@/lib/public-site-url';
@@ -54,18 +55,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Site not found' }, { status: 404 });
   }
 
-  // Handle both v1 (Block[]) and v2 ({ v: 2, pages: Page[] }) formats
-  const rawBlocks = site.blocks_json as Block[] | { v: number; pages: Page[] };
-  let pages: Page[];
+  // v1 (Block[]) と v2 ({ v: 2, pages: Page[] }) の読み分けは lib/site-export.ts に置いている。
+  // 公開と書き出しで読み方がずれないように、両方ここを通す。
   const seoSettings: SEOSettings = site.seo_json as SEOSettings;
-
-  if (Array.isArray(rawBlocks)) {
-    pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: rawBlocks, seo: seoSettings }];
-  } else if (rawBlocks?.v === 2 && rawBlocks.pages?.length) {
-    pages = rawBlocks.pages;
-  } else {
-    pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: [], seo: seoSettings }];
-  }
+  const pages: Page[] = pagesFromBlocksJson(
+    site.blocks_json as Block[] | { v: number; pages: Page[] },
+    seoSettings,
+  );
 
   const html = exportToHTML(
     pages,

@@ -131,6 +131,8 @@ export default function SettingsPage() {
   const [pwMsg, setPwMsg] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
 
+  const [htmlExportMsg, setHtmlExportMsg] = useState('');
+  const [htmlExportLoading, setHtmlExportLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState('');
@@ -913,6 +915,44 @@ export default function SettingsPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             データをダウンロード (JSON)
           </button>
+
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <h3 className="font-bold text-sm text-gray-900 mb-1">ページをHTMLで書き出す</h3>
+            <p className="text-gray-500 text-xs mb-1">作ったページを1枚のHTMLファイルとして保存します。ほかのサーバーに置いても表示できます。</p>
+            <p className="text-gray-400 text-[11px] mb-4">お問い合わせフォーム・予約・ショップ・会員ページなどLARU HPの機能は、このファイル単体では動きません（文章・写真・デザインはそのまま残ります）。</p>
+            <button
+              onClick={async () => {
+                setHtmlExportLoading(true);
+                setHtmlExportMsg('');
+                try {
+                  const res = await fetch('/api/sites');
+                  const data = await res.json();
+                  const sites: { id: string; name: string }[] = data.sites || [];
+                  if (!sites.length) { setHtmlExportMsg('書き出せるページがまだありません。'); return; }
+                  for (const site of sites) {
+                    const a = document.createElement('a');
+                    a.href = `/api/sites/${site.id}/export-html`;
+                    a.download = '';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    await new Promise(r => setTimeout(r, 400));
+                  }
+                  setHtmlExportMsg(sites.length > 1 ? `${sites.length}件のページを書き出しました。` : '書き出しました。');
+                } catch {
+                  setHtmlExportMsg('書き出せませんでした。時間をおいてお試しください。');
+                } finally {
+                  setHtmlExportLoading(false);
+                }
+              }}
+              disabled={htmlExportLoading}
+              className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              {htmlExportLoading ? '書き出しています…' : 'ページをダウンロード (HTML)'}
+            </button>
+            {htmlExportMsg && <p className="text-xs text-gray-500 mt-3">{htmlExportMsg}</p>}
+          </div>
         </section>
 
         {/* Delete account */}
