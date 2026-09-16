@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
       { source: '/laruHP/lp-next', destination: '/lp-next' },
     ];
   },
+  // 旧サイトの名残。Search Console に 404 として残り続けている
+  // （/index.html は 2026-09-04、/terms.html は 2026-07-06 にもクロールされている）。
+  // 消えるのを待つより、今のページへ送ったほうが、その分の評価を拾える。
+  async redirects() {
+    return [
+      { source: '/index.html', destination: '/', permanent: true },
+      { source: '/terms.html', destination: '/terms', permanent: true },
+      { source: '/privacy.html', destination: '/privacy', permanent: true },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {
