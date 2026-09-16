@@ -18,7 +18,11 @@ export async function readSiteCreate(req: Request) {
   const blocks = body.blocks_json ?? [];
   const seo = body.seo_json ?? { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' };
   const settings = body.settings_json ?? {};
-  if (!Array.isArray(blocks) || !object(seo) || !object(settings)) throw Error('サイトの内容を確認してください');
+  // 作成でも更新と同じ形を受ける。制作スタジオは複数ページの文書
+  // （{ v: 2, pages: [...] }）を送るが、ここが配列しか通していなかったため、
+  // 新しく作ったサイトの「最初の保存」が必ず400で落ちていた。
+  // 更新側は blocksDocument を使っており、作成側だけが取り残されていた。
+  if (!blocksDocument(blocks) || !object(seo) || !object(settings)) throw Error('サイトの内容を確認してください');
   return { name, industry, blocks, seo, settings };
 }
 

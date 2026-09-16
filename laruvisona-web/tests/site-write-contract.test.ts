@@ -22,6 +22,18 @@ test('サイト作成入力は必要な形だけを受け付ける', async () =>
   assert.deepEqual(await readSiteCreate(request({ name: ' 店 ', industry: ' 美容 ', blocks_json: [], seo_json: {}, settings_json: {} })), {
     name: '店', industry: '美容', blocks: [], seo: {}, settings: {},
   });
+  // 制作スタジオが実際に送る形。ここが配列しか通っていなかったため、
+  // 新規サイトの最初の保存が必ず400で落ちていた。
+  assert.deepEqual(
+    await readSiteCreate(request({ name: '店', blocks_json: { v: 2, pages: [{ id: 'home', blocks: [] }] } })),
+    {
+      name: '店', industry: null,
+      blocks: { v: 2, pages: [{ id: 'home', blocks: [] }] },
+      seo: { title: '', description: '', keywords: '', ogTitle: '', ogDescription: '', ogImage: '' },
+      settings: {},
+    },
+  );
+  await assert.rejects(() => readSiteCreate(request({ name: '店', blocks_json: { v: 9 } })), /サイトの内容/);
   await assert.rejects(() => readSiteCreate(request({ name: '店', user_id: 'other' })), /作成できない/);
   await assert.rejects(() => readSiteCreate(request({ name: '', blocks_json: {} })), /サイト名/);
 });
