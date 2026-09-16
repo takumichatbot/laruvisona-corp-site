@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { billingAppOrigin } from '@/lib/billing-url';
+import { billingPortalMode } from '@/lib/billing-portal-mode';
 
 export async function POST() {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export async function POST() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('stripe_customer_id, contract_ends_at, subscription_status')
+    .select('stripe_customer_id, contract_starts_at, subscription_status')
     .eq('id', user.id)
     .single();
 
@@ -25,13 +26,11 @@ export async function POST() {
   // 最低契約期間中もカード変更は必要になり得る。通常のポータルを開くと
   // Stripe側の設定次第で早期解約できるため、この期間だけ支払方法変更の
   // 単一フローへ閉じる。契約期間後は通常の管理ポータルを開く。
-  let paymentMethodOnly = false;
-  if (profile.contract_ends_at && profile.subscription_status === 'active') {
-    const contractEnd = new Date(profile.contract_ends_at);
-    if (contractEnd > new Date()) {
-      paymentMethodOnly = true;
-    }
-  }
+  //
+  // 判定は契約の始まりから数える。以前は contract_ends_at（今の請求期間の
+  // 終わり）を見ていたため、支払うたびに未来へ動き、最低利用期間を過ぎても
+  // 解約画面が永久に開かなかった。
+  const { paymentMethodOnly, cancelableFrom } = billingPortalMode(profile);
 
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: profile.stripe_customer_id,
@@ -44,5 +43,9 @@ export async function POST() {
     } : {}),
   });
 
-  return NextResponse.json({ url: portalSession.url, mode: paymentMethodOnly ? 'payment_method' : 'manage' });
+  return NextResponse.json({
+    url: portalSession.url,
+    mode: paymentMethodOnly ? 'payment_method' : 'manage',
+    cancelableFrom,
+  });
 }

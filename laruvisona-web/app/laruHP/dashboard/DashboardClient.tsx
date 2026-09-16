@@ -12,6 +12,7 @@ import { getSiteLimit } from '@/lib/plan-limits';
 import { track } from '@/lib/analytics';
 import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
 import { publishCompletion } from '@/lib/publish-result';
+import { TERMS } from '@/lib/laruhp-facts';
 
 interface SiteSettings {
   larubot?: boolean;
@@ -326,6 +327,7 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
+  const [portalNotice, setPortalNotice] = useState<{ url: string; text: string } | null>(null);
   const [paymentBanner, setPaymentBanner] = useState<'success' | 'canceled' | 'upgraded' | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [pendingSiteId, setPendingSiteId] = useState<string | null>(null);
@@ -628,12 +630,23 @@ export default function DashboardPage() {
     setPortalError('');
     const res = await fetch('/api/stripe/portal', { method: 'POST' });
     const data = await res.json();
-    if (data.url) {
+    if (data.url && data.mode === 'payment_method') {
+      /* 最低利用期間の途中。開くのは支払方法の変更だけなので、
+         解約が見当たらない理由と、いつからできるのかを先に伝える。
+         黙って飛ばすと「解約させない作り」に見える。 */
+      const from = data.cancelableFrom
+        ? new Date(data.cancelableFrom).toLocaleDateString('ja-JP')
+        : '';
+      setPortalNotice({
+        url: data.url,
+        text: `最低利用期間（${TERMS.minimumMonths}ヶ月）の途中のため、いまは支払方法の変更のみ行えます。`
+          + (from ? `${from} から、この画面で解約できます。` : '')
+          + 'それより前の解約のご相談は info@laruvisona.jp へどうぞ。',
+      });
+    } else if (data.url) {
       window.location.href = data.url;
-    } else if (data.error === 'minimum_contract') {
-      setPortalError(data.message);
     } else {
-      setPortalError('エラーが発生しました');
+      setPortalError(data.error || 'エラーが発生しました');
     }
     setPortalLoading(false);
   };
@@ -1179,6 +1192,17 @@ export default function DashboardPage() {
                 </p>
               )}
               {portalError && <p className="text-red-600 text-xs mt-1.5">{portalError}</p>}
+              {portalNotice && (
+                <div className="mt-2 rounded-lg border border-slate-300 bg-slate-50 p-3">
+                  <p className="text-slate-700 text-xs leading-relaxed">{portalNotice.text}</p>
+                  <a
+                    href={portalNotice.url}
+                    className="inline-block mt-2 text-xs font-bold text-blue-700 underline"
+                  >
+                    支払方法の変更へ進む
+                  </a>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 flex-shrink-0">
               {(effectiveStatus === 'active' || effectiveStatus === 'past_due') ? (
