@@ -686,7 +686,8 @@
 }
 .lv-user-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* 1件でも2件でも収まるように。件数で崩れる作りにしない。 */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
   gap: 1px;
   background: #9db0b566;
   border: 1px solid #9db0b566;

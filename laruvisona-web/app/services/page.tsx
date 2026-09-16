@@ -142,7 +142,9 @@ const BUILT: {
   },
 ];
 
-// 導入事例。社名掲載の許可をいただいた分だけを置く。
+// 導入事例。社名掲載の許可をいただいた、社外のお客様だけを置く。
+// 身内・関係会社はここに入れない。読む人には見分けがつかず、
+// あとで分かったときに、他の記載まで疑われるため。
 // 効果の数値はまだ計測していないため、書けるのは「何に使われているか」まで。
 // 数字が取れた時点で metrics を足す。取れていない数字は書かない。
 const CASE_STUDIES: {
@@ -159,14 +161,6 @@ const CASE_STUDIES: {
     area: '東京都板橋区・創業50年以上',
     body:
       '営業案件の管理にお使いいただいています。案件ボードで商談がどの段階にあるかを追い、保留にした案件には理由と次回の確認予定日を残す。しばらく動いていない案件は通知で拾い上げる。運用しながらご要望をうかがい、機能を足しています。',
-  },
-  {
-    company: 'アールフラワー',
-    product: 'LARUbot',
-    field: '推し活イベントのフラワースタンド・楽屋花をオーダーメイドで制作',
-    area: '東京都板橋区',
-    body:
-      '問い合わせから注文までのやりとりにお使いいただいています。一件ずつ内容の違うオーダーメイドの注文を、取りこぼさずに受けるための入口として使われています。',
   },
 ];
 
@@ -364,7 +358,7 @@ export default function ServicesPage() {
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight">使っていただいています</h2>
                 <p className="mt-4 text-slate-400 text-sm leading-relaxed">社名の掲載について、ご本人の許可をいただいています。</p>
               </div>
-              <div className="grid md:grid-cols-2 gap-5">
+              <div className={`grid gap-5 ${CASE_STUDIES.length > 1 ? 'md:grid-cols-2' : ''}`}>
                 {CASE_STUDIES.map(c => (
                   <div key={c.company} className="bg-[#0f172a] border border-white/5 rounded-2xl p-7 flex flex-col">
                     <span className="self-start text-blue-400 text-[10px] font-bold tracking-[0.2em] border border-blue-400/30 rounded-full px-3 py-1 mb-4">
