@@ -480,6 +480,15 @@ const services = [
     body: "問い合わせ対応、情報の整理、繰り返しの作業。今の仕事の流れを聞くところから、AIの活かし方を設計します。",
     tags: ["AIチャットボット", "情報活用", "外部サービス連携"],
   },
+  {
+    // 新しくつくる話だけだと、「フォームが壊れた」という人の行き先が無くなる。
+    // 小さい相談の入口を、同じ並びに置いておく。
+    n: "04",
+    title: "修理・改修・安全点検",
+    en: "今あるものを、まず直す。",
+    body: "動かないフォーム、崩れた表示、時々止まるシステム。他社がつくったものでも、原因から調べて直します。社内でつくったAIツールの安全点検も。",
+    tags: ["原因調査", "サイトの改修", "AIシステム点検"],
+  },
 ];
 function Services() {
   return (
@@ -490,7 +499,7 @@ function Services() {
     >
       <div className="lv-section-top">
         <span className="lv-index">03 — あなたと、つくる</span>
-        <span className="lv-small-note">デザインも、その奥の仕組みも。</span>
+        <span className="lv-small-note">新しくつくることも、今あるものを直すことも。</span>
       </div>
       <div className="lv-section-heading">
         <h2 id="services-title">
