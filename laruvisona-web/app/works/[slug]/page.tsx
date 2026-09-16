@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import CompanyFooter from '@/components/company/CompanyFooter';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
@@ -14,9 +15,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const work = getWork(slug);
   if (!work) return {};
+  const canonical = `https://laruvisona.jp/works/${work.slug}`;
   return {
     title: `${work.name} | 開発実績 | LaruVisona`,
     description: work.overview,
+    // 受託を探している人がいちばん見る3ページだけ、正規URLを宣言していなかった
+    alternates: { canonical },
+    openGraph: {
+      title: `${work.name} | 開発実績`,
+      description: work.overview,
+      url: canonical,
+      type: 'article',
+      images: [{ url: `https://laruvisona.jp${work.shots[0]?.src ?? '/images/logo_light.png'}`, alt: work.name }],
+    },
   };
 }
 
@@ -164,9 +175,7 @@ export default async function WorkDetailPage({ params }: { params: Promise<{ slu
         </div>
       </main>
 
-      <footer className="bg-black text-slate-500 py-10 border-t border-white/5 text-center">
-        <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LaruVisona All Rights Reserved.</p>
-      </footer>
+      <CompanyFooter />
     </div>
   );
 }

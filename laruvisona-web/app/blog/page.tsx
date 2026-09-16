@@ -27,8 +27,8 @@ export default function BlogPage() {
           </Link>
           <nav className="flex items-center gap-2 sm:gap-5 text-sm">
             <Link href="/services" className="hidden sm:inline text-slate-300 hover:text-white transition-colors">受託開発</Link>
-            <Link href="/#works" className="hidden sm:inline text-slate-300 hover:text-white transition-colors">実績</Link>
-            <Link href="/#contact" className="bg-white text-black px-4 py-2 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-50 transition-all">
+            <Link href="/works" className="hidden sm:inline text-slate-300 hover:text-white transition-colors">実績</Link>
+            <Link href="/contact" className="bg-white text-black px-4 py-2 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-50 transition-all">
               お問い合わせ
             </Link>
           </nav>
@@ -66,7 +66,7 @@ export default function BlogPage() {
           <div className="flex flex-wrap justify-center gap-6 text-xs font-bold tracking-widest uppercase">
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
             <Link href="/services" className="hover:text-white transition-colors">Services</Link>
-            <Link href="/#contact" className="hover:text-white transition-colors">Contact</Link>
+            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
           </div>

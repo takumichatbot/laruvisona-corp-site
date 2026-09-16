@@ -13,6 +13,12 @@ export interface Article {
   author: string;
   readingTime: number;
   tags: string[];
+  /**
+   * この記事と関係の深い業種（lib/laruhp-public.ts の LARUHP_INDUSTRIES と同じID）。
+   * 記事11本と業種15本のあいだにリンクが1本も無く、26ページが横並びになっていた。
+   * 「工務店 ホームページ 見積り」で記事に着いた人が、工務店のページへ行けるようにする。
+   */
+  relatedIndustries?: string[];
   sources: ArticleSource[];
   body: string;
 }
@@ -27,7 +33,7 @@ export const ARTICLES: Article[] = [
     description: '制作費だけでなく、公開後の更新、サーバー、独自ドメインまで含めて、ホームページの費用を比較する考え方を解説します。',
     category: 'HP作成ガイド',
     publishedAt: '2026-05-15', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 6,
-    tags: ['HP作成', '費用', '中小企業', 'ホームページ'], sources: [],
+    tags: ['HP作成', '費用', '中小企業', 'ホームページ'], relatedIndustries: ['construction', 'beauty', 'restaurant'], sources: [],
     body: `
 ## 先に、必要な仕事を分ける
 
@@ -82,7 +88,7 @@ export const ARTICLES: Article[] = [
     description: '相見積もりで金額だけを並べても比べられません。工務店や士業の依頼でよく食い違う項目を挙げ、見積書のどこを見れば総額が読めるかを整理します。',
     category: 'HP作成ガイド',
     publishedAt: '2026-09-17', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 7,
-    tags: ['見積もり', '費用', '制作会社', '比較'], sources: [],
+    tags: ['見積もり', '費用', '制作会社', '比較'], relatedIndustries: ['construction', 'realestate', 'legal'], sources: [],
     body: `
 ## 金額が同じでも、買っているものが違う
 
@@ -150,7 +156,7 @@ LARU HPの料金と契約条件は料金ページに書いてあります。月�
     description: '初期費用ゼロの月額制と、作り切りの一括払い。3年間の総額と、やめるときに何が起きるかを並べて比較します。',
     category: 'HP作成ガイド',
     publishedAt: '2026-09-17', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 6,
-    tags: ['月額', '費用', '比較', '契約'], sources: [],
+    tags: ['月額', '費用', '比較', '契約'], relatedIndustries: ['beauty', 'restaurant', 'retail'], sources: [],
     body: `
 ## 「初期費用ゼロ」は、安いという意味ではない
 
@@ -216,7 +222,7 @@ LARU HPは月額999円から、初月無料、最低利用期間6ヶ月です。
     description: '機能の数を並べても違いは分かりません。自分で更新し続けられるか、やめるときに持ち出せるか。実際に差が出る4つの軸で比較します。',
     category: 'HP作成ガイド',
     publishedAt: '2026-09-17', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 7,
-    tags: ['比較', 'ツール', 'HP作成', '選び方'], sources: [],
+    tags: ['比較', 'ツール', 'HP作成', '選び方'], relatedIndustries: ['retail', 'photo', 'education'], sources: [],
     body: `
 ## 機能一覧は、比較の役に立たない
 
@@ -290,7 +296,7 @@ LARU HPは月額999円から、初月無料、最低利用期間6ヶ月です。
     description: '何を書けばいいか分からず、作りかけで止まる。文章を「書く」のではなく「答える」に変えると進みます。実際に使える質問と、書かないほうがいい表現をまとめました。',
     category: 'HP作成ガイド',
     publishedAt: '2026-09-17', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 6,
-    tags: ['文章', 'HP作成', '書き方', 'コンテンツ'], sources: [],
+    tags: ['文章', 'HP作成', '書き方', 'コンテンツ'], relatedIndustries: ['legal', 'accounting', 'clinic'], sources: [],
     body: `
 ## 止まるのは、たいてい文章のところ
 
@@ -366,7 +372,7 @@ AIはあなたの事業の事実を知りません。「創業20年」「実績1
     description: 'プロに頼まないと無理、と思って止まっている人向けに、スマホで撮る手順、撮る順番、素材写真や生成画像を使うときの線引きをまとめました。',
     category: 'HP作成ガイド',
     publishedAt: '2026-09-17', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 6,
-    tags: ['写真', 'HP作成', '撮影', '著作権'], sources: [],
+    tags: ['写真', 'HP作成', '撮影', '著作権'], relatedIndustries: ['restaurant', 'photo', 'wedding'], sources: [],
     body: `
 ## 撮影を待っていると、公開しない
 
@@ -441,7 +447,7 @@ AIはあなたの事業の事実を知りません。「創業20年」「実績1
     description: '安いから自分で、ではうまくいきません。どちらが向いているかは、使える時間と、伝えたいものの複雑さで決まります。判断の基準を具体的に整理しました。',
     category: 'HP作成ガイド',
     publishedAt: '2026-09-17', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 7,
-    tags: ['比較', '制作会社', '選び方', 'HP作成'], sources: [],
+    tags: ['比較', '制作会社', '選び方', 'HP作成'], relatedIndustries: ['construction', 'hotel', 'wedding'], sources: [],
     body: `
 ## 金額で選ぶと、たいてい失敗する
 
@@ -523,7 +529,7 @@ AIはあなたの事業の事実を知りません。「創業20年」「実績1
     title: 'SNSがあっても、事業のホームページを持つ5つの理由',
     description: 'SNSとホームページの役割を分け、検索、信頼、問い合わせ、情報管理の観点から必要性を整理します。',
     category: 'HP活用術', publishedAt: '2026-05-22', updatedAt: REVIEW_DATE,
-    author: AUTHOR, readingTime: 5, tags: ['HP作成', '個人事業主', '集客', 'Googleマップ'], sources: [],
+    author: AUTHOR, readingTime: 5, tags: ['HP作成', '個人事業主', '集客', 'Googleマップ'], relatedIndustries: ['pet', 'fitness', 'dental'], sources: [],
     body: `
 ## SNSとホームページは役割が違う
 
@@ -577,7 +583,7 @@ SNSの表示方法や規約が変わっても、自社サイトの文章や構�
     title: 'LARU HPでホームページを作る流れ｜生成から公開後の更新まで',
     description: '業種と事業情報から下書きを作り、完成像を見ながら編集し、公開するまでの実際の流れを説明します。',
     category: 'LARU HP紹介', publishedAt: '2026-06-01', updatedAt: REVIEW_DATE,
-    author: AUTHOR, readingTime: 5, tags: ['AI', 'HP作成', 'ホームページ', 'LARU HP'], sources: [],
+    author: AUTHOR, readingTime: 5, tags: ['AI', 'HP作成', 'ホームページ', 'LARU HP'], relatedIndustries: ['beauty', 'retail', 'education'], sources: [],
     body: `
 ## AIは完成品ではなく、最初の下書きを作る
 
@@ -643,7 +649,7 @@ AIは、あなたの事業の事実を知りません。知らないまま、そ
     title: '地域の事業が始めるローカルSEO｜Google公式情報に沿った基本',
     description: 'Googleビジネスプロフィールとホームページの情報を揃え、地域の利用者へ正確に伝えるための基本を解説します。',
     category: 'SEO・集客', publishedAt: '2026-06-10', updatedAt: REVIEW_DATE,
-    author: AUTHOR, readingTime: 7, tags: ['SEO', 'ローカルSEO', 'Googleマップ', '地域集客'],
+    author: AUTHOR, readingTime: 7, tags: ['SEO', 'ローカルSEO', 'Googleマップ', '地域集客'], relatedIndustries: ['clinic', 'dental', 'realestate'],
     sources: [
       { title: 'Google ビジネス プロフィールのガイドライン', url: 'https://support.google.com/business/answer/3038177?hl=ja' },
       { title: 'Google のローカル検索結果のランキングを改善する方法', url: 'https://support.google.com/business/answer/7091?hl=ja' },
@@ -699,7 +705,7 @@ Googleは、**特定の地域や都市に向けて作られ、実質同じ内容
     title: 'AIチャットボットをホームページに置く前に決めること',
     description: '自動回答の範囲、問い合わせへの引き継ぎ、情報更新、個人情報の扱いを整理し、事業で安全に使う考え方を説明します。',
     category: 'AI活用術', publishedAt: '2026-06-15', updatedAt: REVIEW_DATE,
-    author: AUTHOR, readingTime: 6, tags: ['チャットボット', 'AI', '自動化', '問い合わせ対応'], sources: [],
+    author: AUTHOR, readingTime: 6, tags: ['チャットボット', 'AI', '自動化', '問い合わせ対応'], relatedIndustries: ['hotel', 'fitness', 'accounting'], sources: [],
     body: `
 ## 最初に、自動回答の範囲を決める
 

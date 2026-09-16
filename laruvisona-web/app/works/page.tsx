@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CompanyFooter from '@/components/company/CompanyFooter';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { WORKS, ACCENT_STYLES } from '@/lib/works-data';
@@ -113,6 +114,8 @@ export default function WorksIndexPage() {
           </div>
         </div>
       </main>
+
+      <CompanyFooter />
     </div>
   );
 }

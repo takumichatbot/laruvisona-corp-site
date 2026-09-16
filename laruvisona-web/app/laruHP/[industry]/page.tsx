@@ -4,9 +4,10 @@ import { notFound } from 'next/navigation';
 import { ArrowUpRight, Check, Globe2, LayoutTemplate, MessageSquare, Search } from 'lucide-react';
 import { jsonForScript } from '@/lib/safe-markup';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
-import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
+import { laruhpOgImage } from '@/lib/laruhp-seo';
 import { INDUSTRY_DETAIL } from '@/lib/laruhp-industry-detail';
 import PublicFooter from '@/components/laruhp/PublicFooter';
+import { ARTICLES } from '@/app/laruHP/articles/articles-data';
 
 const INDUSTRY_DATA = {
   restaurant: {
@@ -139,7 +140,9 @@ export async function generateMetadata({ params }: { params: Promise<{ industry:
     description,
     keywords: [d.keyword, `${d.name} HP制作`, 'LARU HP'],
     alternates: { canonical: `https://laruhp.com/${industry}` },
-    openGraph: { title, description, url: `https://laruhp.com/${industry}`, type: 'website', siteName: 'LARU HP', images: [LARUHP_OG_IMAGE] },
+    // 業種ごとに違う絵にする（15業種で同じ絵だと、貼っても何のページか分からない）
+    openGraph: { title, description, url: `https://laruhp.com/${industry}`, type: 'website', siteName: 'LARU HP', images: [laruhpOgImage(`${d.name}のホームページ`, 'LARU HP')] },
+    twitter: { card: 'summary_large_image', title, description, images: [laruhpOgImage(`${d.name}のホームページ`, 'LARU HP').url] },
   };
 }
 
@@ -148,8 +151,17 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
   const d = INDUSTRY_DATA[industry as IndustryId];
   if (!d) notFound();
   const canonical = `https://laruhp.com/${industry}`;
+  const relatedArticles = ARTICLES.filter(a => a.relatedIndustries?.includes(industry)).slice(0, 3);
   const detail = INDUSTRY_DETAIL[industry];
   const jsonLd = jsonForScript([
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'LARU HP', item: 'https://laruhp.com/' },
+        { '@type': 'ListItem', position: 2, name: `${d.name}のホームページ作成`, item: canonical },
+      ],
+    },
     {
       '@context': 'https://schema.org',
       '@type': 'Service',
@@ -315,12 +327,32 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
           </div>
         </section>
 
+        {/* 読み物への導線。業種ページと記事のあいだにリンクが無く、どちらも単発で終わっていた。 */}
+        {relatedArticles.length > 0 && (
+          <section className="mx-auto max-w-6xl px-5 pb-8">
+            <h2 className="text-lg font-bold text-slate-900">先に読んでおくと迷わないもの</h2>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {relatedArticles.map(a => (
+                <Link key={a.slug} href={`https://laruhp.com/articles/${a.slug}`}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 transition-colors hover:border-sky-300">
+                  <div className="text-[11px] font-bold text-sky-700">{a.category}</div>
+                  <div className="mt-1 text-sm font-bold leading-6 text-slate-900">{a.title}</div>
+                  <div className="mt-2 text-xs leading-5 text-slate-500">約{a.readingTime}分で読めます</div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="bg-sky-700 px-5 py-20 text-white">
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-bold text-sky-100">HP単体プラン 月額 {PLANS[0].monthly.toLocaleString('ja-JP')}円（税別）から</p>
             <h2 className="mt-5 text-3xl font-black tracking-[-0.04em] md:text-5xl">{d.name}の完成像を、<br />その場で確かめる。</h2>
             <p className="mx-auto mt-6 max-w-xl text-sm leading-7 text-sky-100">{TERMS.firstMonthFree}。{TERMS.cancelNote}。料金と契約条件を確認してから申し込めます。</p>
-            <Link href={`https://laruvisona.jp/laruHP/studio?industry=${industry}`} className="mt-9 inline-flex items-center gap-3 rounded-full bg-white px-7 py-4 font-bold text-sky-800">制作スタジオを開く <ArrowUpRight size={18} /></Link>
+            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link href={`https://laruvisona.jp/laruHP/studio?industry=${industry}`} className="inline-flex items-center gap-3 rounded-full bg-white px-7 py-4 font-bold text-sky-800">制作スタジオを開く <ArrowUpRight size={18} /></Link>
+              <Link href="https://laruhp.com/contact" className="inline-flex items-center gap-2 rounded-full border border-white/50 px-7 py-4 font-bold text-white transition-colors hover:bg-white/10">先に相談する</Link>
+            </div>
           </div>
         </section>
       </main>

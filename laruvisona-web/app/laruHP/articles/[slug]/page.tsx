@@ -4,8 +4,9 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { ARTICLES, getArticle } from '../articles-data';
 import { jsonForScript } from '@/lib/safe-markup';
-import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
+import { laruhpOgImage } from '@/lib/laruhp-seo';
 import PublicFooter from '@/components/laruhp/PublicFooter';
+import { INDUSTRIES } from '@/lib/laruhp-facts';
 
 export async function generateStaticParams() {
   return ARTICLES.map(a => ({ slug: a.slug }));
@@ -29,7 +30,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       modifiedTime: article.updatedAt,
       authors: [article.author],
       siteName: 'LARU HP',
-      images: [LARUHP_OG_IMAGE],
+      // 記事ごとに違う絵にする。共通の1枚だと、11本をSNSへ貼っても全部同じ見た目になる。
+      images: [laruhpOgImage(article.title, article.category)],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description: article.description,
+      images: [laruhpOgImage(article.title, article.category).url],
     },
   };
 }
@@ -121,7 +129,16 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   const related = ARTICLES.filter(a => a.slug !== slug && a.tags.some(t => article.tags.includes(t))).slice(0, 3);
   const canonical = `https://laruhp.com/articles/${article.slug}`;
-  const articleJsonLd = jsonForScript({
+  // 画面のパンくずだけでは検索結果の階層表示にならない。同じ道筋を構造化データでも出す。
+  const articleJsonLd = jsonForScript([{
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LARU HP', item: 'https://laruhp.com/' },
+      { '@type': 'ListItem', position: 2, name: 'ブログ', item: 'https://laruhp.com/articles' },
+      { '@type': 'ListItem', position: 3, name: article.title, item: canonical },
+    ],
+  }, {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: article.title,
@@ -131,7 +148,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     mainEntityOfPage: canonical,
     author: { '@type': 'Organization', name: article.author, url: 'https://laruvisona.jp/' },
     publisher: { '@type': 'Organization', name: '株式会社LaruVisona', url: 'https://laruvisona.jp/' },
-  });
+  }]);
 
   return (
     <div className="min-h-screen bg-sky-50">
@@ -203,13 +220,41 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <div className="bg-gradient-to-br from-sky-600 to-indigo-600 rounded-2xl p-8 text-center text-white mb-10">
             <div className="text-lg font-black mb-2">自分の事業で、完成像を試す</div>
             <p className="text-sky-100 text-xs mb-6">制作の試作はログイン前から。保存・公開にはご契約が必要です。</p>
-            <Link
-              href="https://laruvisona.jp/laruHP/studio"
-              className="inline-block bg-white text-sky-600 font-black text-sm px-8 py-3 rounded-xl hover:bg-sky-50 transition-colors shadow"
-            >
-              制作スタジオを開く
-            </Link>
+            {/* 読み終えた直後の人に「申し込む」だけを出すと、まだ決めていない人の行き先が無くなる。 */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="https://laruvisona.jp/laruHP/studio"
+                className="inline-block bg-white text-sky-600 font-black text-sm px-8 py-3 rounded-xl hover:bg-sky-50 transition-colors shadow"
+              >
+                制作スタジオを開く
+              </Link>
+              <Link
+                href="https://laruhp.com/contact"
+                className="inline-block border border-white/50 text-white font-bold text-sm px-8 py-3 rounded-xl hover:bg-white/10 transition-colors"
+              >
+                先に相談する
+              </Link>
+            </div>
           </div>
+
+          {/* この記事に関係の深い業種へ。記事と業種ページが横並びのままだと、どちらも浅く見える。 */}
+          {(article.relatedIndustries?.length ?? 0) > 0 && (
+            <div className="mb-10">
+              <h2 className="text-sm font-bold text-gray-700 mb-4">この業種の作り方も見る</h2>
+              <div className="flex gap-2 flex-wrap">
+                {article.relatedIndustries!.map(id => {
+                  const name = INDUSTRIES.find(i => i.id === id)?.name;
+                  if (!name) return null;
+                  return (
+                    <Link key={id} href={`https://laruhp.com/${id}`}
+                      className="bg-white border border-gray-200 hover:border-sky-300 hover:text-sky-700 text-gray-700 text-sm px-4 py-2 rounded-xl transition-all">
+                      {name}のホームページ
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Related articles */}
           {related.length > 0 && (

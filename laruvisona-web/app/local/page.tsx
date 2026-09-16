@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CompanyFooter from '@/components/company/CompanyFooter';
 import type { Metadata } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
 import { organizationWithAreaLd, AREAS_SERVED } from '@/lib/organization-ld';
@@ -164,6 +165,8 @@ export default function LocalPage() {
           </section>
         </div>
       </main>
+
+      <CompanyFooter />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CompanyFooter from '@/components/company/CompanyFooter';
 import type { Metadata } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
 
@@ -63,6 +64,8 @@ export default function TroubleIndexPage() {
           </div>
         </div>
       </main>
+
+      <CompanyFooter />
     </div>
   );
 }

@@ -16,8 +16,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // 受託開発サービス
     { url: `${base}/services`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
 
-    // ブログ（LARU SEO 記事一覧）
-    { url: `${base}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    // ブログ（LARU SEO 記事一覧）は、記事の本体が larubot.tokyo 側で描かれる。
+    // こちらが返すHTMLには本文が1文字も無いので、sitemapからは外しておく。
+    // 「毎週更新」と宣言しているのに中身が空、という状態にはしない。
+    // サーバー側で記事を取って /blog/[slug] を実体化したら、ここへ戻す。
 
     // 地域。1本だけ。量産すると誘導ページ扱いになる。
     { url: `${base}/local`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },

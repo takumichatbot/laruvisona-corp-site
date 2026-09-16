@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import CompanyFooter from '@/components/company/CompanyFooter';
 import Link from 'next/link';
 import LarubotContactForm from '@/components/LarubotContactForm';
 import { jsonForScript } from '@/lib/safe-markup';
@@ -226,6 +227,46 @@ function Check() {
   );
 }
 
+
+/* よくあるご質問。すべて、こちらが責任を持てる事実だけを書く。
+   受託で最初に聞かれることを、問い合わせの前に読めるようにしておく。 */
+const SERVICE_FAQ = [
+  {
+    q: '見積もりは無料ですか。',
+    a: 'はい。内容を伺ったうえで、金額と期間をお出しします。その段階で費用はいただきません。',
+  },
+  {
+    q: '料金はどのように決まりますか。',
+    a: 'このページの金額は目安です（すべて税別）。画面の数、連携する外部サービス、データの移行量で変わります。お見積もりの内訳は項目ごとにお出しします。',
+  },
+  {
+    q: '打ち合わせは対面が必要ですか。',
+    a: '必要ありません。要件の確認から納品まで、メールとオンラインで進められます。',
+  },
+  {
+    q: '作ったあとの運用もお願いできますか。',
+    a: '保守・運用は月額でお受けしています。納品物には標準でお付けしていますが、不要であれば外せます。',
+  },
+  {
+    q: '途中で仕様が変わっても大丈夫ですか。',
+    a: '変わる前提で進めます。変更が金額や期間に影響する場合は、その時点でお知らせしてから着手します。',
+  },
+  {
+    q: 'ソースコードはもらえますか。',
+    a: '納品物としてお渡しします。自社で運用したい場合も、他社へ引き継ぐ場合も、引き渡しを前提にしています。',
+  },
+];
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: SERVICE_FAQ.map(item => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.a },
+  })),
+};
+
 export default function ServicesPage() {
   // 料金は画面の SERVICES から取り出す。書き写すと、料金表を直したときに
   // 構造化データだけ古い額が残る。
@@ -235,6 +276,7 @@ export default function ServicesPage() {
       { name: 'ホーム', path: '/' },
       { name: '受託開発サービスと料金', path: '/services' },
     ]),
+    faqLd,
   ];
 
   return (
@@ -530,23 +572,32 @@ export default function ServicesPage() {
             <div className="bg-white border border-white/10 rounded-2xl md:rounded-3xl overflow-hidden">
               <LarubotContactForm />
             </div>
+            {/* フォームが表示されないときの受け口。受注の入口を1つにしない。 */}
+            <p className="mt-6 text-center text-sm text-slate-400">
+              フォームが表示されない場合は、
+              <a href="mailto:info@laruvisona.jp" className="text-blue-300 underline underline-offset-4 mx-1">info@laruvisona.jp</a>
+              へ直接お送りください。
+            </p>
+          </div>
+        </section>
+
+        {/* よくあるご質問。受託を探している人が最初に知りたいことを、ページの中に置く。 */}
+        <section className="px-6 py-16 md:py-24 border-t border-white/5">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-8">よくあるご質問</h2>
+            <div className="space-y-3">
+              {SERVICE_FAQ.map(item => (
+                <details key={item.q} className="rounded-2xl border border-white/10 bg-[#0f172a] p-5">
+                  <summary className="cursor-pointer text-sm font-bold text-white">{item.q}</summary>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-400">{item.a}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-black text-slate-500 py-12 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col items-center gap-6 text-center">
-          <img src="/images/logo_dark.png" alt="株式会社LaruVisona" className="h-7 w-auto object-contain opacity-80" />
-          <div className="flex flex-wrap justify-center gap-6 text-xs font-bold tracking-widest uppercase">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <Link href="/#company" className="hover:text-white transition-colors">Company</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-          </div>
-          <p className="text-xs font-mono text-slate-600">&copy; 2026 株式会社LaruVisona All Rights Reserved.</p>
-        </div>
-      </footer>
+      <CompanyFooter />
     </div>
   );
 }

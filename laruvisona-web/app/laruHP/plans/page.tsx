@@ -518,6 +518,19 @@ export default function PlansPage() {
         </div>
       </section>
 
+      <section className="px-4 md:px-6 pb-16">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-gray-500 text-sm mb-4">ほかの道具と迷っている場合は、比べる点をまとめています。</p>
+          <div className="flex justify-center gap-2 flex-wrap">
+            {[['jimdo', 'Jimdo'], ['wix', 'Wix'], ['canva', 'Canva'], ['studio', 'STUDIO']].map(([slug, name]) => (
+              <Link key={slug} href={`https://laruhp.com/vs/${slug}`} className="border border-gray-200 bg-white text-gray-600 hover:border-sky-300 hover:text-sky-600 px-4 py-2 rounded-xl text-sm transition-all">
+                {name} と比べる
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <PublicFooter />
     </div>
     </CurrentPlanContext.Provider>

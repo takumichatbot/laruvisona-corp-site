@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CompanyFooter from '@/components/company/CompanyFooter';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { TROUBLES, getTrouble } from '@/lib/trouble-data';
@@ -35,7 +36,20 @@ export default async function TroublePage({ params }: { params: Promise<{ slug: 
   const t = getTrouble(slug);
   if (!t) notFound();
   // 全部並べると選べなくなる。隣の3本だけ見せる。
-  const others = TROUBLES.filter(o => o.slug !== t.slug).slice(0, 3);
+  // 先頭から3本を出していたため、12本のうち後半8本にはどこからもリンクが集まらず、
+  // 事実上の行き止まりになっていた。自分の位置から順に回して、全部に入口を作る。
+  const here = TROUBLES.findIndex(o => o.slug === t.slug);
+  const others = [1, 2, 3].map(n => TROUBLES[(here + n) % TROUBLES.length]);
+
+  const breadcrumbLdData = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: 'https://laruvisona.jp/' },
+      { '@type': 'ListItem', position: 2, name: 'よくある困りごと', item: 'https://laruvisona.jp/trouble' },
+      { '@type': 'ListItem', position: 3, name: t.h1, item: `https://laruvisona.jp/trouble/${t.slug}` },
+    ],
+  };
 
   // 検索結果にそのまま出る形。読む前に答えが見えるほうが、読む人の得になる。
   const faqLd = {
@@ -50,7 +64,7 @@ export default async function TroublePage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="min-h-screen bg-[#030712] text-white">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([faqLd, breadcrumbLdData]) }} />
 
       <header className="sticky top-0 z-50 bg-[#030712]/85 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -164,6 +178,8 @@ export default async function TroublePage({ params }: { params: Promise<{ slug: 
           <p className="text-slate-600 text-xs mt-12">最終更新 {t.updated}｜株式会社LaruVisona</p>
         </div>
       </main>
+
+      <CompanyFooter />
     </div>
   );
 }

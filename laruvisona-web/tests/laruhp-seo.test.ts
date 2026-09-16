@@ -76,10 +76,11 @@ test('管理画面は既定でnoindexにし、公開ページだけ索引を明�
     'page.tsx', '[industry]/page.tsx', 'articles/page.tsx', 'articles/[slug]/page.tsx',
     'plans/layout.tsx', 'domains/page.tsx', 'contact/page.tsx', 'privacy/page.tsx',
     'terms/page.tsx', 'tokusho/page.tsx',
+    // 比較ページは書いてあるのにnoindexで、laruhp.comからは404だった（2026-09-17に公開）
+    'vs/[competitor]/page.tsx',
   ]) {
     assert.match(read(`app/laruHP/${path}`), /robots: \{ index: true, follow: true \}/, path);
   }
-  assert.match(read('app/laruHP/vs/[competitor]/page.tsx'), /robots: \{ index: false, follow: false \}/);
 });
 
 test('制作画面と既定テンプレートに絵文字を使わない', () => {

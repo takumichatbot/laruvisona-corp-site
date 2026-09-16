@@ -79,10 +79,21 @@ export default function LaruHPLandingPage() {
   return (
     <div className="lhp-landing">
       <BrandFonts />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonForScript({
-        '@context': 'https://schema.org', '@type': 'WebSite',
-        name: 'LARU HP', alternateName: 'LARUHP', url: 'https://laruhp.com/',
-      }) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonForScript([
+        {
+          '@context': 'https://schema.org', '@type': 'WebSite',
+          name: 'LARU HP', alternateName: 'LARUHP', url: 'https://laruhp.com/',
+        },
+        // 画面に出しているFAQを、検索側にも同じ内容で伝える。
+        // 画面とズレると意味がないので、同じ配列から作る。
+        {
+          '@context': 'https://schema.org', '@type': 'FAQPage',
+          mainEntity: [...HOW_FAQ, ...FACT_FAQ.slice(0, 3)].map(f => ({
+            '@type': 'Question', name: f.q,
+            acceptedAnswer: { '@type': 'Answer', text: f.a },
+          })),
+        },
+      ]) }} />
       <a className="lp-skip" href="#lp-main">
         本文へ移動
       </a>
@@ -412,6 +423,19 @@ export default function LaruHPLandingPage() {
               ))}
               <Link className="lp-guide-all" href="https://laruhp.com/articles">すべての記事を見る<ArrowUpRight size={15} /></Link>
             </div>
+          </div>
+        </section>
+
+        {/* 比較ページへの入口。書いてあるのに、どこからも辿れなかった。 */}
+        <section className="lp-container" style={{ paddingBottom: '2rem' }}>
+          <p className="lp-section-label"><span>06</span>ほかの道具と迷っているなら。</p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+            {[['jimdo', 'Jimdo'], ['wix', 'Wix'], ['canva', 'Canva'], ['studio', 'STUDIO']].map(([slug, name]) => (
+              <Link key={slug} href={`https://laruhp.com/vs/${slug}`} className="lp-text-link">
+                {name} と比べる
+                <ArrowUpRight size={16} />
+              </Link>
+            ))}
           </div>
         </section>
 

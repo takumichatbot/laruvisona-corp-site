@@ -34,6 +34,14 @@ export default function ContactPage() {
             <LarubotContactForm />
           </div>
 
+          {/* フォームは外部サービスの読み込みに依存している。
+              広告ブロッカーや障害で表示されないことがあるので、メールの宛先も必ず出す。 */}
+          <p className="mt-6 text-center text-sm text-slate-400">
+            フォームが表示されない場合は、
+            <a href="mailto:info@laruvisona.jp" className="text-blue-300 underline underline-offset-4 mx-1">info@laruvisona.jp</a>
+            へ直接お送りください。
+          </p>
+
           <div className="mt-8 text-center">
             <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm transition-colors">← トップに戻る</Link>
           </div>

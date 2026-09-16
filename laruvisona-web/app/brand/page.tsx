@@ -79,7 +79,7 @@ export default function BrandPage() {
             <Image src="/images/logo_dark.png" alt="LaruVisona" width={1300} height={375} priority sizes="240px"
               className="h-6 md:h-7 w-auto" />
           </Link>
-          <Link href="/#contact"
+          <Link href="/contact"
             className="inline-flex items-center min-h-[40px] px-4 rounded-full border border-white/25 text-[12px] md:text-[13px] font-bold
               hover:border-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
             相談する
