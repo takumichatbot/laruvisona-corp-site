@@ -5329,6 +5329,15 @@ function BuilderContent() {
         router.push('/laruHP/auth/signup?redirectTo=/laruHP/builder');
         return;
       }
+      // プラン未契約: 既存サイトの公開と同じく、料金を見せる。
+      // ここを通信エラー扱いにしていたため、初めての人が「公開」を押すと
+      // 「通信環境を確認してください」と出て、値段にたどり着けなかった。
+      if (res.status === 403) {
+        try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
+        setPublishing(false);
+        setShowPlanModal(true);
+        return;
+      }
       const { site: s } = await res.json().catch(() => ({ site: null }));
       id = s?.id;
       if (id) setDbSiteId(id);
