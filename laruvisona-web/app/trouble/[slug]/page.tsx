@@ -96,7 +96,8 @@ export default async function TroublePage({ params }: { params: Promise<{ slug: 
                   <Num n={i + 1} />
                   <div className="min-w-0">
                     <h3 className="font-bold mb-2 leading-snug">{c.title}</h3>
-                    <p className="text-slate-300 text-sm leading-[1.95]">{c.how}</p>
+                    {/* 手順に改行が入るものがある（貼り付け用のコードなど）ので、そのまま出す */}
+                    <p className="text-slate-300 text-sm leading-[1.95] whitespace-pre-line break-words">{c.how}</p>
                   </div>
                 </li>
               ))}
