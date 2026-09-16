@@ -47,6 +47,7 @@ export default function CalendarPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [scheduling, setScheduling] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState('');
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,9 +68,18 @@ export default function CalendarPage() {
   useEffect(() => {
     if (!selectedSiteId) return;
     (async () => {
-      const res = await fetch(`/api/posts?siteId=${selectedSiteId}`);
-      const d = await res.json();
-      setPosts(d.posts || []);
+      setLoadError('');
+      try {
+        // 記事の一覧はサイト配下のAPIから読む。以前は存在しない /api/posts を叩いていて、
+        // 404のHTMLをJSONとして読もうとして例外になり、画面には何も出ていなかった。
+        const res = await fetch(`/api/sites/${selectedSiteId}/posts?all=true`);
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d.error || '記事を読み込めませんでした');
+        setPosts(d.posts || []);
+      } catch (e) {
+        setPosts([]);
+        setLoadError(e instanceof Error ? e.message : '記事を読み込めませんでした');
+      }
     })();
   }, [selectedSiteId]);
 
@@ -85,13 +95,24 @@ export default function CalendarPage() {
 
   const handleSchedule = async (postId: string, dateStr: string) => {
     setScheduling(postId);
-    await fetch('/api/posts', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: postId, scheduled_at: dateStr || null }),
-    });
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, scheduled_at: dateStr || null } : p));
-    setScheduling(null);
+    setLoadError('');
+    try {
+      // 日付だけだとUTCの0時になり、日本時間では前日の朝になる。その日の9時に出す。
+      const at = dateStr ? new Date(`${dateStr}T09:00:00+09:00`).toISOString() : null;
+      const res = await fetch(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduled_at: at }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || '予約を保存できませんでした');
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, scheduled_at: (d.post?.scheduled_at ?? at) } : p));
+    } catch (e) {
+      // 保存できていないのに予約できたように見せない
+      setLoadError(e instanceof Error ? e.message : '予約を保存できませんでした');
+    } finally {
+      setScheduling(null);
+    }
   };
 
   const daysInMonth = getDaysInMonth(year, month);
@@ -132,6 +153,12 @@ export default function CalendarPage() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
+
+        {loadError && (
+          <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {loadError}
+          </div>
+        )}
 
         {/* Site picker */}
         {sites.length > 1 && (

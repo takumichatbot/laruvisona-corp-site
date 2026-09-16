@@ -9,7 +9,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 19;
+export const EXPORT_VERSION = 20;
 
 
 function renderEditorialMark(value: unknown, index: number): string {
@@ -336,6 +336,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 (function(){
   var sid=window.__LHPSID; if(!sid)return;
   var root=document.getElementById('lhp-shop-list-${bid}'); if(!root)return;
+  var PAYOFF=${js(process.env.HP_SHOP_PAYMENTS_ENABLED !== '1')};
   var KEY='laru_cart_'+sid, QB='width:36px;height:36px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:18px;font-weight:700;cursor:pointer;color:#0f172a';
   var products=[], chosen={}, cart={};
   try{cart=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
@@ -376,8 +377,8 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     if(!bar){bar=document.createElement('div');bar.id='lhp-shopbar-${bid}';bar.style.cssText='position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -2px 12px rgba(0,0,0,.08);padding:12px 24px;z-index:60;display:none';document.body.appendChild(bar);}
     if(tq<=0){bar.style.display='none';return;}
     bar.style.display='block';
-    bar.innerHTML='<div style="max-width:960px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap"><span style="font-weight:700;color:#0f172a">カート '+tq+'点</span><span style="font-size:20px;font-weight:800;color:#0369a1;margin-left:auto">'+yen(tp)+'</span><button id="lhp-co-${bid}" style="background:#0f172a;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-weight:700;cursor:pointer">レジに進む</button></div>';
-    document.getElementById('lhp-co-${bid}').onclick=function(){var btn=this;btn.disabled=true;btn.textContent='処理中...';fetch('/api/shop/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,items:it.map(function(x){return{productId:x.p.id,variantId:x.v?x.v.id:undefined,quantity:x.q}}),successUrl:location.href.split('?')[0]+'?payment=success',cancelUrl:location.href.split('?')[0]})}).then(function(r){return r.json()}).then(function(d){if(d.url){try{localStorage.removeItem(KEY)}catch(e){}location.href=d.url;}else{btn.disabled=false;btn.textContent='レジに進む';alert(d.error||'決済を開始できませんでした');}}).catch(function(){btn.disabled=false;btn.textContent='レジに進む';alert('通信エラー');});};
+    bar.innerHTML='<div style="max-width:960px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap"><span style="font-weight:700;color:#0f172a">カート '+tq+'点</span><span style="font-size:20px;font-weight:800;color:#0369a1;margin-left:auto">'+yen(tp)+'</span>'+(PAYOFF?'<span style="font-size:13px;color:#b45309">ただいまオンラインでのお支払いを停止しています。ご注文はお問い合わせください。</span>':'<button id="lhp-co-${bid}" style="background:#0f172a;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-weight:700;cursor:pointer">レジに進む</button>')+'</div>';
+    if(!PAYOFF)document.getElementById('lhp-co-${bid}').onclick=function(){var btn=this;btn.disabled=true;btn.textContent='処理中...';fetch('/api/shop/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:sid,items:it.map(function(x){return{productId:x.p.id,variantId:x.v?x.v.id:undefined,quantity:x.q}}),successUrl:location.href.split('?')[0]+'?payment=success',cancelUrl:location.href.split('?')[0]})}).then(function(r){return r.json()}).then(function(d){if(d.url){try{localStorage.removeItem(KEY)}catch(e){}location.href=d.url;}else{btn.disabled=false;btn.textContent='レジに進む';alert(d.error||'決済を開始できませんでした');}}).catch(function(){btn.disabled=false;btn.textContent='レジに進む';alert('通信エラー');});};
   }
 })();
 </script>`;
@@ -395,6 +396,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 (function(){
   var sid=window.__LHPSID; if(!sid)return;
   var box=document.getElementById('lhp-item-box-${bid}'); if(!box)return;
+  var PAYOFF=${js(process.env.HP_SHOP_PAYMENTS_ENABLED !== '1')};
   var PID=${js(pid)}, BUY=${js(rawValue('buyText') || '購入する')}, QB='width:40px;height:40px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-size:20px;font-weight:700;cursor:pointer;color:#0f172a';
   var p=null,vid=null,qty=1;
   function yen(n){return '¥'+n.toLocaleString();}
@@ -412,7 +414,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     var v=variant(),pr=price(),st=stock(),sold=st<=0,hv=p.variants&&p.variants.length;
     var vhtml=hv?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px">'+p.variants.map(function(o){var os=(o.stock!==null&&o.stock!==undefined&&o.stock<=0),sel=vid===o.id;return '<button data-v="'+o.id+'" '+(os?'disabled':'')+' style="font-size:13px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:'+(os?'not-allowed':'pointer')+';border:'+(sel?'2px solid #0369a1':'1px solid #cbd5e1')+';background:'+(os?'#f1f5f9':sel?'#eff6ff':'#fff')+';color:'+(os?'#cbd5e1':sel?'#0369a1':'#334155')+'">'+esc(o.name)+(o.priceDelta?'（'+(o.priceDelta>0?'+':'')+yen(o.priceDelta)+'）':'')+'</button>';}).join('')+'</div>':'';
     var img=(p.images&&p.images[0])?'<img src="'+esc(p.images[0])+'" alt="" style="width:100%;height:100%;object-fit:cover"/>':'<span style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#64748b">商品画像</span>';
-    box.innerHTML='<div style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:#fff"><div style="height:200px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);display:flex;align-items:center;justify-content:center;font-size:56px;overflow:hidden">'+img+'</div><div style="padding:24px"><h3 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 8px">'+esc(p.name)+'</h3>'+(p.description?'<p style="font-size:14px;color:#475569;margin:0 0 16px;line-height:1.6">'+esc(p.description)+'</p>':'')+vhtml+'<div style="font-size:28px;font-weight:800;color:#0369a1;margin-bottom:8px">'+yen(pr)+'</div>'+(st!==Infinity?'<p style="font-size:13px;color:'+(st<=5?'#dc2626':'#64748b')+';margin:0 0 16px">残り'+st+'件</p>':'<div style="height:8px"></div>')+(sold?'<button disabled style="width:100%;background:#e2e8f0;color:#94a3b8;border:none;border-radius:12px;padding:14px;font-weight:700">売り切れ</button>':'<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><button id="qm-${bid}" style="'+QB+'">−</button><span style="font-weight:800;font-size:18px;min-width:24px;text-align:center">'+qty+'</span><button id="qp-${bid}" style="'+QB+'">＋</button></div><button id="buy-${bid}" style="width:100%;background:#0369a1;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;cursor:pointer">'+esc(BUY)+'</button>')+'</div></div>';
+    box.innerHTML='<div style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:#fff"><div style="height:200px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);display:flex;align-items:center;justify-content:center;font-size:56px;overflow:hidden">'+img+'</div><div style="padding:24px"><h3 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 8px">'+esc(p.name)+'</h3>'+(p.description?'<p style="font-size:14px;color:#475569;margin:0 0 16px;line-height:1.6">'+esc(p.description)+'</p>':'')+vhtml+'<div style="font-size:28px;font-weight:800;color:#0369a1;margin-bottom:8px">'+yen(pr)+'</div>'+(st!==Infinity?'<p style="font-size:13px;color:'+(st<=5?'#dc2626':'#64748b')+';margin:0 0 16px">残り'+st+'件</p>':'<div style="height:8px"></div>')+(sold?'<button disabled style="width:100%;background:#e2e8f0;color:#94a3b8;border:none;border-radius:12px;padding:14px;font-weight:700">売り切れ</button>':PAYOFF?'<p style="margin:0;padding:12px;border-radius:12px;background:#fffbeb;color:#b45309;font-size:13px;text-align:center">ただいまオンラインでのお支払いを停止しています。ご注文はお問い合わせください。</p>':'<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><button id="qm-${bid}" style="'+QB+'">−</button><span style="font-weight:800;font-size:18px;min-width:24px;text-align:center">'+qty+'</span><button id="qp-${bid}" style="'+QB+'">＋</button></div><button id="buy-${bid}" style="width:100%;background:#0369a1;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:700;cursor:pointer">'+esc(BUY)+'</button>')+'</div></div>';
     box.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){vid=b.getAttribute('data-v');qty=1;render();};});
     var qm=document.getElementById('qm-${bid}'),qp=document.getElementById('qp-${bid}'),buy=document.getElementById('buy-${bid}');
     if(qm)qm.onclick=function(){if(qty>1){qty--;render();}};

@@ -54,6 +54,34 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
 }
 
+
+/* 配信まわりのキーを、届いたかどうかが分かる言葉にする。
+   以前は owner_email_status / not_configured のまま画面に並んでいて、
+   「通知が出ていない」ことに気づけなかった。 */
+const EXTRA_LABEL: Record<string, string> = {
+  owner_email_status: 'お店への通知メール',
+  customer_email_status: 'お客さまへの自動返信',
+  line_status: 'LINE通知',
+  notification_at: '通知を試みた時刻',
+};
+const EXTRA_VALUE: Record<string, string> = {
+  sent: '送信しました',
+  failed: '送信できませんでした',
+  not_configured: '未設定のため送信していません',
+  skipped: '送信対象外',
+};
+
+function deliveryWarning(extra: Record<string, string> | null | undefined): string {
+  if (!extra) return '';
+  const bad = ['owner_email_status', 'customer_email_status']
+    .filter(k => extra[k] === 'not_configured' || extra[k] === 'failed');
+  if (!bad.length) return '';
+  const notConfigured = bad.some(k => extra[k] === 'not_configured');
+  return notConfigured
+    ? 'この問い合わせの通知メールは送られていません（メール配信が未設定です）。この画面には残っているので、ここから返信してください。設定は運営までご連絡ください。'
+    : 'この問い合わせの通知メールを送れませんでした。この画面には残っているので、ここから返信してください。';
+}
+
 export default function ContactsPage() {
   const searchParams = useSearchParams();
   const listRef = useRef<HTMLDivElement>(null);
@@ -676,13 +704,20 @@ export default function ContactsPage() {
                   </div>
                 )}
 
+                {/* 通知の結果。英語のキーのまま出していたので、何が起きたのか伝わっていなかった。 */}
+                {deliveryWarning(selected.extra_fields) && (
+                  <div role="alert" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                    {deliveryWarning(selected.extra_fields)}
+                  </div>
+                )}
+
                 {/* Extra fields (from booking etc.) */}
                 {selected.extra_fields && Object.keys(selected.extra_fields).filter(k => !k.startsWith('webhook')).length > 0 && (
                   <div className="mt-3 bg-gray-50 rounded-lg p-3 text-xs space-y-1.5">
                     {Object.entries(selected.extra_fields).filter(([k]) => !k.startsWith('webhook')).map(([k, v]) => (
                       <div key={k} className="flex gap-2">
-                        <span className="text-gray-500 w-24 flex-shrink-0">{k}</span>
-                        <span className="text-gray-700">{v}</span>
+                        <span className="text-gray-500 w-24 flex-shrink-0">{EXTRA_LABEL[k] || k}</span>
+                        <span className="text-gray-700">{EXTRA_VALUE[String(v)] || String(v)}</span>
                       </div>
                     ))}
                   </div>

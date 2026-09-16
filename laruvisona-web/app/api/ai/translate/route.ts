@@ -38,23 +38,42 @@ export async function POST(req: Request) {
 
   if (!site) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Extract text content from blocks
-  type Block = { type?: string; props?: Record<string, unknown>; children?: Block[] };
-  function extractTexts(blocks: Block[]): string[] {
-    const texts: string[] = [];
-    for (const block of blocks || []) {
-      const props = block.props || {};
-      for (const [key, val] of Object.entries(props)) {
-        if (typeof val === 'string' && val.trim() && key !== 'src' && key !== 'href' && key !== 'url' && key !== 'id') {
-          texts.push(val.trim());
-        }
-      }
-      if (block.children) texts.push(...extractTexts(block.children));
+  // ブロックから文章を集める。
+  // 以前は block.props / block.children を見ていたが、このアプリのブロックは
+  // { id, type, data } で、複数ページは { v:2, pages:[...] } に入っている。
+  // そのため、集まる文章がほぼ空になり、翻訳してもページの中身が変わらなかった。
+  const SKIP_KEYS = new Set([
+    'src', 'href', 'url', 'id', 'anchorId', 'bgImage', 'image', 'imageUrl', 'link', 'ctaLink',
+    'bgColor', 'textColor', 'buttonColor', 'color', 'icon', 'mode', 'type', 'align', 'variant',
+    'priceId', 'formId', 'embed', 'videoUrl', 'mapUrl', 'redirectUrl',
+  ]);
+  function extractFromData(value: unknown, depth = 0): string[] {
+    if (depth > 6) return [];
+    if (typeof value === 'string') {
+      const text = value.trim();
+      // 色コード・URL・記号だけのものは訳さない
+      if (!text || /^#[0-9a-f]{3,8}$/i.test(text) || /^https?:\/\//i.test(text) || !/[^\W\d_]/u.test(text)) return [];
+      return [text];
     }
-    return texts;
+    if (Array.isArray(value)) return value.flatMap(v => extractFromData(v, depth + 1));
+    if (value && typeof value === 'object') {
+      return Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => !SKIP_KEYS.has(key))
+        .flatMap(([, v]) => extractFromData(v, depth + 1));
+    }
+    return [];
+  }
+  function extractTexts(raw: unknown): string[] {
+    const pages = Array.isArray(raw)
+      ? [{ blocks: raw }]
+      : ((raw as { v?: number; pages?: { blocks?: unknown[] }[] } | null)?.pages ?? []);
+    return pages.flatMap(page => (page.blocks || []).flatMap((block) => {
+      const data = (block as { data?: unknown })?.data;
+      return extractFromData(data);
+    }));
   }
 
-  const blocks = (site.blocks_json as Block[]) || [];
+  const blocks = site.blocks_json;
   const seo = (site.seo_json as Record<string, string>) || {};
 
   const sourceTexts: string[] = [

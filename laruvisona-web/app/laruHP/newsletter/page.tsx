@@ -457,7 +457,7 @@ export default function NewsletterPage() {
                     <p className="text-gray-400 text-xs mt-1">ニュースレター登録ブロックをサイトに追加して公開してください</p>
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                  <div className="border border-gray-200 rounded-xl overflow-x-auto bg-white shadow-sm">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-200 bg-gray-50">

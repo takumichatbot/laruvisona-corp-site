@@ -56,6 +56,7 @@ export default function AgencyPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [planBlocked, setPlanBlocked] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('updated');
   const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
   const [selected, setSelected] = useState<Site | null>(null);
@@ -80,6 +81,7 @@ export default function AgencyPage() {
   const [refCopied, setRefCopied] = useState(false);
   const [brand, setBrand] = useState({ name: '', logo: '', accent: '#0369a1' });
   const [brandSaving, setBrandSaving] = useState(false);
+  const [brandError, setBrandError] = useState('');
   const [brandSaved, setBrandSaved] = useState(false);
   const [adminDomain, setAdminDomain] = useState('');
   const [domainSaving, setDomainSaving] = useState(false);
@@ -92,7 +94,10 @@ export default function AgencyPage() {
     const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
     const { data: profile } = await supabase.from('profiles').select('plan, agency_brand_name, agency_logo_url, agency_accent, agency_admin_domain').eq('id', user.id).single();
     if (!isAdmin && profile?.plan !== 'agency') {
-      router.replace('/laruHP/plans#agency');
+      // 無言で料金ページへ飛ばすと、何が起きたのか分からない。
+      // どのプランの機能かを、その場で伝える。
+      setPlanBlocked(true);
+      setLoading(false);
       return;
     }
     setBrand({
@@ -135,12 +140,14 @@ export default function AgencyPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setBrandSaving(true);
-    await supabase.from('profiles').update({
+    const { error } = await supabase.from('profiles').update({
       agency_brand_name: brand.name || null,
       agency_logo_url: brand.logo || null,
       agency_accent: brand.accent || null,
     }).eq('id', user.id);
     setBrandSaving(false);
+    if (error) { setBrandError('保存できませんでした。もう一度お試しください。'); return; }
+    setBrandError('');
     setBrandSaved(true);
     setTimeout(() => setBrandSaved(false), 2500);
   };
@@ -149,7 +156,9 @@ export default function AgencyPage() {
     if (!selected) return;
     setSaving(true);
     const newData = { ...(selected.data ?? {}), ...editForm };
-    await supabase.from('sites').update({ data: newData }).eq('id', selected.id);
+    const { error } = await supabase.from('sites').update({ data: newData }).eq('id', selected.id);
+    if (error) { setSaving(false); setBrandError('顧客情報を保存できませんでした。もう一度お試しください。'); return; }
+    setBrandError('');
     setSites(prev => prev.map(s => s.id === selected.id ? { ...s, data: newData } : s));
     setSelected(s => s ? { ...s, data: newData } : s);
     setSaving(false);
@@ -198,9 +207,32 @@ export default function AgencyPage() {
   const totalContacts = contacts.length;
   const publishedCount = sites.filter(s => s.published).length;
 
+  if (planBlocked) {
+    return (
+      <div className="min-h-screen bg-[#030712] text-white flex items-center justify-center px-6">
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-bold mb-3">エージェンシー管理は、エージェンシープランの機能です</h1>
+          <p className="text-slate-400 text-sm mb-6">
+            複数のクライアントサイトを1つのアカウントでまとめて管理する画面です。いまのご契約では開けません。
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/laruHP/plans#agency" className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-sm">プランを見る</Link>
+            <Link href="/laruHP/dashboard" className="border border-white/20 text-slate-300 px-5 py-2.5 rounded-xl text-sm">ダッシュボードへ戻る</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#030712] text-white">
       <div className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-sm sticky top-0 z-10">
+      {brandError && (
+        <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-3 text-sm shadow-lg">
+          {brandError}
+          <button onClick={() => setBrandError('')} className="ml-3 underline opacity-70">閉じる</button>
+        </div>
+      )}
         <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4">
           <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -372,7 +404,7 @@ export default function AgencyPage() {
                         閲覧
                       </a>
                     )}
-                    <Link href={`/laruHP/contacts?siteId=${site.id}`}
+                    <Link href={`/laruHP/contacts?site=${site.id}`}
                       className="relative text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all flex items-center gap-1">
                       問合 問い合わせ
                       {unread > 0 && (
@@ -541,7 +573,7 @@ export default function AgencyPage() {
                   className="flex-1 text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
                   サイトを編集
                 </Link>
-                <Link href={`/laruHP/contacts?siteId=${selected.id}`}
+                <Link href={`/laruHP/contacts?site=${selected.id}`}
                   className="flex-1 text-center bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-sm transition-all">
                   問い合わせ確認
                 </Link>

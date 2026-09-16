@@ -471,7 +471,7 @@ export default function AnalyticsPage() {
           <Link href="/laruHP/contacts" className="text-xs text-sky-700 border border-sky-200 bg-sky-50 px-4 py-2 rounded-xl hover:bg-sky-100 transition-colors font-semibold">
             問い合わせ一覧 →
           </Link>
-          <Link href="/laruHP/settings?section=gsc" className="text-xs text-indigo-700 border border-indigo-200 bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors font-semibold">
+          <Link href="/laruHP/settings?tab=integrations#gsc" className="text-xs text-indigo-700 border border-indigo-200 bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors font-semibold">
             Search Console →
           </Link>
           <Link href="/laruHP/larubot-logs" className="text-xs text-purple-700 border border-purple-200 bg-purple-50 px-4 py-2 rounded-xl hover:bg-purple-100 transition-colors font-semibold">

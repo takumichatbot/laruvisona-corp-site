@@ -76,7 +76,7 @@ export async function POST(req: Request) {
   catch { return NextResponse.json({ error: 'URL required' }, { status: 400 }); }
 
   const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) return NextResponse.json({ error: 'api_key_missing' }, { status: 500 });
+  if (!geminiKey) return NextResponse.json({ error: 'ページの読み取りは、いまご利用いただけません。時間をおいてお試しください。' }, { status: 503 });
 
   const denied=await requireAiAccess(supabase,user.id,'assistant',30);
   if(denied)return denied;

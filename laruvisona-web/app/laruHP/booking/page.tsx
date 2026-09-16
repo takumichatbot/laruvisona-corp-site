@@ -51,6 +51,7 @@ export default function BookingPage() {
   const [config, setConfig] = useState<BookingConfig>(DEFAULT_CONFIG);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [newSlot, setNewSlot] = useState({ date: '', time: '10:00', duration: 60, label: '相談・カウンセリング' });
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
@@ -88,7 +89,14 @@ export default function BookingPage() {
     setSaving(true);
     const site = sites.find(s => s.id === siteId);
     const newData = { ...(site?.data ?? {}), bookingConfig: cfg };
-    await supabase.from('sites').update({ data: newData }).eq('id', siteId);
+    const { error } = await supabase.from('sites').update({ data: newData }).eq('id', siteId);
+    if (error) {
+      // 保存できていないのに、枠が増えたように見せない
+      setSaveError('予約枠を保存できませんでした。通信状況を確かめて、もう一度お試しください。');
+      setSaving(false);
+      return;
+    }
+    setSaveError('');
     setSites(prev => prev.map(s => s.id === siteId ? { ...s, data: newData } : s));
     setConfig(cfg);
     setSaving(false);
@@ -192,6 +200,12 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-[#030712] text-white">
+      {saveError && (
+        <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 shadow-lg">
+          {saveError}
+          <button onClick={() => setSaveError('')} className="ml-3 underline opacity-70">閉じる</button>
+        </div>
+      )}
       {/* Realtime new booking toast — aria-live for screen readers */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {newBooking ? `${newBooking.name}さんから予約が届きました` : ''}

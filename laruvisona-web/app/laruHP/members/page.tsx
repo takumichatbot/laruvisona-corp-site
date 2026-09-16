@@ -103,7 +103,7 @@ export default function MembersPage() {
             <p className="text-gray-400 text-xs mt-1">「会員限定」ブロックを公開すると、登録した会員がここに表示されます</p>
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs">
                 <tr><th className="text-left px-4 py-2.5">メール</th><th className="text-left px-4 py-2.5">名前</th><th className="text-left px-4 py-2.5">プラン</th><th className="text-left px-4 py-2.5">登録日</th><th className="px-4 py-2.5"></th></tr>

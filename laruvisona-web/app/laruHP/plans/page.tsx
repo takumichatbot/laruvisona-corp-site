@@ -325,7 +325,11 @@ export default function PlansPage() {
 
       {/* Comparison table */}
       <section className="py-8 md:py-16 px-4 md:px-6">
-        <div className="max-w-4xl mx-auto">
+        {/* スマホでは5列が1列46pxまで潰れ、プラン名と金額が縦に割れて読めなくなる。
+            親が overflow-x-hidden なので横スクロールも封じられていた。
+            ここだけ横スクロールを許し、最小幅を与える。 */}
+        <div className="max-w-4xl mx-auto overflow-x-auto -mx-4 px-4 md:mx-auto md:px-0">
+          <div className="min-w-[680px] md:min-w-0">
 
           {/* Plan header row */}
           <div className="grid grid-cols-5 gap-0 mb-0">
@@ -492,6 +496,7 @@ export default function PlansPage() {
             </div>
           </div>
         </div>
+          </div>
       </section>
 
       {/* CTA section */}

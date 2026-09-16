@@ -166,9 +166,15 @@ export default function SeoPage() {
     setRepublishing(false);
   };
 
-  const handleSave = async () => {
-    if (!selectedSite) return;
+  /**
+   * 保存できたかどうかを返す。以前は返していなかったため、
+   * 「保存に失敗 → 再公開は成功」の順で走ると「反映されました」と出て、
+   * 古いSEO情報のまま公開されていた。
+   */
+  const handleSave = async (): Promise<boolean> => {
+    if (!selectedSite) return false;
     setSaving(true);
+    let ok = false;
     try {
       const businessInfo: BusinessInfo = {
         ...form,
@@ -189,6 +195,7 @@ export default function SeoPage() {
         showMsg('SEO情報を保存しました。次の公開時に反映されます。');
         setNeedsRepublish(true);
         localStorage.setItem(REPUBLISH_KEY(selectedSite.id), '1');
+        ok = true;
       } else {
         const d = await res.json().catch(() => ({}));
         showMsg((d as { error?: string }).error || '保存に失敗しました', 'error');
@@ -197,6 +204,7 @@ export default function SeoPage() {
       showMsg('ネットワークエラーが発生しました', 'error');
     }
     setSaving(false);
+    return ok;
   };
 
   const setField = <K extends keyof BusinessInfo>(key: K, value: BusinessInfo[K]) => {
@@ -345,7 +353,7 @@ export default function SeoPage() {
               <span className="text-xs font-semibold text-amber-800">SEO設定を変更しました。Googleへの反映には再公開が必要です。</span>
             </div>
             <button
-              onClick={async () => { await handleSave(); await handleRepublish(); }}
+              onClick={async () => { if (await handleSave()) await handleRepublish(); }}
               disabled={saving || republishing}
               className="flex-shrink-0 text-xs bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="SEO設定を保存してサイトを再公開します（Googleへの反映に必要）"
@@ -666,7 +674,7 @@ export default function SeoPage() {
             {saving ? '保存中...' : 'SEO情報を保存'}
           </button>
           <button
-            onClick={async () => { await handleSave(); if (!saving) await handleRepublish(); }}
+            onClick={async () => { if (await handleSave()) await handleRepublish(); }}
             disabled={saving || republishing || (!form.name.trim() && !selectedSite?.name) || !form.description.trim()}
             className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl text-sm transition-colors"
             title={(!form.name.trim() && !selectedSite?.name) ? '店舗名を入力してください' : !form.description.trim() ? '説明文を入力してください' : '保存後すぐにサイトを再公開します'}

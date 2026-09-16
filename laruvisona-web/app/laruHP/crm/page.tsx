@@ -71,6 +71,7 @@ export default function CRMPage() {
   const [renderedAt] = useState(Date.now);
   const supabase = createClient();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [saveError, setSaveError] = useState('');
   const [sites, setSites] = useState<Site[]>([]);
   const [siteFilter, setSiteFilter] = useState('');
   const [selected, setSelected] = useState<Contact | null>(null);
@@ -127,7 +128,10 @@ export default function CRMPage() {
     const c = contacts.find(x => x.id === contactId);
     if (!c) return;
     const newExtra = { ...(c.extra_fields || {}), ...patch };
-    await supabase.from('contacts').update({ extra_fields: newExtra }).eq('id', contactId);
+    // 失敗したまま画面だけ動かすと、リロードで全部戻る。保存できたときだけ反映する。
+    const { error } = await supabase.from('contacts').update({ extra_fields: newExtra }).eq('id', contactId);
+    if (error) { setSaveError('保存できませんでした。通信状況を確かめて、もう一度お試しください。'); return; }
+    setSaveError('');
     setContacts(prev => prev.map(x => x.id === contactId ? { ...x, extra_fields: newExtra as Record<string, string> } : x));
     if (selected?.id === contactId) setSelected(s => s ? { ...s, extra_fields: newExtra as Record<string, string> } : s);
   };
@@ -244,6 +248,12 @@ export default function CRMPage() {
   return (
     <div className="min-h-screen bg-sky-50 text-gray-900">
       {/* 成約確認モーダル */}
+      {saveError && (
+        <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm shadow-lg">
+          {saveError}
+          <button onClick={() => setSaveError('')} className="ml-3 underline opacity-70">閉じる</button>
+        </div>
+      )}
       {pendingContractId && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl">

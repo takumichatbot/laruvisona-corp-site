@@ -15,6 +15,9 @@ interface Sequence {
   id: string;
   name: string;
   trigger: 'contact_form' | 'manual' | 'booking';
+  /** 送信の実績。作っただけで動いていない状態を画面で確かめられるようにする。 */
+  sentCount?: number;
+  lastSentAt?: string | null;
   steps: SequenceStep[];
   active: boolean;
   enrolledCount: number;
@@ -438,6 +441,19 @@ export default function SequencesPage() {
                           登録済み: <span className="font-bold text-gray-700">{seq.enrolledCount}件</span>
                         </div>
                       )}
+                      {/* 送れているかどうか。作っただけで動いていないことに気づけるようにする。 */}
+                      <div className="text-[11px] mb-3">
+                        {(seq.sentCount ?? 0) > 0 ? (
+                          <span className="text-gray-500">
+                            送信済み: <span className="font-bold text-gray-700">{seq.sentCount}通</span>
+                            {seq.lastSentAt && <>（最終 {new Date(seq.lastSentAt).toLocaleString('ja-JP')}）</>}
+                          </span>
+                        ) : seq.active && seq.enrolledCount > 0 ? (
+                          <span className="text-amber-700">まだ1通も送信されていません。30分ほど経っても変わらない場合はご連絡ください。</span>
+                        ) : (
+                          <span className="text-gray-400">送信の実績はまだありません。</span>
+                        )}
+                      </div>
                       <div className="space-y-0 mb-4">
                         {seq.steps.map((step, i) => (
                           <div key={i} className="flex items-start gap-2 text-xs">

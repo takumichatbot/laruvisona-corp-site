@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { canonicalBase, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
+import { applyTranslationToHtml, isTranslationLocale, translationFor, TRANSLATION_LOCALES } from '@/lib/translate-apply';
 
 // 注: 以前ここで revalidateTag を再エクスポートしていたが、
 // Next.js のページは決められた export しか持てないため、
@@ -22,10 +23,14 @@ function getServiceClient() {
 
 interface Props {
   params: Promise<{ slug: string }>;
+  /* ?lang=en のように言語を指定して開ける。保存してある翻訳をあてる。 */
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug: rawSlug } = await params;
+  const query = (await searchParams) ?? {};
+  const lang = Array.isArray(query.lang) ? query.lang[0] : query.lang;
   const slug = decodeSlug(rawSlug);
   const supabase = getServiceClient();
   const { data } = await supabase
@@ -38,7 +43,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: 'Not Found' };
 
   const seo = (data.seo_json ?? {}) as { title?: string; description?: string; ogTitle?: string; ogDescription?: string; ogImage?: string };
-  const settings = (data.settings_json ?? {}) as { noIndex?: boolean };
+  const settings = (data.settings_json ?? {}) as { noIndex?: boolean; translations?: Record<string, { map?: Record<string, string> }> };
+  const translated = isTranslationLocale(lang) ? translationFor(settings as Record<string, unknown>, lang) : null;
   // 同じサイトがパス形式・サブドメイン形式・独自ドメイン形式で開ける。
   // 開かれたホストに合わせて、そのサイトの正規URLを1つに決める。
   // 正規URLは保存された公開先の方針から一意に決める（入口のホストで変えない）
@@ -46,10 +52,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ogTitle = seo.ogTitle || seo.title || data.name;
   const ogDesc = seo.ogDescription || seo.description || '';
 
+  // 用意してある言語を検索側へ伝える。翻訳済みのページは、その言語のURLを正規とする。
+  const locales = Object.keys((settings.translations ?? {})).filter(isTranslationLocale);
+  const languages = locales.length
+    ? Object.fromEntries([
+        ['ja', canonical],
+        ...locales.map(code => [TRANSLATION_LOCALES[code].hreflang, `${canonical}?lang=${code}`]),
+      ])
+    : undefined;
+
   const metadata: Metadata = {
-    title: seo.title || data.name,
-    description: seo.description || '',
-    alternates: { canonical },
+    title: translated?.map?.[seo.title || data.name] || seo.title || data.name,
+    description: (seo.description && translated?.map?.[seo.description]) || seo.description || '',
+    alternates: {
+      canonical: translated && isTranslationLocale(lang) ? `${canonical}?lang=${lang}` : canonical,
+      ...(languages ? { languages } : {}),
+    },
     robots: settings.noIndex
       ? { index: false, follow: false }
       : { index: true, follow: true },
@@ -132,8 +150,10 @@ function buildJsonLd(siteName: string, baseUrl: string, seo: { description?: str
   return jsonForScript(obj);
 }
 
-export default async function PublishedSitePage({ params }: Props) {
+export default async function PublishedSitePage({ params, searchParams }: Props) {
   const { slug: rawSlug } = await params;
+  const query = (await searchParams) ?? {};
+  const langParam = Array.isArray(query.lang) ? query.lang[0] : query.lang;
   const slug = decodeSlug(rawSlug);
   const supabase = getServiceClient();
 
@@ -177,8 +197,17 @@ export default async function PublishedSitePage({ params }: Props) {
 
   const base = canonicalBase(site as { slug?: string | null; custom_domain?: string | null });
 
+  // ?lang= が指定され、その言語の翻訳が保存してあれば、本文にあてる。
+  // 無い言語・壊れた指定は、そのまま日本語で出す（404にはしない）。
+  const translation = isTranslationLocale(langParam)
+    ? translationFor(site.settings_json as Record<string, unknown>, langParam)
+    : null;
+  const localizedHtml = translation
+    ? applyTranslationToHtml(site.published_html, translation.map)
+    : site.published_html;
+
   // Ensure the first <img> in the page is eager-loaded (improves LCP)
-  const eagerHtml = site.published_html.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
+  const eagerHtml = localizedHtml.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
 
   const hasBusinessInfo = !!settings.businessInfo;
   const jsonLdStr = hasBusinessInfo

@@ -686,6 +686,7 @@ export default function DashboardPage() {
   // AI Audit
   const [auditPanels, setAuditPanels] = useState<Record<string, boolean>>({});
   const [auditData, setAuditData] = useState<Record<string, { score: number; summary: string; items: Array<{ category: string; issue: string; suggestion: string; impact: string; score: number }> } | null>>({});
+  const [auditError, setAuditError] = useState<Record<string, string>>({});
   const [auditLoading, setAuditLoading] = useState<string | null>(null);
   // Heatmap
   const [heatmapPanels, setHeatmapPanels] = useState<Record<string, boolean>>({});
@@ -815,9 +816,20 @@ export default function DashboardPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ siteId }),
         });
-        const d = await res.json();
-        setAuditData(p => ({ ...p, [siteId]: d.audit ?? null }));
-      } catch { setAuditData(p => ({ ...p, [siteId]: null })); }
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          // 403（契約）・429（回数）・500 を「データ無し」に潰すと、
+          // 何度押しても無反応の画面になり、理由がどこにも出ない。
+          setAuditError(p => ({ ...p, [siteId]: d.error || '診断できませんでした。時間をおいてお試しください。' }));
+          setAuditData(p => ({ ...p, [siteId]: null }));
+        } else {
+          setAuditError(p => ({ ...p, [siteId]: '' }));
+          setAuditData(p => ({ ...p, [siteId]: d.audit ?? null }));
+        }
+      } catch {
+        setAuditError(p => ({ ...p, [siteId]: '通信できませんでした。時間をおいてお試しください。' }));
+        setAuditData(p => ({ ...p, [siteId]: null }));
+      }
       setAuditLoading(null);
     }
   };
@@ -1286,7 +1298,7 @@ export default function DashboardPage() {
               icon: 'search',
               title: 'Google Search Consoleを連携しよう',
               body: '検索順位・クリック数をダッシュボードで確認できます。連携は設定画面から2分で完了。',
-              href: '/laruHP/settings?section=gsc',
+              href: '/laruHP/settings?tab=integrations#gsc',
               cta: '設定する',
             });
           }
@@ -1875,7 +1887,7 @@ export default function DashboardPage() {
                       const unread = siteContacts.filter(c => !c.read).length;
                       if (total === 0) return null;
                       return (
-                        <Link href={`/laruHP/contacts?siteId=${site.id}`}
+                        <Link href={`/laruHP/contacts?site=${site.id}`}
                           className="flex items-center justify-between bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 hover:border-sky-200 transition-all">
                           <div className="flex items-center gap-2">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -2198,7 +2210,9 @@ export default function DashboardPage() {
                             </div>
                           ) : (
                             <div className="text-center py-2">
-                              <div className="text-[10px] text-gray-400 mb-2">AIがサイトを分析して改善点をスコアリングします</div>
+                              {auditError[site.id]
+                                ? <div role="alert" className="text-[10px] text-rose-600 mb-2">{auditError[site.id]}</div>
+                                : <div className="text-[10px] text-gray-400 mb-2">AIがサイトを分析して改善点をスコアリングします</div>}
                               <button
                                 onClick={() => handleAudit(site.id)}
                                 className="text-[10px] bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 px-3 py-1.5 rounded-md transition-all font-bold"
@@ -2253,13 +2267,7 @@ export default function DashboardPage() {
                             ) : (
                               <div className="text-center py-3">
                                 <div className="text-[10px] text-gray-400">まだクリックデータがありません</div>
-                                <div className="text-[9px] text-gray-300 mt-0.5">公開サイトにトラッキングスクリプトを追加してください</div>
-                                <a
-                                  href={`/laruHP/builder?siteId=${site.id}&tab=settings`}
-                                  className="text-[10px] text-sky-600 hover:text-sky-500 mt-1.5 inline-block transition-colors"
-                                >
-                                  スクリプト設定 →
-                                </a>
+                                <div className="text-[9px] text-gray-300 mt-0.5">計測は公開時に自動で入ります。訪問があると、ここに出ます。</div>
                               </div>
                             )}
                           </div>

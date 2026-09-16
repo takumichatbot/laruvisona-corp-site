@@ -265,6 +265,22 @@ app.prepare().then(() => {
   setTimeout(triggerSequences, 30 * 1000);
   setInterval(triggerSequences, 15 * 60 * 1000);
 
+  // 予約投稿: 予約時刻を過ぎた記事を公開する。10分ごと。
+  // これが無いと、カレンダーで予約しても永久に公開されない。
+  async function triggerScheduledPosts() {
+    if (!process.env.ADMIN_SECRET) return;
+    try {
+      const r = await fetch(`${SELF}/api/cron/publish-scheduled`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.ADMIN_SECRET}` },
+        signal: AbortSignal.timeout(55000),
+      });
+      if (!r.ok) console.warn('[cron] publish-scheduled:', r.status);
+    } catch (e) { console.warn('[cron] publish-scheduled error:', e?.message); }
+  }
+  setTimeout(triggerScheduledPosts, 45 * 1000);
+  setInterval(triggerScheduledPosts, 10 * 60 * 1000);
+
   // デプロイ後の一括再公開: html-export の EXPORT_VERSION が上がっていたら、
   // 古いバージョンの published_html だけを作り直す。
   //

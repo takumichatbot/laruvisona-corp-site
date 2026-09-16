@@ -938,7 +938,9 @@ function StudioInner() {
     <ImageUploadContext.Provider value={{pending:uploads>0,report:reportUpload}}><div className="se-editor h-screen flex flex-col bg-slate-100 text-slate-900" data-mobile-tool={mobileTool} data-wide-preview={widePreview} data-sheet-expanded={sheetExpanded} onBlurCapture={breakGroup}>
       {/* 上の帯 */}
       <header className="se-editor-header flex items-center gap-3 px-4 h-14 bg-white border-b border-slate-200 flex-shrink-0">
-        <Link href="/laruHP/dashboard" className="text-sm font-bold text-slate-500 hover:text-slate-900">← 一覧</Link>
+        {/* 未保存のまま離れると、その場では消えたように見える。予約管理へのリンクと同じように止める。 */}
+        <Link href="/laruHP/dashboard" className="text-sm font-bold text-slate-500 hover:text-slate-900"
+          onClick={e => { if (saveState.kind !== 'clean' && !confirm('保存していない変更があります。保存せずに一覧へ戻りますか？')) e.preventDefault(); }}>← 一覧</Link>
         <input
           className="font-bold text-slate-900 border border-transparent hover:border-slate-300 focus:border-sky-400 rounded px-2 py-1 text-sm w-56 focus:outline-none"
           value={site.name} placeholder="店名"
@@ -1070,7 +1072,8 @@ function StudioInner() {
               ) : selected ? (
                 <p className="text-sm text-slate-500 leading-relaxed">
                   この節（{selected.type}）は、いまの画面からは細かい設定を出していません。
-                  <Link href={`/laruHP/builder?siteId=${siteId ?? ''}`} className="text-sky-700 underline ml-1">これまでの編集画面</Link>
+                  <Link href={`/laruHP/builder?siteId=${siteId ?? ''}`} className="text-sky-700 underline ml-1"
+                    onClick={e => { if (saveState.kind !== 'clean' && !confirm('保存していない変更があります。保存せずに移動しますか？')) e.preventDefault(); }}>これまでの編集画面</Link>
                   で直せます。
                 </p>
               ) : (
@@ -1432,7 +1435,8 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
         {note && <div className="text-[12px] mt-2 text-slate-700">{note}</div>}
         {siteId && (
           <Link href={`/laruHP/builder?siteId=${siteId}`}
-            className="block text-center text-[11px] text-slate-400 hover:text-slate-700 mt-3 underline">
+            className="block text-center text-[11px] text-slate-400 hover:text-slate-700 mt-3 underline"
+            onClick={e => { if (saveState.kind !== 'clean' && !confirm('保存していない変更があります。保存せずに移動しますか？')) e.preventDefault(); }}>
             これまでの編集画面を開く
           </Link>
         )}

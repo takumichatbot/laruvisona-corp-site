@@ -1067,12 +1067,15 @@ export default function ScheduleManager() {
                   オンライン予約を受け付ける
                 </label>
                 <div className={s.section}>
-                  {(payments?.available || config.paymentMode === "prepay") && <fieldset className={s.card}>
+                  {/* 事前決済が使えない環境では、この欄ごと消えていた。
+                      「予約時にStripeで支払う」が存在しないのか、まだ使えないのかが
+                      画面から分からず、案内と食い違って見える。欄は出して状態を書く。 */}
+                  <fieldset className={s.card}>
                     <legend><strong>お支払い方法</strong></legend>
                     <label className={s.check}><input type="radio" name="paymentMode" value="onsite" checked={(config.paymentMode||"onsite")==="onsite"} onChange={()=>patch({paymentMode:"onsite"})}/>来店時に支払う</label>
-                    <label className={s.check}><input type="radio" name="paymentMode" value="prepay" checked={config.paymentMode==="prepay"} disabled={!payments?.ready} onChange={()=>patch({paymentMode:"prepay"})}/>予約時にStripeで支払う</label>
-                    {!payments?.available ? <p className={s.small}>事前決済を現在確認できません。来店時払いへ変更できます。</p> : payments.ready ? <p className={s.small}>Stripeへの入金先を確認済みです。無料メニューは決済なしで確定します。</p> : <div><p className={s.small}>{payments.connected ? "Stripe側の本人確認または入金設定を完了してください。" : "売上を受け取るStripe口座を接続してください。"}</p><button type="button" className={s.secondary} disabled={busy} onClick={connectStripe}>{payments.connected ? "Stripeの設定を続ける" : "Stripeを接続する"}</button></div>}
-                  </fieldset>}
+                    <label className={s.check}><input type="radio" name="paymentMode" value="prepay" checked={config.paymentMode==="prepay"} disabled={!payments?.available || !payments?.ready} onChange={()=>patch({paymentMode:"prepay"})}/>予約時にStripeで支払う</label>
+                    {!payments?.available ? <p className={s.small}>事前決済は順次提供の準備中です（いまは来店時払いでご利用いただけます）。</p> : payments.ready ? <p className={s.small}>Stripeへの入金先を確認済みです。無料メニューは決済なしで確定します。</p> : <div><p className={s.small}>{payments.connected ? "Stripe側の本人確認または入金設定を完了してください。" : "売上を受け取るStripe口座を接続してください。"}</p><button type="button" className={s.secondary} disabled={busy} onClick={connectStripe}>{payments.connected ? "Stripeの設定を続ける" : "Stripeを接続する"}</button></div>}
+                  </fieldset>
                   <label className={s.field}>
                     開始時刻の間隔
                     <select

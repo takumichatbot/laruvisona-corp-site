@@ -1,7 +1,7 @@
 import { readContactBody } from './contact-contract';
 import { safeUrl } from './safe-markup';
 
-const ALLOWED = new Set(['title', 'content', 'category', 'image_url', 'published', 'published_at']);
+const ALLOWED = new Set(['title', 'content', 'category', 'image_url', 'published', 'published_at', 'scheduled_at']);
 
 export type NewsPostInput = {
   title?: string;
@@ -10,6 +10,8 @@ export type NewsPostInput = {
   image_url?: string | null;
   published?: boolean;
   published_at?: string;
+  /** 予約投稿の公開予定時刻。null で予約の取り消し。 */
+  scheduled_at?: string | null;
 };
 
 export const validNewsId = (value: unknown): value is string =>
@@ -48,6 +50,15 @@ export function parseNewsPost(value: Record<string, unknown>, requireTitle: bool
       throw Error('公開日時を確認してください');
     }
     output.published_at = new Date(value.published_at).toISOString();
+  }
+  if (value.scheduled_at !== undefined) {
+    if (value.scheduled_at === null || value.scheduled_at === '') {
+      output.scheduled_at = null;
+    } else if (typeof value.scheduled_at !== 'string' || value.scheduled_at.length > 40 || !Number.isFinite(Date.parse(value.scheduled_at))) {
+      throw Error('予約日時を確認してください');
+    } else {
+      output.scheduled_at = new Date(value.scheduled_at).toISOString();
+    }
   }
   if (requireTitle && !output.title) throw Error('タイトルが必要です');
   if (!Object.keys(output).length) throw Error('更新する内容がありません');

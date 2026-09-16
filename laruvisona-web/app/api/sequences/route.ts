@@ -56,8 +56,11 @@ async function sequenceQuota(
   return {};
 }
 
-function output(row: DbSequence, count = 0): SequenceRecord {
-  return { id: row.id, name: row.name, trigger: row.trigger, steps: row.steps, active: row.active, enrolledCount: count, createdAt: row.created_at };
+function output(row: DbSequence, count = 0, sent = { sentCount: 0, lastSentAt: null as string | null }): SequenceRecord {
+  return {
+    id: row.id, name: row.name, trigger: row.trigger, steps: row.steps, active: row.active,
+    enrolledCount: count, sentCount: sent.sentCount, lastSentAt: sent.lastSentAt, createdAt: row.created_at,
+  };
 }
 
 export async function GET(req: Request) {
@@ -76,7 +79,29 @@ export async function GET(req: Request) {
     if (countError) return NextResponse.json({ error: '登録数を読み込めませんでした' }, { status: 500 });
     for (const item of enrollments || []) counts.set(item.sequence_id, (counts.get(item.sequence_id) || 0) + 1);
   }
-  return NextResponse.json({ sequences: rows.map(row => output(row, counts.get(row.id) || 0)) });
+
+  // 実際に送れているか。作っただけで動いていない状態を、画面から確かめられるようにする。
+  const sent = new Map<string, { sentCount: number; lastSentAt: string | null }>();
+  if (rows.length) {
+    const { data: deliveries } = await service
+      .from('hp_sequence_deliveries')
+      .select('sent_at, hp_sequence_enrollments!inner(sequence_id, site_id)')
+      .eq('hp_sequence_enrollments.site_id', siteId)
+      .order('sent_at', { ascending: false })
+      .limit(1000);
+    for (const row of (deliveries || []) as unknown as { sent_at: string; hp_sequence_enrollments: { sequence_id: string } }[]) {
+      const key = row.hp_sequence_enrollments?.sequence_id;
+      if (!key) continue;
+      const current = sent.get(key) || { sentCount: 0, lastSentAt: null };
+      current.sentCount += 1;
+      if (!current.lastSentAt || row.sent_at > current.lastSentAt) current.lastSentAt = row.sent_at;
+      sent.set(key, current);
+    }
+  }
+
+  return NextResponse.json({
+    sequences: rows.map(row => output(row, counts.get(row.id) || 0, sent.get(row.id) || { sentCount: 0, lastSentAt: null })),
+  });
 }
 
 export async function POST(req: Request) {

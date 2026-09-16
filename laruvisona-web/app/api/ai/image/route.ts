@@ -7,7 +7,8 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) return NextResponse.json({ error: 'Google AI API key not configured' }, { status: 500 });
+  // 日本語の画面に英語の内部メッセージを出さない。何が起きたかを利用者の言葉で返す。
+  if (!apiKey) return NextResponse.json({ error: 'AIでの画像作成は、いまご利用いただけません。お手数ですが写真をアップロードしてください。' }, { status: 503 });
 
   const input=await readAiJson(req,2000);
   if(!input.ok)return input.response;

@@ -9,6 +9,9 @@ export type SequenceRecord = {
   steps: SequenceStep[];
   active: boolean;
   enrolledCount: number;
+  /** 送信済みの通数と、最後に送った時刻。配信されているかを画面で確かめられるようにする。 */
+  sentCount: number;
+  lastSentAt: string | null;
   createdAt: string;
 };
 

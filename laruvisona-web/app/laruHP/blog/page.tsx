@@ -45,6 +45,8 @@ export default function BlogPage() {
   const [aiMsg, setAiMsg] = useState('');
   const [aiLimitReached, setAiLimitReached] = useState(false);
   const [firstPostToast, setFirstPostToast] = useState(false);
+  /* 失敗を握りつぶすと、書いた本文が黙って消える。必ず画面に出す。 */
+  const [opError, setOpError] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState('');
@@ -64,11 +66,19 @@ export default function BlogPage() {
 
   const loadPosts = useCallback(async (siteId: string) => {
     setPostsLoading(true);
-    // 管理画面は下書き含む全件・全カラムが必要（?all=true）
-    const res = await fetch(`/api/sites/${siteId}/posts?all=true`);
-    const data = await res.json();
-    setPosts(data.posts || []);
-    setPostsLoading(false);
+    setOpError('');
+    try {
+      // 管理画面は下書き含む全件・全カラムが必要（?all=true）
+      const res = await fetch(`/api/sites/${siteId}/posts?all=true`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '記事を読み込めませんでした');
+      setPosts(data.posts || []);
+    } catch (e) {
+      setPosts([]);
+      setOpError(e instanceof Error ? e.message : '記事を読み込めませんでした');
+    } finally {
+      setPostsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -89,9 +99,14 @@ export default function BlogPage() {
   };
 
   const openEdit = async (post: Post) => {
+    setOpError('');
     const res = await fetch(`/api/posts/${post.id}`);
-    const data = await res.json();
-    const p = data.post as Post;
+    const data = await res.json().catch(() => ({}));
+    const p = data.post as Post | undefined;
+    if (!res.ok || !p) {
+      setOpError(data.error || '記事を開けませんでした');
+      return;
+    }
     setEditingPost(p);
     setForm({ title: p.title, content: p.content || '', category: p.category || 'お知らせ', image_url: p.image_url || '', published: p.published, published_at: p.published_at?.split('T')[0] || new Date().toISOString().split('T')[0] });
     setShowModal(true);
@@ -102,10 +117,18 @@ export default function BlogPage() {
     setSaving(true);
     const isFirstPost = !editingPost && posts.length === 0;
     const body = { ...form, published_at: new Date(form.published_at).toISOString() };
-    if (editingPost) {
-      await fetch(`/api/posts/${editingPost.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    } else {
-      await fetch(`/api/sites/${selectedSiteId}/posts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    setOpError('');
+    try {
+      const res = editingPost
+        ? await fetch(`/api/posts/${editingPost.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        : await fetch(`/api/sites/${selectedSiteId}/posts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '記事を保存できませんでした');
+    } catch (e) {
+      // ここで閉じると、書いた本文がそのまま消える
+      setSaving(false);
+      setOpError(e instanceof Error ? e.message : '記事を保存できませんでした');
+      return;
     }
     setSaving(false);
     setShowModal(false);
@@ -122,7 +145,14 @@ export default function BlogPage() {
 
   const confirmDelete = async () => {
     if (!deleteConfirmId) return;
-    await fetch(`/api/posts/${deleteConfirmId}`, { method: 'DELETE' });
+    setOpError('');
+    const res = await fetch(`/api/posts/${deleteConfirmId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setOpError(d.error || '記事を削除できませんでした');
+      setDeleteConfirmId(null);
+      return;
+    }
     setPosts(prev => prev.filter(p => p.id !== deleteConfirmId));
     setDeleteConfirmId(null);
   };
@@ -188,7 +218,14 @@ export default function BlogPage() {
     const newPublished = !post.published;
     const patchBody: Record<string, unknown> = { published: newPublished };
     if (newPublished) patchBody.published_at = new Date().toISOString().split('T')[0];
-    await fetch(`/api/posts/${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody) });
+    setOpError('');
+    const res = await fetch(`/api/posts/${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patchBody) });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      // 公開できていないのに「公開中」にしない
+      setOpError(d.error || '公開状態を変更できませんでした');
+      return;
+    }
     setPosts(prev => prev.map(p => p.id === post.id ? {
       ...p, published: newPublished,
       ...(newPublished ? { published_at: patchBody.published_at as string } : {}),
@@ -209,6 +246,11 @@ export default function BlogPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {opError && (
+          <div role="alert" className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            {opError}
+          </div>
+        )}
         {loading ? (
           <div className="text-slate-500 text-sm">読み込み中...</div>
         ) : sites.length === 0 ? (
@@ -338,7 +380,7 @@ export default function BlogPage() {
                 <p className="text-slate-600 text-xs mt-1">サイトのお知らせブロックに自動表示されます</p>
               </div>
             ) : (
-              <div className="border border-white/[0.07] rounded-xl overflow-hidden">
+              <div className="border border-white/[0.07] rounded-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/[0.07] bg-white/[0.02]">
