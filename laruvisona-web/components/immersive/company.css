@@ -524,7 +524,8 @@
   white-space: nowrap;
 }
 .lv-browser {
-  width: 80%;
+  width: 76%;
+  margin-right: 14%;
   border: 1px solid #ffffffb3;
   box-shadow: 20px 30px 60px #35596935;
   background: #f8f9f9;
@@ -560,6 +561,29 @@
 }
 .lv-browser-bar span {
   margin: auto;
+}
+/* Same service opened on a phone. It sits beside the desktop screen rather
+   than inside it, so neither has to be read through the other. */
+.lv-phone {
+  position: absolute;
+  right: 4%;
+  top: 26%;
+  width: 16%;
+  border: 3px solid #ffffffe6;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 8px 16px 34px #35596940;
+  transform: rotate(-3deg);
+  transition: transform 1s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.lv-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.lv-product-panel:hover .lv-phone {
+  transform: rotate(-1deg);
 }
 .lv-art-note {
   position: absolute;
@@ -1371,6 +1395,17 @@
     bottom: 14px;
     left: 18px;
   }
+  /* On a phone the phone screen is the one worth reading, so it takes more of
+     the frame and the desktop screen steps back instead of shrinking with it. */
+  .lv-browser {
+    width: 66%;
+    margin-right: 24%;
+  }
+  .lv-phone {
+    width: 27%;
+    right: 5%;
+    top: 24%;
+  }
   .lv-concept-heading {
     display: block;
     margin-bottom: 25px;
@@ -1650,7 +1685,9 @@
     scroll-behavior: auto !important;
   }
   .lv-browser,
-  .lv-product-panel:hover .lv-browser {
+  .lv-product-panel:hover .lv-browser,
+  .lv-phone,
+  .lv-product-panel:hover .lv-phone {
     transform: none;
   }
   .lv-concept-frame:hover .lv-concept-photo {
@@ -1695,6 +1732,8 @@
 @media (prefers-reduced-motion: reduce) {
   .lv-product-panel .lv-browser,
   .lv-product-panel:hover .lv-browser,
+  .lv-phone,
+  .lv-product-panel:hover .lv-phone,
   .lv-concept-photo,
   .lv-concept-frame:hover .lv-concept-photo {
     transform: none;
@@ -1719,6 +1758,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .lv-product-panel:hover .lv-browser,
+  .lv-product-panel:hover .lv-phone,
   .lv-concept-frame:hover .lv-concept-photo {
     transform: none;
   }

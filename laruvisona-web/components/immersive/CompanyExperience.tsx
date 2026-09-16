@@ -109,8 +109,10 @@ const shots = {
     h: 750,
     alt: "LARU HPの制作画面",
     bar: "LARU HP ／ 制作画面",
+    sp: "/company/products/laruhp-sp.jpg",
+    spAlt: "LARU HPのサイトをスマホで開いたところ",
     word: "つくる。",
-    note: "実際の制作画面",
+    note: "実際の制作画面と、サイトのスマホ表示",
   },
   bot: {
     src: "/company/products/larubot.jpg",
@@ -118,6 +120,8 @@ const shots = {
     h: 750,
     alt: "LARUbotのサービス画面",
     bar: "larubot.tokyo",
+    sp: "/company/products/larubot-sp.jpg",
+    spAlt: "LARUbotのサイトをスマホで開いたところ",
     word: "こたえる。",
     note: "実際の画面・チャットは画面右下から試せます",
   },
@@ -127,6 +131,8 @@ const shots = {
     h: 750,
     alt: "LARUSEOの画面",
     bar: "larubot.tokyo ／ LARU SEO",
+    sp: "/company/products/laruseo-sp.jpg",
+    spAlt: "LARUSEOの画面をスマホで開いたところ",
     word: "とどく。",
     note: "実際の画面・LARUbotに追加して使います",
   },
@@ -136,6 +142,8 @@ const shots = {
     h: 595,
     alt: "FLASTALのサービス画面",
     bar: "flastal.com",
+    sp: "/company/products/flastal-sp.jpg",
+    spAlt: "FLASTALをスマホで開いたところ",
     word: "あつまる。",
     note: "実際の画面",
   },
@@ -161,6 +169,16 @@ function ProductVisual({ id }: { id: keyof typeof shots }) {
           width={shot.w}
           height={shot.h}
           sizes="(max-width: 760px) 90vw, 55vw"
+        />
+      </div>
+      {/* 同じサービスをスマホで開いた実画面。縮小版ではなく、スマホの組み方が見える。 */}
+      <div className="lv-phone">
+        <Image
+          src={shot.sp}
+          alt={shot.spAlt}
+          width={390}
+          height={750}
+          sizes="(max-width: 760px) 27vw, 11vw"
         />
       </div>
       <span className="lv-art-note">{shot.note}</span>

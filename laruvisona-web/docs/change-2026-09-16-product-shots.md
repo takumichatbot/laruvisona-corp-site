@@ -84,3 +84,31 @@ company.css は 88行 減った。
 ## やっていないこと
 
 push、本番設定、デプロイ、実送信、有料生成は含まない。
+
+## 追補（同日）: スマホで開いた実画面も並べる
+
+カードに入っているのがパソコンの画面だけだと、スマホでどう組まれるかが伝わらない。
+4つとも、同じサービスをスマホ幅（390px）で開いた実画面を撮り、
+パソコンの画面の右横に置いた。
+
+| ファイル | 撮影元 |
+| --- | --- |
+| `public/company/products/laruhp-sp.jpg` | https://laruhp.com/ |
+| `public/company/products/larubot-sp.jpg` | https://larubot.tokyo/ |
+| `public/company/products/laruseo-sp.jpg` | https://larubot.tokyo/laru-seo |
+| `public/company/products/flastal-sp.jpg` | https://www.flastal.com/ |
+
+いずれも 390×750、JPEG 品質84、38〜65KB。実表示そのままで、合成・加筆はしていない。
+LARU HP だけは制作画面がログインの内側にあるため、
+パソコン側は制作画面、スマホ側は laruhp.com の表示で、注記にもそう書いた。
+
+構図は画面幅で変える。縮小版にはしない。
+
+- パソコン: ブラウザ枠を 76% にして左へ寄せ、スマホを右 4%・幅 16% に置く。
+- スマホ: ブラウザ枠を 66% まで下げ、スマホを幅 27% に上げる。
+  小さい画面では、読む値打ちがあるのはスマホの画面のほうなので、そちらを大きくする。
+
+傾きは `prefers-reduced-motion` で無効化する対象に加えた（ブラウザ枠と同じ扱い）。
+
+再確認: `tsc` / `eslint` エラーなし、`npm test` 828 passed、`next build` 成功、
+`company-immersive-check.mjs` 88 passed、4カードを 1440px・390px で目視。
