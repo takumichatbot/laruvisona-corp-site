@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { verifyPrice } from '@/lib/price-integrity';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
@@ -27,6 +28,19 @@ export async function POST(req: Request) {
   const plan = body.plan;
   const priceId = PLAN_PRICE_MAP[plan];
   if (!priceId) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+
+  // 画面に出した額と、Stripeが請求する額が違うまま切り替えない（checkout と同じ）。
+  try {
+    const price = await stripe.prices.retrieve(priceId);
+    const verdict = verifyPrice(plan, 'monthly', price);
+    if (!verdict.ok) {
+      console.error('[stripe/upgrade] 表示額とStripeの価格が一致しません', { plan, reason: verdict.reason });
+      return NextResponse.json({ error: '料金の設定を確認しています。少し時間をおいてお試しください。' }, { status: 503 });
+    }
+  } catch (err) {
+    console.error('[stripe/upgrade] 価格を確認できませんでした:', (err as Error)?.message);
+    return NextResponse.json({ error: '料金を確認できませんでした。時間をおいてお試しください。' }, { status: 503 });
+  }
 
   const rate = await claimPublicRate(createServiceClient(), 'plan-billing', user.id, 1, 60);
   if (rate === 'limited') return NextResponse.json({ error: '少し待ってからお試しください' }, { status: 429 });

@@ -5,6 +5,7 @@ import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { readContactBody } from '@/lib/contact-contract';
+import { verifyPrice } from '@/lib/price-integrity';
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   hp: process.env.STRIPE_PRICE_ID,
@@ -67,6 +68,20 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  // 画面に出した額と、Stripeが実際に請求する額が違うまま売らない。
+  // （2026-09-16、年払いが画面9,990円／Stripe9,999円になっていた）
+  try {
+    const price = await stripe.prices.retrieve(resolvedPriceId);
+    const verdict = verifyPrice(plan, isAnnual ? 'annual' : 'monthly', price);
+    if (!verdict.ok) {
+      console.error('[stripe/checkout] 表示額とStripeの価格が一致しません', { plan, billing, reason: verdict.reason });
+      return NextResponse.json({ error: '料金の設定を確認しています。少し時間をおいてお試しください。' }, { status: 503 });
+    }
+  } catch (err) {
+    console.error('[stripe/checkout] 価格を確認できませんでした:', (err as Error)?.message);
+    return NextResponse.json({ error: '料金を確認できませんでした。時間をおいてお試しください。' }, { status: 503 });
+  }
+
   const couponId = !isAnnual ? process.env.STRIPE_FIRST_MONTH_COUPON_ID : undefined;
   if (!isAnnual && !couponId) {
     // 画面で初月無料を約束しているため、クーポン無しの通常請求には退化させない。
