@@ -2008,6 +2008,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   // 画像を上げ損ねた理由。出さないと、押しても何も起きない画面になる
   const [imgError, setImgError] = useState('');
   const [aiCopyLoading, setAiCopyLoading] = useState(false);
+  // 文案を作れなかった理由。出さないと、押しても何も起きない画面になる
+  const [aiCopyError, setAiCopyError] = useState('');
   const [aiCopyResult, setAiCopyResult] = useState<Record<string, string> | null>(null);
   const [webhookLogs, setWebhookLogs] = useState<{ id: string; name: string; email: string; type: string; webhook_status: string; webhook_at: string; webhook_code: string }[] | null>(null);
   const [webhookLogsLoading, setWebhookLogsLoading] = useState(false);
@@ -2030,6 +2032,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
     if (!block) return;
     setAiCopyLoading(true);
     setAiCopyResult(null);
+    setAiCopyError('');
     try {
       const currentText = [d.heading, d.text, d.subheading, d.subtext].filter(Boolean).join(' / ');
       const res = await fetch('/api/ai/copy', {
@@ -2037,8 +2040,13 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blockType: block.type, businessName: siteName, industry: '', currentText }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({} as { result?: string; error?: string }));
       if (json.result) setAiCopyResult(json.result);
+      // else が無く、上限でもサーバ落ちでも**何も出なかった**。
+      // 押しても画面が変わらないので「AIが遅い」と思われ、不具合として届かない。
+      else setAiCopyError(json.error || `文案を作れませんでした (${res.status})`);
+    } catch {
+      setAiCopyError('文案を作れませんでした。通信を確かめて、もう一度お試しください');
     } finally {
       setAiCopyLoading(false);
     }
@@ -3660,6 +3668,11 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                 >
                   {aiCopyLoading ? '生成中...' : 'AIで文章を自動生成'}
                 </button>
+                {aiCopyError && (
+                  <p role="alert" className="mt-2 text-[11px] text-red-200 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    {aiCopyError}
+                  </p>
+                )}
                 {aiCopyResult && (
                   <div className="mt-3 bg-white/[0.04] border border-white/10 rounded-lg p-3 space-y-2">
                     <span className="text-[10px] text-slate-400 font-semibold block">生成結果プレビュー</span>
@@ -5533,12 +5546,25 @@ function BuilderContent() {
     }
   };
 
+  /*
+    履歴が開けなかったら、そう言う。
+
+    以前は res.ok を見ず、失敗しても data.versions || [] で空にして
+    パネルだけ開いていた。店主には「履歴が1件も無い」ように見える。
+    通信が落ちた場合は例外が飛び、**押しても何も起きない。**
+    どちらも、過去の版が消えたのか読めないだけなのか、区別がつかない。
+  */
   const handleOpenHistory = async () => {
     if (!dbSiteId) return;
-    const res = await fetch(`/api/sites/${dbSiteId}/versions`);
-    const data = await res.json();
-    setVersions(data.versions || []);
-    setShowHistoryPanel(true);
+    try {
+      const res = await fetch(`/api/sites/${dbSiteId}/versions`);
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      setVersions(data.versions || []);
+      setShowHistoryPanel(true);
+    } catch {
+      setBuilderToast('履歴を読み込めませんでした。通信を確かめて、もう一度お試しください');
+    }
   };
 
   const handleRestoreVersion = (versionId: string) => {

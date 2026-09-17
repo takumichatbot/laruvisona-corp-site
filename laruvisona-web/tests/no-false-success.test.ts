@@ -91,6 +91,18 @@ test('運営の操作は、反映を確かめてから画面を変える', () =>
   assert.match(ad, /\{opError && \(/, '失敗を画面に出していない');
 });
 
+test('履歴と文案も、失敗したらそう言う', () => {
+  const b = read('app/laruHP/builder/page.tsx');
+  // 履歴: res.ok を見ずに空で開くと「1件も無い」ように見える
+  const hist = fnBody(b, 'handleOpenHistory');
+  assert.match(hist, /if \(!res\.ok\) throw/, '応答を見ていない');
+  assert.match(hist, /setBuilderToast\('履歴を読み込めませんでした/, '失敗を伝えていない');
+  // AI文案: else が無いと、上限でもサーバ落ちでも何も出ない
+  const copy = fnBody(b, 'handleAiCopy');
+  assert.match(copy, /else setAiCopyError\(/, '失敗したときに何も出ない');
+  assert.match(b, /\{aiCopyError && \(/, '画面に出していない');
+});
+
 test('押したあとの状態は、finally で必ず戻す', () => {
   // catch の中だけで戻すと、途中の return で抜けたときに固まる。
   for (const [file, setters] of [
