@@ -40,14 +40,11 @@ export async function POST(req: Request) {
   const plan = profile?.plan as string | null;
   const subStatus = profile?.subscription_status as string | null;
 
+  // 契約が無くても作れる。止めるのは公開のとき（publish が別に見ている）。
+  // 以前ここで 403 を返していたので、登録した直後の人は
+  // 4つの質問に答えて「保存」を押した瞬間に行き止まりだった。
   const access = siteCreationAccess(user.email, plan, subStatus,
     [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]);
-  if (!access.allowed) {
-    return NextResponse.json(
-      { error: 'サブスクリプションが必要です。プランを選択してください。', code: 'no_plan' },
-      { status: 403 }
-    );
-  }
 
   let input;
   try { input = await readSiteCreate(req); }
@@ -73,9 +70,13 @@ export async function POST(req: Request) {
   }
   const outcome = result.data as { ok?: boolean; reason?: string; site?: unknown; count?: number; limit?: number };
   if (!outcome.ok && outcome.reason === 'site_limit') {
+    // 契約していない人に「プランをアップグレード」と言っても意味が通らない。
+    // その人が今いる場所から見た言葉にする。
     return NextResponse.json({
-      error: `現在のプラン（${plan}）ではサイトを${access.limit}件まで作成できます。プランをアップグレードしてください。`,
-      code: 'site_limit', limit: access.limit, current: outcome.count,
+      error: access.paying
+        ? `現在のプラン（${plan}）ではサイトを${access.limit}件まで作成できます。プランをアップグレードしてください。`
+        : `無料でお試しいただけるサイトは${access.limit}つです。いまのサイトはそのまま編集できます。公開するときにプランをお選びください。`,
+      code: 'site_limit', limit: access.limit, current: outcome.count, free: !access.paying,
     }, { status: 403 });
   }
   if (!outcome.ok || !outcome.site) return NextResponse.json({ error: 'サイトを作成できませんでした' }, { status: 503 });

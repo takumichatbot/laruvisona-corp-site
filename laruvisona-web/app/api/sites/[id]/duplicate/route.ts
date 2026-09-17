@@ -24,9 +24,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (profileError || !profile) return NextResponse.json({ error: 'ご契約を確認できませんでした' }, { status: 503 });
   const access = siteCreationAccess(user.email, profile?.plan ?? null, profile?.subscription_status ?? null,
     [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]);
-  if (!access.allowed) {
-    return NextResponse.json({ error: 'サブスクリプションが必要です', code: 'no_plan' }, { status: 403 });
-  }
+  // 複製も、止めるのは数だけ。契約の有無で門前払いはしない（作成と同じ）。
 
   const slugBase = String(original.slug || 'site').slice(0, 42).replace(/-+$/, '') || 'site';
   const slug = `${slugBase}-copy-${Date.now().toString(36)}`;
@@ -42,7 +40,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
   const outcome = result.data as { ok?: boolean; reason?: string; site?: unknown; count?: number };
   if (!outcome.ok && outcome.reason === 'site_limit') {
-    return NextResponse.json({ error: `現在のプランではサイトを${access.limit}件まで作成できます`, code: 'site_limit', limit: access.limit, current: outcome.count }, { status: 403 });
+    return NextResponse.json({
+      error: access.paying
+        ? `現在のプランではサイトを${access.limit}件まで作成できます`
+        : `無料でお試しいただけるサイトは${access.limit}つです。公開するときにプランをお選びください。`,
+      code: 'site_limit', limit: access.limit, current: outcome.count, free: !access.paying,
+    }, { status: 403 });
   }
   if (!outcome.ok || !outcome.site) return NextResponse.json({ error: 'サイトを複製できませんでした' }, { status: 503 });
   return NextResponse.json({ site: outcome.site }, { status: 201 });

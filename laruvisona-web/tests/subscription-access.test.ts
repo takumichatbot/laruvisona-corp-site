@@ -16,7 +16,8 @@ test('使ってよいのは active と trialing だけ', () => {
 
 test('試用中でも、作るのと公開するのが食い違わない', () => {
   // 作れる側
-  assert.equal(siteCreationAccess('a@example.com', 'hp', 'trialing', []).allowed, true);
+  assert.equal(siteCreationAccess('a@example.com', 'hp', 'trialing', []).paying, true);
+  assert.equal(siteCreationAccess('a@example.com', 'hp', 'trialing', []).limit, 1);
   // 公開する側。以前はここが active 限定で、作れるのに公開できなかった
   const route = readFileSync(new URL('../app/api/sites/[id]/publish/route.ts', import.meta.url), 'utf8');
   assert.match(route, /hasServiceAccess\(profile\?\.subscription_status\)/);

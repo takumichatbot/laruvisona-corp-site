@@ -315,7 +315,7 @@ export default function DashboardPage() {
   const [creatingSite, setCreatingSite] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [fetchError, setFetchError] = useState('');
-  const [showSiteLimitModal, setShowSiteLimitModal] = useState<{ limit: number; current: number } | null>(null);
+  const [showSiteLimitModal, setShowSiteLimitModal] = useState<{ limit: number; current: number; free?: boolean } | null>(null);
   const [planModalAnnual, setPlanModalAnnual] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -854,7 +854,7 @@ export default function DashboardPage() {
         return;
       }
       if (data.code === 'site_limit') {
-        setShowSiteLimitModal({ limit: data.limit as number, current: data.current as number });
+        setShowSiteLimitModal({ limit: data.limit as number, current: data.current as number, free: !!data.free });
       } else {
         setNewSiteError(data.error || 'サイトの作成に失敗しました');
       }
@@ -2382,10 +2382,18 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
           <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="w-12 h-12 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl flex items-center justify-center mx-auto mb-4"><IcAlert /></div>
-            <h2 className="text-gray-900 font-bold text-lg text-center mb-1">サイト数の上限に達しました</h2>
+            <h2 className="text-gray-900 font-bold text-lg text-center mb-1">
+              {showSiteLimitModal.free ? '無料でお試しできるのは1サイトです' : 'サイト数の上限に達しました'}
+            </h2>
+            {/* 契約していない人に「アップグレード」と言っても、まだ何も買っていない。
+                いまのサイトは触れることを先に伝える。行き止まりに見せない。 */}
             <p className="text-gray-500 text-sm text-center mb-5">
-              現在のプランでは <strong className="text-gray-900">{showSiteLimitModal.current}/{showSiteLimitModal.limit}件</strong> が上限です。<br/>
-              プランをアップグレードするとサイト数を増やせます。
+              {showSiteLimitModal.free ? (
+                <>いま作ったサイトは、そのまま編集できます。<br/>公開するときにプランをお選びください。</>
+              ) : (
+                <>現在のプランでは <strong className="text-gray-900">{showSiteLimitModal.current}/{showSiteLimitModal.limit}件</strong> が上限です。<br/>
+                プランをアップグレードするとサイト数を増やせます。</>
+              )}
             </p>
             <div className="space-y-2 mb-5">
               {[
