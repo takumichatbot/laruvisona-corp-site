@@ -63,18 +63,30 @@ export default function LoyaltyPage() {
   const [cardSearch, setCardSearch] = useState('');
   const [stampError, setStampError] = useState('');
 
+  /*
+    読み込みに失敗しても、必ず読み込み中を解く。
+
+    以前は成功したときだけ setLoading(false) していた。通信が落ちると
+    **画面は「読み込み中…」のまま永久に止まり、理由も再試行の導線も出ない。**
+    店主にできるのは、閉じることだけ。
+  */
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/laruHP/auth/login'); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.replace('/laruHP/auth/login'); return; }
 
-      const res = await fetch('/api/sites');
-      const d = await responseBody(res);
-      if (!res.ok) { setLoadError('サイトを読み込めませんでした。再読み込みしてください'); setLoading(false); return; }
-      const s = Array.isArray(d.sites) ? d.sites as Site[] : [];
-      setSites(s);
-      if (s.length > 0) setSelectedSiteId(s[0].id);
-      setLoading(false);
+        const res = await fetch('/api/sites');
+        const d = await responseBody(res);
+        if (!res.ok) { setLoadError('サイトを読み込めませんでした。再読み込みしてください'); return; }
+        const s = Array.isArray(d.sites) ? d.sites as Site[] : [];
+        setSites(s);
+        if (s.length > 0) setSelectedSiteId(s[0].id);
+      } catch {
+        setLoadError('読み込めませんでした。通信を確かめて、もう一度お試しください');
+      } finally {
+        setLoading(false);
+      }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -168,6 +180,14 @@ export default function LoyaltyPage() {
 
   return (
     <AppShell title="デジタルポイントカード">
+      {loadError && (
+        <div role="alert" className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start gap-3">
+          <span className="flex-1">{loadError}</span>
+          <button onClick={() => location.reload()} className="shrink-0 rounded-lg border border-red-300 px-3 py-1 text-xs font-bold hover:bg-red-100">
+            再読み込み
+          </button>
+        </div>
+      )}
       {/* Celebration modal */}
       {celebrationCard && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

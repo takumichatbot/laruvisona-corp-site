@@ -55,6 +55,7 @@ export default function PopupsPage() {
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [popups, setPopups] = useState<PopupConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -63,21 +64,34 @@ export default function PopupsPage() {
   const [triggerInlineError, setTriggerInlineError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
 
+  /*
+    読み込みに失敗しても、必ず読み込み中を解く。
+
+    以前は成功したときだけ setLoading(false) していた。通信が落ちると
+    **画面は「読み込み中…」のまま永久に止まり、理由も再試行の導線も出ない。**
+    店主にできるのは、閉じることだけ。
+  */
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/laruHP/auth/login'); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.replace('/laruHP/auth/login'); return; }
 
-      const res = await fetch('/api/sites');
-      const d = await res.json();
-      const s: Site[] = d.sites || [];
-      setSites(s);
-      if (s.length > 0) {
-        setSelectedSite(s[0]);
-        const existing = (s[0].settings_json?.popups as PopupConfig[]) || [];
-        setPopups(existing);
+        const res = await fetch('/api/sites');
+        if (!res.ok) throw new Error(String(res.status));
+        const d = await res.json();
+        const s: Site[] = d.sites || [];
+        setSites(s);
+        if (s.length > 0) {
+          setSelectedSite(s[0]);
+          const existing = (s[0].settings_json?.popups as PopupConfig[]) || [];
+          setPopups(existing);
+        }
+      } catch {
+        setLoadError('読み込めませんでした。通信を確かめて、もう一度お試しください');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -156,6 +170,14 @@ export default function PopupsPage() {
 
   return (
     <AppShell title="ポップアップ/バナービルダー">
+      {loadError && (
+        <div role="alert" className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start gap-3">
+          <span className="flex-1">{loadError}</span>
+          <button onClick={() => location.reload()} className="shrink-0 rounded-lg border border-red-300 px-3 py-1 text-xs font-bold hover:bg-red-100">
+            再読み込み
+          </button>
+        </div>
+      )}
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
 
         {/* Site picker */}

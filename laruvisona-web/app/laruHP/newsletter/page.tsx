@@ -55,6 +55,7 @@ export default function NewsletterPage() {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [subLoading, setSubLoading] = useState(false);
   const [campLoading, setCampLoading] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
@@ -92,16 +93,29 @@ export default function NewsletterPage() {
     catch { setUnsubReasonCounts({}); }
   }, []);
 
+  /*
+    読み込みに失敗しても、必ず読み込み中を解く。
+
+    以前は成功したときだけ setLoading(false) していた。通信が落ちると
+    **画面は「読み込み中…」のまま永久に止まり、理由も再試行の導線も出ない。**
+    店主にできるのは、閉じることだけ。
+  */
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/laruHP/auth/login'); return; }
-      const res = await fetch('/api/sites');
-      const data = await res.json();
-      const s: Site[] = (data.sites || []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name }));
-      setSites(s);
-      if (s.length > 0) setSelectedSiteId(s[0].id);
-      setLoading(false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/laruHP/auth/login'); return; }
+        const res = await fetch('/api/sites');
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        const s: Site[] = (data.sites || []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name }));
+        setSites(s);
+        if (s.length > 0) setSelectedSiteId(s[0].id);
+      } catch {
+        setLoadError('読み込めませんでした。通信を確かめて、もう一度お試しください');
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -286,6 +300,14 @@ export default function NewsletterPage() {
 
   return (
     <AppShell title="メールニュースレター">
+      {loadError && (
+        <div role="alert" className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start gap-3">
+          <span className="flex-1">{loadError}</span>
+          <button onClick={() => location.reload()} className="shrink-0 rounded-lg border border-red-300 px-3 py-1 text-xs font-bold hover:bg-red-100">
+            再読み込み
+          </button>
+        </div>
+      )}
       {/* Unsubscribe reason modal */}
       {unsubReasonEmail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
