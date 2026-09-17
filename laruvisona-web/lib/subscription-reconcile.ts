@@ -15,6 +15,7 @@
  * ここではStripeを正とする。判断を副作用から切り離してあるので、
  * Stripeにも DBにも触らずに試験できる。
  */
+import { subscriptionPeriodEnd } from './stripe-shape';
 
 /** Stripeの契約状態 → profiles.subscription_status（DBのcheck制約に収まる値）。 */
 const STATUS_MAP: Record<string, string> = {
@@ -37,7 +38,9 @@ export type StripeSubscriptionLike = {
   id: string;
   status: string;
   start_date?: number | null;
+  /** 古い版の形。いまの版では items の中にある（lib/stripe-shape.ts が両方を見る） */
   current_period_end?: number | null;
+  items?: { data?: Array<{ current_period_end?: number | null; current_period_start?: number | null }> } | null;
   metadata?: Record<string, string> | null;
   customer?: string | { id?: string } | null;
 };
@@ -66,6 +69,21 @@ export type ProfileBilling = {
  * 目印を付けた行は止めない。目印は `admin_notes` に残るので、
  * 管理画面からも「これは売上ではない」と分かる。
  */
+/**
+ * profiles から読む列。**読む場所すべてが、これを使う。**
+ *
+ * 一斉停止の判定（isOrphanedActiveProfile → isCompedProfile）は admin_notes を見る。
+ * ところが読む側の select が2箇所にあり、**片方に admin_notes が入っていなかった。**
+ * 値が undefined になるので目印は常に効かず、
+ * **無償提供先・検証用アカウントが canceled に落ちてサイトが止まる。**
+ * 目印を用意した目的（最初の本物の契約が入った瞬間の一斉停止を防ぐ）が、
+ * そのまま起きる。
+ *
+ * 止まっても、ログには他の停止と同じ行が1つ増えるだけ。誰も気づかない。
+ */
+export const PROFILE_BILLING_COLUMNS =
+  'id, stripe_customer_id, stripe_subscription_id, subscription_status, plan, contract_starts_at, contract_ends_at, admin_notes';
+
 export const COMP_MARKER = '[無償]';
 
 export function isCompedProfile(profile: ProfileBilling): boolean {
@@ -134,7 +152,9 @@ export function reconcileSubscription(
 
   const startsAt = iso(sub.start_date);
   if (startsAt) desired.contract_starts_at = startsAt;
-  const endsAt = iso(sub.current_period_end);
+  // 期間の終わりは版で居場所が違う。直に読むと undefined になり、
+  // 契約終了日が入らないまま既定値で固まっていた。
+  const endsAt = iso(subscriptionPeriodEnd(sub));
   if (endsAt) desired.contract_ends_at = endsAt;
 
   const plan = (sub.metadata || {}).plan;

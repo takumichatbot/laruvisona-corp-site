@@ -9,6 +9,7 @@ import {
   isOrphanedActiveProfile,
   isCompedProfile,
   COMP_MARKER,
+  PROFILE_BILLING_COLUMNS,
 } from '../lib/subscription-reconcile.ts';
 
 const sub = (over: Record<string, unknown> = {}) => ({
@@ -174,9 +175,26 @@ test('無償と分かっている行は、契約切れとして止めない', ()
 });
 
 test('定期処理が、目印の列を読みに行っている', () => {
-  // select に admin_notes が無いと、目印はいつも空に見えて全部止まる
+  /*
+    この見張りは、まさにこの不具合のために書かれていた。それなのに効かなかった。
+
+    `assert.match(src, /contract_ends_at, admin_notes'/)` は**ファイルのどこか**に
+    一致すればよい。select は2箇所あり、admin_notes が入っていたのは
+    **止めない側**のほう。止める側には入っていなかったのに、通っていた。
+
+    stopSelect を切り出しておきながら、使わずに length > 0 だけ見ていた。
+    落ちない見張りは、無いのと同じ。しかも「通った」結果だけが出るぶん質が悪い。
+
+    いまは列の一覧を1箇所（PROFILE_BILLING_COLUMNS）に置き、
+    読む所すべてがそれを使う。**書き写しが無ければ、食い違いも起きない。**
+  */
   const src = readFileSync(new URL('../app/api/cron/subscription-sync/route.ts', import.meta.url), 'utf8');
-  const stopSelect = src.slice(src.indexOf('ACTIVE_PROFILE_STATUSES'));
-  assert.match(src, /contract_ends_at, admin_notes'/, '停止判定の select に admin_notes が無い');
-  assert.ok(stopSelect.length > 0);
+  assert.match(PROFILE_BILLING_COLUMNS, /\badmin_notes\b/, '共通の列に admin_notes が無い');
+
+  const selects = [...src.matchAll(/\.select\(([^)]*)\)/g)].map(m => m[1].trim());
+  const profileSelects = selects.filter(x => x.includes('stripe_customer_id') || x === 'PROFILE_BILLING_COLUMNS');
+  assert.ok(profileSelects.length >= 2, `profiles の読み取りが${profileSelects.length}箇所しか見つからない`);
+  for (const sel of profileSelects) {
+    assert.equal(sel, 'PROFILE_BILLING_COLUMNS', `列を書き写している: ${sel}`);
+  }
 });

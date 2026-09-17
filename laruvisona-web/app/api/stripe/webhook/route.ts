@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { invoiceSubscriptionId, subscriptionPeriodEnd, subscriptionStartedAt } from '@/lib/stripe-shape';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { finalizeBooking } from '@/lib/booking-finalize';
@@ -57,6 +58,36 @@ async function syncMemberSubscription(sub: Stripe.Subscription, supabase: Supaba
   }).eq('id', meta.member_id).eq('site_id', meta.site_id).select('id');
   if (error || data?.length !== 1) throw Error('member subscription could not be synchronized');
   return true;
+}
+
+/**
+ * 「書けなかった」と「その契約は元からうちに無い」を、分けて扱う。
+ *
+ * これまで、更新した行数が1でなければ全部 500 を返していた。
+ * ところが profiles に居ない契約がある。
+ *   ・管理者の契約（164行目で意図的に紐付けをスキップしている）
+ *   ・Stripe の管理画面から直接作った契約
+ *
+ * その契約のイベントは、**何度再送されても永遠に500**になる。
+ * 失敗が積み上がると Stripe がこのエンドポイントごと無効にするので、
+ * **他の全お客様の契約同期（解約・支払い失敗・プラン変更）まで一緒に止まる。**
+ *
+ * しかも失敗は Stripe 側のイベントログにしか出ない。
+ * こちらの画面にもログにも「同期が止まった」ことは現れない。
+ *
+ * 分け方:
+ *   書けなかった（error あり） → 500。再送で直るので、直してもらう
+ *   1件も当たらない            → 200。再送しても永久に当たらない
+ */
+type WriteOutcome = { ok: true } | { ok: false; retry: boolean; reason: string };
+
+function outcome(
+  result: { error: { message: string } | null; data: unknown[] | null },
+  what: string,
+): WriteOutcome {
+  if (result.error) return { ok: false, retry: true, reason: `${what}: ${result.error.message}` };
+  if ((result.data?.length ?? 0) === 1) return { ok: true };
+  return { ok: false, retry: false, reason: `${what}: 対象の契約がこちらに登録されていません` };
 }
 
 export async function POST(req: Request) {
@@ -172,14 +203,21 @@ export async function POST(req: Request) {
       contractEnd.setMonth(contractEnd.getMonth() + 6);
       if (subId) {
         try {
-          const sub = await stripe.subscriptions.retrieve(subId) as unknown as { start_date?: number; current_period_start: number; current_period_end: number };
+          const sub = await stripe.subscriptions.retrieve(subId);
           // 契約の始まりは start_date（契約が始まった日）で固定する。
-          // current_period_start は請求のたびに翌月へ動くため、最低利用期間の
+          // 請求期間の始まりは請求のたびに翌月へ動くため、最低利用期間の
           // 判定（lib/billing-portal-mode.ts）が明けなくなる。定期同期
           // （app/api/cron/subscription-sync）も start_date を正としている。
-          const startedAt = sub.start_date || sub.current_period_start;
+          //
+          // 期間の終わりは、この版では items の中にある。直に読むと undefined になり、
+          // contract_ends_at が既定値（処理時刻＋6ヶ月）のまま入っていた。
+          // ダッシュボードが見せている「最低契約期間: 〜◯月◯日」が、
+          // Stripe の実際の契約と**無関係な数字**になっていた。
+          const startedAt = subscriptionStartedAt(sub);
           if (startedAt) contractStart = new Date(startedAt * 1000);
-          if (sub.current_period_end) contractEnd = new Date(sub.current_period_end * 1000);
+          const periodEnd = subscriptionPeriodEnd(sub);
+          if (periodEnd) contractEnd = new Date(periodEnd * 1000);
+          else console.error('[Stripe webhook] period end not found for', subId);
         } catch { /* fall through to default */ }
       }
 
@@ -235,9 +273,9 @@ export async function POST(req: Request) {
 
     case 'invoice.payment_succeeded': {
       const inv = event.data.object as unknown as Record<string, unknown>;
-      const subRaw = inv['subscription'];
-      const subId = typeof subRaw === 'string' ? subRaw : (subRaw as { id?: string } | null)?.id ?? (inv['subscription_id'] as string | null);
-      if (!subId) break;
+      // 契約IDの居場所は版で変わる。lib/stripe-shape.ts が両方を見る。
+      const subId = invoiceSubscriptionId(inv);
+      if (!subId) { console.error('[Stripe webhook] payment_succeeded: subscription id not found', inv['id']); break; }
 
       const { data: memberPaid, error: memberError } = await supabase.from('hp_members')
         .update({ plan: 'paid' }).eq('stripe_subscription_id', subId).eq('status', 'active').select('id');
@@ -250,33 +288,44 @@ export async function POST(req: Request) {
       if (lines?.data?.[0]?.period?.end) {
         updates.contract_ends_at = new Date(lines.data[0].period.end! * 1000).toISOString();
       }
-      const renewed = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId).select('id');
-      if (renewed.error || renewed.data?.length !== 1) {
-        return NextResponse.json({ error: 'Subscription payment could not be synchronized' }, { status: 500 });
+      const renewed = outcome(
+        await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId).select('id'),
+        'invoice.payment_succeeded',
+      );
+      if (!renewed.ok) {
+        console.error('[Stripe webhook]', renewed.reason);
+        if (renewed.retry) return NextResponse.json({ error: 'Subscription payment could not be synchronized' }, { status: 500 });
       }
       break;
     }
 
     case 'invoice.payment_failed': {
       const inv = event.data.object as unknown as Record<string, unknown>;
-      const subRaw2 = inv['subscription'];
-      const subId = typeof subRaw2 === 'string' ? subRaw2 : (subRaw2 as { id?: string } | null)?.id ?? (inv['subscription_id'] as string | null);
-      if (!subId) break;
+      /*
+        ここで契約IDが取れないと、**カードが落ちても何も起きない。**
+        past_due にならず、サービスも止まらず、お知らせも届かない。
+        Stripe が最後に契約を消すまで、無料で使われ続ける。
+        黙って break していたので、Stripe 側からは「全部成功」に見えていた。
+      */
+      const subId = invoiceSubscriptionId(inv);
+      if (!subId) { console.error('[Stripe webhook] payment_failed: subscription id not found', inv['id']); break; }
 
       const { data: memberPastDue, error: memberError } = await supabase.from('hp_members')
         .update({ plan: 'free' }).eq('stripe_subscription_id', subId).select('id');
       if (memberError) return NextResponse.json({ error: 'Member payment could not be synchronized' }, { status: 500 });
       if ((memberPastDue?.length || 0) > 0) break;
 
-      const failedUpdate = await supabase.from('profiles')
+      const failedRaw = await supabase.from('profiles')
         .update({ subscription_status: 'past_due' })
         .eq('stripe_subscription_id', subId).select('id');
-      if (failedUpdate.error || failedUpdate.data?.length !== 1) {
-        return NextResponse.json({ error: 'Subscription failure could not be synchronized' }, { status: 500 });
+      const failedUpdate = outcome(failedRaw, 'invoice.payment_failed');
+      if (!failedUpdate.ok) {
+        console.error('[Stripe webhook]', failedUpdate.reason);
+        if (failedUpdate.retry) return NextResponse.json({ error: 'Subscription failure could not be synchronized' }, { status: 500 });
       }
 
       // 支払い失敗メール
-      const failedProfile = failedUpdate.data[0];
+      const failedProfile = failedRaw.data?.[0];
       if (failedProfile) {
         const { data: { user: failedUser } } = await supabase.auth.admin.getUserById(failedProfile.id);
         if (failedUser?.email) {
@@ -322,13 +371,16 @@ export async function POST(req: Request) {
       };
       if (updatedPlan) updates['plan'] = updatedPlan;
       const subscriptionUpdated = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', sub.id).select('id');
-      if (subscriptionUpdated.error || subscriptionUpdated.data?.length !== 1) {
-        return NextResponse.json({ error: 'Subscription could not be synchronized' }, { status: 500 });
+      const updatedOutcome = outcome(subscriptionUpdated, 'customer.subscription.updated');
+      if (!updatedOutcome.ok) {
+        console.error('[Stripe webhook]', updatedOutcome.reason);
+        if (updatedOutcome.retry) return NextResponse.json({ error: 'Subscription could not be synchronized' }, { status: 500 });
+        break;   // うちに無い契約。再送しても当たらないので、ここで終える
       }
 
       // プラン変更確認メール (アクティブ時のみ)
       if (updatedPlan && (sub.status === 'active' || sub.status === 'trialing')) {
-        const upgProfile = subscriptionUpdated.data[0];
+        const upgProfile = subscriptionUpdated.data?.[0];
         if (upgProfile) {
           const { data: { user: upgUser } } = await supabase.auth.admin.getUserById(upgProfile.id);
           if (upgUser?.email) {

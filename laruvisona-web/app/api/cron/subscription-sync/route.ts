@@ -11,8 +11,7 @@ import {
   isOrphanedActiveProfile,
   ACTIVE_PROFILE_STATUSES,
   type StripeSubscriptionLike,
-  type ProfileBilling,
-} from '@/lib/subscription-reconcile';
+  type ProfileBilling, PROFILE_BILLING_COLUMNS } from '@/lib/subscription-reconcile';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +99,7 @@ async function run(dryRun: boolean, force = false) {
     const chunk = customerIds.slice(i, i + PAGE);
     const { data, error } = await db
       .from('profiles')
-      .select('id, stripe_customer_id, stripe_subscription_id, subscription_status, plan, contract_starts_at, contract_ends_at, admin_notes')
+      .select(PROFILE_BILLING_COLUMNS)
       .in('stripe_customer_id', chunk);
     if (error) return NextResponse.json({ error: '契約情報を読み取れませんでした' }, { status: 503 });
     for (const row of (data || []) as ProfileBilling[]) {
@@ -149,7 +148,7 @@ async function run(dryRun: boolean, force = false) {
     const liveIds = new Set(planSubs.filter(s => !isTerminal(s.status)).map(s => s.id));
     const { data, error } = await db
       .from('profiles')
-      .select('id, stripe_customer_id, stripe_subscription_id, subscription_status, plan, contract_starts_at, contract_ends_at')
+      .select(PROFILE_BILLING_COLUMNS)
       .in('subscription_status', ACTIVE_PROFILE_STATUSES)
       .limit(1000);
     if (error) return NextResponse.json({ error: '契約情報を読み取れませんでした', fixed }, { status: 503 });
