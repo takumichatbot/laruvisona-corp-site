@@ -40,6 +40,9 @@ const INDUSTRY_DATA = {
   },
   construction: {
     name: '建設・工務店', keyword: '工務店 ホームページ作成',
+    // 検索で実際に使われている言い方（Search Console 2026-09-17:
+    // 「工務店 ホームページ 見積り」「リフォーム会社 ホームページ 月額料金」）。
+    alias: 'リフォーム会社',
     lead: '施工の質と人柄を、写真と工程で伝える。',
     intro: '施工事例、対応工事、地域、見積もりの流れを整理します。完成写真だけでなく、考え方や仕事の進め方も伝えられます。',
     sections: ['施工事例', '対応する工事', '見積もりと工程', '会社・職人紹介'],
@@ -47,6 +50,7 @@ const INDUSTRY_DATA = {
   },
   realestate: {
     name: '不動産会社', keyword: '不動産会社 ホームページ作成',
+    alias: '不動産屋',
     lead: '物件だけでなく、相談できる理由まで見せる。',
     intro: '売買、賃貸、管理などの取扱内容と地域情報を整理し、相談先としての強みが伝わる構成を作ります。',
     sections: ['取扱サービス', '地域と物件の情報', '担当者紹介', '査定・相談フォーム'],
@@ -110,6 +114,8 @@ const INDUSTRY_DATA = {
   },
   accounting: {
     name: '税理士・会計士', keyword: '税理士 ホームページ作成',
+    // 「税理士事務所 ホームページ制作」で表示されている（Search Console 2026-09-17）
+    alias: '税理士事務所',
     lead: '依頼できる仕事と相談の流れを、明快に伝える。',
     intro: '対応業務、対象、料金の考え方、担当者、相談方法を整理し、初めて依頼する事業者にも分かりやすいサイトを作ります。',
     sections: ['対応業務', '対象となる事業者', '料金と契約の流れ', '事務所・担当者紹介'],
@@ -128,11 +134,15 @@ export async function generateMetadata({ params }: { params: Promise<{ industry:
   const { industry } = await params;
   const d = INDUSTRY_DATA[industry as IndustryId];
   if (!d) return { title: 'LARU HP' };
-  const title = `${d.name}のホームページ作成｜LARU HP`;
+  // 「作成」と「制作」はどちらでも検索される。別名がある業種は、その言い方も入れる。
+  const alias = (d as { alias?: string }).alias;
+  const title = alias
+    ? `${d.name}・${alias}のホームページ作成｜LARU HP`
+    : `${d.name}のホームページ作成｜LARU HP`;
   // 説明文も業種ごとに変える。ここが同じだと、検索結果で15件が同じ顔になる。
   const detail = INDUSTRY_DETAIL[industry];
   const description = detail
-    ? `${d.name}のサイトでよく起きる「${detail.problems[0].q}」への対処から、載せる情報とその理由、${detail.rules[0].law}など公開前に確かめる点までまとめました。完成像を見ながら作れます。`.slice(0, 120)
+    ? `${alias ? `${d.name}・${alias}` : d.name}のホームページ制作で起きる「${detail.problems[0].q}」への対処から、載せる情報とその理由、${detail.rules[0].law}など公開前に確かめる点までまとめました。完成像を見ながら作れます。`.slice(0, 120)
     : `${d.name}に必要なページ構成と公開前の確認事項を解説。完成像を見ながら写真・文章・配色を整え、問い合わせや予約の入口まで作れます。`;
   return {
     robots: { index: true, follow: true },

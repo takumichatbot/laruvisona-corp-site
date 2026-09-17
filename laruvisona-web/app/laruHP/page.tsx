@@ -75,7 +75,17 @@ const features = [
   },
 ];
 
-export default function LaruHPLandingPage() {
+export default async function LaruHPLandingPage({ searchParams }: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  /* どこから来た人なのかを、制作スタジオまで引き継ぐ（?ref=larubot など）。
+     引き継がないと、案内ページで途切れて「どの入口が効いたか」が分からない。
+     使うのは短い英数字だけ。任意の文字列をURLに混ぜない。 */
+  const query = (await searchParams) ?? {};
+  const rawRef = Array.isArray(query.ref) ? query.ref[0] : query.ref;
+  const ref = typeof rawRef === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(rawRef) ? rawRef : '';
+  const studio = `https://laruvisona.jp/laruHP/studio${ref ? `?ref=${ref}` : ''}`;
+
   return (
     <div className="lhp-landing">
       <BrandFonts />
@@ -115,7 +125,7 @@ export default function LaruHPLandingPage() {
           <Link className="lp-login" href="https://laruvisona.jp/laruHP/auth/login">
             ログイン
           </Link>
-          <Link className="lp-button lp-button-small" href="https://laruvisona.jp/laruHP/studio">
+          <Link className="lp-button lp-button-small" href={studio}>
             作りはじめる
             <ArrowUpRight size={15} />
           </Link>
@@ -142,7 +152,7 @@ export default function LaruHPLandingPage() {
               あなたの仕事が伝わるサイトを、ここで。
             </p>
             <div className="lp-hero-actions">
-              <Link href="https://laruvisona.jp/laruHP/studio" className="lp-button">
+              <Link href={studio} className="lp-button">
                 完成を見ながら、つくる
                 <ArrowUpRight size={20} />
               </Link>
@@ -279,7 +289,7 @@ export default function LaruHPLandingPage() {
               </article>
             ))}
           </div>
-          <Link className="lp-text-link" href="https://laruvisona.jp/laruHP/studio">
+          <Link className="lp-text-link" href={studio}>
             あなたのお店で試してみる
             <ArrowUpRight size={18} />
           </Link>
@@ -369,7 +379,7 @@ export default function LaruHPLandingPage() {
                 </p>
                 <Link
                   className={`lp-button ${p.highlight ? '' : 'lp-button-outline'}`}
-                  href={`https://laruvisona.jp${PRIMARY_CTA.href}`}
+                  href={`https://laruvisona.jp${PRIMARY_CTA.href}${ref ? `?ref=${ref}` : ''}`}
                 >
                   {PRIMARY_CTA.label}
                   <ArrowUpRight size={17} />
@@ -480,7 +490,7 @@ export default function LaruHPLandingPage() {
             <br />
             作りながら、見つけていきましょう。
           </p>
-          <Link className="lp-button" href="https://laruvisona.jp/laruHP/studio">
+          <Link className="lp-button" href={studio}>
             自分のサイトをつくる
             <ArrowUpRight size={20} />
           </Link>

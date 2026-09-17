@@ -160,3 +160,20 @@ test('実装で差がついていないサポートを、差があるように�
   const plans = code('app/laruHP/plans/page.tsx');
   assert.match(plans, /サポート（メール）/);
 });
+
+test('公開する文章に、ハングルが混ざっていない', () => {
+  // 日本語入力の取り違えで「公開」が「공開」になっていたことが2回ある。
+  // 目では気づきにくく、そのまま公開されると読み手の信用を落とす。
+  const hangul = /[ᄀ-ᇿ㄰-㆏가-힯]/;
+  for (const path of [
+    'app/laruHP/articles/articles-data.ts',
+    'lib/laruhp-industry-detail.ts',
+    'lib/trouble-data.ts',
+    'lib/studio-start.ts',
+    'lib/laruhp-facts.ts',
+  ]) {
+    const src = code(path);
+    const hit = hangul.exec(src);
+    assert.equal(hit, null, `${path} にハングルが混ざっている: ${hit ? src.slice(Math.max(0, hit.index - 30), hit.index + 30) : ''}`);
+  }
+});

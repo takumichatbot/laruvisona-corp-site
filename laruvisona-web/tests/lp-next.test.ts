@@ -46,7 +46,8 @@ test('URLは /laruHP/lp-next のまま、実体はレイアウト配下の外に
 });
 
 test('既存LPのURL・canonical・メタデータに触っていない', () => {
-  assert.match(oldLp, /export default function LaruHPLandingPage/);
+  // 2026-09-17: 入口の計測（?ref=）を引き継ぐため async 関数になった。名前は変えない。
+  assert.match(oldLp, /export default (async )?function LaruHPLandingPage/);
   assert.equal(/lp-next/.test(oldLp), false, '既存LPが新LPを参照している');
 });
 
