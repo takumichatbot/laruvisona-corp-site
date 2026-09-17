@@ -64,9 +64,19 @@ const EXTRA_LABEL: Record<string, string> = {
   customer_email_status: 'お客さまへの自動返信',
   line_status: 'LINE通知',
   notification_at: '通知を試みた時刻',
+  owner_email_id: 'お店への通知メールの控え番号',
+  customer_email_id: '自動返信の控え番号',
 };
 const EXTRA_VALUE: Record<string, string> = {
+  // 2026-09-17: 「送信しました」としか出していなかった。
+  // 実際には店主あての通知が2回とも届いていないのに、画面は成功に見えていた。
+  // **出せるのは「受け付けられた」までで、届いたかは別。** 言葉を分ける。
+  accepted: '送信を受け付けました（到着は未確認）',
+  delivered: '届きました',
+  bounced: '届きませんでした（宛先から戻ってきました）',
+  complained: '迷惑メール扱いにされました',
   sent: '送信しました',
+  success: '送信を受け付けました（到着は未確認）',
   failed: '送信できませんでした',
   not_configured: '未設定のため送信していません',
   skipped: '送信対象外',
@@ -74,8 +84,12 @@ const EXTRA_VALUE: Record<string, string> = {
 
 function deliveryWarning(extra: Record<string, string> | null | undefined): string {
   if (!extra) return '';
-  const bad = ['owner_email_status', 'customer_email_status']
-    .filter(k => extra[k] === 'not_configured' || extra[k] === 'failed');
+  const keys = ['owner_email_status', 'customer_email_status'];
+  // 戻ってきた・迷惑メール扱い は、送れなかったより強く出す。
+  if (keys.some(k => extra[k] === 'bounced' || extra[k] === 'complained')) {
+    return 'この問い合わせの通知メールが、宛先まで届きませんでした。この画面には残っているので、ここから返信してください。通知先のメールアドレスをご確認ください。';
+  }
+  const bad = keys.filter(k => extra[k] === 'not_configured' || extra[k] === 'failed');
   if (!bad.length) return '';
   const notConfigured = bad.some(k => extra[k] === 'not_configured');
   return notConfigured

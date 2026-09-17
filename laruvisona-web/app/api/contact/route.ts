@@ -245,14 +245,18 @@ export async function POST(req: Request) {
   const lineMessage = `【${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}】${site.name}\nお名前: ${name}\nメール: ${email}${phone ? `\nTEL: ${phone}` : ''}${message ? `\nメッセージ: ${message.slice(0, 200)}` : ''}`;
 
   const deliveryResults = await Promise.all([
+    // 送信の結果とあわせて、**Resend が付けた控え番号を残す。**
+    // 2026-09-17: 店主あての通知が2回とも届かなかったのに、記録は success
+    // だった。受け付けられた＝届いた、ではない。控え番号が無いと、
+    // 「来ていない」と言われたときに追いかける手がかりが1つも無い。
     ...(toEmail ? [resend.emails.send({
       from: 'LARU HP <noreply@laruvisona.jp>',
       to: toEmail,
       replyTo: email,
       subject,
       html,
-    }).then(result => ({ ok: !result.error, channel: 'owner_email' as const }))
-      .catch(() => ({ ok: false, channel: 'owner_email' as const }))] : []),
+    }).then(result => ({ ok: !result.error, id: result.data?.id ?? null, channel: 'owner_email' as const }))
+      .catch(() => ({ ok: false, id: null, channel: 'owner_email' as const }))] : []),
     resend.emails.send({
       from: 'LARU HP <noreply@laruvisona.jp>',
       to: email,
@@ -260,8 +264,8 @@ export async function POST(req: Request) {
         ? `【受付完了】ご予約リクエストを承りました — ${site.name}`
         : `【受付完了】お問い合わせを承りました — ${site.name}`,
       html: autoReplyHtml,
-    }).then(result => ({ ok: !result.error, channel: 'customer_email' as const }))
-      .catch(() => ({ ok: false, channel: 'customer_email' as const })),
+    }).then(result => ({ ok: !result.error, id: result.data?.id ?? null, channel: 'customer_email' as const }))
+      .catch(() => ({ ok: false, id: null, channel: 'customer_email' as const })),
     ...(lineChannelToken && lineTarget ? [
       fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
@@ -271,12 +275,18 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({ to: lineTarget, messages: [{ type: 'text', text: lineMessage }] }),
         signal: AbortSignal.timeout(8_000),
-      }).then(result => ({ ok: result.ok, channel: 'line' as const }))
-        .catch(() => ({ ok: false, channel: 'line' as const })),
+      }).then(result => ({ ok: result.ok, id: null, channel: 'line' as const }))
+        .catch(() => ({ ok: false, id: null, channel: 'line' as const })),
     ] : []),
   ]);
 
-  const deliveryState = Object.fromEntries(deliveryResults.map(result => [result.channel, result.ok ? 'success' : 'failed']));
+  // `accepted` は「メール配信の会社が受け付けた」という意味しかない。
+  // 届いたかどうかは、あとから Resend の webhook（delivered / bounced）で入る。
+  // ここで success と書いていたせいで、届いていないものが届いたように見えていた。
+  const deliveryState = Object.fromEntries(deliveryResults.map(r => [r.channel, r.ok ? 'accepted' : 'failed']));
+  const deliveryIds = Object.fromEntries(
+    deliveryResults.filter(r => r.id).map(r => [`${r.channel}_id`, r.id as string]),
+  );
   const deliveryAt = new Date().toISOString();
   const notificationFields = {
     ...(extraFields || {}),
@@ -284,7 +294,12 @@ export async function POST(req: Request) {
     owner_email_status: deliveryState.owner_email || 'not_configured',
     customer_email_status: deliveryState.customer_email || 'not_configured',
     line_status: deliveryState.line || (lineChannelToken && lineTarget ? 'failed' : 'not_configured'),
+    ...deliveryIds,
   };
+  if (deliveryState.owner_email !== 'accepted') {
+    // 店主に知らせが行かないのは、この製品でいちばん困る失敗。必ず記録に残す。
+    console.error('[Contact] owner notification not accepted:', deliveryState.owner_email || 'no_recipient');
+  }
 
   // Fire webhook and record delivery result in contact's extra_fields
   if (webhookUrl && contactRow?.id) {

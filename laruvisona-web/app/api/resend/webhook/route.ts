@@ -10,6 +10,43 @@ const EVENT_MAP: Record<string, string> = {
   'email.delivery_delayed': 'delayed',
 };
 
+/**
+ * 問い合わせの通知メールが、実際にどうなったか。
+ *
+ * 2026-09-17: 店主あての通知が2回とも届かなかったのに、記録は「成功」だった。
+ * 送った側が持っているのは「配信会社が受け付けた」までで、
+ * **届いたかどうかは、あとから知らせてもらう以外に知る方法が無い。**
+ * 知らせが来ない＝届いていない、が誰にも見えないのがいちばん困る。
+ */
+const CONTACT_EVENT: Record<string, string> = {
+  'email.delivered': 'delivered',
+  'email.bounced': 'bounced',
+  'email.complained': 'complained',
+};
+
+/** 控え番号から問い合わせを引き当て、その通知の状態を書き換える。 */
+async function recordContactDelivery(
+  service: ReturnType<typeof createServiceClient>,
+  emailId: string,
+  state: string,
+): Promise<boolean> {
+  for (const channel of ['owner_email', 'customer_email'] as const) {
+    const { data } = await service
+      .from('contacts')
+      .select('id, extra_fields')
+      .eq(`extra_fields->>${channel}_id`, emailId)
+      .limit(1)
+      .maybeSingle();
+    if (!data) continue;
+    const extra = (data.extra_fields || {}) as Record<string, unknown>;
+    await service.from('contacts').update({
+      extra_fields: { ...extra, [`${channel}_status`]: state },
+    }).eq('id', data.id);
+    return true;
+  }
+  return false;
+}
+
 export async function POST(req: Request) {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
   if (!webhookSecret) return NextResponse.json({ error: 'Webhook is not configured' }, { status: 503 });
@@ -32,10 +69,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
-  const eventType = EVENT_MAP[event.type];
-  if (!eventType || !('email_id' in event.data) || !event.data.email_id) return NextResponse.json({ ok: true });
+  if (!('email_id' in event.data) || !event.data.email_id) return NextResponse.json({ ok: true });
   const emailId = event.data.email_id;
   const service = createServiceClient();
+
+  // 問い合わせの通知メールなら、そこへ書いて終わり。
+  const contactState = CONTACT_EVENT[event.type];
+  if (contactState && await recordContactDelivery(service, emailId, contactState)) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const eventType = EVENT_MAP[event.type];
+  if (!eventType) return NextResponse.json({ ok: true });
   const { data: sent, error: sentError } = await service.from('newsletter_email_events')
     .select('campaign_id,recipient_email').eq('resend_email_id', emailId).eq('event_type', 'sent').single();
   if (sentError?.code === 'PGRST116') return NextResponse.json({ ok: true });
