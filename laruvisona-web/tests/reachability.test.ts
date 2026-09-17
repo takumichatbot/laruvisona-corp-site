@@ -101,8 +101,12 @@ test('問い合わせの受け口を1つにしない', () => {
 
 test('中身が空のページを、sitemapに載せない', () => {
   const sitemap = code('app/sitemap.ts');
-  // /blog は記事本体を外部（larubot.tokyo）が描くため、こちらのHTMLには本文が無い
-  assert.doesNotMatch(sitemap, /\$\{base\}\/blog`/, '本文の無いページを「毎週更新」と宣言しない');
+  // /blog は 2026-09-17 にサーバー側描画へ切り替えた（本文がこちらのHTMLに載る）。
+  // それでも **記事が0件の日は載せない**。本文の無いページを
+  // 「毎週更新」と宣言すると、サイト全体の評価が下がる。
+  assert.match(sitemap, /\.\.\.\(articles\.length\s*$/m, '件数で囲わずに /blog を載せない');
+  const guarded = sitemap.slice(sitemap.indexOf('...(articles.length'));
+  assert.match(guarded.slice(0, guarded.indexOf(': []')), /\$\{base\}\/blog`/);
 });
 
 test('画面に出しているFAQを、構造化データでも同じ内容で出す', () => {

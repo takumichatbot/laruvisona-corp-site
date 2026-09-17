@@ -1,10 +1,15 @@
 import { MetadataRoute } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
 import { WORKS } from '@/lib/works-data';
+import { listArticles } from '@/lib/laruseo-articles';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = 'https://laruvisona.jp';
   const now = new Date();
+
+  // ブログは記事があるときだけ載せる。
+  // 取りに行けなかった日も 0件で返るので、結果としてその日は載らない。
+  const { articles } = await listArticles({ limit: 50 });
 
   return [
     // 会社サイト
@@ -16,10 +21,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // 受託開発サービス
     { url: `${base}/services`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
 
-    // ブログ（LARU SEO 記事一覧）は、記事の本体が larubot.tokyo 側で描かれる。
-    // こちらが返すHTMLには本文が1文字も無いので、sitemapからは外しておく。
-    // 「毎週更新」と宣言しているのに中身が空、という状態にはしない。
-    // サーバー側で記事を取って /blog/[slug] を実体化したら、ここへ戻す。
+    // ブログ。2026-09-17 にサーバー側描画へ切り替えたので、本文がHTMLに載る。
+    // ただし **記事が0件のあいだは載せない**。中身の無いページを
+    // 「毎週更新」と宣言して出すと、サイト全体の評価が下がる。
+    ...(articles.length
+      ? [
+          { url: `${base}/blog`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7 },
+          ...articles.map(a => ({
+            url: `${base}/blog/${a.slug}`,
+            lastModified: a.updatedAt ? new Date(a.updatedAt) : now,
+            changeFrequency: 'monthly' as const,
+            priority: 0.6,
+          })),
+        ]
+      : []),
 
     // 地域。1本だけ。量産すると誘導ページ扱いになる。
     { url: `${base}/local`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },

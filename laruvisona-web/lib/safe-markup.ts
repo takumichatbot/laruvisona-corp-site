@@ -64,9 +64,34 @@ export function safeNumber(input: unknown, fallback: number, lo = -1e6, hi = 1e6
    通常のテキスト項目とは型を分け、こちらを通ったものだけHTMLとして出す。 */
 
 const ALLOWED_TAGS = new Set(['b', 'strong', 'i', 'em', 'u', 'br', 'a', 'ul', 'ol', 'li', 'p', 'span', 'small']);
+/** 閉じ札を持たない札。 */
+const VOID_TAGS = new Set(['br', 'hr', 'img']);
+
+/** 記事の本文。見出し・画像・表まで通す。 */
+const ARTICLE_TAGS = new Set([
+  'p', 'br', 'hr', 'strong', 'b', 'em', 'i', 'u', 's', 'span', 'small',
+  'a', 'ul', 'ol', 'li', 'h2', 'h3', 'h4', 'blockquote', 'pre', 'code',
+  'figure', 'figcaption', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+]);
+const ARTICLE_ATTRS: Record<string, Set<string>> = {
+  a: new Set(['href', 'target', 'rel']),
+  img: new Set(['src', 'alt', 'width', 'height']),
+};
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   a: new Set(['href', 'target', 'rel']),
 };
+
+/**
+ * 記事では、この札は**中身ごと捨てる**。
+ *
+ * 許していない札は普通、文字にして残す（利用者が打った `<b>` を
+ * 消してしまわないため）。ただし記事の本文は人が打ったものではない。
+ * ここで `<script>` を文字にすると、読み手の画面に JavaScript が
+ * そのまま並ぶ。動きはしないが、記事としては壊れている。
+ *
+ * リッチテキスト（利用者の入力）では、打った通りを見せたいので捨てない。
+ */
+const ARTICLE_DROP = new Set(['script', 'style', 'iframe', 'noscript', 'object', 'embed', 'template', 'svg', 'math', 'form']);
 
 /**
  * 許可した札と属性だけを残す。それ以外は文字として出す。
@@ -74,7 +99,19 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
  * 完全なHTMLパーサではない。だからこそ「許したものだけ残す」側に倒し、
  * 判断がつかないものはすべてエスケープする。
  */
-export function sanitizeRichText(input: unknown): string {
+/**
+ * 許す札と属性を差し替えられる、共通の本体。
+ *
+ * 2026-09-17: 記事の本文（見出し・画像・表を含む）も通す必要が出たので、
+ * 方針だけ差し替えられるようにした。**解析の仕方は1つに保つこと。**
+ * ここを写して別の除菌器を作ると、片方だけ穴が残る。
+ */
+function sanitizeWithPolicy(
+  input: unknown,
+  allowedTags: Set<string>,
+  allowedAttrs: Record<string, Set<string>>,
+  dropContent: Set<string> = new Set(),
+): string {
   const src = String(input ?? '');
   let out = '';
   let i = 0;
@@ -96,8 +133,17 @@ export function sanitizeRichText(input: unknown): string {
     const name = m[2].toLowerCase();
     const rest = m[3];
 
-    if (!ALLOWED_TAGS.has(name)) {
-      // 許していない札は、中身ごと文字にする（<script> の中身を出さない）
+    if (!allowedTags.has(name)) {
+      if (dropContent.has(name)) {
+        if (closing) { i = gt + 1; continue; }
+        // 閉じ札まで読み飛ばす。無ければ、そこから先は全部捨てる。
+        const end = src.toLowerCase().indexOf(`</${name}`, gt);
+        if (end === -1) { i = src.length; break; }
+        const endGt = src.indexOf('>', end);
+        i = endGt === -1 ? src.length : endGt + 1;
+        continue;
+      }
+      // 許していない札は、文字にして残す（利用者が打った通りを見せる）
       out += escapeHtml(src.slice(lt, gt + 1));
       i = gt + 1;
       continue;
@@ -111,7 +157,7 @@ export function sanitizeRichText(input: unknown): string {
     }
 
     const attrs: string[] = [];
-    const allow = ALLOWED_ATTRS[name];
+    const allow = allowedAttrs[name];
     if (allow) {
       const re = /([a-zA-Z:-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/g;
       let a: RegExpExecArray | null;
@@ -120,6 +166,15 @@ export function sanitizeRichText(input: unknown): string {
         if (!allow.has(key)) continue;
         const value = a[3] ?? a[4] ?? a[5] ?? '';
         if (key === 'href') attrs.push(`href="${escapeHtml(safeUrl(value))}"`);
+        else if (key === 'src') {
+          // よそのサーバーの絵。http や data: を混ぜない。
+          const url = safeUrl(value, '');
+          if (url.startsWith('https://')) attrs.push(`src="${escapeHtml(url)}"`);
+        }
+        else if (key === 'alt') attrs.push(`alt="${escapeHtml(value)}"`);
+        else if (key === 'width' || key === 'height') {
+          if (/^\d{1,5}$/.test(value)) attrs.push(`${key}="${value}"`);
+        }
         else if (key === 'target' && value === '_blank') attrs.push('target="_blank"');
         else if (key === 'rel') attrs.push('rel="noopener noreferrer"');
       }
@@ -128,7 +183,18 @@ export function sanitizeRichText(input: unknown): string {
       }
     }
 
-    if (name === 'br') { out += '<br>'; i = gt + 1; continue; }
+    if (VOID_TAGS.has(name)) {
+      // 閉じ札を持たない。開いたままにすると、あとで勝手に閉じてしまう。
+      if (name === 'img') {
+        // 絵が読めなくても、そこにあったことが分かるように alt は残す。
+        // 読み込みは後回しにして、本文の表示を止めない。
+        out += `<img ${attrs.join(' ')} loading="lazy" decoding="async">`;
+      } else {
+        out += `<${name}>`;
+      }
+      i = gt + 1;
+      continue;
+    }
     openTags.push(name);
     out += `<${name}${attrs.length ? ' ' + attrs.join(' ') : ''}>`;
     i = gt + 1;
@@ -137,6 +203,21 @@ export function sanitizeRichText(input: unknown): string {
   // 閉じ忘れを閉じる
   for (let k = openTags.length - 1; k >= 0; k--) out += `</${openTags[k]}>`;
   return out;
+}
+
+export function sanitizeRichText(input: unknown): string {
+  return sanitizeWithPolicy(input, ALLOWED_TAGS, ALLOWED_ATTRS);
+}
+
+/**
+ * よそから受け取った記事の本文を、こちらのページに出す前に通す。
+ *
+ * LARUSEO（larubot.tokyo）が生成したHTMLをそのまま出すと、
+ * 向こうに何かが混ざった日に、こちらのドメインで実行される。
+ * 見出し・段落・箇条書き・引用・表・画像だけを残し、それ以外は文字にする。
+ */
+export function sanitizeArticleHtml(input: unknown): string {
+  return sanitizeWithPolicy(input, ARTICLE_TAGS, ARTICLE_ATTRS, ARTICLE_DROP);
 }
 
 /**
