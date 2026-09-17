@@ -56,6 +56,9 @@ export default function AuthShell({
   asideTitle?: string;
   asideLead?: string;
 }) {
+  // 濃い面にはロゴ画像を置かない。laruhp_logo.png は濃い色で描かれていて、
+  // 濃い面の上ではほとんど見えない。ログイン後の道しるべ（.shell-brand）と
+  // 同じ組み方にして、どちらの面でも読めるようにする。
   const logo = (
     <Image src="/laruhp_logo.png" alt="LARU HP" height={36} width={144} className="h-9 w-auto" priority />
   );
@@ -63,7 +66,10 @@ export default function AuthShell({
   return (
     <div className="auth">
       <aside className="auth-aside">
-        <a href={`${LARUHP_ORIGIN}/`} className="auth-aside-brand">{logo}</a>
+        <a href={`${LARUHP_ORIGIN}/`} className="auth-aside-brand" aria-label="LARU HP">
+          <span className="auth-mark" aria-hidden="true">L</span>
+          <span className="auth-wordmark" aria-hidden="true">LARU<b>HP</b></span>
+        </a>
 
         <div>
           {asideTitle && <h2>{asideTitle}</h2>}

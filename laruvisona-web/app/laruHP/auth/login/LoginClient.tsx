@@ -104,7 +104,7 @@ function LoginForm() {
   return (
     <AuthShell
       heading="ログイン"
-      lead="アカウントに入って、サイトを直したり問い合わせを見たりできます。"
+      lead="サイトの編集と、問い合わせの確認ができます。"
       asideTitle="お店のホームページを、自分の手で。"
       asideLead="作るのも、直すのも、公開するのも、この画面の中だけで終わります。"
       points={POINTS}
