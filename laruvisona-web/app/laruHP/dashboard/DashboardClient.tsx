@@ -628,8 +628,12 @@ export default function DashboardPage() {
   const handlePortal = async () => {
     setPortalLoading(true);
     setPortalError('');
+    // try/finally が無いと、応答がJSONでないとき（本文の無い500など）res.json() が
+    // 例外になり、下の setPortalLoading(false) まで来ない。
+    // 画面は「処理中」のまま固まり、押した人には理由が何も出ない。
+    try {
     const res = await fetch('/api/stripe/portal', { method: 'POST' });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({} as { url?: string; mode?: string; cancelableFrom?: string; error?: string }));
     if (data.url && data.mode === 'payment_method') {
       /* 最低利用期間の途中。開くのは支払方法の変更だけなので、
          解約が見当たらない理由と、いつからできるのかを先に伝える。
@@ -646,9 +650,13 @@ export default function DashboardPage() {
     } else if (data.url) {
       window.location.href = data.url;
     } else {
-      setPortalError(data.error || 'エラーが発生しました');
+      setPortalError(data.error || 'エラーが発生しました。時間をおいてお試しください。');
     }
-    setPortalLoading(false);
+    } catch {
+      setPortalError('通信に失敗しました。時間をおいてお試しください。');
+    } finally {
+      setPortalLoading(false);
+    }
   };
 
   const handleCheckout = async () => {

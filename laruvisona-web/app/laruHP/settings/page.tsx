@@ -109,16 +109,21 @@ export default function SettingsPage() {
   const openBillingPortal = async () => {
     setPortalLoading(true);
     setPortalMsg('');
-    const res = await fetch('/api/stripe/portal', { method: 'POST' });
-    const data = await res.json();
-    if (res.ok && data.url) {
-      window.location.href = data.url;
-    } else if (res.status === 403 && data.message) {
-      setPortalMsg(data.message);
-    } else {
-      setPortalMsg('サブスクリプション情報が見つかりません。');
+    // ダッシュボード側と同じ理由で try/finally が要る。応答がJSONでないと
+    // res.json() が例外になり、「読み込み中...」のまま止まってしまう。
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' });
+      const data = await res.json().catch(() => ({} as { url?: string; message?: string; error?: string }));
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setPortalMsg(data.message || data.error || 'サブスクリプション情報が見つかりません。');
+    } catch {
+      setPortalMsg('通信に失敗しました。時間をおいてお試しください。');
+    } finally {
+      setPortalLoading(false);
     }
-    setPortalLoading(false);
   };
 
   const [email, setEmail] = useState('');

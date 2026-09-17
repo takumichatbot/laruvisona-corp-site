@@ -32,16 +32,36 @@ export async function POST() {
   // 解約画面が永久に開かなかった。
   const { paymentMethodOnly, cancelableFrom } = billingPortalMode(profile);
 
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: returnUrl,
-    ...(paymentMethodOnly ? {
-      flow_data: {
-        type: 'payment_method_update' as const,
-        after_completion: { type: 'redirect' as const, redirect: { return_url: returnUrl } },
-      },
-    } : {}),
-  });
+  // Stripe側が失敗したとき、ここで捕まえずに投げると Next が本文の無い500を返す。
+  // 画面は res.json() で例外になり、読み込み解除まで到達せず「処理中」のまま止まる。
+  // 押した人には何も出ない。理由の分かる本文を必ず返す。
+  let portalSession: { url: string };
+  try {
+    portalSession = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: returnUrl,
+      ...(paymentMethodOnly ? {
+        flow_data: {
+          type: 'payment_method_update' as const,
+          after_completion: { type: 'redirect' as const, redirect: { return_url: returnUrl } },
+        },
+      } : {}),
+    });
+  } catch (err) {
+    const raw = err as { code?: string; type?: string; message?: string };
+    const code = raw?.code || raw?.type || 'stripe_error';
+    console.error('[stripe/portal] portal session failed', { code, message: raw?.message });
+    // Stripeの生の文言はそのまま出さない（顧客IDや設定名が混じる）。
+    // 代わりに、利用者が次に何をすればよいかが分かる文にする。
+    const message = /No configuration provided/i.test(raw?.message || '')
+      // 契約管理画面はStripe側で一度保存しないと使えない。運営がやることなので、
+      // 利用者に「設定してください」とは言わない。
+      ? 'お支払い管理の画面をいま開けません。お手数ですが info@laruvisona.jp までご連絡ください。'
+      : code === 'resource_missing'
+        ? 'お客様の決済情報が見つかりませんでした。お手数ですが info@laruvisona.jp までご連絡ください。'
+        : '契約管理の画面を開けませんでした。時間をおいてお試しください。';
+    return NextResponse.json({ error: message, code }, { status: 502 });
+  }
 
   return NextResponse.json({
     url: portalSession.url,
