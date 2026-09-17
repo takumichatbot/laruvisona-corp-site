@@ -4590,8 +4590,32 @@ function BuilderContent() {
   // 編集のたびに進む版番号。保存の往復中に編集が入ったかを、これで見分ける
   const editSeqRef = useRef(0);
   const isFirstRender = useRef(true);
+
+  /**
+   * 「読み込み」は編集ではない。
+   *
+   * これまで、画面を開いて**何も触っていないのに「未保存」**と出ていた。
+   * 中身はサーバや下書きから**あとから**入るので、その入れ替えが
+   * 「編集された」と数えられていた。開いた瞬間に必ずそうなる。
+   *
+   * そのせいで起きていたこと。
+   *   ・見ただけで閉じると、ブラウザの「このサイトを離れますか？」が出る。
+   *     何も直していない人が、消えるのかと思って固まる。
+   *   ・30秒後に、何も変えていない内容が毎回サーバへ送られる。
+   *   ・「未保存」が出っぱなしになるので、**本当に未保存のときと見分けがつかない。**
+   *     いつも点いている札は、何も知らせていないのと同じ。
+   *
+   * だから、読み込みで入れ替えるときだけ印をつけ、その1回は数えない。
+   */
+  const hydratingRef = useRef(false);
+  const hydrateSite = useCallback((next: SiteData) => {
+    hydratingRef.current = true;
+    setSite(next);
+  }, []);
+
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (hydratingRef.current) { hydratingRef.current = false; return; }
     editSeqRef.current += 1;
     setIsDirty(true);
   }, [site]);
@@ -4857,7 +4881,7 @@ function BuilderContent() {
             } else {
               pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: [], seo: { ...emptySeo, ...(s.seo_json || {}) } }];
             }
-            setSite({
+            hydrateSite({
               siteName: s.name,
               pages,
               colorScheme: s.settings_json?.colorScheme || 'professional-blue',
@@ -4964,7 +4988,7 @@ function BuilderContent() {
         if (d.larubot) blocks.push(defaultBlock('larubot'));
       }
 
-      setSite({
+      hydrateSite({
         siteName: d.businessName || 'マイサイト',
         pages: [{
           id: 'page-main',
@@ -5052,10 +5076,10 @@ function BuilderContent() {
       if (savedStr) {
         const parsed = JSON.parse(savedStr);
         if (parsed.pages) {
-          setSite(parsed as SiteData);
+          hydrateSite(parsed as SiteData);
           setCurrentPageId(parsed.pages[0]?.id || 'page-main');
         } else if (parsed.blocks) {
-          setSite({
+          hydrateSite({
             siteName: parsed.siteName || 'マイサイト',
             pages: [{ id: 'page-main', name: 'トップページ', path: '/', blocks: parsed.blocks, seo: parsed.seo || emptySeo }],
             colorScheme: parsed.colorScheme || 'professional-blue',
