@@ -30,7 +30,11 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: 'SEO自動最適化',           hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'LARUbot Lite AIチャットボット', hp: 'no',  lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: '　└ Q&A 登録数',          hp: 'no',  lite: '15件', hpBot: '30件', hpBotSeo: '30件' },
-  { label: '　└ 設置ボット数',        hp: 'no',  lite: '2体',  hpBot: '3体',  hpBotSeo: '3体' },
+  // 2026-09-17: 「設置ボット数 2体/3体」は、対応する上限がLARUbot側に存在しなかった。
+  // 1アカウント=1ボットで、設置タグは何サイトに貼っても動く（サイト数の制限も無い）。
+  // 2体/3体 の数字は「チャット内のメニュー項目数」のもので、意味が違っていた。
+  // 無い上限を売らない。実際に差がある項目に書き換える。
+  { label: '　└ チャット内のメニュー項目', hp: 'no',  lite: '2件',  hpBot: '3件',  hpBotSeo: '3件' },
   { label: '　└ 質問例',              hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
   { label: '　└ メールシーケンス',    hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
   { label: 'LARUSEO AIブログ',        hp: 'no',  lite: 'no',  hpBot: 'no',  hpBotSeo: 'yes' },

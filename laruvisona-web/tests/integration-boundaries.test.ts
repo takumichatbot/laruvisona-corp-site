@@ -15,10 +15,14 @@ test('LARUbotの手動登録は入力・所有権・回数・待ち時間を有�
   assert.doesNotMatch(route, /await res\.text\(/);
 });
 
-test('契約からのLARUbot登録も待ち時間を有限化し応答本文を解放する', () => {
+test('契約からのLARUbot登録も待ち時間を有限化し応答本文を読み切る', () => {
   const route = source('lib/larubot-provision.ts');
   assert.match(route, /AbortSignal\.timeout\(12_000\)/);
-  assert.match(route, /await res\.body\?\.cancel\(\)/);
+  // 2026-09-17: 以前は body.cancel() で捨てていた。捨てずに読むようにしたので、
+  // 流しっぱなしにならないのは同じ。public_id が本文に入っていて、
+  // 捨てていたせいでコールバック待ちになっていた。
+  assert.match(route, /await res\.json\(\)\.catch/);
+  assert.doesNotMatch(route, /await res\.text\(/);
 });
 
 test('代理店ロゴは有限なHTTPS URLだけを保存する', () => {
