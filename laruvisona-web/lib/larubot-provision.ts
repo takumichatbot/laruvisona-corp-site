@@ -162,7 +162,34 @@ export async function linkLarubotIds(params: {
 
   const query = supabase.from('sites').select('id, settings_json').eq('user_id', userId);
   const { data: sites } = siteId ? await query.eq('id', siteId) : await query;
-  if (!sites?.length) return;
+
+  /*
+    サイトがまだ無いときは、**預かる。**
+
+    以前はここで黙って return していた。そのとき public_id はどこにも
+    残らず、例外にもならず、ログも1行も出ない。画面は「契約済み」のまま。
+
+    そして料金ページから契約した人は、必ずここを通る。
+    Stripe の metadata の site_id は空文字（まだサイトが無いので当然）で、
+    webhook はそれを渡すから「その人の全サイト」＝0件になる。
+
+    識別子が失われると、あとから再登録する経路も無い。
+    埋め込みタグが出ないので、**ブログは1記事も出ない。**
+    「毎週AIがSEO記事を自動公開」と売っている機能が、契約した日から動かない。
+
+    預けた分は、最初のサイトを作るときに移す（app/api/sites/route.ts）。
+  */
+  if (!sites?.length) {
+    const held = await supabase.from('profiles').update({
+      ...(publicId ? { pending_larubot_public_id: publicId } : {}),
+      ...(seoPublicId ? { pending_laruseo_public_id: seoPublicId } : {}),
+    }).eq('id', userId).select('id');
+    if (held.error || held.data?.length !== 1) {
+      // 列がまだ無い場合もここに来る（supabase/profiles_pending_larubot.sql を実行する）
+      console.error('[larubot] public ids not held for later:', userId, held.error?.message || 'no profile row');
+    }
+    return;
+  }
 
   for (const site of sites) {
     await supabase

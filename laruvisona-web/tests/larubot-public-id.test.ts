@@ -35,13 +35,29 @@ test('食い違いを見つけられる', () => {
   assert.equal(publicIdMismatch({}), false);
 });
 
-test('公開HTMLが、補い合う側を通っている', () => {
-  const src = code('lib/html-export.ts');
-  assert.match(src, /blogPublicId\(settings\)/);
-  assert.match(src, /chatPublicId\(settings\)/);
-  // 直に読むのに戻っていないこと
-  assert.ok(!src.includes('settings.laruseo && settings.laruseoPublicId'),
-    'LARUSEO欄が空だと設置タグが出ない形に戻っている');
+test('設置タグを出す側が、補い合う規則を通っている', () => {
+  /*
+    2026-09-17まで、設置タグは**2箇所から出ていた。**
+      公開HTML（lib/html-export.ts が焼き込む）… 補い合う規則と入切を見る
+      配信するページ（app/hp/[slug]）      … 生の laruseoPublicId だけ
+
+    公開HTMLの中の script は配信時に本物へ作り直して実行されるので、
+    **両方が動き、記事一覧が二重に描かれていた。**
+    しかも判定が違うので、チャットの識別子しか入っていない人には
+    ページ側から何も出ず、逆にLARUSEOを「切」にしても出続けた。
+
+    配信するページ側に一本化した。あちらは保存されている値をそのつど
+    読むので、識別子が入った次の表示から効く（公開し直す必要が無い）。
+    この検査もそちらへ移す。
+  */
+  const page = code('app/hp/[slug]/page.tsx');
+  assert.match(page, /chatPublicId\(settings\)/, '補い合う規則を使っていない');
+  assert.match(page, /blogPublicId\(settings\)/, '補い合う規則を使っていない');
+  assert.match(page, /settings\.laruseo === false \? '' :/, '入切を見ていない');
+
+  // 公開HTML側からは出さない（出すと二重になる）
+  const exporter = code('lib/html-export.ts');
+  assert.match(exporter, /const laruSeoScript = '';/, '公開HTMLがまだ出している');
 });
 
 test('編集画面が、食い違いを黙って通さない', () => {

@@ -489,7 +489,21 @@ function StudioInner() {
     name: '', pages: [], settings: {
       colorScheme: 'professional-blue', designStyle: 'modern', fontFamily: 'noto',
       accentColor: '#2563eb', heroLayout: 'center', headerStyle: 'solid', animLevel: 'subtle',
-      larubot: false, laruseo: false, notifyEmail: '', gaTrackingId: '', customCss: '',
+      /*
+        売っている機能を、既定で切らない。
+
+        ここが false のまま新規作成のPOSTに乗るので、DBの既定値
+        （supabase/schema.sql の "larubot":true,"laruseo":true）が上書きされる。
+        公開HTMLの判定は `settings.laruseo && blogId` なので、
+        識別子が正しく入っていても**ブログの設置タグが1つも出ない。**
+
+        しかも未連携のお知らせ（ダッシュボード）は laruseo が真のときだけ出る。
+        **まさにこの状態では、警告すら出ない。**
+
+        プランには「毎週AIがSEO記事を自動公開」と書いて売っている。
+        既定は入り、使わない人が切る。逆にしてはいけない。
+      */
+      larubot: true, laruseo: true, notifyEmail: '', gaTrackingId: '', customCss: '',
       design: { ...DEFAULT_DESIGN }, designPreset: '',
     },
   }));

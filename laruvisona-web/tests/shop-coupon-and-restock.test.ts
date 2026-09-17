@@ -73,7 +73,27 @@ test('何をいくつ買ったかを、注文に残す', () => {
   // items には名前と数量しか無く、**商品のIDが入っていない。**
   // だから「どの商品の在庫を戻すか」が特定できなかった。
   const webhook = read('lib/shop-webhook.ts');
-  assert.match(webhook, /stripe_payment_intent_id: intentId,\s*cart,/, 'cart を残していない');
+  assert.match(webhook, /update\(\{ cart \}\)/, 'cart を残していない');
+});
+
+test('cart を残す更新は、注文の確定とは分ける', () => {
+  /*
+    この列はSQLを実行するまで存在しない。PostgREST は存在しない列を含む
+    更新を**丸ごと**失敗させるので、必須の更新に混ぜると
+    **SQLを実行するまで注文そのものが確定しなくなる。**
+    課金されたのに注文が無い、という直したばかりの状態に戻る。
+
+    これは既存の見張り（tests/schema-drift.test.ts）が見つけてくれた。
+    「DBに無い列を読んでいる」と名指しされて、初めて気づいた。
+  */
+  const webhook = read('lib/shop-webhook.ts');
+  // 必須の更新に cart を混ぜていないこと
+  const at = webhook.indexOf('const linked = await db.from');
+  assert.ok(at > 0);
+  assert.doesNotMatch(webhook.slice(at, at + 260), /cart/, '必須の更新に混ざっている');
+  // 失敗しても注文は通す。ただし黙らない
+  assert.match(webhook, /if \(cartSaved\.error\) \{\s*console\.error/);
+  assert.doesNotMatch(webhook, /cartSaved\.error[\s\S]{0,80}throw/, '注文を落としている');
 });
 
 test('返金・キャンセルのあと、在庫を戻しに行く', () => {

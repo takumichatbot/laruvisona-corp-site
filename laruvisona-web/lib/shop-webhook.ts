@@ -80,9 +80,26 @@ export async function commitShopCheckout(
   const linked = await db.from('hp_orders').update({
     stripe_account_id: accountId,
     stripe_payment_intent_id: intentId,
-    cart,
   }).eq('id', result.id).eq('site_id', siteId).select('id');
   if (linked.error || !linked.data || linked.data.length !== 1) throw new Error('shop_database');
+
+  /*
+    何をいくつ買ったかを残す。**注文の確定とは分ける。**
+
+    items には名前と数量しか無く、商品のIDが入っていない。だから返金時に
+    「どの商品の在庫を戻すか」が特定できなかった（supabase/hp_orders_restock.sql）。
+
+    ただし、この列はSQLを実行するまで存在しない。PostgREST は存在しない列を
+    含む更新を**丸ごと**失敗させるので、上の必須の更新に混ぜると
+    **SQLを実行するまで注文そのものが確定しなくなる。** 課金されたのに
+    注文が無い、という直したばかりの状態に戻る。
+
+    だから別の更新にして、失敗しても注文は通す。ただし黙らない。
+  */
+  const cartSaved = await db.from('hp_orders').update({ cart }).eq('id', result.id).eq('site_id', siteId).select('id');
+  if (cartSaved.error) {
+    console.error('[shop] cart not recorded (refund cannot restore stock):', result.id, cartSaved.error.message);
+  }
   // 注文は既に確定している。通知失敗でStripeへ失敗を返さず、DBキューから再送する。
   // 重複Webhookでも未通知なら同じ冪等キーで再試行できる。
   try { await deliverShopOrderNotification(result.id, db); }

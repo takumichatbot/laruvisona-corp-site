@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { canonicalBase, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 import { buildJsonLd, type BusinessInfo } from '@/lib/site-jsonld';
+import { chatPublicId, blogPublicId } from '@/lib/larubot-public-id';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
 import { applyTranslationToHtml, isTranslationLocale, translationFor, TRANSLATION_LOCALES } from '@/lib/translate-apply';
@@ -116,12 +117,33 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
   const settings = (site.settings_json ?? {}) as {
     larubotPublicId?: string;
     laruseoPublicId?: string;
+    larubot?: boolean;
+    laruseo?: boolean;
     gaTrackingId?: string;
     clarityId?: string;
     popups?: Array<{ enabled: boolean }>;
     businessInfo?: BusinessInfo;
   };
-  const { larubotPublicId, laruseoPublicId, gaTrackingId, clarityId } = settings;
+  const { gaTrackingId, clarityId } = settings;
+  /*
+    チャットとブログの設置タグは、**ここだけが出す。**
+
+    以前は、公開HTML（lib/html-export.ts が焼き込む）とここの両方が
+    出していた。公開HTMLの中の script は配信時に本物へ作り直して実行される
+    （components/PublishedSite.tsx）ので、**両方が動いていた。**
+      ・ブログの記事一覧が二重に描かれる
+      ・チャットの窓が二重に立ち上がりうる
+
+    判定も食い違っていた。あちらは
+      ・chatPublicId / blogPublicId（片方が空なら、もう片方から補う）
+      ・settings.larubot / settings.laruseo の入切を見る
+    こちらは生の laruseoPublicId だけを見ていたので、
+      ・チャットの識別子しか入っていない人には**何も出ない**
+      ・LARUSEOを「切」にしても、識別子があれば**出し続ける**
+    同じ規則に揃える。
+  */
+  const chatId = settings.larubot === false ? '' : chatPublicId(settings);
+  const blogId = settings.laruseo === false ? '' : blogPublicId(settings);
   const hasActivePopup = (settings.popups || []).some(p => p.enabled);
 
   // 署名鍵が用意できないときは、計測だけ諦める（顧客の公開サイトは出す）。
@@ -149,7 +171,20 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
     : site.published_html;
 
   // Ensure the first <img> in the page is eager-loaded (improves LCP)
-  const eagerHtml = localizedHtml.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
+  /*
+    公開済みのHTMLに焼き込まれている古い設置タグを、配信時に落とす。
+
+    この直しより前に公開した人のHTMLには、まだ焼き込みが入っている。
+    上で出すぶんと合わせて二重に動くので、そこだけ取り除く
+    （larubot の2本だけを名指しする。他の script には触らない）。
+    公開し直せば焼き込み自体が無くなるが、それを待たない。
+  */
+  const withoutBakedEmbeds = localizedHtml.replace(
+    /<script[^>]*src="https:\/\/larubot\.tokyo\/(?:static\/embed|embed\/blog)\.js"[^>]*><\/script>/g,
+    '',
+  );
+
+  const eagerHtml = withoutBakedEmbeds.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
 
   /*
     businessInfo が無くても出す。
@@ -175,11 +210,11 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
       {clarityId && (
         <script dangerouslySetInnerHTML={{ __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script",${jsonForScript(safeToken(clarityId))})` }} />
       )}
-      {larubotPublicId && (
-        <script src="https://larubot.tokyo/static/embed.js" data-public-id={larubotPublicId} defer />
+      {chatId && (
+        <script src="https://larubot.tokyo/static/embed.js" data-public-id={chatId} defer />
       )}
-      {laruseoPublicId && (
-        <script src="https://larubot.tokyo/embed/blog.js" data-id={laruseoPublicId} data-limit="6" defer />
+      {blogId && (
+        <script src="https://larubot.tokyo/embed/blog.js" data-id={blogId} data-limit="6" defer />
       )}
       {/* Signed first-party pageview and heatmap tracking.
           署名鍵が無い・短いときは analytics_unavailable を投げる作りなので、

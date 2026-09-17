@@ -79,5 +79,54 @@ export async function POST(req: Request) {
     }, { status: 403 });
   }
   if (!outcome.ok || !outcome.site) return NextResponse.json({ error: 'サイトを作成できませんでした' }, { status: 503 });
+
+  /*
+    契約のときに預かった LARUbot / LARUSEO の識別子を、このサイトへ移す。
+
+    料金ページから契約した人は、契約の時点でまだサイトが無い。
+    そのとき発行された public_id は、以前は**どこにも残らず消えていた**
+    （lib/larubot-provision.ts に経緯を書いた）。識別子が無いと埋め込みタグが
+    出ないので、「毎週AIがSEO記事を自動公開」が契約した日から動かない。
+
+    移せなくてもサイトの作成は成功として返す。サイトはもう出来ているので、
+    ここで失敗を返すと「作れなかった」と思わせるほうの混乱になる。
+    ただし**黙らない。**
+  */
+  const created = outcome.site as { id?: string };
+  if (created.id) {
+    try {
+      const svc = createServiceClient();
+      const held = await svc.from('profiles')
+        .select('pending_larubot_public_id, pending_laruseo_public_id').eq('id', user.id).maybeSingle();
+      /*
+        列がまだ無いと、PostgREST はこの問い合わせを**丸ごと**失敗させる。
+        例外ではなく error が返るので、見ないと黙って「預けた分は無い」に
+        なってしまう。まさに直している型の失敗なので、ここで見る。
+        （supabase/profiles_pending_larubot.sql を実行する）
+      */
+      if (held.error) {
+        console.error('[larubot] held public ids could not be read:', user.id, held.error.message);
+      }
+      const bot = held.data?.pending_larubot_public_id as string | null | undefined;
+      const seoId = held.data?.pending_laruseo_public_id as string | null | undefined;
+      if (bot || seoId) {
+        await svc.from('sites').update({
+          settings_json: {
+            ...(input.settings as Record<string, unknown>),
+            ...(bot ? { larubotPublicId: bot, larubot: true } : {}),
+            ...(seoId ? { laruseoPublicId: seoId, laruseo: true } : {}),
+          },
+        }).eq('id', created.id).eq('user_id', user.id);
+        // 移したら空にする。残すと2件目のサイトにも同じ識別子が入る。
+        await svc.from('profiles')
+          .update({ pending_larubot_public_id: null, pending_laruseo_public_id: null })
+          .eq('id', user.id);
+      }
+    } catch (e) {
+      // 列がまだ無い場合もここに来る（supabase/profiles_pending_larubot.sql を実行する）
+      console.error('[larubot] held public ids not applied to new site:', created.id, (e as Error)?.message);
+    }
+  }
+
   return NextResponse.json({ site: outcome.site }, { status: 201 });
 }

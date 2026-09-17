@@ -1,5 +1,4 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
-import { blogPublicId, chatPublicId } from './larubot-public-id';
 import { autoDescription } from './auto-description';
 import { designCss } from '@/lib/site-design';
 import { COMPOSITION_CSS } from '@/lib/composition-css';
@@ -2070,20 +2069,24 @@ window.addEventListener('popstate',function(){
     ここで焼き込むと、公開し直すまで古いままになる。
   */
 
-  // チャットとLARUSEOは、LARUbot 側では同じ public_id を指す（2026-09-17の回答）。
-  // 片方しか入っていなくても、もう片方から補う。
-  // 別々に持たせていたせいで、LARUSEO欄が空のままブログの設置タグが
-  // 出力されず、記事が0件になる状態が起こりえた。
-  const chatId = chatPublicId(settings);
-  const blogId = blogPublicId(settings);
+  /*
+    チャットとブログの設置タグは、**ここでは出さない。**
 
-  const laruBotScript = (settings.larubot && chatId)
-    ? `<script src="https://larubot.tokyo/static/embed.js" data-public-id="${escapeHtml(safeToken(chatId))}" defer></script>`
-    : '';
+    配信するページ（app/hp/[slug]/page.tsx）も同じタグを出していた。
+    公開HTMLの中の script は、配信時に本物へ作り直して実行される
+    （components/PublishedSite.tsx）。つまり**両方が動いていた。**
+      ・ブログの記事一覧が二重に描かれる
+      ・チャットの窓が二重に立ち上がりうる
 
-  const laruSeoScript = (settings.laruseo && blogId)
-    ? `<script src="https://larubot.tokyo/embed/blog.js" data-id="${escapeHtml(safeToken(blogId))}" data-limit="6" defer></script>`
-    : '';
+    さらに、ここで焼き込むと識別子が古いままになる。
+    契約したあとに識別子が入っても、**自分で「公開」を押し直すまで
+    タグが入らない。** その案内はどこにも出ていなかった。
+
+    配信するページ側だけにした。あちらは保存されている値をそのつど読むので、
+    識別子が入った次の表示から効く。公開し直す必要が無い。
+  */
+  const laruBotScript = '';
+  const laruSeoScript = '';
 
   const gaScript = settings.gaTrackingId ? `
 <script async src="https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(safeToken(settings.gaTrackingId))}"></script>
