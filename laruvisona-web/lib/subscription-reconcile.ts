@@ -50,7 +50,27 @@ export type ProfileBilling = {
   plan?: string | null;
   contract_starts_at?: string | null;
   contract_ends_at?: string | null;
+  admin_notes?: string | null;
 };
+
+/**
+ * 無償で使ってもらっている行の目印。`admin_notes` の先頭に入れる。
+ *
+ * なぜ要るか。
+ * 運営の動作確認用アカウントや、無償で提供している相手は、Stripeに契約が無いまま
+ * `active` になっている。定期の突き合わせは「Stripeに契約が無い active」を
+ * 契約切れとみなして止めるので、**最初の本物の契約が入った瞬間に、
+ * これらがまとめて止まる**（それまではStripeが0件で一斉停止が見送られるため、
+ * 誰も気づかない）。
+ *
+ * 目印を付けた行は止めない。目印は `admin_notes` に残るので、
+ * 管理画面からも「これは売上ではない」と分かる。
+ */
+export const COMP_MARKER = '[無償]';
+
+export function isCompedProfile(profile: ProfileBilling): boolean {
+  return (profile.admin_notes || '').includes(COMP_MARKER);
+}
 
 export function profileStatusFor(stripeStatus: string): string {
   // 知らない状態を勝手に active にしない。分からないときは止める側へ倒す。
@@ -158,6 +178,8 @@ export function isOrphanedActiveProfile(
   liveSubscriptionIds: Set<string>,
 ): boolean {
   if (!ACTIVE_PROFILE_STATUSES.includes(profile.subscription_status ?? '')) return false;
+  // 無償と分かっている行は、Stripeに契約が無くて当たり前なので止めない
+  if (isCompedProfile(profile)) return false;
   if (!profile.stripe_subscription_id) return true;
   return !liveSubscriptionIds.has(profile.stripe_subscription_id);
 }

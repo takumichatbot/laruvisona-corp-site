@@ -7,6 +7,8 @@ import {
   isPlanSubscription,
   customerIdOf,
   isOrphanedActiveProfile,
+  isCompedProfile,
+  COMP_MARKER,
 } from '../lib/subscription-reconcile.ts';
 
 const sub = (over: Record<string, unknown> = {}) => ({
@@ -142,4 +144,39 @@ test('Stripeに契約が1件も無いときは、DB側を一斉に止めない',
   assert.match(route, /stopWithoutStripeSubscriptions/);
   // 空打ちでも本実行でも、同じ判断を通ってから停止処理に入る
   assert.match(route, /\} else if \(complete\) \{/);
+});
+
+test('無償と分かっている行は、契約切れとして止めない', () => {
+  // 2026-09-17: Stripeに契約が0件のあいだは一斉停止が見送られるので、
+  // 手で active にした行はそのまま残る。ところが**最初の本物の契約が入った
+  // 瞬間に一斉停止が動き出し、それらがまとめて止まる**。
+  // 気づけるのは、止まったあとに誰かが使えなくなってから。
+  const live = new Set<string>(['sub_live_1']);
+
+  const comped = {
+    id: 'p1', subscription_status: 'active', stripe_subscription_id: null,
+    admin_notes: `${COMP_MARKER} 運営の動作確認用。Stripeの契約なし（売上ではない）`,
+  };
+  assert.equal(isCompedProfile(comped), true);
+  assert.equal(isOrphanedActiveProfile(comped, live), false, '無償の行を止めている');
+
+  // 目印が無ければ、これまでどおり止める（ここを緩めると、解約済みが使い続けられる）
+  const orphan = { id: 'p2', subscription_status: 'active', stripe_subscription_id: null, admin_notes: '通常の顧客' };
+  assert.equal(isOrphanedActiveProfile(orphan, live), true);
+  const stale = { id: 'p3', subscription_status: 'active', stripe_subscription_id: 'sub_gone', admin_notes: null };
+  assert.equal(isOrphanedActiveProfile(stale, live), true);
+
+  // 目印があっても、そもそも active でなければ対象外
+  assert.equal(isOrphanedActiveProfile({ id: 'p4', subscription_status: 'canceled', admin_notes: comped.admin_notes }, live), false);
+
+  // 生きている契約を持つ行は、目印の有無にかかわらず止めない
+  assert.equal(isOrphanedActiveProfile({ id: 'p5', subscription_status: 'active', stripe_subscription_id: 'sub_live_1' }, live), false);
+});
+
+test('定期処理が、目印の列を読みに行っている', () => {
+  // select に admin_notes が無いと、目印はいつも空に見えて全部止まる
+  const src = readFileSync(new URL('../app/api/cron/subscription-sync/route.ts', import.meta.url), 'utf8');
+  const stopSelect = src.slice(src.indexOf('ACTIVE_PROFILE_STATUSES'));
+  assert.match(src, /contract_ends_at, admin_notes'/, '停止判定の select に admin_notes が無い');
+  assert.ok(stopSelect.length > 0);
 });

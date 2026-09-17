@@ -100,7 +100,7 @@ async function run(dryRun: boolean, force = false) {
     const chunk = customerIds.slice(i, i + PAGE);
     const { data, error } = await db
       .from('profiles')
-      .select('id, stripe_customer_id, stripe_subscription_id, subscription_status, plan, contract_starts_at, contract_ends_at')
+      .select('id, stripe_customer_id, stripe_subscription_id, subscription_status, plan, contract_starts_at, contract_ends_at, admin_notes')
       .in('stripe_customer_id', chunk);
     if (error) return NextResponse.json({ error: '契約情報を読み取れませんでした' }, { status: 503 });
     for (const row of (data || []) as ProfileBilling[]) {
