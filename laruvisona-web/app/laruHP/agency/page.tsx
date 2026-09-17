@@ -3,12 +3,13 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import AppShell from '@/components/laruhp/AppShell';
 
 type LarubotPlan = 'lite' | 'starter' | 'pro' | 'laru-cloud';
 
 const LARUBOT_PLANS: { id: LarubotPlan; label: string; desc: string; color: string }[] = [
-  { id: 'lite',       label: 'Lite',       desc: '基本チャット・シンプルなFAQ対応',       color: 'text-slate-300 bg-slate-700 border-slate-600' },
-  { id: 'starter',    label: 'Starter',    desc: 'カスタム対応・基本分析・週次レポート',   color: 'text-blue-300 bg-blue-900/40 border-blue-700' },
+  { id: 'lite',       label: 'Lite',       desc: '基本チャット・シンプルなFAQ対応',       color: 'text-gray-600 bg-gray-100 border-gray-300' },
+  { id: 'starter',    label: 'Starter',    desc: 'カスタム対応・基本分析・週次レポート',   color: 'text-sky-700 bg-sky-50 border-sky-200' },
   { id: 'pro',        label: 'Pro',        desc: '高度な分析・優先サポート・多言語対応',   color: 'text-purple-300 bg-purple-900/40 border-purple-700' },
   { id: 'laru-cloud', label: 'LARU Cloud', desc: '完全カスタム・専任担当・SLA保証',        color: 'text-amber-300 bg-amber-900/40 border-amber-700' },
 ];
@@ -209,15 +210,15 @@ export default function AgencyPage() {
 
   if (planBlocked) {
     return (
-      <div className="min-h-screen bg-[#030712] text-white flex items-center justify-center px-6">
+      <div className="min-h-screen bg-transparent text-gray-900 flex items-center justify-center px-6">
         <div className="max-w-md text-center">
           <h1 className="text-xl font-bold mb-3">エージェンシー管理は、エージェンシープランの機能です</h1>
-          <p className="text-slate-400 text-sm mb-6">
+          <p className="text-gray-500 text-sm mb-6">
             複数のクライアントサイトを1つのアカウントでまとめて管理する画面です。いまのご契約では開けません。
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/laruHP/plans#agency" className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-sm">プランを見る</Link>
-            <Link href="/laruHP/dashboard" className="border border-white/20 text-slate-300 px-5 py-2.5 rounded-xl text-sm">ダッシュボードへ戻る</Link>
+            <Link href="/laruHP/plans#agency" className="bg-sky-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm">プランを見る</Link>
+            <Link href="/laruHP/dashboard" className="border border-gray-300 text-gray-600 px-5 py-2.5 rounded-xl text-sm">ダッシュボードへ戻る</Link>
           </div>
         </div>
       </div>
@@ -225,73 +226,67 @@ export default function AgencyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white">
-      <div className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-sm sticky top-0 z-10">
+    <AppShell
+      title="エージェンシー管理"
+      lead="預かっているお客様のサイトを、まとめて見ます。"
+      actions={
+        <Link href="/laruHP/studio"
+          className="text-sm px-4 py-2 bg-sky-600 text-white hover:bg-sky-500 rounded-lg font-bold transition-all whitespace-nowrap">
+          + 新規クライアントサイト
+        </Link>
+      }
+    >
       {brandError && (
-        <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-3 text-sm shadow-lg">
+        <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm shadow-lg">
           {brandError}
           <button onClick={() => setBrandError('')} className="ml-3 underline opacity-70">閉じる</button>
         </div>
       )}
-        <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            ダッシュボード
-          </Link>
-          <h1 className="font-bold text-white">エージェンシー管理</h1>
-          <div className="ml-auto flex items-center gap-3">
-            <Link href="/laruHP/studio"
-              className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition-all">
-              + 新規クライアントサイト
-            </Link>
-          </div>
-        </div>
-      </div>
 
       <div className="max-w-screen-xl mx-auto px-4 py-6">
         {/* ホワイトラベル ブランド設定 */}
-        <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 mb-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-sm font-bold text-white">商品 ブランド設定（ホワイトラベル）</h2>
+            <h2 className="text-sm font-bold text-gray-900">商品 ブランド設定（ホワイトラベル）</h2>
           </div>
-          <p className="text-[11px] text-slate-500 mb-4">管理画面のロゴ・屋号・アクセント色をあなたのブランドに差し替えます（agencyプラン）。</p>
+          <p className="text-[11px] text-gray-500 mb-4">管理画面のロゴ・屋号・アクセント色をあなたのブランドに差し替えます（agencyプラン）。</p>
           <div className="grid sm:grid-cols-3 gap-3">
             <label className="block">
-              <span className="text-slate-400 text-[11px] block mb-1">屋号・ブランド名</span>
+              <span className="text-gray-500 text-[11px] block mb-1">屋号・ブランド名</span>
               <input type="text" value={brand.name} onChange={e => setBrand(b => ({ ...b, name: e.target.value }))}
-                placeholder="例：〇〇制作所" className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                placeholder="例：〇〇制作所" className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm" />
             </label>
             <label className="block">
-              <span className="text-slate-400 text-[11px] block mb-1">ロゴ画像URL（任意）</span>
+              <span className="text-gray-500 text-[11px] block mb-1">ロゴ画像URL（任意）</span>
               <input type="text" value={brand.logo} onChange={e => setBrand(b => ({ ...b, logo: e.target.value }))}
-                placeholder="https://.../logo.png" className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
+                placeholder="https://.../logo.png" className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm" />
             </label>
             <label className="block">
-              <span className="text-slate-400 text-[11px] block mb-1">アクセント色</span>
+              <span className="text-gray-500 text-[11px] block mb-1">アクセント色</span>
               <input type="color" value={brand.accent} onChange={e => setBrand(b => ({ ...b, accent: e.target.value }))}
-                className="w-full h-9 rounded-lg cursor-pointer bg-transparent border border-white/20" />
+                className="w-full h-9 rounded-lg cursor-pointer bg-transparent border border-gray-300" />
             </label>
           </div>
           <div className="flex items-center gap-3 mt-4">
             <button onClick={saveBrand} disabled={brandSaving}
-              className="text-sm px-5 py-2 rounded-lg font-bold text-white disabled:opacity-50" style={{ background: brand.accent || '#0369a1' }}>
+              className="text-sm px-5 py-2 rounded-lg font-bold text-gray-900 disabled:opacity-50" style={{ background: brand.accent || '#0369a1' }}>
               {brandSaving ? '保存中...' : 'ブランドを保存'}
             </button>
-            {brandSaved && <span className="text-emerald-400 text-xs">✓ 保存しました（再読み込みで反映）</span>}
+            {brandSaved && <span className="text-emerald-600 text-xs">✓ 保存しました（再読み込みで反映）</span>}
             {brand.logo && <img src={brand.logo} alt="" className="h-7 w-auto ml-auto" />}
           </div>
 
           {/* 管理画面の独自ドメイン */}
-          <div className="mt-5 pt-4 border-t border-white/10">
-            <span className="text-slate-400 text-[11px] block mb-1">管理画面の独自ドメイン（例: admin.あなたの屋号.com）</span>
+          <div className="mt-5 pt-4 border-t border-gray-200">
+            <span className="text-gray-500 text-[11px] block mb-1">管理画面の独自ドメイン（例: admin.あなたの屋号.com）</span>
             <div className="flex gap-2">
               <input type="text" value={adminDomain} onChange={e => setAdminDomain(e.target.value)}
-                placeholder="admin.example.com" className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm" />
-              <button onClick={saveDomain} disabled={domainSaving} className="text-sm px-4 py-2 rounded-lg font-bold bg-white/10 hover:bg-white/20 text-white disabled:opacity-50">{domainSaving ? '保存中...' : '保存'}</button>
+                placeholder="admin.example.com" className="flex-1 bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm" />
+              <button onClick={saveDomain} disabled={domainSaving} className="text-sm px-4 py-2 rounded-lg font-bold bg-gray-100 hover:bg-gray-200 text-gray-900 disabled:opacity-50">{domainSaving ? '保存中...' : '保存'}</button>
             </div>
-            {domainMsg && <p className="text-[11px] text-slate-300 mt-2">{domainMsg}</p>}
-            <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-              保存後、ドメインのDNSに <span className="text-slate-300">CNAME → {(process.env.NEXT_PUBLIC_RENDER_SLUG || 'your-app')}.onrender.com</span> を設定してください。
+            {domainMsg && <p className="text-[11px] text-gray-600 mt-2">{domainMsg}</p>}
+            <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+              保存後、ドメインのDNSに <span className="text-gray-600">CNAME → {(process.env.NEXT_PUBLIC_RENDER_SLUG || 'your-app')}.onrender.com</span> を設定してください。
               <br />確認: Googleログインやメール内リンクは主ドメイン（laruvisona.jp）に飛ぶ仕様です。完全な隠蔽が必要な場合はメール＋パスワードのみでの運用を推奨します。
             </p>
           </div>
@@ -305,40 +300,40 @@ export default function AgencyPage() {
             { label: '総PV', value: totalViews.toLocaleString(), icon: '閲覧' },
             { label: '総問い合わせ', value: totalContacts, icon: '問合' },
           ].map(stat => (
-            <div key={stat.label} className="bg-[#1e293b] border border-white/10 rounded-xl p-4">
+            <div key={stat.label} className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-2xl mb-1">{stat.icon}</div>
-              <div className="text-2xl font-bold text-white">{stat.value}</div>
-              <div className="text-slate-500 text-xs">{stat.label}</div>
+              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+              <div className="text-gray-500 text-xs">{stat.label}</div>
             </div>
           ))}
         </div>
 
         {/* Filters */}
         <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <div className="flex gap-1 bg-white/5 border border-white/10 rounded-lg p-1">
+          <div className="flex gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1">
             {(['all', 'published', 'draft'] as const).map(f => (
               <button key={f} onClick={() => setFilterPublished(f)}
-                className={`text-xs px-3 py-1 rounded-md transition-all ${filterPublished === f ? 'bg-white/20 text-white' : 'text-slate-500 hover:text-white'}`}>
+                className={`text-xs px-3 py-1 rounded-md transition-all ${filterPublished === f ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}>
                 {f === 'all' ? 'すべて' : f === 'published' ? '公開中' : '下書き'}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-slate-500 text-xs">並び替え:</span>
+            <span className="text-gray-500 text-xs">並び替え:</span>
             <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}
               aria-label="並び替え方法を選択"
-              className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-xs text-white outline-none">
+              className="bg-gray-100 border border-gray-300 rounded-lg px-2.5 py-1 text-xs text-gray-900 outline-none">
               <option value="updated">最終更新</option>
               <option value="name">クライアント名</option>
               <option value="views">PV数</option>
               <option value="contacts">問い合わせ数</option>
             </select>
           </div>
-          <span className="text-slate-600 text-xs ml-auto">{sorted.length} サイト</span>
+          <span className="text-gray-400 text-xs ml-auto">{sorted.length} サイト</span>
         </div>
 
         {loading ? (
-          <div className="text-center text-slate-500 py-24">読み込み中...</div>
+          <div className="text-center text-gray-500 py-24">読み込み中...</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sorted.map(site => {
@@ -346,29 +341,29 @@ export default function AgencyPage() {
               const unread = unreadForSite(site.id);
               const clientName = site.data?.clientName;
               return (
-                <div key={site.id} className="bg-[#1e293b] border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all group">
+                <div key={site.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-gray-300 transition-all group">
                   {/* Card header */}
                   <div className="px-5 pt-5 pb-4">
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         {clientName && (
-                          <div className="text-slate-400 text-xs mb-0.5">{clientName}</div>
+                          <div className="text-gray-500 text-xs mb-0.5">{clientName}</div>
                         )}
-                        <div className="font-bold text-white">{site.name}</div>
+                        <div className="font-bold text-gray-900">{site.name}</div>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${site.published ? 'bg-green-900/40 text-green-400 border border-green-500/30' : 'bg-white/5 text-slate-500 border border-white/10'}`}>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${site.published ? 'bg-green-900/40 text-emerald-600 border border-emerald-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
                         {site.published ? '公開中' : '下書き'}
                       </span>
                     </div>
 
                     {/* Stats row */}
-                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span>表示 {(site.view_count || 0).toLocaleString()} PV</span>
-                      <span className={unread > 0 ? 'text-blue-400 font-semibold' : ''}>
+                      <span className={unread > 0 ? 'text-sky-600 font-semibold' : ''}>
                         問合 {siteContacts.length}{unread > 0 ? ` (未読${unread})` : ''}
                       </span>
                       {site.settings_json?.larubot && (
-                        <span className="text-indigo-400 font-medium">
+                        <span className="text-indigo-600 font-medium">
                           AI LARUbot {site.settings_json.larubotPlan ? `(${LARUBOT_PLANS.find(p => p.id === site.settings_json?.larubotPlan)?.label ?? site.settings_json.larubotPlan})` : ''}
                         </span>
                       )}
@@ -380,44 +375,44 @@ export default function AgencyPage() {
                             setCopiedEmbedId(site.id);
                             setTimeout(() => setCopiedEmbedId(null), 2000);
                           }}
-                          className="text-emerald-400 hover:text-emerald-300 text-[10px] underline underline-offset-2 transition-colors"
+                          className="text-emerald-600 hover:text-emerald-700 text-[10px] underline underline-offset-2 transition-colors"
                         >
                           {copiedEmbedId === site.id ? '✓ コピー済み' : '埋め込みコードをコピー'}
                         </button>
                       )}
                     </div>
 
-                    <div className="text-slate-600 text-[11px] mt-1.5">更新 {timeAgo(site.updated_at)}</div>
+                    <div className="text-gray-400 text-[11px] mt-1.5">更新 {timeAgo(site.updated_at)}</div>
                   </div>
 
                   {/* Actions */}
-                  <div className="border-t border-white/5 px-5 py-3 flex items-center gap-2 flex-wrap">
+                  <div className="border-t border-gray-100 px-5 py-3 flex items-center gap-2 flex-wrap">
                     <Link href={`/laruHP/studio?siteId=${site.id}`}
-                      className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all flex items-center gap-1">
+                      className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all flex items-center gap-1">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       編集
                     </Link>
                     {site.published && site.slug && (
                       <a href={`/hp/${site.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all flex items-center gap-1">
+                        className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all flex items-center gap-1">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                         閲覧
                       </a>
                     )}
                     <Link href={`/laruHP/contacts?site=${site.id}`}
-                      className="relative text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all flex items-center gap-1">
+                      className="relative text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all flex items-center gap-1">
                       問合 問い合わせ
                       {unread > 0 && (
-                        <span className="bg-blue-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{unread}</span>
+                        <span className="bg-sky-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{unread}</span>
                       )}
                     </Link>
                     <button
                       onClick={() => { setLarubotTarget(site); setLarubotPlan(site.settings_json?.larubotPlan ?? 'lite'); setLarubotClientEmail(site.data?.clientEmail ?? ''); setLarubotError(''); }}
-                      className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${site.settings_json?.larubot ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-700 hover:bg-indigo-900/60' : 'bg-white/10 hover:bg-white/20 text-slate-400 hover:text-white'}`}>
+                      className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${site.settings_json?.larubot ? 'bg-indigo-900/40 text-indigo-700 border border-indigo-700 hover:bg-indigo-900/60' : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900'}`}>
                       AI {site.settings_json?.larubot ? 'LARUbot変更' : 'LARUbot設定'}
                     </button>
                     <button onClick={() => { setSelected(site); setEditForm({ clientName: site.data?.clientName ?? '', clientEmail: site.data?.clientEmail ?? '', clientPhone: site.data?.clientPhone ?? '', clientNote: site.data?.clientNote ?? '' }); setEditMode(false); }}
-                      className="text-xs px-3 py-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all ml-auto">
+                      className="text-xs px-3 py-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all ml-auto">
                       詳細 →
                     </button>
                   </div>
@@ -430,13 +425,13 @@ export default function AgencyPage() {
 
       {/* LARUbot plan modal */}
       {larubotTarget && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setLarubotTarget(null)}>
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setLarubotTarget(null)}>
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold text-white">LARUbot プラン設定</h2>
-              <button onClick={() => setLarubotTarget(null)} aria-label="LARUbotプラン設定を閉じる" className="text-slate-400 hover:text-white text-xl">×</button>
+              <h2 className="font-bold text-gray-900">LARUbot プラン設定</h2>
+              <button onClick={() => setLarubotTarget(null)} aria-label="LARUbotプラン設定を閉じる" className="text-gray-500 hover:text-gray-900 text-xl">×</button>
             </div>
-            <p className="text-slate-400 text-xs mb-5">
+            <p className="text-gray-500 text-xs mb-5">
               {larubotTarget.data?.clientName || larubotTarget.name} に適用するLARUbotのプランを選択してください。
             </p>
             <div className="space-y-2 mb-5">
@@ -446,30 +441,30 @@ export default function AgencyPage() {
                   onClick={() => setLarubotPlan(p.id)}
                   aria-pressed={larubotPlan === p.id}
                   aria-label={`${p.label}: ${p.desc}`}
-                  className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3 transition-all text-left ${larubotPlan === p.id ? p.color + ' border-opacity-100' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                  className={`w-full flex items-center gap-3 border rounded-xl px-4 py-3 transition-all text-left ${larubotPlan === p.id ? p.color + ' border-opacity-100' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
                 >
-                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${larubotPlan === p.id ? 'border-current' : 'border-slate-600'}`}>
+                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${larubotPlan === p.id ? 'border-current' : 'border-gray-300'}`}>
                     {larubotPlan === p.id && <div className="w-2 h-2 rounded-full bg-current" />}
                   </div>
                   <div>
-                    <div className="font-semibold text-sm text-white">{p.label}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{p.desc}</div>
+                    <div className="font-semibold text-sm text-gray-900">{p.label}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{p.desc}</div>
                   </div>
                 </button>
               ))}
             </div>
             <div className="mb-4">
-              <label className="text-slate-400 text-xs block mb-1.5">クライアントのメールアドレス <span className="text-slate-500">（ログイン招待メールを送信）</span></label>
+              <label className="text-gray-500 text-xs block mb-1.5">クライアントのメールアドレス <span className="text-gray-500">（ログイン招待メールを送信）</span></label>
               <input
                 type="email"
                 value={larubotClientEmail}
                 onChange={e => setLarubotClientEmail(e.target.value)}
                 placeholder="client@example.com"
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
+                className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none focus:border-indigo-500 transition-colors placeholder-gray-400"
               />
-              <p className="text-slate-500 text-[11px] mt-1">入力するとクライアントにパスワード設定メールが届きます</p>
+              <p className="text-gray-500 text-[11px] mt-1">入力するとクライアントにパスワード設定メールが届きます</p>
             </div>
-            {larubotError && <p className="text-red-400 text-xs mb-3">{larubotError}</p>}
+            {larubotError && <p className="text-red-600 text-xs mb-3">{larubotError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={setupLarubot}
@@ -479,7 +474,7 @@ export default function AgencyPage() {
                 {larubotLoading ? '設定中...' : '設定する'}
               </button>
               <button onClick={() => setLarubotTarget(null)}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-sm transition-all">
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 py-2.5 rounded-xl text-sm transition-all">
                 キャンセル
               </button>
             </div>
@@ -489,50 +484,50 @@ export default function AgencyPage() {
 
       {/* Detail / edit modal */}
       {selected && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                {selected.data?.clientName && <div className="text-slate-400 text-xs">{selected.data.clientName}</div>}
-                <h2 className="font-bold text-white text-lg">{selected.name}</h2>
+                {selected.data?.clientName && <div className="text-gray-500 text-xs">{selected.data.clientName}</div>}
+                <h2 className="font-bold text-gray-900 text-lg">{selected.name}</h2>
               </div>
-              <button onClick={() => setSelected(null)} aria-label="サイト詳細を閉じる" className="text-slate-400 hover:text-white text-xl">×</button>
+              <button onClick={() => setSelected(null)} aria-label="サイト詳細を閉じる" className="text-gray-500 hover:text-gray-900 text-xl">×</button>
             </div>
 
             {editMode ? (
               <div className="space-y-3 mb-4">
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">クライアント名</label>
+                  <label className="text-gray-500 text-xs block mb-1">クライアント名</label>
                   <input type="text" value={editForm.clientName} onChange={e => setEditForm(f => ({ ...f, clientName: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none"
                     placeholder="例：山田商店" />
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">クライアントメール</label>
+                  <label className="text-gray-500 text-xs block mb-1">クライアントメール</label>
                   <input type="email" value={editForm.clientEmail} onChange={e => setEditForm(f => ({ ...f, clientEmail: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none"
                     placeholder="client@example.com" />
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">電話番号</label>
+                  <label className="text-gray-500 text-xs block mb-1">電話番号</label>
                   <input type="tel" value={editForm.clientPhone} onChange={e => setEditForm(f => ({ ...f, clientPhone: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none"
                     placeholder="090-0000-0000" />
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">メモ</label>
+                  <label className="text-gray-500 text-xs block mb-1">メモ</label>
                   <textarea value={editForm.clientNote} onChange={e => setEditForm(f => ({ ...f, clientNote: e.target.value }))}
                     rows={3}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none resize-none"
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none resize-none"
                     placeholder="契約内容、特記事項など" />
                 </div>
                 <div className="flex gap-2">
                   <button onClick={saveClientInfo} disabled={saving}
-                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                     {saving ? '保存中...' : '保存'}
                   </button>
                   <button onClick={() => setEditMode(false)}
-                    className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-sm transition-all">
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 py-2.5 rounded-xl text-sm transition-all">
                     キャンセル
                   </button>
                 </div>
@@ -548,33 +543,33 @@ export default function AgencyPage() {
                   { label: '作成日', value: new Date(selected.created_at).toLocaleDateString('ja-JP') },
                 ].map(row => (
                   <div key={row.label} className="flex gap-2">
-                    <span className="text-slate-500 w-28 flex-shrink-0">{row.label}</span>
+                    <span className="text-gray-500 w-28 flex-shrink-0">{row.label}</span>
                     {row.link ? (
-                      <a href={row.link} className="text-blue-400 hover:underline">{row.value}</a>
+                      <a href={row.link} className="text-sky-600 hover:underline">{row.value}</a>
                     ) : (
-                      <span className="text-slate-300">{row.value}</span>
+                      <span className="text-gray-600">{row.value}</span>
                     )}
                   </div>
                 ))}
                 {selected.data?.clientNote && (
                   <div className="flex gap-2">
-                    <span className="text-slate-500 w-28 flex-shrink-0">メモ</span>
-                    <span className="text-slate-300 flex-1 whitespace-pre-wrap text-xs">{selected.data.clientNote}</span>
+                    <span className="text-gray-500 w-28 flex-shrink-0">メモ</span>
+                    <span className="text-gray-600 flex-1 whitespace-pre-wrap text-xs">{selected.data.clientNote}</span>
                   </div>
                 )}
                 <button onClick={() => setEditMode(true)}
-                  className="text-xs text-blue-400 hover:text-blue-300 mt-1">クライアント情報を編集 →</button>
+                  className="text-xs text-sky-600 hover:text-sky-700 mt-1">クライアント情報を編集 →</button>
               </div>
             )}
 
             {!editMode && (
-              <div className="border-t border-white/10 pt-4 flex gap-2 flex-wrap">
+              <div className="border-t border-gray-200 pt-4 flex gap-2 flex-wrap">
                 <Link href={`/laruHP/studio?siteId=${selected.id}`}
-                  className="flex-1 text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
+                  className="flex-1 text-center bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
                   サイトを編集
                 </Link>
                 <Link href={`/laruHP/contacts?site=${selected.id}`}
-                  className="flex-1 text-center bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-sm transition-all">
+                  className="flex-1 text-center bg-gray-100 hover:bg-gray-200 text-gray-900 py-2.5 rounded-xl text-sm transition-all">
                   問い合わせ確認
                 </Link>
               </div>
@@ -585,30 +580,30 @@ export default function AgencyPage() {
 
       {/* ── Affiliate / Referral Section ── */}
       {refStats && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 border-t border-white/[0.07]">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">紹介プログラム</h2>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 border-t border-gray-200">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">紹介プログラム</h2>
 
           {/* KPI row */}
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-white">{refStats.total}</div>
-              <div className="text-xs text-slate-500 mt-0.5">紹介した人数</div>
+            <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-gray-900">{refStats.total}</div>
+              <div className="text-xs text-gray-500 mt-0.5">紹介した人数</div>
             </div>
-            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-green-400">{refStats.active}</div>
-              <div className="text-xs text-slate-500 mt-0.5">現在の有効契約</div>
+            <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-emerald-600">{refStats.active}</div>
+              <div className="text-xs text-gray-500 mt-0.5">現在の有効契約</div>
             </div>
-            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-sky-400">¥{refStats.totalCommissionMonthly.toLocaleString()}</div>
-              <div className="text-xs text-slate-500 mt-0.5">月間コミッション（20%）</div>
+            <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-sky-600">¥{refStats.totalCommissionMonthly.toLocaleString()}</div>
+              <div className="text-xs text-gray-500 mt-0.5">月間コミッション（20%）</div>
             </div>
           </div>
 
           {/* Referral link */}
-          <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 mb-6">
-            <div className="text-xs font-bold text-slate-400 mb-2">あなたの紹介リンク</div>
+          <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 mb-6">
+            <div className="text-xs font-bold text-gray-500 mb-2">あなたの紹介リンク</div>
             <div className="flex items-center gap-3">
-              <div className="flex-1 bg-white/[0.05] border border-white/[0.07] rounded-lg px-3 py-2 font-mono text-xs text-slate-300 truncate">
+              <div className="flex-1 bg-white/[0.05] border border-gray-200 rounded-lg px-3 py-2 font-mono text-xs text-gray-600 truncate">
                 {refStats.referralUrl}
               </div>
               <button
@@ -622,15 +617,15 @@ export default function AgencyPage() {
                 {refCopied ? '✓ コピー' : 'コピー'}
               </button>
             </div>
-            <p className="text-[10px] text-slate-600 mt-2">
+            <p className="text-[10px] text-gray-400 mt-2">
               このリンクから登録した方が契約すると、月額の20%をクレジットとして毎月還元します。
             </p>
           </div>
 
           {/* Referral list */}
           {refStats.referrals.length > 0 && (
-            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl overflow-hidden">
-              <div className="grid grid-cols-4 px-4 py-2.5 bg-white/[0.03] border-b border-white/[0.07] text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="bg-gray-100 border border-gray-200 rounded-xl overflow-hidden">
+              <div className="grid grid-cols-4 px-4 py-2.5 bg-white/[0.03] border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                 <span>ID</span>
                 <span>プラン</span>
                 <span>ステータス</span>
@@ -638,12 +633,12 @@ export default function AgencyPage() {
               </div>
               {refStats.referrals.map(r => (
                 <div key={r.id} className="grid grid-cols-4 px-4 py-3 border-b border-white/[0.05] last:border-0">
-                  <span className="font-mono text-xs text-slate-400">{r.id}…</span>
-                  <span className="text-xs text-slate-300">{r.plan || 'hp'}</span>
-                  <span className={`text-xs font-semibold ${r.status === 'active' ? 'text-green-400' : 'text-slate-500'}`}>
+                  <span className="font-mono text-xs text-gray-500">{r.id}…</span>
+                  <span className="text-xs text-gray-600">{r.plan || 'hp'}</span>
+                  <span className={`text-xs font-semibold ${r.status === 'active' ? 'text-emerald-600' : 'text-gray-500'}`}>
                     {r.status === 'active' ? '契約中' : '未契約'}
                   </span>
-                  <span className={`text-xs font-bold text-right ${r.status === 'active' ? 'text-sky-400' : 'text-slate-600'}`}>
+                  <span className={`text-xs font-bold text-right ${r.status === 'active' ? 'text-sky-600' : 'text-gray-400'}`}>
                     {r.status === 'active' ? `¥${r.commission.toLocaleString()}` : '—'}
                   </span>
                 </div>
@@ -652,12 +647,12 @@ export default function AgencyPage() {
           )}
 
           {refStats.referrals.length === 0 && (
-            <div className="text-center py-8 text-slate-600 text-sm">
+            <div className="text-center py-8 text-gray-400 text-sm">
               まだ紹介実績がありません。リンクをSNSや名刺に掲載しましょう。
             </div>
           )}
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

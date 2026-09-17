@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Globe2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface Slot {
   id: string;
@@ -170,38 +171,53 @@ export default function BookingPage() {
   // 読み込み完了まで（エラー時も無限ローディングにしない）
   if (!loaded) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
-        <div className="text-slate-500 text-sm">読み込み中...</div>
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <div className="text-gray-500 text-sm">読み込み中...</div>
       </div>
     );
   }
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <p className="text-red-300 text-sm font-semibold mb-3">読み込みに失敗しました</p>
-          <p className="text-slate-500 text-xs mb-4 break-all">{loadError}</p>
-          <button onClick={() => { setLoadError(''); setLoaded(false); load(); }} className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg">再読み込み</button>
+          <p className="text-red-600 text-sm font-semibold mb-3">読み込みに失敗しました</p>
+          <p className="text-gray-500 text-xs mb-4 break-all">{loadError}</p>
+          <button onClick={() => { setLoadError(''); setLoaded(false); load(); }} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2 rounded-lg">再読み込み</button>
         </div>
       </div>
     );
   }
   if (sites.length === 0) {
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <p className="text-slate-300 text-sm font-semibold mb-2">サイトがありません</p>
-          <p className="text-slate-500 text-xs mb-4">先にビルダーでサイトを作成・公開してください。</p>
-          <Link href="/laruHP/dashboard" className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg">ダッシュボードへ</Link>
+          <p className="text-gray-600 text-sm font-semibold mb-2">サイトがありません</p>
+          <p className="text-gray-500 text-xs mb-4">先にビルダーでサイトを作成・公開してください。</p>
+          <Link href="/laruHP/dashboard" className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2 rounded-lg">ダッシュボードへ</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white">
+    <AppShell
+      title="予約枠管理"
+      lead="お客様が選べる日時を、ここで決めます。"
+      actions={
+        <>
+          {saving && <span className="text-gray-500 text-xs">保存中…</span>}
+          <select value={siteId} onChange={e => setSiteId(e.target.value)}
+            className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 outline-none">
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </>
+      }
+    >
+      <p className="mb-5 text-sm">
+        <Link href="/laruHP/booking/schedule" className="text-sky-700 underline">担当者・設備の本格予約はこちら</Link>
+      </p>
       {saveError && (
-        <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 shadow-lg">
+        <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-lg">
           {saveError}
           <button onClick={() => setSaveError('')} className="ml-3 underline opacity-70">閉じる</button>
         </div>
@@ -211,39 +227,22 @@ export default function BookingPage() {
         {newBooking ? `${newBooking.name}さんから予約が届きました` : ''}
       </div>
       {newBooking && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 bg-[#1e293b] border border-blue-500/30 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-2xl">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 bg-white border border-sky-200 text-gray-900 text-sm font-medium px-4 py-3 rounded-xl shadow-2xl">
           <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0" />
           {newBooking.name}さんから予約が届きました
-          <button onClick={() => setNewBooking(null)} aria-label="通知を閉じる" className="ml-2 text-slate-400 hover:text-white text-base leading-none">×</button>
+          <button onClick={() => setNewBooking(null)} aria-label="通知を閉じる" className="ml-2 text-gray-500 hover:text-gray-900 text-base leading-none">×</button>
         </div>
       )}
-      <div className="border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            ダッシュボード
-          </Link>
-          <Link href="/laruHP/booking/schedule" className="text-sm text-sky-700 underline">担当者・設備の本格予約へ</Link>
-        <h1 className="font-bold text-white">予約枠管理</h1>
-          {saving && <span className="text-slate-500 text-xs">保存中...</span>}
-          <div className="ml-auto flex items-center gap-3">
-            <select value={siteId} onChange={e => setSiteId(e.target.value)}
-              className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
-              {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
 
       <div className="max-w-screen-xl mx-auto px-4 py-6 flex flex-wrap gap-6">
         {/* Main: slot list */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-4">
-            <h2 className="font-semibold text-white">予約枠一覧</h2>
-            <span className="text-slate-500 text-sm">{upcoming.length}件（今後）</span>
+            <h2 className="font-semibold text-gray-900">予約枠一覧</h2>
+            <span className="text-gray-500 text-sm">{upcoming.length}件（今後）</span>
             <div className="ml-auto flex gap-2">
               <button onClick={() => setShowAdd(v => !v)}
-                className="text-sm px-4 py-2.5 min-h-[44px] bg-blue-600 hover:bg-blue-500 rounded-lg font-bold transition-all flex items-center gap-1.5">
+                className="text-sm px-4 py-2.5 min-h-[44px] bg-sky-600 hover:bg-sky-500 rounded-lg font-bold transition-all flex items-center gap-1.5">
                 + 枠を追加
               </button>
               <BulkAddButton onAdd={addBulk} />
@@ -251,35 +250,35 @@ export default function BookingPage() {
           </div>
 
           {showAdd && (
-            <div className="bg-[#1e293b] border border-white/10 rounded-xl p-4 mb-4">
-              <div className="text-sm font-semibold mb-3 text-white">新しい予約枠</div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
+              <div className="text-sm font-semibold mb-3 text-gray-900">新しい予約枠</div>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label htmlFor="slot-date" className="text-slate-400 text-xs block mb-1">日付</label>
+                  <label htmlFor="slot-date" className="text-gray-500 text-xs block mb-1">日付</label>
                   <input id="slot-date" type="date" value={newSlot.date} onChange={e => setNewSlot(v => ({ ...v, date: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
                 </div>
                 <div>
-                  <label htmlFor="slot-time" className="text-slate-400 text-xs block mb-1">時刻</label>
+                  <label htmlFor="slot-time" className="text-gray-500 text-xs block mb-1">時刻</label>
                   <input id="slot-time" type="time" value={newSlot.time} onChange={e => setNewSlot(v => ({ ...v, time: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">所要時間（分）</label>
+                  <label className="text-gray-500 text-xs block mb-1">所要時間（分）</label>
                   <select value={newSlot.duration} onChange={e => setNewSlot(v => ({ ...v, duration: Number(e.target.value) }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none">
                     {[30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d}分</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-slate-400 text-xs block mb-1">ラベル</label>
+                  <label className="text-gray-500 text-xs block mb-1">ラベル</label>
                   <input type="text" value={newSlot.label} onChange={e => setNewSlot(v => ({ ...v, label: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={addSlot} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-bold transition-all">追加</button>
-                <button onClick={() => setShowAdd(false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-all">キャンセル</button>
+                <button onClick={addSlot} className="px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-lg text-sm font-bold transition-all">追加</button>
+                <button onClick={() => setShowAdd(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-all">キャンセル</button>
               </div>
             </div>
           )}
@@ -287,11 +286,11 @@ export default function BookingPage() {
           {/* Upcoming slots */}
           <div className="space-y-2 mb-6">
             {upcoming.length === 0 && (
-              <div className="text-center py-12 border border-dashed border-white/10 rounded-xl flex flex-col items-center gap-3">
+              <div className="text-center py-12 border border-dashed border-gray-200 rounded-xl flex flex-col items-center gap-3">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <div>
-                  <p className="text-slate-400 text-sm font-semibold">予約枠がありません</p>
-                  <p className="text-slate-500 text-xs mt-1">下の「+ 枠を追加」ボタンで予約枠を作成しましょう</p>
+                  <p className="text-gray-500 text-sm font-semibold">予約枠がありません</p>
+                  <p className="text-gray-500 text-xs mt-1">下の「+ 枠を追加」ボタンで予約枠を作成しましょう</p>
                 </div>
               </div>
             )}
@@ -300,19 +299,19 @@ export default function BookingPage() {
               const booking = bookings.find(b => b.extra_fields?.slot_id === slot.id);
               return (
                 <div key={slot.id} className={`flex items-center gap-3 p-4 rounded-xl border transition-all
-                  ${taken ? 'bg-blue-900/20 border-blue-500/30' : slot.available ? 'bg-white/5 border-white/10' : 'bg-white/5 border-white/10 opacity-50'}`}>
-                  <div className="w-3 h-3 rounded-full flex-shrink-0 border border-white/20" style={{ background: taken ? '#3b82f6' : slot.available ? '#22c55e' : '#6b7280' }} title={taken ? '予約済み' : slot.available ? '空き' : '締切'} />
+                  ${taken ? 'bg-sky-50 border-sky-200' : slot.available ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
+                  <div className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300" style={{ background: taken ? '#3b82f6' : slot.available ? '#22c55e' : '#6b7280' }} title={taken ? '予約済み' : slot.available ? '空き' : '締切'} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-white text-sm">{formatDt(slot.datetime)}</span>
+                      <span className="font-semibold text-gray-900 text-sm">{formatDt(slot.datetime)}</span>
                       {formatDtLocal(slot.datetime) && (
-                        <span className="inline-flex items-center gap-1 text-blue-300 text-[10px] bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded-full font-semibold"><Globe2 size={11} aria-hidden="true" />{formatDtLocal(slot.datetime)}</span>
+                        <span className="inline-flex items-center gap-1 text-sky-700 text-[10px] bg-sky-500/15 border border-sky-200 px-1.5 py-0.5 rounded-full font-semibold"><Globe2 size={11} aria-hidden="true" />{formatDtLocal(slot.datetime)}</span>
                       )}
-                      <span className="text-slate-500 text-xs">{slot.duration}分</span>
-                      <span className="text-slate-400 text-xs">{slot.label}</span>
+                      <span className="text-gray-500 text-xs">{slot.duration}分</span>
+                      <span className="text-gray-500 text-xs">{slot.label}</span>
                     </div>
                     {taken && booking && (
-                      <button onClick={() => setDetailBooking(booking)} className="text-blue-400 text-xs hover:underline mt-0.5">
+                      <button onClick={() => setDetailBooking(booking)} className="text-sky-600 text-xs hover:underline mt-0.5">
                         {booking.name} が予約済み →
                       </button>
                     )}
@@ -320,14 +319,14 @@ export default function BookingPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!taken && (
                       <button onClick={() => toggleSlot(slot.id)}
-                        className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all flex items-center gap-1 ${slot.available ? 'border-red-500/40 text-red-400 bg-red-500/10 hover:bg-red-500/20' : 'border-green-500/50 text-green-400 bg-green-500/10 hover:bg-green-900/30'}`}>
+                        className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all flex items-center gap-1 ${slot.available ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-500/20' : 'border-green-500/50 text-emerald-600 bg-emerald-50 hover:bg-green-900/30'}`}>
                         {slot.available ? '✕ 無効化' : '✓ 有効化'}
                       </button>
                     )}
                     {!taken && (
-                      <button onClick={() => deleteSlot(slot.id)} aria-label={`${slot.datetime} の枠を削除`} className="text-red-400/60 hover:text-red-400 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all">✕</button>
+                      <button onClick={() => deleteSlot(slot.id)} aria-label={`${slot.datetime} の枠を削除`} className="text-red-500 hover:text-red-600 min-h-[44px] min-w-[44px] flex items-center justify-center transition-all">✕</button>
                     )}
-                    {taken && <span className="text-xs text-blue-400 font-bold bg-blue-900/30 px-2.5 py-1 rounded-lg border border-blue-500/30">予約済</span>}
+                    {taken && <span className="text-xs text-sky-600 font-bold bg-sky-100 px-2.5 py-1 rounded-lg border border-sky-200">予約済</span>}
                   </div>
                 </div>
               );
@@ -337,7 +336,7 @@ export default function BookingPage() {
           {/* Past slots */}
           {past.length > 0 && (
             <details className="group">
-              <summary className="cursor-pointer text-slate-500 text-sm mb-2 hover:text-slate-400">
+              <summary className="cursor-pointer text-gray-500 text-sm mb-2 hover:text-gray-700">
                 過去の枠 ({past.length}件)
               </summary>
               <div className="space-y-1 mt-2">
@@ -345,11 +344,11 @@ export default function BookingPage() {
                   const taken = takenSlotIds.has(slot.id);
                   const booking = bookings.find(b => b.extra_fields?.slot_id === slot.id);
                   return (
-                    <div key={slot.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/[0.06] opacity-80">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0 border border-white/20" style={{ background: taken ? '#3b82f6' : '#374151' }} title={taken ? '予約済み' : '空き'} />
-                      <span className="text-slate-400 text-sm">{formatDt(slot.datetime)}</span>
-                      <span className="text-slate-600 text-xs">{slot.duration}分</span>
-                      {taken && booking && <span className="text-blue-400/60 text-xs">{booking.name}</span>}
+                    <div key={slot.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white/[0.06] opacity-80">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300" style={{ background: taken ? '#3b82f6' : '#374151' }} title={taken ? '予約済み' : '空き'} />
+                      <span className="text-gray-500 text-sm">{formatDt(slot.datetime)}</span>
+                      <span className="text-gray-400 text-xs">{slot.duration}分</span>
+                      {taken && booking && <span className="text-sky-700 text-xs">{booking.name}</span>}
                     </div>
                   );
                 })}
@@ -361,43 +360,43 @@ export default function BookingPage() {
         {/* Sidebar: settings + bookings */}
         <div className="w-full sm:w-72 flex-shrink-0 space-y-4">
           {/* Settings */}
-          <div className="bg-[#1e293b] border border-white/10 rounded-xl p-4">
-            <div className="font-semibold text-sm mb-3 text-white">設定</div>
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="font-semibold text-sm mb-3 text-gray-900">設定</div>
             <div className="space-y-3">
               <div>
-                <label className="text-slate-400 text-xs block mb-1">バッファー（前後の空き）</label>
+                <label className="text-gray-500 text-xs block mb-1">バッファー（前後の空き）</label>
                 <select value={config.bufferMinutes}
                   onChange={e => { const c = { ...config, bufferMinutes: Number(e.target.value) }; setConfig(c); save(c); }}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                  className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none">
                   {[0, 10, 15, 30, 60].map(m => <option key={m} value={m}>{m}分</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-slate-400 text-xs block mb-1">最大予約可能日数（先）</label>
+                <label className="text-gray-500 text-xs block mb-1">最大予約可能日数（先）</label>
                 <select value={config.maxAdvanceDays}
                   onChange={e => { const c = { ...config, maxAdvanceDays: Number(e.target.value) }; setConfig(c); save(c); }}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                  className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none">
                   {[7, 14, 30, 60, 90].map(d => <option key={d} value={d}>{d}日</option>)}
                 </select>
               </div>
               {/* 店舗ごとの入金先を持つ本格予約へ移行する */}
-              <div className="pt-3 border-t border-white/10">
-                <div className="text-white text-sm font-semibold">事前決済・担当者・設備の管理</div>
-                <p className="text-slate-400 text-[11px] mt-1.5 leading-relaxed">店舗ごとのStripe入金先と、空き枠・担当者・設備をまとめて確認できる新しい予約管理で設定します。</p>
+              <div className="pt-3 border-t border-gray-200">
+                <div className="text-gray-900 text-sm font-semibold">事前決済・担当者・設備の管理</div>
+                <p className="text-gray-500 text-[11px] mt-1.5 leading-relaxed">店舗ごとのStripe入金先と、空き枠・担当者・設備をまとめて確認できる新しい予約管理で設定します。</p>
                 <Link href={`/laruHP/booking/schedule${siteId ? `?siteId=${encodeURIComponent(siteId)}` : ''}`}
                   className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 text-xs font-semibold text-sky-200 hover:bg-sky-400/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300">
                   新しい予約管理を開く
                 </Link>
-                <p className="text-slate-500 text-[11px] mt-2 leading-relaxed">※ 公開サイトで予約を受けるには、ビルダーの<strong className="text-slate-400">「予約フォーム」ブロックを「カレンダー」モード</strong>に設定してください。</p>
+                <p className="text-gray-500 text-[11px] mt-2 leading-relaxed">※ 公開サイトで予約を受けるには、ビルダーの<strong className="text-gray-500">「予約フォーム」ブロックを「カレンダー」モード</strong>に設定してください。</p>
               </div>
             </div>
           </div>
 
           {/* Recent bookings */}
-          <div className="bg-[#1e293b] border border-white/10 rounded-xl p-4">
-            <div className="font-semibold text-sm mb-3 text-white">予約リスト</div>
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="font-semibold text-sm mb-3 text-gray-900">予約リスト</div>
             {bookings.length === 0 ? (
-              <div className="text-slate-500 text-xs text-center py-4">まだ予約はありません</div>
+              <div className="text-gray-500 text-xs text-center py-4">まだ予約はありません</div>
             ) : (
               <div className="space-y-2">
                 {bookings.slice(0, 10).map(b => {
@@ -405,10 +404,10 @@ export default function BookingPage() {
                   const slot = config.slots.find(s => s.id === slotId);
                   return (
                     <button key={b.id} onClick={() => setDetailBooking(b)}
-                      className="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all">
-                      <div className="font-semibold text-white text-sm truncate">{b.name}</div>
-                      {slot && <div className="text-blue-400/80 text-xs">{formatDt(slot.datetime)}</div>}
-                      <div className="text-slate-500 text-xs">{b.email}</div>
+                      className="w-full text-left p-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-all">
+                      <div className="font-semibold text-gray-900 text-sm truncate">{b.name}</div>
+                      {slot && <div className="text-sky-700 text-xs">{formatDt(slot.datetime)}</div>}
+                      <div className="text-gray-500 text-xs">{b.email}</div>
                     </button>
                   );
                 })}
@@ -420,30 +419,30 @@ export default function BookingPage() {
 
       {/* Booking detail modal */}
       {detailBooking && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDetailBooking(null)}>
-          <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDetailBooking(null)}>
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-white">{detailBooking.name}</h2>
-              <button onClick={() => setDetailBooking(null)} aria-label="予約詳細を閉じる" className="text-slate-400 hover:text-white text-xl">×</button>
+              <h2 className="font-bold text-gray-900">{detailBooking.name}</h2>
+              <button onClick={() => setDetailBooking(null)} aria-label="予約詳細を閉じる" className="text-gray-500 hover:text-gray-900 text-xl">×</button>
             </div>
             <div className="space-y-2 text-sm mb-4">
-              <div className="flex gap-2"><span className="text-slate-500 w-20">メール</span><a href={`mailto:${detailBooking.email}`} className="text-blue-400 hover:underline">{detailBooking.email}</a></div>
-              {detailBooking.phone && <div className="flex gap-2"><span className="text-slate-500 w-20">電話</span><span>{detailBooking.phone}</span></div>}
+              <div className="flex gap-2"><span className="text-gray-500 w-20">メール</span><a href={`mailto:${detailBooking.email}`} className="text-sky-600 hover:underline">{detailBooking.email}</a></div>
+              {detailBooking.phone && <div className="flex gap-2"><span className="text-gray-500 w-20">電話</span><span>{detailBooking.phone}</span></div>}
               {detailBooking.extra_fields?.slot_id && (() => {
                 const slot = config.slots.find(s => s.id === detailBooking.extra_fields?.slot_id);
-                return slot ? <div className="flex gap-2"><span className="text-slate-500 w-20">予約枠</span><span className="text-blue-300">{formatDt(slot.datetime)} ({slot.duration}分)</span></div> : null;
+                return slot ? <div className="flex gap-2"><span className="text-gray-500 w-20">予約枠</span><span className="text-sky-700">{formatDt(slot.datetime)} ({slot.duration}分)</span></div> : null;
               })()}
-              {detailBooking.extra_fields?.message && <div className="flex gap-2"><span className="text-slate-500 w-20">メッセージ</span><span className="text-slate-300 flex-1">{detailBooking.extra_fields.message}</span></div>}
-              <div className="flex gap-2"><span className="text-slate-500 w-20">受付日時</span><span className="text-slate-400 text-xs">{new Date(detailBooking.created_at).toLocaleString('ja-JP')}</span></div>
+              {detailBooking.extra_fields?.message && <div className="flex gap-2"><span className="text-gray-500 w-20">メッセージ</span><span className="text-gray-600 flex-1">{detailBooking.extra_fields.message}</span></div>}
+              <div className="flex gap-2"><span className="text-gray-500 w-20">受付日時</span><span className="text-gray-500 text-xs">{new Date(detailBooking.created_at).toLocaleString('ja-JP')}</span></div>
             </div>
             <a href={`mailto:${detailBooking.email}?subject=ご予約確定のお知らせ`}
-              className="w-full block text-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
+              className="w-full block text-center bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">
               メールで返信する →
             </a>
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 
@@ -468,28 +467,28 @@ function BulkAddButton({ onAdd }: { onAdd: (s: string, e: string, t: string[], d
   };
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="text-sm px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all">一括追加</button>
+    <button onClick={() => setOpen(true)} className="text-sm px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all">一括追加</button>
   );
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
-      <div className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h3 className="font-bold text-white mb-4">一括追加</h3>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold text-gray-900 mb-4">一括追加</h3>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-slate-400 text-xs block mb-1">開始日</label>
+              <label className="text-gray-500 text-xs block mb-1">開始日</label>
               <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
             </div>
             <div>
-              <label className="text-slate-400 text-xs block mb-1">終了日</label>
+              <label className="text-gray-500 text-xs block mb-1">終了日</label>
               <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
             </div>
           </div>
           <div>
-            <label className="text-slate-400 text-xs block mb-1.5">時刻を選択</label>
+            <label className="text-gray-500 text-xs block mb-1.5">時刻を選択</label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'].map(t => {
                 const selected = form.times.split(',').map(x => x.trim()).includes(t);
@@ -502,36 +501,36 @@ function BulkAddButton({ onAdd }: { onAdd: (s: string, e: string, t: string[], d
                       const next = selected ? current.filter(x => x !== t) : [...current, t].sort();
                       setForm(f => ({ ...f, times: next.join(',') }));
                     }}
-                    className={`text-xs px-2 py-1 rounded-lg border transition-all ${selected ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/10 text-slate-400 border-white/10 hover:border-white/30'}`}
+                    className={`text-xs px-2 py-1 rounded-lg border transition-all ${selected ? 'bg-sky-600 text-white border-sky-500' : 'bg-gray-100 text-gray-500 border-gray-200 hover:border-gray-400'}`}
                   >{t}</button>
                 );
               })}
             </div>
-            <p className="text-[10px] text-slate-500">選択中: {form.times.split(',').filter(Boolean).length}件</p>
+            <p className="text-[10px] text-gray-500">選択中: {form.times.split(',').filter(Boolean).length}件</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-slate-400 text-xs block mb-1">所要時間</label>
+              <label className="text-gray-500 text-xs block mb-1">所要時間</label>
               <select value={form.duration} onChange={e => setForm(f => ({ ...f, duration: Number(e.target.value) }))}
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none">
                 {[30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d}分</option>)}
               </select>
             </div>
             <div>
-              <label className="text-slate-400 text-xs block mb-1">ラベル</label>
+              <label className="text-gray-500 text-xs block mb-1">ラベル</label>
               <input type="text" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
             </div>
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.excludeWeekends} onChange={e => setForm(f => ({ ...f, excludeWeekends: e.target.checked }))}
-              className="w-4 h-4 rounded accent-blue-500" />
-            <span className="text-slate-400 text-sm">土日を除く</span>
+              className="w-4 h-4 rounded accent-sky-600" />
+            <span className="text-gray-500 text-sm">土日を除く</span>
           </label>
         </div>
         <div className="flex gap-2 mt-4">
-          <button onClick={handleAdd} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">一括追加</button>
-          <button onClick={() => setOpen(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-sm transition-all">キャンセル</button>
+          <button onClick={handleAdd} className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all">一括追加</button>
+          <button onClick={() => setOpen(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 py-2.5 rounded-xl text-sm transition-all">キャンセル</button>
         </div>
       </div>
     </div>

@@ -27,7 +27,7 @@ test('管理画面のタップ領域を44px以上にする仕組みがある', (
   // 2026-09-17: 骨組み（AppShell）の根に移した。
   // ダッシュボードだけに付いていたので、ほかの管理画面には規則が効いていなかった。
   const shell = read('../components/laruhp/AppShell.tsx');
-  assert.match(shell, /className="shell laru-touch"/,
+  assert.match(shell, /className=\{`shell laru-touch\$\{fill \? ' is-fill' : ''\}`\}/,
     '骨組みの根に laru-touch が付いていない＝ルールが全画面に効かない');
   assert.match(dashboard, /className="laru-touch"/);
 });

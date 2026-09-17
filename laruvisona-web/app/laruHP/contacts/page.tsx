@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarClock, Clock3, Inbox, Mail, Sparkles } from 'lucide-react';
+import AppShell from '@/components/laruhp/AppShell';
 
 type CrmStatus = 'new' | 'in_progress' | 'done' | 'lost';
 
@@ -346,29 +347,12 @@ export default function ContactsPage() {
   const inputCls = 'w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-blue-500 transition-colors';
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900 flex flex-col">
-      {/* Realtime new contact toast */}
-      {newContactToast && (
-        <div className="fixed top-4 right-4 z-[100] flex items-center gap-3 bg-white border border-blue-200 text-gray-900 text-sm font-medium px-4 py-3 rounded-xl shadow-2xl shadow-blue-100 animate-slideIn ring-1 ring-blue-200">
-          <span className="relative flex-shrink-0">
-            <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-40" />
-            <span className="relative w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-600"><Inbox size={15} aria-hidden="true" /></span>
-          </span>
-          <div>
-            <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wide mb-0.5">新着問い合わせ</p>
-            <p className="text-sm text-gray-900">{newContactToast}</p>
-          </div>
-          <button onClick={() => setNewContactToast(null)} className="ml-2 text-gray-400 hover:text-gray-700 text-base leading-none flex-shrink-0">×</button>
-        </div>
-      )}
-      {/* Header */}
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-shrink-0">
-        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors flex-shrink-0">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          ダッシュボード
-        </Link>
-        <h1 className="text-sm font-bold text-gray-900">問い合わせ管理</h1>
-        {unreadCount > 0 && (
+    <AppShell
+      title="問い合わせ管理"
+      lead="届いた連絡を、ここで読んで返します。"
+      unreadContacts={unreadCount}
+      fill
+      actions={<>{unreadCount > 0 && (
           <button
             onClick={() => {
               const el = listRef.current?.querySelector('[data-unread="true"]') as HTMLElement | null;
@@ -377,10 +361,10 @@ export default function ContactsPage() {
               const id = el.getAttribute('data-contact-id');
               if (id) { setFlashId(id); setTimeout(() => setFlashId(null), 1200); }
             }}
-            className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 hover:bg-blue-400 transition-colors"
+            className="bg-sky-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 hover:bg-sky-500 transition-colors"
           >{unreadCount}未読</button>
         )}
-        <div className="flex-1" />
+        
         <div className="relative flex-shrink-0">
           <button onClick={exportCsv} disabled={filtered.length === 0}
             className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 ${exportDone ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
@@ -392,8 +376,24 @@ export default function ContactsPage() {
               <p className="text-[9px] text-amber-400 mt-1 text-right whitespace-nowrap">30日以上未出力</p>
             </>
           )}
+        </div></>}
+    >
+      {/* Realtime new contact toast */}
+      {newContactToast && (
+        <div className="fixed top-4 right-4 z-[100] flex items-center gap-3 bg-white border border-blue-200 text-gray-900 text-sm font-medium px-4 py-3 rounded-xl shadow-2xl shadow-blue-100 animate-slideIn ring-1 ring-blue-200">
+          <span className="relative flex-shrink-0">
+            <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-40" />
+            <span className="relative w-7 h-7 rounded-full bg-sky-600/20 border border-blue-400/40 flex items-center justify-center text-blue-600"><Inbox size={15} aria-hidden="true" /></span>
+          </span>
+          <div>
+            <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wide mb-0.5">新着問い合わせ</p>
+            <p className="text-sm text-gray-900">{newContactToast}</p>
+          </div>
+          <button onClick={() => setNewContactToast(null)} className="ml-2 text-gray-400 hover:text-gray-700 text-base leading-none flex-shrink-0">×</button>
         </div>
-      </header>
+      )}
+      {/* Header */}
+      
 
       {/* KPI row */}
       <div className="flex gap-3 px-4 sm:px-6 py-3 border-b border-gray-200 bg-white overflow-x-auto flex-shrink-0">
@@ -910,6 +910,7 @@ export default function ContactsPage() {
           )}
         </div>
       </div>
-    </div>
+    
+    </AppShell>
   );
 }

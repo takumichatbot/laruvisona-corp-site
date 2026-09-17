@@ -101,17 +101,26 @@ export interface AppShellProps {
   /** 問い合わせの未読数。道しるべの印に使う。 */
   unreadContacts?: number;
   email?: string | null;
+  /**
+   * 画面いっぱいに詰めて出す。
+   *
+   * 問い合わせ画面のように、左に一覧・右に本文を並べて
+   * **それぞれが別々に縦スクロールする**作りのとき。
+   * 余白を外し、本体の高さを画面に固定する（ページ全体はスクロールしない）。
+   * 中身に flex-1 と min-h-0 を持たせること。
+   */
+  fill?: boolean;
 }
 
 export default function AppShell({
-  children, actions, title, lead, unreadContacts = 0, email,
+  children, actions, title, lead, unreadContacts = 0, email, fill = false,
 }: AppShellProps) {
   const pathname = usePathname() || '';
   const [open, setOpen] = useState(false);
   const heading = title || currentLabel(pathname) || 'LARU HP';
 
   return (
-    <div className="shell laru-touch">
+    <div className={`shell laru-touch${fill ? ' is-fill' : ''}`}>
       {/* 引き出し（小さい画面）。開いているあいだだけ背景を覆う。 */}
       {open && (
         <button
