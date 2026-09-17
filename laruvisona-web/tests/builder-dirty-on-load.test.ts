@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { bareSource } from './helpers/bare-source';
 
 /**
  * 開いただけでは「未保存」にしない。
@@ -25,11 +26,7 @@ import fs from 'node:fs';
 const read = (p: string) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const builder = read('app/laruHP/builder/page.tsx');
 
-/** 注釈を落としたコード。決めごとを注釈にも書くので、探すのは外だけにする。 */
-const bare = builder
-  .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .split('\n').filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n');
+const bare = bareSource(builder);
 
 test('読み込みは、編集として数えない', () => {
   assert.match(bare, /const hydratingRef = useRef\(false\);/);

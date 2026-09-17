@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { bareSource } from './helpers/bare-source';
 import { BLOCK_ICON_PATHS, blockIconPath, BLOCK_ICON_FALLBACK } from '../lib/laruhp-block-icons';
 
 /**
@@ -25,11 +26,7 @@ import { BLOCK_ICON_PATHS, blockIconPath, BLOCK_ICON_FALLBACK } from '../lib/lar
 const read = (p: string) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const builder = read('app/laruHP/builder/page.tsx');
 
-/** 注釈を落としたコード。決めごとを注釈にも書くので、探すのは外だけにする。 */
-const bare = builder
-  .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+const bare = bareSource(builder);
 
 test('同じ言葉を2回出さない', () => {
   const stutter: string[] = [];

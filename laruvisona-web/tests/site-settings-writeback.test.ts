@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { bareSource } from './helpers/bare-source';
 
 /**
  * 設定を「丸ごと書き戻す」画面が、もう無いこと。
@@ -27,10 +28,7 @@ import path from 'node:path';
 const root = new URL('../', import.meta.url).pathname;
 const read = (p: string) => fs.readFileSync(path.join(root, p), 'utf8');
 
-/** 注釈を落としたコード。決めごとを注釈にも書くので、探すのは外だけにする。 */
-const bare = (src: string) => src
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .split('\n').filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n');
+const bare = bareSource;
 
 /** app/ 配下の画面（"use client"）を全部拾う */
 function clientScreens(): string[] {

@@ -560,12 +560,43 @@ function EditableText({ value, tag, className, onCommit }: {
   return <span {...props} />;
 }
 
-function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }: {
+/**
+ * 画像を上げる。上げられなかったら、そう言う。
+ *
+ * これまでは、失敗すると**黙って base64 をサイトの中身に埋めていた。**
+ * 画面には画像が出るので、店主は上がったと思う。実際に起きるのは:
+ *
+ *   ・5MBの写真が約6.7MBの文字列になって blocks_json に入る
+ *   ・保存の受け口は本文2MBまで。**以後どの保存も400で落ちる**
+ *   ・下書きのローカル保存も容量超過で黙って止まる
+ *
+ * つまり1回の上げ損ねで、そのサイトは保存できない体になる。
+ * しかも画面には何も出ない。店主は編集を続け、全部消える。
+ *
+ * 上げられなかったときは、埋めずに理由を返す。
+ */
+async function uploadImageFile(file: File): Promise<{ url: string } | { error: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  let res: Response;
+  try {
+    res = await fetch('/api/images/upload', { method: 'POST', body: form });
+  } catch {
+    return { error: '画像を送れませんでした。通信を確かめて、もう一度お試しください' };
+  }
+  const data = await res.json().catch(() => ({} as Record<string, unknown>));
+  if (res.ok && typeof data.url === 'string' && data.url) return { url: data.url };
+  return { error: (data.error as string) || `画像を保存できませんでした (${res.status})` };
+}
+
+function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange, onUploadError }: {
   block: Block;
   selected: boolean;
   multiSelected: boolean;
   onSelect: (e: React.MouseEvent) => void;
   onDataChange: (data: Record<string, unknown>) => void;
+  /** 画像を上げられなかったとき、店主に見える所へ出す */
+  onUploadError: (message: string) => void;
 }) {
   const d = block.data;
 
@@ -692,16 +723,9 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                 <input type="file" accept="image/*" className="hidden" onChange={async e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const form = new FormData();
-                  form.append('file', file);
-                  const res = await fetch('/api/images/upload', { method: 'POST', body: form });
-                  const data = await res.json();
-                  if (data.url) onDataChange({ ...d, src: data.url });
-                  else {
-                    const reader = new FileReader();
-                    reader.onload = ev => onDataChange({ ...d, src: ev.target?.result as string });
-                    reader.readAsDataURL(file);
-                  }
+                  const up = await uploadImageFile(file);
+                  if ('url' in up) onDataChange({ ...d, src: up.url });
+                  else onUploadError(up.error);
                 }} />
               </label>
             )}
@@ -1067,20 +1091,10 @@ function BlockCanvas({ block, selected, multiSelected, onSelect, onDataChange }:
                   <input type="file" accept="image/*" className="hidden" onChange={async e => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    const form = new FormData();
-                    form.append('file', file);
-                    const res = await fetch('/api/images/upload', { method: 'POST', body: form });
-                    const data = await res.json();
+                    const up = await uploadImageFile(file);
+                    if (!('url' in up)) { onUploadError(up.error); return; }
                     const newImages = [...images];
-                    if (data.url) {
-                      newImages[i] = data.url;
-                    } else {
-                      const reader = new FileReader();
-                      await new Promise<void>(resolve => {
-                        reader.onload = ev => { newImages[i] = ev.target?.result as string; resolve(); };
-                        reader.readAsDataURL(file);
-                      });
-                    }
+                    newImages[i] = up.url;
                     onDataChange({ ...d, images: newImages });
                   }} />
                 </label>
@@ -1734,6 +1748,7 @@ function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => v
   const [photos, setPhotos] = useState<{ id: string; url: string; thumb: string; alt: string; credit: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const search = async (q: string) => {
@@ -1762,13 +1777,22 @@ function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => v
     return () => { active = false; };
   }, []);
 
+  /*
+    上げ損ねたら、そう言う。
+    以前は if (data.url) だけで else が無く、失敗しても**何も起きなかった**。
+    押しても画面が変わらないので、店主は「重いのかな」と何度も押す。
+    さらに fetch が try の外にあり、回線が切れると「アップロード中」で固まっていた。
+  */
   const handleUpload = async (file: File) => {
     setUploading(true);
-    const fd = new FormData(); fd.append('file', file);
-    const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    setUploading(false);
-    if (data.url) onSelect(data.url);
+    setUploadError('');
+    try {
+      const up = await uploadImageFile(file);
+      if ('url' in up) onSelect(up.url);
+      else setUploadError(up.error);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -1778,6 +1802,11 @@ function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => v
           <h2 className="font-bold text-white">画像ライブラリ</h2>
           <button onClick={onClose} aria-label="画像ライブラリを閉じる" className="text-slate-500 hover:text-white text-xl leading-none focus:outline-none focus:ring-1 focus:ring-white/30 rounded">✕</button>
         </div>
+        {uploadError && (
+          <p role="alert" className="mx-5 mt-3 text-xs text-red-200 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+            {uploadError}
+          </p>
+        )}
         <div className="px-4 py-3 border-b border-white/10 flex gap-2 flex-shrink-0">
           <input
             type="text" value={query} placeholder="Unsplashで検索（例: cafe interior, office, nature）"
@@ -1976,6 +2005,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
   const [uploadingImg, setUploadingImg] = useState<string | null>(null);
+  // 画像を上げ損ねた理由。出さないと、押しても何も起きない画面になる
+  const [imgError, setImgError] = useState('');
   const [aiCopyLoading, setAiCopyLoading] = useState(false);
   const [aiCopyResult, setAiCopyResult] = useState<Record<string, string> | null>(null);
   const [webhookLogs, setWebhookLogs] = useState<{ id: string; name: string; email: string; type: string; webhook_status: string; webhook_at: string; webhook_code: string }[] | null>(null);
@@ -2034,10 +2065,9 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
     const slotKey = key + (idx !== undefined ? `-${idx}` : '');
     setUploadingImg(slotKey);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
-      const json = await res.json();
+      const up = await uploadImageFile(file);
+      if (!('url' in up)) { setImgError(up.error); return; }
+      const json = { url: up.url };
       if (json.url && block) {
         if (idx !== undefined) {
           const images = [...((d.images as string[]) || [])];
@@ -2076,6 +2106,14 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
           </button>
         ))}
       </div>
+
+      {/* 画像を上げ損ねた理由。出さないと、押しても何も起きない画面になる */}
+      {imgError && (
+        <div role="alert" className="mx-3 mt-3 text-[11px] text-red-200 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 flex items-start gap-2">
+          <span className="flex-1">{imgError}</span>
+          <button onClick={() => setImgError('')} aria-label="閉じる" className="text-red-300 hover:text-red-100">✕</button>
+        </div>
+      )}
 
       <div data-lenis-prevent-wheel className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
         {tab === 'block' && (
@@ -2468,14 +2506,11 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                                   const f = e.target.files?.[0]; if (!f) return;
                                   setUploadingImg(slotKey);
                                   try {
-                                    const fd = new FormData(); fd.append('file', f);
-                                    const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
-                                    const json = await res.json();
-                                    if (json.url) {
-                                      const items = [...((d.items as Array<Record<string,unknown>>) || [])];
-                                      items[i] = { ...items[i], image: json.url };
-                                      onDataChange(block.id, { ...d, items });
-                                    }
+                                    const up = await uploadImageFile(f);
+                                    if (!('url' in up)) { setImgError(up.error); return; }
+                                    const items = [...((d.items as Array<Record<string,unknown>>) || [])];
+                                    items[i] = { ...items[i], image: up.url };
+                                    onDataChange(block.id, { ...d, items });
                                   } finally { setUploadingImg(null); }
                                 }} />
                               <span className={`flex items-center px-1.5 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-300 text-[10px] transition-all ${uploadingImg === slotKey ? 'opacity-50' : ''}`}>
@@ -5430,60 +5465,72 @@ function BuilderContent() {
         return;
       }
     }
+    /*
+      ここから先を try/finally で囲う。
+
+      これまで囲っていなかった。setPublishing(true) のあとに通信が切れると、
+      その場で止まって **setPublishing(false) に一生たどり着かない。**
+      「公開する」ボタンは disabled のまま「公開中...」で固まり、
+      画面には何のお知らせも出ない。直すには再読み込みしかない。
+
+      公開を押すのは、ここまで作ってきた人が最後に踏む一歩。
+      そこで黙って固まるのは、いちばんやってはいけない。
+    */
     setPublishing(true);
-    let id = dbSiteId;
-    if (!id) {
-      const res = await fetch('/api/sites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...buildSavePayload(site, 'full'), industry: onboardingData?.industry }),
-      });
-      // 未ログイン: 作業をローカル保存して登録へ誘導（サイレント失敗を防ぐ）
+    try {
+      let id = dbSiteId;
+      if (!id) {
+        const res = await fetch('/api/sites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...buildSavePayload(site, 'full'), industry: onboardingData?.industry }),
+        });
+        // 未ログイン: 作業をローカル保存して登録へ誘導（サイレント失敗を防ぐ）
+        if (res.status === 401) {
+          try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
+          router.push('/laruHP/auth/signup?redirectTo=/laruHP/builder');
+          return;
+        }
+        // プラン未契約: 既存サイトの公開と同じく、料金を見せる。
+        // ここを通信エラー扱いにしていたため、初めての人が「公開」を押すと
+        // 「通信環境を確認してください」と出て、値段にたどり着けなかった。
+        if (res.status === 403) {
+          try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
+              setShowPlanModal(true);
+          return;
+        }
+        const { site: s } = await res.json().catch(() => ({ site: null }));
+        id = s?.id;
+        if (id) setDbSiteId(id);
+      }
+      if (!id) { setSaveError('公開の準備に失敗しました。通信環境を確認してもう一度お試しください。'); return; }
+
+      const res = await fetch(`/api/sites/${id}/publish`, { method: 'POST' });
       if (res.status === 401) {
         try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
-        setPublishing(false);
-        router.push('/laruHP/auth/signup?redirectTo=/laruHP/builder');
+          router.push('/laruHP/auth/signup?redirectTo=/laruHP/builder');
         return;
       }
-      // プラン未契約: 既存サイトの公開と同じく、料金を見せる。
-      // ここを通信エラー扱いにしていたため、初めての人が「公開」を押すと
-      // 「通信環境を確認してください」と出て、値段にたどり着けなかった。
-      if (res.status === 403) {
-        try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
-        setPublishing(false);
+      const data = await res.json().catch(() => ({}));
+      if (data.error === 'subscription_required') {
+          setPendingSiteId(id);
         setShowPlanModal(true);
         return;
       }
-      const { site: s } = await res.json().catch(() => ({ site: null }));
-      id = s?.id;
-      if (id) setDbSiteId(id);
-    }
-    if (!id) { setPublishing(false); setSaveError('公開の準備に失敗しました。通信環境を確認してもう一度お試しください。'); return; }
-
-    const res = await fetch(`/api/sites/${id}/publish`, { method: 'POST' });
-    if (res.status === 401) {
-      try { localStorage.setItem('laruHP_builder', JSON.stringify(site)); } catch {}
+      if (data.success) {
+        setPublished(true);
+        setPublishedSlug(data.slug);
+        const completion = publishCompletion(data);
+        if (completion.warning) setBuilderToast(completion.message);
+        if (fromOnboarding) setShowPublishSuccess(true);
+      } else {
+        setSaveError(data.message || data.error || '公開に失敗しました。もう一度お試しください。');
+      }
+    } catch {
+      setSaveError('公開できませんでした。通信を確かめて、もう一度お試しください');
+    } finally {
       setPublishing(false);
-      router.push('/laruHP/auth/signup?redirectTo=/laruHP/builder');
-      return;
     }
-    const data = await res.json().catch(() => ({}));
-    if (data.error === 'subscription_required') {
-      setPublishing(false);
-      setPendingSiteId(id);
-      setShowPlanModal(true);
-      return;
-    }
-    if (data.success) {
-      setPublished(true);
-      setPublishedSlug(data.slug);
-      const completion = publishCompletion(data);
-      if (completion.warning) setBuilderToast(completion.message);
-      if (fromOnboarding) setShowPublishSuccess(true);
-    } else {
-      setSaveError(data.message || data.error || '公開に失敗しました。もう一度お試しください。');
-    }
-    setPublishing(false);
   };
 
   const handleOpenHistory = async () => {
@@ -6455,6 +6502,7 @@ function BuilderContent() {
                   style={!preview && draggedId === block.id ? { opacity: 0.45, cursor: 'grabbing' } : !preview ? { cursor: 'grab' } : undefined}
                 >
                   <BlockCanvas
+                    onUploadError={setBuilderToast}
                     block={block}
                     selected={selectedId === block.id && !preview && selectedIds.size === 0}
                     multiSelected={!preview && selectedIds.has(block.id)}

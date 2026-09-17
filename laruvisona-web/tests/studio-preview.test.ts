@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { bareSource } from './helpers/bare-source';
 
 /**
  * 制作スタジオの「できあがり」が、ちゃんと出ること。
@@ -28,10 +29,7 @@ import fs from 'node:fs';
 const read = (p: string) => fs.readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const studio = read('app/laruHP/studio/page.tsx');
 
-/** 注釈を落としたコード。決めごとを注釈にも書くので、探すのは外だけにする。 */
-const bare = studio
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .split('\n').filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n');
+const bare = bareSource(studio);
 
 test('大きさが分かるまで、枠を作らない', () => {
   // 作った直後に大きさが変わると、その変化が中に伝わらない。
