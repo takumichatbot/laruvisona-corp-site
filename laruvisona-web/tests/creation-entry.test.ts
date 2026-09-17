@@ -17,7 +17,10 @@ test('新規登録・紹介・主要な管理導線は制作スタジオを正�
   const dashboard=read('app/laruHP/dashboard/DashboardClient.tsx');
   assert.match(signup,/safeLaruHpRedirect\(searchParams\.get\('redirectTo'\), '\/laruHP\/studio'\)/);
   assert.match(referral,/redirect\(`\/laruHP\/studio\?ref=/);
-  assert.match(dashboard,/label: '制作スタジオ'/);
+  // 道しるべは lib/laruhp-nav.ts が正本（2026-09-17に移した）
+  const nav=read('lib/laruhp-nav.ts');
+  assert.match(nav,/label: '制作スタジオ'/);
+  assert.doesNotMatch(nav,/'\/laruHP\/onboarding'/);
   assert.doesNotMatch(dashboard,/href: '\/laruHP\/onboarding'/);
 });
 

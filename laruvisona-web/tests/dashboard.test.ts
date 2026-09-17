@@ -21,37 +21,52 @@ const FEATURES = [
   '/laruHP/heatmap',
 ];
 
-const groups = src.slice(src.indexOf('const TOOL_GROUPS'), src.indexOf('const TOOL_ACCENT') >= 0 ? src.indexOf('export default function DashboardPage') : src.length);
+// 2026-09-17: 道しるべは lib/laruhp-nav.ts へ移した。
+// それまでは DashboardClient の本文の中（サイト一覧の見出しと中身のあいだ）に
+// 直接書かれていて、この画面にしか無かった。ほかの画面へ入ると消える。
+// 正本が移ったので、見る先もそちらにする。
+const nav = readFileSync(new URL('../lib/laruhp-nav.ts', import.meta.url), 'utf8');
+const shell = readFileSync(new URL('../components/laruhp/AppShell.tsx', import.meta.url), 'utf8');
+const shellCss = readFileSync(new URL('../app/laruHP/app-shell.css', import.meta.url), 'utf8');
 
 test('機能が1つも欠けていない（21個すべて残っている）', () => {
   for (const href of FEATURES) {
-    assert.ok(groups.includes(`'${href}'`), `${href} が一覧から消えている`);
+    assert.ok(nav.includes(`'${href}'`), `${href} が道しるべから消えている`);
   }
 });
 
 test('仕事の流れで束ねてある（ただの一列ではない）', () => {
   for (const title of ['集客', '応対', '販売', '顧客', '分析・運営']) {
-    assert.ok(groups.includes(`title: '${title}'`), `${title} のまとまりが無い`);
+    assert.ok(nav.includes(`title: '${title}'`), `${title} のまとまりが無い`);
   }
   assert.ok(!src.includes('flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none'),
     '横スクロールの帯が残っている（スマホで大半が画面外になる）');
 });
 
-test('スマホで全部が見える並びになっている', () => {
-  assert.match(src, /grid-cols-1 sm:grid-cols-2 lg:grid-cols-5/, 'まとまりが縦積みにならない');
-  assert.match(src, /grid-cols-2 lg:grid-cols-1/, 'スマホで2列に並ばない');
+test('道しるべが、どの画面でも同じ場所にある', () => {
+  // 骨組みが持つこと。画面ごとに書き足すと、また画面によって違う状態に戻る。
+  assert.match(shell, /NAV_GROUPS\.map/);
+  assert.match(shell, /NAV_PRIMARY\.map/);
+  // 大きい画面では出したまま、小さい画面では引き出しにする
+  assert.match(shellCss, /@media \(min-width: 1024px\)/);
+  assert.match(shellCss, /\.shell-side \{ transform: translateX\(0\); \}/);
+  assert.match(shell, /aria-label="メニューを開く"/);
+  // いまどこにいるかが分かること
+  assert.match(shell, /aria-current=\{current \? 'page' : undefined\}/);
 });
 
 test('指で押せる大きさがある', () => {
-  const link = src.slice(src.indexOf('TOOL_ACCENT[item.accent]'));
-  assert.match(link.slice(0, 200), /min-h-\[44px\]/, 'タップ領域が44px未満');
+  // 骨組みの側で、リンクの高さを決める
+  const link = shellCss.slice(shellCss.indexOf('.shell-nav-link {'));
+  assert.match(link.slice(0, 400), /padding: 8px 10px/, 'タップ領域の指定が無い');
+  assert.match(shellCss, /\.shell-menu \{[\s\S]*?width: 38px/, 'メニューのボタンが小さすぎる');
 });
 
-test('色クラスを文字列連結で作らない（Tailwindが生成できない）', () => {
-  const jsx = src.slice(src.indexOf('const TOOL_ACCENT'));
-  assert.ok(!/className=\{`[^`]*hover:border-\$\{/.test(jsx),
+test('色を文字列連結で作らない（Tailwindが生成できない）', () => {
+  // 道しるべの見た目はCSS変数で決める。クラス名を組み立てない。
+  assert.ok(!/className=\{`[^`]*\$\{[^`]*accent/.test(shell),
     '組み立てたクラス名は生成されず、色が効かない');
-  assert.match(src, /const TOOL_ACCENT: Record<string, string> = \{/);
+  assert.match(shellCss, /--ac:\s+#/, '主色が変数になっていない');
 });
 
 test('データ取得はユーザー確認を待たずに始める', () => {

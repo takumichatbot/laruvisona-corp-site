@@ -1,0 +1,176 @@
+/*
+ * ログイン後の画面の、見た目の決めごと。
+ *
+ * これまで色・角・影・文字の大きさが画面ごとに直接書かれていて、
+ * 同じ「カード」でも画面によって違って見えていた。
+ * 新しく画面を足すときは、ここの変数を使うこと。数値を直接書かない。
+ */
+
+.shell {
+  /* 面 */
+  --sf-app:    #f6f8fb;   /* いちばん外。ほんのり冷たい白 */
+  --sf-card:   #ffffff;
+  --sf-side:   #0f172a;   /* 道しるべは濃い面に置き、本文と役割を分ける */
+  --sf-sunken: #eef2f7;
+
+  /* 線 */
+  --ln-soft:   #e6ebf2;
+  --ln-hard:   #d3dbe6;
+  --ln-side:   rgba(255, 255, 255, 0.10);
+
+  /* 文字 */
+  --tx-strong: #0f172a;
+  --tx-body:   #475569;
+  --tx-muted:  #94a3b8;
+  --tx-side:   #cbd5e1;
+  --tx-side-q: #7c8ba1;
+
+  /* 主色。いままでの空色を引き継ぎつつ、濃度を1段締める */
+  --ac:        #0369a1;
+  --ac-soft:   #e0f2fe;
+  --ac-line:   #7dd3fc;
+  --warn:      #b45309;
+  --warn-soft: #fef3c7;
+
+  /* 形 */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --sh-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.03);
+  --sh-pop:  0 10px 30px rgba(15, 23, 42, 0.12);
+
+  /* 寸法 */
+  --side-w: 248px;
+  --top-h: 64px;
+
+  min-height: 100vh;
+  background: var(--sf-app);
+  color: var(--tx-body);
+}
+
+/* ── 道しるべ ───────────────────────────────── */
+.shell-side {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--side-w);
+  display: flex;
+  flex-direction: column;
+  background: var(--sf-side);
+  color: var(--tx-side);
+  z-index: 40;
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+}
+.shell-side.is-open { transform: translateX(0); box-shadow: var(--sh-pop); }
+
+.shell-side-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 18px 16px 14px;
+}
+.shell-brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: #fff; text-decoration: none; letter-spacing: -0.02em;
+}
+.shell-brand-mark {
+  width: 28px; height: 28px; border-radius: 9px;
+  display: grid; place-items: center;
+  background: linear-gradient(140deg, #0ea5e9, #0369a1);
+  font-weight: 900; font-size: 15px; color: #fff;
+}
+.shell-brand-name { font-size: 15px; font-weight: 800; }
+.shell-brand-name b { font-weight: 300; }
+
+.shell-side-close {
+  display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  color: var(--tx-side); background: transparent; border: 0; cursor: pointer;
+}
+.shell-side-close:hover { background: rgba(255, 255, 255, 0.08); }
+
+.shell-nav { flex: 1; overflow-y: auto; padding: 4px 10px 12px; }
+.shell-nav-section { padding-bottom: 10px; }
+.shell-nav-section + .shell-nav-section { border-top: 1px solid var(--ln-side); padding-top: 10px; }
+.shell-nav-section-last { border-top: 1px solid var(--ln-side); padding-top: 10px; }
+
+.shell-nav-heading {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 2px 10px 6px; margin: 0;
+  font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 0.04em;
+}
+.shell-nav-heading small { font-size: 10px; font-weight: 400; color: var(--tx-side-q); }
+
+.shell-nav-link {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border-radius: var(--r-sm);
+  color: var(--tx-side); text-decoration: none;
+  font-size: 13px; line-height: 1.3;
+  background: transparent; border: 0; cursor: pointer; text-align: left;
+}
+.shell-nav-link:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+.shell-nav-link.is-current { background: rgba(56, 189, 248, 0.16); color: #fff; font-weight: 700; }
+.shell-nav-link.is-current .shell-icon { color: #38bdf8; }
+.shell-nav-link-quiet { color: var(--tx-side-q); }
+
+.shell-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shell-icon { width: 16px; height: 16px; flex: 0 0 auto; }
+
+.shell-nav-badge {
+  flex: 0 0 auto; min-width: 20px; padding: 1px 6px; border-radius: 999px;
+  background: #ef4444; color: #fff; font-size: 11px; font-weight: 700; text-align: center;
+}
+
+.shell-side-foot { padding: 10px; border-top: 1px solid var(--ln-side); }
+.shell-side-email {
+  margin: 0 0 6px; padding: 0 10px;
+  font-size: 11px; color: var(--tx-side-q);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.shell-scrim {
+  position: fixed; inset: 0; z-index: 35;
+  background: rgba(15, 23, 42, 0.45); border: 0; cursor: pointer;
+}
+
+/* ── 本体 ───────────────────────────────────── */
+.shell-main { min-height: 100vh; display: flex; flex-direction: column; }
+
+.shell-top {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 12px;
+  min-height: var(--top-h); padding: 10px 16px;
+  background: rgba(246, 248, 251, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--ln-soft);
+}
+.shell-menu {
+  display: grid; place-items: center;
+  width: 38px; height: 38px; flex: 0 0 auto;
+  border-radius: var(--r-sm); border: 1px solid var(--ln-hard);
+  background: var(--sf-card); color: var(--tx-strong); cursor: pointer;
+}
+.shell-top-title { flex: 1; min-width: 0; }
+.shell-top-title h1 {
+  margin: 0; font-size: 17px; font-weight: 800; color: var(--tx-strong);
+  letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.shell-top-title p {
+  margin: 2px 0 0; font-size: 12px; color: var(--tx-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.shell-top-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+.shell-content { flex: 1; padding: 20px 16px 64px; }
+
+/* ── 大きい画面では、道しるべを出したままにする ── */
+@media (min-width: 1024px) {
+  .shell-side { transform: translateX(0); }
+  .shell-side-close, .shell-menu, .shell-scrim { display: none; }
+  .shell-main { margin-left: var(--side-w); }
+  .shell-top { padding: 12px 28px; }
+  .shell-top-title h1 { font-size: 19px; }
+  .shell-content { padding: 28px 28px 80px; }
+}
+
+@media (min-width: 1440px) {
+  .shell-content { padding-left: 40px; padding-right: 40px; }
+}

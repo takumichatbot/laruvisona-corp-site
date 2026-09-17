@@ -24,8 +24,12 @@ test('スマホで入力欄が16px未満にならない（iOSの自動拡大対�
 test('管理画面のタップ領域を44px以上にする仕組みがある', () => {
   assert.match(css, /\.laru-touch a\[href\],/);
   assert.match(css, /min-height: 44px;/);
-  assert.match(dashboard, /className="laru-touch min-h-screen/,
-    'ダッシュボードのルートに laru-touch が付いていない＝ルールが効かない');
+  // 2026-09-17: 骨組み（AppShell）の根に移した。
+  // ダッシュボードだけに付いていたので、ほかの管理画面には規則が効いていなかった。
+  const shell = read('../components/laruhp/AppShell.tsx');
+  assert.match(shell, /className="shell laru-touch"/,
+    '骨組みの根に laru-touch が付いていない＝ルールが全画面に効かない');
+  assert.match(dashboard, /className="laru-touch"/);
 });
 
 test('管理画面の最小文字サイズを11pxまで引き上げる', () => {

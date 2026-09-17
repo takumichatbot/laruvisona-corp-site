@@ -1,3 +1,4 @@
+import './app-shell.css';
 import type { Metadata, Viewport } from 'next';
 import { jsonForScript } from '@/lib/safe-markup';
 import PwaInit from '@/components/PwaInit';
