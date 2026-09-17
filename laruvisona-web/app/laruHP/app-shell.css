@@ -207,13 +207,22 @@
   color: rgba(100, 116, 139, 0.16);
   user-select: none;
 }
+/*
+ * 2026-09-17: 読み込めるまで透明にして、済んだら見せる作りをやめた。
+ *
+ * 「opacity:0 → クラスが付いたら1へ移す」は、移り変わりが走らない状況で
+ * **0 のまま止まる**。裏に回ったタブ、動きを減らす設定、描画の間引き。
+ * 実際、サイトカードの絵が出ず、頭文字の面だけが出ていた。
+ * 中身は正しく届いていて、見せる側だけが止まっていた。
+ *
+ * いまは最初から見える。下に頭文字の面を敷いてあるので、
+ * 読み込みの途中でも白い穴にはならない（枠の地は白）。
+ * 読めなかったときは枠ごと外し、頭文字の面が出る。
+ */
 .site-thumb-frame {
   position: absolute; top: 0; left: 0;
   transform-origin: 0 0;
   border: 0;
   pointer-events: none;      /* 縮小した絵なので、触らせない */
   background: #fff;
-  opacity: 0;
-  transition: opacity 0.25s ease;
 }
-.site-thumb-frame.is-ready { opacity: 1; }

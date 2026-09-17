@@ -54,3 +54,15 @@ test('取り出し用のHTMLは、これまでどおり保存ダイアログを�
   // 持ち主だけが読める状態は保つ
   assert.match(route, /\.eq\('user_id', user\.id\)/);
 });
+
+test('絵を、移り変わり頼みで見せない', () => {
+  // opacity:0 から始めてクラスで 1 にする作りは、移り変わりが走らない
+  // 状況（裏に回ったタブ・動きを減らす設定・描画の間引き）で 0 のまま止まる。
+  // 本番で実際に止まり、中身は届いているのに頭文字の面だけが出ていた。
+  const css = code('app/laruHP/app-shell.css');
+  const rule = css.slice(css.indexOf('.site-thumb-frame {'));
+  assert.doesNotMatch(rule.slice(0, rule.indexOf('}')), /opacity:\s*0/,
+    '読み込み後に見せる作りに戻っている');
+  assert.doesNotMatch(css, /\.site-thumb-frame\.is-ready/);
+  assert.doesNotMatch(code('components/laruhp/SiteThumb.tsx'), /is-ready/);
+});

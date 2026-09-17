@@ -20,6 +20,12 @@ import { useEffect, useRef, useState } from 'react';
  *   ・カードが画面に入るまで読み込まない。7件ぶんを一度に描くと、
  *     開いた瞬間にサーバー側で7回ぶんの組み立てが走る。
  *   ・読めなかったときは、これまでと同じ頭文字の面に戻す。真っ白にはしない。
+ *
+ * 2026-09-17: 「読み込めるまで透明、済んだら見せる」をやめた。
+ *   その作りは、移り変わりが走らない状況（裏に回ったタブ・動きを減らす設定・
+ *   描画の間引き）で **0 のまま止まる**。本番で実際に止まっていて、
+ *   中身は正しく届いているのに頭文字の面だけが出ていた。
+ *   いまは最初から見せる。下に頭文字の面を敷いてあるので穴は開かない。
  */
 
 // カードの幅の3倍で描いてから1/3に縮める。
@@ -74,7 +80,7 @@ export default function SiteThumb({
           scrolling="no"
           tabIndex={-1}
           aria-hidden="true"
-          className={`site-thumb-frame${state === 'ready' ? ' is-ready' : ''}`}
+          className="site-thumb-frame"
           style={{
             width: `${SCALE * 100}%`,
             height: `${SCALE * 100}%`,
