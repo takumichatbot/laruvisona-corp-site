@@ -1115,7 +1115,9 @@ function StudioInner() {
       {blocked && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-[13px] font-bold text-amber-900">
-            {blocked.kind === 'login' ? '保存するにはログインが必要です。' : (blocked.message || '保存するには契約が必要です。')}
+            {/* 契約なしでも保存できるようになったので、ここへ落ちるのは
+                サイト数の上限に当たったときだけ。既定の文も、そう書く。 */}
+            {blocked.kind === 'login' ? '保存するにはログインが必要です。' : (blocked.message || 'これ以上サイトを増やせません。')}
             {draftKept
               ? ' 打った内容は、この端末に残してあります。'
               : ' この端末に控えを残せませんでした。この画面を閉じると消えます。'}
