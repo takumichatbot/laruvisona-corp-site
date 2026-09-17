@@ -20,7 +20,6 @@ type Page = { id: string; name: string; blocks: Block[] };
 type SiteRow = {
   id: string; name: string; published: boolean;
   blocks_json: Block[] | { v: number; pages: Page[] };
-  seo_json: unknown; settings_json: unknown;
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -164,21 +163,46 @@ export default function MobileEditPage() {
     setDirty(true);
   };
 
+  /**
+   * この画面が触った所だけを送る。
+   *
+   * ここは文章の書き換えと並べ替えしかしない。なのに以前は、開いたときに
+   * 読み込んだ seo_json と settings_json を、保存のたびに丸ごと送り返していた。
+   *
+   * 設定は一つの塊（settings_json）に入っていて、この画面が知らないものも
+   * 同じ塊に入っている。開いた時の塊をそのまま書き戻すと、その間に
+   * **別の場所で変わった分が、そっくり前の値に戻る。**
+   *
+   *   ・パソコンで止めたプレビュー用URLが、また見られるようになる
+   *   ・別の画面で変えた問い合わせの通知先が、古いメールアドレスに戻る
+   *   ・検索避け（noIndex）の切り替えが、元に戻る
+   *   ・LARUbotの設置がその間に終わっていたら、その番号ごと消える
+   *     （消えると、ダッシュボードに「設置が未完了」と出たまま直らない）
+   *
+   * どれも画面には何も出ない。店主は文章を直しただけのつもりでいる。
+   *
+   * 送らなければ、サーバ側では今の値がそのまま残る（PUTは届いた項目だけ書く）。
+   * だから blocks_json だけ送る。名前もここでは変えないので送らない。
+   */
+  const persist = useCallback(async (id: string) => {
+    const res = await fetch(`/api/sites/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blocks_json: { v: 2, pages } }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(res.status === 401
+        ? 'ログインが切れています。入り直してから、もう一度保存してください'
+        : (body.error as string) || `保存エラー (${res.status})`);
+    }
+  }, [pages]);
+
   const save = async () => {
     if (!site) return;
     setSaving(true); setNote('');
     try {
-      const res = await fetch(`/api/sites/${site.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: site.name,
-          blocks_json: { v: 2, pages },
-          seo_json: site.seo_json,
-          settings_json: site.settings_json,
-        }),
-      });
-      if (!res.ok) throw new Error(`保存エラー (${res.status})`);
+      await persist(site.id);
       setDirty(false);
       setNote('保存しました');
     } catch (e) {
@@ -192,11 +216,7 @@ export default function MobileEditPage() {
     setSaving(true); setNote('');
     try {
       if (dirty) {
-        const r = await fetch(`/api/sites/${site.id}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: site.name, blocks_json: { v: 2, pages }, seo_json: site.seo_json, settings_json: site.settings_json }),
-        });
-        if (!r.ok) throw new Error(`保存エラー (${r.status})`);
+        await persist(site.id);
         setDirty(false);
       }
       const res = await fetch(`/api/sites/${site.id}/publish`, { method: 'POST' });
