@@ -199,7 +199,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
       <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
           <Link href="https://laruhp.com/" className="text-lg font-black tracking-[-0.05em]">LARU <span className="text-sky-600">HP</span></Link>
-          <Link href={`https://laruvisona.jp/laruHP/studio?industry=${industry}`} className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-bold text-white">この業種で試す</Link>
+          <Link href="https://laruhp.com/demo" className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-bold text-white">見本を見る</Link>
         </div>
       </header>
 
@@ -361,6 +361,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
             <p className="mx-auto mt-6 max-w-xl text-sm leading-7 text-sky-100">{TERMS.firstMonthFree}。{TERMS.cancelNote}。料金と契約条件を確認してから申し込めます。</p>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link href={`https://laruvisona.jp/laruHP/studio?industry=${industry}`} className="inline-flex items-center gap-3 rounded-full bg-white px-7 py-4 font-bold text-sky-800">制作スタジオを開く <ArrowUpRight size={18} /></Link>
+              <Link href="https://laruhp.com/demo" className="inline-flex items-center gap-2 rounded-full border border-white/50 px-7 py-4 font-bold text-white transition-colors hover:bg-white/10">登録せずに見本を見る</Link>
               <Link href="https://laruhp.com/contact" className="inline-flex items-center gap-2 rounded-full border border-white/50 px-7 py-4 font-bold text-white transition-colors hover:bg-white/10">先に相談する</Link>
             </div>
           </div>

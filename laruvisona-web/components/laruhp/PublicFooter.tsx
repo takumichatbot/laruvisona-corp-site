@@ -32,6 +32,8 @@ const COLUMNS = [
     title: 'サービス',
     links: [
       { href: 'https://laruhp.com/', label: 'LARU HP について' },
+      // 登録の手前で中身を見たい人の受け皿。前はどこからも辿れなかった。
+      { href: 'https://laruhp.com/demo', label: '業種別の見本を見る' },
       { href: 'https://laruhp.com/plans', label: '料金プラン' },
       { href: 'https://laruhp.com/domains', label: '独自ドメイン' },
       { href: 'https://laruhp.com/articles', label: 'ホームページ作成ガイド' },

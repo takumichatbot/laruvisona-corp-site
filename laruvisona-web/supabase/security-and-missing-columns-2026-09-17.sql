@@ -1,6 +1,13 @@
 -- 2026-09-17 の点検で見つかった3点を直す。
 -- Supabase の SQL エディタでそのまま実行できる。2回流しても壊れない。
 --
+-- **本番へ適用済み（2026-09-17）**。適用後に実機で確かめたこと:
+--   ・sites の匿名 select ポリシーは残っていない（pg_policies に 0件）
+--   ・anon は sites も profiles も select できない（has_table_privilege = false）
+--   ・profiles の番人トリガが1件あり、role=authenticated からの plan / subscription_status の
+--     書き換えは profile_billing_server_only で止まる（実際に試して確認、中身は変わっていない）
+--   ・公開ページ（/hp/<slug>）と管理画面は、どちらもこれまで通り表示される
+--
 --   (1) コードが使っているのに、DBに存在しない列がある
 --   (2) 公開サイトの全列を、匿名の誰でも読めてしまう
 --   (3) 課金・権限の列を、本人のブラウザから書き換えられてしまう

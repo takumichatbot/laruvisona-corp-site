@@ -419,6 +419,7 @@ export default async function LaruHPLandingPage({ searchParams }: {
           </div>
           <nav className="lp-industry-links" aria-label="業種別ホームページ作成">
             {INDUSTRIES.map(industry => <Link key={industry.id} href={`https://laruhp.com/${industry.id}`}>{industry.name}<ArrowUpRight size={14} /></Link>)}
+            <Link href="https://laruhp.com/demo">業種別の見本を見る<ArrowUpRight size={14} /></Link>
           </nav>
           <div className="lp-guide-links">
             <div>
@@ -509,6 +510,7 @@ export default async function LaruHPLandingPage({ searchParams }: {
         </div>
         <nav aria-label="フッター">
           <Link href="https://laruvisona.jp/">運営会社</Link>
+          <Link href="https://laruhp.com/demo">業種別の見本</Link>
           <Link href="https://laruhp.com/articles">作成ガイド</Link>
           <Link href="https://laruhp.com/contact">お問い合わせ</Link>
           <Link href="https://laruhp.com/terms">利用規約</Link>

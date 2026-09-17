@@ -122,3 +122,45 @@ test('案内サイトの公開ページは、CDNに置いてよいと伝える',
   // 端末側には残さない
   assert.match(proxy, /max-age=0/);
 });
+
+test('登録なしで見られる見本が、配信・索引・回遊のすべてに乗っている', () => {
+  // 2026-09-17: 15業種ぶんの見本は前から作ってあったのに、
+  //   ・laruhp.com の公開パスに無い（404）
+  //   ・/laruHP 配下の既定で noindex
+  //   ・どのページからもリンクされていない
+  // ので、誰の目にも触れていなかった。作ってあるものを見せていないのは、
+  // 置いていないのと同じなので、ここで固定する。
+  assert.ok(LARUHP_PUBLIC_PATHS.includes('/demo'), '/demo が公開パスに無い（laruhp.comでは404）');
+  assert.equal(internalLaruHpPath('/demo'), '/laruHP/demo');
+  assert.ok(laruHpSitemapXml().includes('https://laruhp.com/demo'), 'sitemapに無い');
+
+  const page = code('app/laruHP/demo/page.tsx');
+  assert.match(page, /robots: \{ index: true, follow: true \}/, '親レイアウトのnoindexを戻していない');
+  assert.match(page, /canonical: URL/);
+
+  // 入口が1本も無いと、検索にしか頼れない
+  const linkers = [
+    'components/laruhp/PublicFooter.tsx',
+    'app/laruHP/page.tsx',
+    'app/laruHP/[industry]/page.tsx',
+  ];
+  for (const file of linkers) {
+    assert.match(code(file), /https:\/\/laruhp\.com\/demo/, `${file}: 見本への導線が無い`);
+  }
+});
+
+test('見本のCTAが、案内サイト側で行き止まりにならない', () => {
+  const client = code('app/laruHP/demo/demo-client.tsx');
+  // laruhp.com では /laruHP/* は配信していない。相対パスのままだと 404 になる。
+  assert.doesNotMatch(client, /href="\/laruHP\//, '相対の /laruHP/... は案内サイト側で404になる');
+  assert.match(client, /LARUHP_APP_ORIGIN/, 'アプリ側へは絶対URLで送ること');
+});
+
+test('見本が、登録だけで作りはじめられるかのように書いていない', () => {
+  const client = code('app/laruHP/demo/demo-client.tsx');
+  // 制作スタジオは契約が無いと 403（app/laruHP/studio/page.tsx の no_plan）。
+  // 「クレジットカード登録のみ」は、登録すれば作れるとも読めてしまう。
+  assert.ok(!client.includes('クレジットカード登録のみ'), '登録だけで作れると読める');
+  assert.ok(!client.includes('プロ品質'), '確かめようのない品質の断定');
+  assert.match(client, /プランの申し込みが必要/);
+});
