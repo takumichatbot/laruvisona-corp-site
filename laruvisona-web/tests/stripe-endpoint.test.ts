@@ -64,7 +64,8 @@ test('手元の替え玉へは差し替える', () => {
 test('検証の道具が、本番の値を持っていない', () => {
   const runner = fs.readFileSync(new URL('../tests/billing/run.sh', import.meta.url), 'utf8');
   // 替え玉の鍵はすべて偽物であること。本物を書くと、リポジトリに鍵が残る。
-  assert.match(runner, /STRIPE_SECRET_KEY="sk_test_/);
+  // 引用符の有無は問わない（setsid の中では外してある）。値が sk_test_ であること。
+  assert.match(runner, /STRIPE_SECRET_KEY="?sk_test_/);
   assert.doesNotMatch(runner, /sk_live|whsec_[A-Za-z0-9]{24,}|re_[A-Za-z0-9]{20,}/);
   // 外へ出ないこと
   assert.doesNotMatch(runner, /api\.stripe\.com|api\.resend\.com|larubot\.tokyo/);

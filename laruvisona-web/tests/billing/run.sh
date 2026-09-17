@@ -22,9 +22,14 @@ SERVICES_PORT=54998
 WEBHOOK_SECRET='whsec_billing_scenario_only_20260917'
 
 FIXTURE_PID=''; SERVER_PID=''
+# `npx next start` は中でもう1段 next-server を立てる。
+# 親だけ殺すと **next-server が居残り**、次の実行がそれを拾う。
+# 居残りは前回の鍵のままなので署名が通らず、10件が一斉に落ちる。
+# 落ちた理由はコードではなく居残りなのに、並んだ NG からはそう見えない。
+# だから setsid で自分のグループを作り、グループごと終わらせる。
 cleanup() {
   [ -n "$FIXTURE_PID" ] && kill "$FIXTURE_PID" 2>/dev/null
-  [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null
+  [ -n "$SERVER_PID" ] && kill -- -"$SERVER_PID" 2>/dev/null
   return 0
 }
 trap cleanup EXIT
@@ -67,26 +72,39 @@ if up "$PORT" && [ -f "$ROOT/.next/BUILD_ID" ]; then
     echo "そのサーバーを止めてから、もう一度実行してください。" >&2
     exit 2
   fi
+
+  # 番号の比較だけでは足りない。前回の実行が残したサーバーは、
+  # 同じビルドのまま**別の鍵**で立っていることがある。
+  # そうすると署名が通らず、10件が一斉に落ちる。
+  # 落ちた理由はコードではなく居残りなのに、それが分からない。
+  # だから「この鍵で署名したものを受け取れるか」を先に確かめる。
+  probe="$(node "$DIR/probe.mjs" "$PORT" "$WEBHOOK_SECRET" 2>&1)"
+  if [ "$probe" != "ok" ]; then
+    echo "ポート $PORT のサーバーは、この試験のものではありません（$probe）。" >&2
+    echo "前回の実行が残したサーバーかもしれません。止めてから、もう一度実行してください:" >&2
+    echo "  pkill -f 'next start -p $PORT'" >&2
+    exit 2
+  fi
 fi
 
 if ! up "$PORT"; then
-  (cd "$ROOT" && \
+  setsid bash -c "cd '$ROOT' && \
     NODE_ENV=production \
-    NEXT_PUBLIC_APP_URL="https://laruvisona.jp" \
-    NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:$SUPABASE_PORT" \
-    NEXT_PUBLIC_SUPABASE_ANON_KEY="anon-stub" \
-    SUPABASE_SERVICE_ROLE_KEY="service-stub" \
-    STRIPE_SECRET_KEY="sk_test_billing_scenario" \
-    STRIPE_API_BASE="http://127.0.0.1:$SERVICES_PORT" \
-    STRIPE_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
-    STRIPE_FIRST_MONTH_COUPON_ID="coupon_first_month" \
-    STRIPE_PRICE_ID="price_hp" \
-    RESEND_API_KEY="re_billing_scenario" \
-    RESEND_BASE_URL="http://127.0.0.1:$SERVICES_PORT" \
-    LARUBOT_API_URL="http://127.0.0.1:$SERVICES_PORT/larubot" \
-    LARU_HP_API_SECRET="billing-scenario-only" \
-    ADMIN_EMAIL="owner@example.test" \
-    npx next start -p "$PORT" >"$DIR/server.log" 2>&1) &
+    NEXT_PUBLIC_APP_URL=https://laruvisona.jp \
+    NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:$SUPABASE_PORT \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-stub \
+    SUPABASE_SERVICE_ROLE_KEY=service-stub \
+    STRIPE_SECRET_KEY=sk_test_billing_scenario \
+    STRIPE_API_BASE=http://127.0.0.1:$SERVICES_PORT \
+    STRIPE_WEBHOOK_SECRET=$WEBHOOK_SECRET \
+    STRIPE_FIRST_MONTH_COUPON_ID=coupon_first_month \
+    STRIPE_PRICE_ID=price_hp \
+    RESEND_API_KEY=re_billing_scenario \
+    RESEND_BASE_URL=http://127.0.0.1:$SERVICES_PORT \
+    LARUBOT_API_URL=http://127.0.0.1:$SERVICES_PORT/larubot \
+    LARU_HP_API_SECRET=billing-scenario-only \
+    ADMIN_EMAIL=owner@example.test \
+    npx next start -p '$PORT'" >"$DIR/server.log" 2>&1 &
   SERVER_PID=$!
   for _ in $(seq 1 60); do up "$PORT" && break; sleep 0.5; done
 fi
