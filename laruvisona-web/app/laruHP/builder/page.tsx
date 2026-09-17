@@ -14,6 +14,7 @@ import { publishCompletion } from '@/lib/publish-result';
 import { migrationBlockData } from '@/lib/migration-block';
 import Link from 'next/link';
 import Image from 'next/image';
+import { blockIconPath } from '@/lib/laruhp-block-icons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BlockType =
@@ -407,57 +408,78 @@ const COLOR_SCHEMES = [
   { id: 'navy-gold',         name: 'ネイビーゴールド', colors: ['#0f172a', '#eab308'] },
 ];
 
+/**
+ * 部品一覧の絵。
+ *
+ * 2026-09-17まで、ここには絵ではなく**短い日本語**が入っていた。
+ * 右に本当の名前が並ぶので「見出 見出し」「動画 動画」と2回出て、
+ * 初めて開いた人には壊れている画面に見えていた。
+ * 描き方は道しるべ（AppShell）と同じに揃える。
+ */
+function BlockIcon({ type }: { type: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24" width="16" height="16"
+      fill="none" stroke="currentColor" strokeWidth="1.75"
+      strokeLinecap="round" strokeLinejoin="round"
+      className="flex-shrink-0 opacity-80"
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: blockIconPath(type) }}
+    />
+  );
+}
+
 // ─── Block Palette Config ─────────────────────────────────────────────────────
 const BLOCK_PALETTE = [
   { group: 'レイアウト', items: [
-    { type: 'nav' as BlockType, label: 'ナビバー', icon: '案内' },
-    { type: 'hero' as BlockType, label: 'ヒーロー', icon: '主役' },
-    { type: 'two-col' as BlockType, label: '2カラム', icon: '2列' },
-    { type: 'three-col' as BlockType, label: '3カラム', icon: '3列' },
-    { type: 'divider' as BlockType, label: '区切り線', icon: '線' },
+    { type: 'nav' as BlockType, label: 'ナビバー' },
+    { type: 'hero' as BlockType, label: 'ヒーロー' },
+    { type: 'two-col' as BlockType, label: '2カラム' },
+    { type: 'three-col' as BlockType, label: '3カラム' },
+    { type: 'divider' as BlockType, label: '区切り線' },
   ]},
   { group: 'コンテンツ', items: [
-    { type: 'heading' as BlockType, label: '見出し', icon: '見出' },
-    { type: 'paragraph' as BlockType, label: 'テキスト', icon: '文' },
-    { type: 'image' as BlockType, label: '画像', icon: '写真' },
-    { type: 'gallery' as BlockType, label: 'ギャラリー', icon: '一覧' },
-    { type: 'cta' as BlockType, label: 'CTAボタン', icon: '導線' },
+    { type: 'heading' as BlockType, label: '見出し' },
+    { type: 'paragraph' as BlockType, label: 'テキスト' },
+    { type: 'image' as BlockType, label: '画像' },
+    { type: 'gallery' as BlockType, label: 'ギャラリー' },
+    { type: 'cta' as BlockType, label: 'CTAボタン' },
   ]},
   { group: 'ビジネス', items: [
-    { type: 'services' as BlockType, label: 'サービス', icon: '業務' },
-    { type: 'testimonials' as BlockType, label: 'お客様の声', icon: '評価' },
-    { type: 'faq' as BlockType, label: 'FAQ', icon: '質問' },
-    { type: 'before-after' as BlockType, label: 'Before/After', icon: '比較' },
-    { type: 'tabs' as BlockType, label: 'タブ', icon: '切替' },
-    { type: 'team' as BlockType, label: 'スタッフ紹介', icon: '人' },
-    { type: 'free' as BlockType, label: 'フリーキャンバス', icon: '自由' },
-    { type: 'shop-grid' as BlockType, label: 'ショップ一覧', icon: '商品' },
-    { type: 'shop-item' as BlockType, label: '商品（単品）', icon: '単品' },
-    { type: 'member-gate' as BlockType, label: '会員限定', icon: '会員' },
-    { type: 'hours' as BlockType, label: '営業時間', icon: '時間' },
-    { type: 'contact' as BlockType, label: 'お問合せ', icon: '連絡' },
+    { type: 'services' as BlockType, label: 'サービス' },
+    { type: 'testimonials' as BlockType, label: 'お客様の声' },
+    { type: 'faq' as BlockType, label: 'FAQ' },
+    { type: 'before-after' as BlockType, label: 'Before/After' },
+    { type: 'tabs' as BlockType, label: 'タブ' },
+    { type: 'team' as BlockType, label: 'スタッフ紹介' },
+    { type: 'free' as BlockType, label: 'フリーキャンバス' },
+    { type: 'shop-grid' as BlockType, label: 'ショップ一覧' },
+    { type: 'shop-item' as BlockType, label: '商品（単品）' },
+    { type: 'member-gate' as BlockType, label: '会員限定' },
+    { type: 'hours' as BlockType, label: '営業時間' },
+    { type: 'contact' as BlockType, label: 'お問合せ' },
   ]},
   { group: 'メディア', items: [
-    { type: 'video' as BlockType, label: '動画', icon: '動画' },
-    { type: 'map' as BlockType, label: 'マップ', icon: '地図' },
-    { type: 'countdown' as BlockType, label: 'カウント', icon: '期限' },
+    { type: 'video' as BlockType, label: '動画' },
+    { type: 'map' as BlockType, label: 'マップ' },
+    { type: 'countdown' as BlockType, label: 'カウント' },
   ]},
   { group: '予約・料金', items: [
-    { type: 'price-table' as BlockType, label: '料金プラン', icon: '料金' },
-    { type: 'booking' as BlockType, label: '予約フォーム', icon: '予約' },
-    { type: 'news' as BlockType, label: 'お知らせ', icon: '記事' },
+    { type: 'price-table' as BlockType, label: '料金プラン' },
+    { type: 'booking' as BlockType, label: '予約フォーム' },
+    { type: 'news' as BlockType, label: 'お知らせ' },
   ]},
   { group: '連携', items: [
-    { type: 'larubot' as BlockType, label: 'LARUbot', icon: 'AI' },
+    { type: 'larubot' as BlockType, label: 'LARUbot' },
   ]},
   { group: '集客', items: [
-    { type: 'announcement-bar' as BlockType, label: 'お知らせバー', icon: '告知' },
-    { type: 'popup' as BlockType, label: 'ポップアップ', icon: '会話' },
-    { type: 'newsletter' as BlockType, label: 'メルマガ登録', icon: '配信' },
-    { type: 'share' as BlockType, label: 'SNSシェア', icon: '共有' },
-    { type: 'stripe-buy' as BlockType, label: '購入ボタン', icon: '購入' },
-    { type: 'google-reviews' as BlockType, label: 'Google口コミ', icon: '評価' },
-    { type: 'instagram' as BlockType, label: 'Instagram', icon: '投稿' },
+    { type: 'announcement-bar' as BlockType, label: 'お知らせバー' },
+    { type: 'popup' as BlockType, label: 'ポップアップ' },
+    { type: 'newsletter' as BlockType, label: 'メルマガ登録' },
+    { type: 'share' as BlockType, label: 'SNSシェア' },
+    { type: 'stripe-buy' as BlockType, label: '購入ボタン' },
+    { type: 'google-reviews' as BlockType, label: 'Google口コミ' },
+    { type: 'instagram' as BlockType, label: 'Instagram' },
   ]},
 ];
 
@@ -2811,7 +2833,7 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                   <span className="text-slate-400 block mb-1">表示トリガー</span>
                   <select value={(d.trigger as string) || 'delay'} onChange={e => onDataChange(block.id, { ...d, trigger: e.target.value })}
                     className="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
-                    <option value="delay">時間 時間経過後</option>
+                    <option value="delay">時間経過後</option>
                     <option value="scroll">スクロール量</option>
                     <option value="exit">離脱インテント</option>
                     <option value="click">ボタンクリック</option>
@@ -5709,7 +5731,7 @@ function BuilderContent() {
               <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
                 if (block) { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }
                 setContextMenu(null);
-              }}>コピー コピー</button>
+              }}>コピー</button>
               <button className="w-full text-left px-4 py-2 text-slate-300 hover:bg-white/[0.07] flex items-center gap-2" onClick={() => {
                 duplicateBlock(contextMenu.blockId); setContextMenu(null);
               }}>⧉ 複製</button>
@@ -5977,7 +5999,7 @@ function BuilderContent() {
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
             title="既存サイトURLを入力して情報を自動取り込み"
           >
-            URL URLインポート
+            URLインポート
           </button>
           <button
             onClick={handleAiLayout}
@@ -6064,7 +6086,7 @@ function BuilderContent() {
               title="サイト速度チェック"
               className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold transition-all text-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-400/60"
             >
-              速度 速度
+              表示速度をみる
             </button>
           )}
           <button
@@ -6143,7 +6165,7 @@ function BuilderContent() {
                             onClick={() => addBlock(type, selectedId || undefined)}
                             className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-all text-left"
                           >
-                            <span className="text-base leading-none">{item.icon}</span>
+                            <BlockIcon type={item.type} />
                             <span className="truncate">{item.label}</span>
                           </button>
                         );
@@ -6167,7 +6189,7 @@ function BuilderContent() {
                         onClick={() => addBlock(item.type, selectedId || undefined)}
                         className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-all text-left"
                       >
-                        <span className="text-base leading-none">{item.icon}</span>
+                        <BlockIcon type={item.type} />
                         <span className="truncate">{item.label}</span>
                       </button>
                     ))}
@@ -6385,7 +6407,12 @@ function BuilderContent() {
                       <button onClick={() => duplicateBlock(block.id)} aria-label="ブロックを複製"
                         className="w-6 h-6 bg-slate-600 text-white rounded text-xs flex items-center justify-center hover:bg-slate-500" title="複製">⧉</button>
                       <button onClick={() => { setCopiedBlock(structuredClone(block)); setCopyToast(true); setTimeout(() => setCopyToast(false), 1500); }} aria-label="ブロックをコピー"
-                        className="w-6 h-6 bg-slate-700 text-white rounded text-xs flex items-center justify-center hover:bg-slate-600" title="コピー (Ctrl+C)">コピー</button>
+                        className="w-6 h-6 bg-slate-700 text-white rounded text-xs flex items-center justify-center hover:bg-slate-600" title="コピー (Ctrl+C)">
+                        {/* 24pxの丸に「コピー」の3文字は入らない。隣（↑↓⧉✕）に合わせて1つの絵にする。 */}
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/>
+                        </svg>
+                      </button>
                       <button onClick={() => deleteBlock(block.id)} aria-label="ブロックを削除"
                         className="w-6 h-6 bg-red-500 text-white rounded text-xs flex items-center justify-center hover:bg-red-600">✕</button>
                     </div>
