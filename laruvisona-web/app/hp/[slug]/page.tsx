@@ -4,6 +4,7 @@ import { analyticsTrackingScript,signAnalyticsSite } from '@/lib/analytics-contr
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { canonicalBase, isHostForSite, decodeSlug } from '@/lib/public-site-url';
+import { buildJsonLd, type BusinessInfo } from '@/lib/site-jsonld';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
 import { applyTranslationToHtml, isTranslationLocale, translationFor, TRANSLATION_LOCALES } from '@/lib/translate-apply';
@@ -90,65 +91,6 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return metadata;
 }
 
-interface BusinessInfo {
-  type?: string;
-  name?: string;
-  description?: string;
-  address?: string;
-  city?: string;
-  postalCode?: string;
-  phone?: string;
-  priceRange?: string;
-  openingHours?: string[];
-  latitude?: string;
-  longitude?: string;
-  sameAs?: string[];
-}
-
-function buildJsonLd(siteName: string, baseUrl: string, seo: { description?: string }, bi: BusinessInfo): string {
-  const url = baseUrl;
-  const schemaType = bi.type || 'LocalBusiness';
-  const name = bi.name || siteName;
-
-  const obj: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': schemaType,
-    name,
-    url,
-  };
-
-  if (bi.description || seo.description) obj.description = bi.description || seo.description;
-  if (bi.phone) obj.telephone = bi.phone;
-  if (bi.priceRange) obj.priceRange = bi.priceRange;
-
-  if (bi.address || bi.city || bi.postalCode) {
-    obj.address = {
-      '@type': 'PostalAddress',
-      ...(bi.address ? { streetAddress: bi.address } : {}),
-      ...(bi.city ? { addressLocality: bi.city } : {}),
-      ...(bi.postalCode ? { postalCode: bi.postalCode } : {}),
-      addressCountry: 'JP',
-    };
-  }
-
-  if (bi.latitude && bi.longitude) {
-    obj.geo = {
-      '@type': 'GeoCoordinates',
-      latitude: bi.latitude,
-      longitude: bi.longitude,
-    };
-  }
-
-  if (bi.openingHours?.length) {
-    obj.openingHours = bi.openingHours;
-  }
-
-  if (bi.sameAs?.length) {
-    obj.sameAs = bi.sameAs.filter(Boolean);
-  }
-
-  return jsonForScript(obj);
-}
 
 export default async function PublishedSitePage({ params, searchParams }: Props) {
   const { slug: rawSlug } = await params;
@@ -159,7 +101,7 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
 
   const { data: site } = await supabase
     .from('sites')
-    .select('published_html, name, settings_json, seo_json, slug, custom_domain')
+    .select('published_html, name, settings_json, seo_json, slug, custom_domain, industry')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -209,10 +151,14 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
   // Ensure the first <img> in the page is eager-loaded (improves LCP)
   const eagerHtml = localizedHtml.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
 
-  const hasBusinessInfo = !!settings.businessInfo;
-  const jsonLdStr = hasBusinessInfo
-    ? buildJsonLd(site.name, base, seo, settings.businessInfo!)
-    : null;
+  /*
+    businessInfo が無くても出す。
+
+    以前は「入れてある人にだけ出す」だったが、公開HTML側にも別のものが
+    あったので、入れていない人にも最低限のものが出ていた。
+    こちらへ寄せた以上、ここで出さないと**構造化データが丸ごと無くなる。**
+  */
+  const jsonLdStr = buildJsonLd(site.name, base, seo, settings.businessInfo ?? ({} as BusinessInfo), site.industry);
 
   return (
     <>

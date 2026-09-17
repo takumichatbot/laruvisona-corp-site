@@ -1,6 +1,5 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { blogPublicId, chatPublicId } from './larubot-public-id';
-import { schemaTypeFor } from './industry-schema';
 import { autoDescription } from './auto-description';
 import { designCss } from '@/lib/site-design';
 import { COMPOSITION_CSS } from '@/lib/composition-css';
@@ -2045,23 +2044,31 @@ window.addEventListener('popstate',function(){
   */
   const pwScript = '';
 
-  // 業種 → schema.org の型は lib/industry-schema.ts に置く。
-  // ここに直書きしていたため、15業種を売りながら5業種しか対応していなかった。
-  const schemaType = schemaTypeFor(businessInfo?.industry);
-
   // 空の値を出さない。url:'' や telephone:'' は、
   // 「電話番号が無い」ではなく「空文字が電話番号」と読まれる。
-  const schema = {
-    '@context': 'https://schema.org',
-    '@type': schemaType,
-    name: businessInfo?.name || siteName,
-    ...(businessInfo?.address
-      ? { address: { '@type': 'PostalAddress', streetAddress: businessInfo.address, addressCountry: 'JP' } }
-      : {}),
-    ...(businessInfo?.phone ? { telephone: businessInfo.phone } : {}),
-    ...(businessInfo?.email ? { email: businessInfo.email } : {}),
-    ...(businessInfo?.slug ? { url: `${appUrl}/hp/${businessInfo.slug}` } : {}),
-  };
+  /*
+    店舗の構造化データは、**ここでは作らない。**
+
+    ここで作っていたものは、次の2つの問題を抱えていた。
+
+    1. 住所も電話もメールも、いつも空だった。
+       公開のときに渡されるのは name / industry / siteId / slug だけで
+       （app/api/sites/[id]/publish/route.ts）、住所などは settings の
+       businessInfo に入っている。渡されないので入りようがない。
+    2. URLが必ず laruvisona.jp/hp/<slug> になっていた。
+       独自ドメインで公開していても、こちらを名乗る。
+
+    さらに、配信するページ（app/hp/[slug]/page.tsx）が**2つ目の構造化データ**を
+    出している。そちらは住所も営業時間も独自ドメインのURLも入った正しいもの。
+    結果、検索側には**食い違う店舗情報が2件**見えていた。
+
+    構造化データは見た目に出ないし、検索結果に反映されるまで数週間かかる。
+    だから誰も気づかない。
+
+    正しいほう（配信するページ側）に一本化する。あちらは保存されている値を
+    そのつど読むので、住所を直したら次の表示から反映される。
+    ここで焼き込むと、公開し直すまで古いままになる。
+  */
 
   // チャットとLARUSEOは、LARUbot 側では同じ public_id を指す（2026-09-17の回答）。
   // 片方しか入っていなくても、もう片方から補う。
@@ -2283,7 +2290,6 @@ ${seo.keywords ? `<meta name="keywords" content="${escapeHtml(seo.keywords)}">` 
 <meta name="twitter:image" content="${escapeHtml(seo.ogImage || ogImageUrl)}">
 <meta name="robots" content="${settings.noIndex ? 'noindex,nofollow' : 'index,follow'}">
 ${businessInfo?.slug ? `<link rel="canonical" href="${appUrl}/hp/${escapeHtml(businessInfo.slug)}">` : ''}
-<script type="application/ld+json">${jsonForScript(schema)}</script>
 ${siteIdScript}
 ${abScript}
 ${gaScript}

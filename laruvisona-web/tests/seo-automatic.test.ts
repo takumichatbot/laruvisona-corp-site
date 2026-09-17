@@ -54,12 +54,30 @@ test('構造化データの業種が、売っている15業種すべてに対応
   assert.equal(schemaTypeFor('知らない業種'), 'LocalBusiness');
 });
 
-test('空の項目を構造化データに出さない', () => {
-  const blocks = [{ id: 'h', type: 'hero', data: { heading: '常盤台不動産', subheading: 'この街で暮らしを探している方へ。' } }] as unknown as Block[];
+test('空の項目を構造化データに出さない', async () => {
+  /*
+    2026-09-17まで、店舗の構造化データは**2箇所から出ていた。**
+      公開HTML（lib/html-export.ts）… 住所も電話もいつも空、
+        URLは必ず laruvisona.jp/hp/<slug>（独自ドメインでもこちらを名乗る）
+      配信するページ（app/hp/[slug]）… 住所も営業時間も独自ドメインも入った正しいもの
+    検索側には、食い違う店舗情報が2件見えていた。
+
+    正しいほうへ寄せ、作る所を lib/site-jsonld.ts に出した。
+    この検査もそちらへ移す（業種→型の対応も、そちらへ持っていった）。
+  */
+  const { buildJsonLd } = await import('../lib/site-jsonld.ts');
+  const json = buildJsonLd('常盤台不動産', 'https://tokiwadai.example', {}, {} as never, 'realestate');
+  assert.match(json, /"@type": ?"RealEstateAgent"/);
+  assert.doesNotMatch(json, /"url": ?""/, '空文字のURLは「URLが無い」ではなく「空がURL」と読まれる');
+  assert.doesNotMatch(json, /"telephone": ?""/);
+  assert.doesNotMatch(json, /"address"/, '中身の無い住所を出している');
+});
+
+test('店舗の構造化データを、2箇所から出さない', () => {
+  // 出どころが2つあると、食い違った瞬間に検索側が混乱する。
+  const blocks = [{ id: 'h', type: 'hero', data: { heading: '常盤台不動産' } }] as unknown as Block[];
   const html = exportToHTML([{ id: 'page-main', name: 'トップ', path: '/', blocks, seo }], seo, settings, '常盤台不動産', { industry: 'realestate' });
-  assert.match(html, /"@type": ?"RealEstateAgent"/);
-  assert.doesNotMatch(html, /"url": ?""/, '空文字のURLは「URLが無い」ではなく「空がURL」と読まれる');
-  assert.doesNotMatch(html, /"telephone": ?""/);
+  assert.doesNotMatch(html, /application\/ld\+json/, '公開HTMLに焼き込みが残っている');
 });
 
 test('案内ページで売っている機能に、制作スタジオから届く導線がある', async () => {

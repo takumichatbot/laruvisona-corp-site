@@ -95,3 +95,12 @@ test('Cookieの帯は、お店が用意していればそこへ飛ばす', () =>
   assert.match(html, /href="https:\/\/example\.com\/privacy"/);
   assert.match(html, /プライバシーポリシー<\/a>/);
 });
+
+test('店舗の構造化データは、1箇所からだけ出す', () => {
+  // 公開HTMLにも焼き込んでいたので、検索側には**食い違う情報が2件**見えていた。
+  //   焼き込み側: 住所も電話もいつも空・URLは必ず laruvisona.jp/hp/<slug>
+  //   ページ側  : 住所も営業時間も独自ドメインのURLも入った正しいもの
+  // 構造化データは見た目に出ず、検索結果に出るまで数週間かかるので気づかない。
+  const html = render([{ id: 'h', type: 'hero', data: { heading: 'お店' } }]);
+  assert.doesNotMatch(html, /application\/ld\+json/, '公開HTMLに構造化データが残っている');
+});
