@@ -28,9 +28,19 @@ import { useEffect, useRef, useState } from 'react';
  *   いまは最初から見せる。下に頭文字の面を敷いてあるので穴は開かない。
  */
 
-// カードの幅の3倍で描いてから1/3に縮める。
-// 固定の画素数にすると、カードの幅が変わったときに右が切れるか余白が出る。
-const SCALE = 3;
+/**
+ * 枠の高さ。カードより高くしておき、上から切って見せる。
+ *
+ * **縮小（transform: scale）はやめた。**
+ * 3倍で描いて1/3に縮めると広い画面の姿が出るが、縮小を掛けた枠は
+ * 中の読み込みが終わっても描き直されないことがあり、絵が白いまま残る。
+ * 本番で7枚すべてがそうなった。枠も位置も大きさも正しく、返るHTMLも正しい。
+ * **コードからは正常に見えるのに、出ない。**
+ *
+ * いまは等倍のまま、カードの幅で描く。
+ * 出るのはスマホでの姿で、これはお客様の訪問者がいちばん多く見る姿でもある。
+ */
+const FRAME_H = 420;
 
 export default function SiteThumb({
   siteId, name, gradient, updatedAt,
@@ -81,21 +91,8 @@ export default function SiteThumb({
           tabIndex={-1}
           aria-hidden="true"
           className="site-thumb-frame"
-          style={{
-            width: `${SCALE * 100}%`,
-            height: `${SCALE * 100}%`,
-            transform: `scale(${1 / SCALE})`,
-          }}
-          onLoad={e => {
-            setState('ready');
-            // 縮小を掛けた枠は、中の読み込みが終わっても**描き直されない**ことがある。
-            // 枠は読み込み済み・位置も大きさも正しいのに、絵だけ白いまま。
-            // 本番の7枚すべてがこの状態だった。ほんのわずかに動かして、描き直させる。
-            const el = e.currentTarget;
-            requestAnimationFrame(() => {
-              el.style.transform = `scale(${(1 / SCALE) * 1.000001})`;
-            });
-          }}
+          style={{ width: '100%', height: `${FRAME_H}px` }}
+          onLoad={() => setState('ready')}
           onError={() => setState('failed')}
         />
       )}

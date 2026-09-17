@@ -5,6 +5,15 @@ import fs from 'node:fs';
 const code = (p: string) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
 /**
+ * 注釈を落としたコード。
+ * 「以前はこう書いていた」を注釈に残すと、その文字列を探す検査に引っかかる。
+ * 経緯は残したいので、探すほうを注釈の外だけにする。
+ */
+const bare = (p: string) => code(p)
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .split('\n').filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n');
+
+/**
  * サイトカードに、実際の見た目を出す。
  *
  * 2026-09-17まで、カードの絵は灰色の面に屋号の頭文字が1つ大きく乗るだけだった。
@@ -67,11 +76,16 @@ test('絵を、移り変わり頼みで見せない', () => {
   assert.doesNotMatch(code('components/laruhp/SiteThumb.tsx'), /is-ready/);
 });
 
-test('縮小した枠を、読み込み後に描き直させる', () => {
-  // 枠は読み込み済み、位置も大きさも正しいのに、絵だけ白いまま出ることがある。
-  // 本番の7枚すべてがこの状態だった。わずかに動かすと、その場で出る。
-  const tsx = code('components/laruhp/SiteThumb.tsx');
-  assert.match(tsx, /requestAnimationFrame/);
-  assert.match(tsx, /el\.style\.transform/);
-  assert.match(code('app/laruHP/app-shell.css'), /will-change: transform;/);
+test('絵を、縮小して見せない', () => {
+  // 3倍で描いて1/3に縮める作りは、縮小を掛けた枠が描き直されず
+  // **絵が白いまま残る**ことがあった。本番で7枚すべてがそうなった。
+  // 枠も位置も大きさも正しく、返るHTMLも正しいので、コードからは正常に見える。
+  // 等倍のまま、カードの幅で描く。
+  const tsx = bare('components/laruhp/SiteThumb.tsx');
+  assert.doesNotMatch(tsx, /transform:\s*`?scale/);
+  assert.doesNotMatch(tsx, /SCALE/);
+  assert.match(tsx, /width: '100%'/);
+  const css = bare('app/laruHP/app-shell.css');
+  const rule = css.slice(css.indexOf('.site-thumb-frame {'));
+  assert.doesNotMatch(rule.slice(0, rule.indexOf('}')), /transform/);
 });
