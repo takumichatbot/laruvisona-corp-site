@@ -13,6 +13,17 @@
   padding: 24px 20px 64px;
   box-sizing: border-box;
 }
+/*
+  ログイン後の骨組み（AppShell）の中に入ったときは、外枠を二重に持たない。
+  .shell は単独ページ用に min-height:100svh と余白と背景を持っている。
+  骨組みの中では、それが二重の余白と、中で二重に伸びる高さになる。
+*/
+:global(.shell-content) .shell {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .shell * {
   box-sizing: border-box;
 }
