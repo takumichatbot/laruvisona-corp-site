@@ -1720,6 +1720,27 @@ export default function DashboardPage() {
                       );
                     })()}
 
+                    {/* 公開しているのに検索に出ない。
+                        これはほぼ必ず間違いで、しかも**どこにも出ていなかった。**
+                        「公開中」とだけ見えるので、見つけてもらえていないことに
+                        誰も気づけない。集客のために払ってもらっているので、
+                        ここで必ず知らせる。 */}
+                    {site.published && (site.settings_json as { noIndex?: boolean } | null)?.noIndex === true && (
+                      <Link
+                        href={`/laruHP/seo?siteId=${site.id}`}
+                        className="flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 hover:bg-amber-100 transition-all"
+                      >
+                        <span className="w-5 h-5 rounded bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0" aria-hidden="true">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 8v5" /><path d="M12 16.2v.1" /><circle cx="12" cy="12" r="9" /></svg>
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-amber-800 text-[10px] font-bold">検索に出ない設定です</span>
+                          <span className="block text-amber-700 text-[9px]">公開中ですが、Googleから見つけてもらえません</span>
+                        </span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-amber-600 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
+                      </Link>
+                    )}
+
                     {/* LARUbot未連携バナー */}
                     {site.settings_json?.larubot && !site.settings_json?.larubotPublicId && (
                       <Link

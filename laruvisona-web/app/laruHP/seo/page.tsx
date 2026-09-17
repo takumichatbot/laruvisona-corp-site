@@ -10,6 +10,8 @@ interface Site {
   id: string;
   name: string;
   slug: string | null;
+  /** 公開中かどうか。「公開しているのに検索に出ない」を見つけるために要る。 */
+  published?: boolean;
   settings_json: Record<string, unknown> | null;
 }
 
@@ -86,6 +88,7 @@ export default function SeoPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [republishing, setRepublishing] = useState(false);
+  const [savingIndexable, setSavingIndexable] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'success' | 'error'>('success');
@@ -96,6 +99,41 @@ export default function SeoPage() {
     setMsgType(type);
     setMsg(text);
     setTimeout(() => setMsg(''), 4000);
+  };
+
+  /**
+   * 検索に出すかどうか。
+   *
+   * 2026-09-17まで、この設定は**読む所が4つあるのに書く所が1つも無く、
+   * 画面にも出ていなかった。** つまり「公開しているのに検索に出ない」が、
+   * 誰にも気づかれずに成立していた。実際、公開していた1件がそうなっていた。
+   * ここでしか変えられないので、保存したらすぐ公開まで通す。
+   */
+  const handleIndexable = async (indexable: boolean) => {
+    if (!selectedSite) return;
+    setSavingIndexable(true);
+    try {
+      const res = await fetch(`/api/sites/${selectedSite.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings_patch: { noIndex: !indexable } }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        showMsg((d as { error?: string }).error || '保存に失敗しました', 'error');
+        return;
+      }
+      const patch = (prev: Site) => ({ ...prev, settings_json: { ...(prev.settings_json || {}), noIndex: !indexable } });
+      setSites(prev => prev.map(x => x.id === selectedSite.id ? patch(x) : x));
+      setSelectedSite(prev => prev ? patch(prev) : prev);
+      showMsg(indexable ? '検索に出す設定にしました。公開すると反映されます。' : '検索に出さない設定にしました。');
+      setNeedsRepublish(true);
+      localStorage.setItem(REPUBLISH_KEY(selectedSite.id), '1');
+    } catch {
+      showMsg('ネットワークエラーが発生しました', 'error');
+    } finally {
+      setSavingIndexable(false);
+    }
   };
 
   useEffect(() => {
@@ -654,6 +692,42 @@ export default function SeoPage() {
             </pre>
           )}
         </section>
+
+        {/* 検索に出すかどうか。ここにしか無い設定なので、目立つ所に置く。 */}
+        {selectedSite && (() => {
+          const noIndex = (selectedSite.settings_json as { noIndex?: boolean } | null)?.noIndex === true;
+          return (
+            <section className={`rounded-2xl border p-5 ${noIndex ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'}`}>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 text-sm">検索結果に出す</p>
+                  <p className="text-xs text-gray-500 leading-relaxed mt-1">
+                    {noIndex
+                      ? 'いま、このサイトは検索結果に出ない設定です。公開していても、GoogleやYahoo!から見つけてもらえません。'
+                      : 'Google・Yahoo!などの検索結果に出します。ふつうはこのままで結構です。'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleIndexable(noIndex)}
+                  disabled={savingIndexable}
+                  className={`flex-shrink-0 min-h-11 px-4 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    noIndex
+                      ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {savingIndexable ? '保存中…' : noIndex ? '検索に出す' : '検索に出さない'}
+                </button>
+              </div>
+              {noIndex && selectedSite.published && (
+                <p className="mt-3 text-xs font-bold text-amber-800">
+                  このサイトは公開中ですが、検索には出ません。集客のために使うなら「検索に出す」を押してください。
+                </p>
+              )}
+            </section>
+          );
+        })()}
 
         {/* Save + Republish */}
         <div className="flex gap-3">

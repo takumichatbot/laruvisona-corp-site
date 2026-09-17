@@ -2106,7 +2106,7 @@ ${seo.keywords ? `<meta name="keywords" content="${escapeHtml(seo.keywords)}">` 
 <meta name="twitter:title" content="${escapeHtml(seo.ogTitle || title)}">
 <meta name="twitter:description" content="${escapeHtml(seo.ogDescription || desc)}">
 <meta name="twitter:image" content="${escapeHtml(seo.ogImage || ogImageUrl)}">
-<meta name="robots" content="index,follow">
+<meta name="robots" content="${settings.noIndex ? 'noindex,nofollow' : 'index,follow'}">
 ${businessInfo?.slug ? `<link rel="canonical" href="${appUrl}/hp/${escapeHtml(businessInfo.slug)}">` : ''}
 <script type="application/ld+json">${jsonForScript(schema)}</script>
 ${siteIdScript}

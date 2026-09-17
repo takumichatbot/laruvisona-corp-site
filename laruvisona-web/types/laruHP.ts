@@ -74,6 +74,15 @@ export interface SiteSettings {
   design?: Record<string, unknown>;
   /** 選んだ雰囲気の見本のid（あとで見分けるためだけに持つ） */
   designPreset?: string;
+  /**
+   * 検索に出さない。
+   *
+   * 2026-09-17まで、この欄は**型に無いのに値だけ入っていた**。
+   * 読む所は4つあるのに書く所が1つも無く、画面にも出ていない。
+   * つまり「公開しているのに検索に出ない」が、誰にも気づかれずに成立する。
+   * 実際、公開していた1件が true だった。
+   */
+  noIndex?: boolean;
 }
 
 export interface Site {
