@@ -36,7 +36,15 @@ export async function commitShopCheckout(
   );
   if (lines.has_more) throw new Error('shop_lines');
   const orderItems = snapshotStripeItems(cart, lines.data);
-  const itemTotal = orderItems.reduce((sum, item) => sum + item.unit * item.quantity, 0);
+  /*
+    照合は「明細の合計の足し上げ」と「決済の総額」で行う。
+
+    以前は 1個あたり×数量 を足していた。割引が入ると 1個あたりが
+    割り切れないので、この足し算は総額と合わなくなる。
+    合わないと例外になり、**課金されたのに注文が作られない。**
+    （この配送先では送料も税も付けていないので、明細の合計＝総額になる）
+  */
+  const itemTotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
   if (itemTotal !== (session.amount_total || 0) || session.currency !== 'jpy') throw new Error('shop_amount');
 
   const customer = session.customer_details;
@@ -62,9 +70,17 @@ export async function commitShopCheckout(
   const result = committed as { created?: boolean; status?: string; id?: string };
   const intentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
   if (!result.id || !intentId) throw new Error('shop_intent');
+  /*
+    何をいくつ買ったかを、注文に残す。
+
+    items には名前と数量しか無く、**商品のIDが入っていない。**
+    そのため返金のときに「どの商品の在庫を戻すか」が特定できず、
+    在庫を戻す処理そのものが作れなかった（supabase/hp_orders_restock.sql）。
+  */
   const linked = await db.from('hp_orders').update({
     stripe_account_id: accountId,
     stripe_payment_intent_id: intentId,
+    cart,
   }).eq('id', result.id).eq('site_id', siteId).select('id');
   if (linked.error || !linked.data || linked.data.length !== 1) throw new Error('shop_database');
   // 注文は既に確定している。通知失敗でStripeへ失敗を返さず、DBキューから再送する。

@@ -8,7 +8,10 @@ export interface ShopOrderItem {
   name: string;
   variant: null;
   quantity: number;
+  /** 1個あたり。割引が入ると割り切れないので、見せる用の丸めた値 */
   unit: number;
+  /** その明細で実際に決済された額。照合はこちらを使う */
+  lineTotal: number;
 }
 
 const ITEM_ID = /^[a-zA-Z0-9_-]{1,80}$/;
@@ -67,9 +70,29 @@ export function snapshotStripeItems(
     const quantity = Number(line.quantity);
     const total = Number(line.amount_total);
     if (!Number.isInteger(quantity) || quantity !== cart[index].q || quantity < 1) throw new Error('決済数量を確認できません');
-    if (!Number.isInteger(total) || total < 0 || total % quantity !== 0) throw new Error('決済金額を確認できません');
+    /*
+      割り切れることを求めてはいけない。
+
+      決済画面はクーポンの入力を受け付けている
+      （app/api/shop/checkout/route.ts の allow_promotion_codes: true）。
+      2個以上の商品に割引が入ると、その明細の合計は数量で割り切れない。
+      例: 1,000円×3個に500円オフ → 2,500円。2,500 ÷ 3 は割り切れない。
+
+      以前はここで例外を投げていた。投げると commitShopCheckout ごと失敗し、
+
+        ・お客様には決済完了の画面が出て、**カードには請求される**
+        ・hp_orders に注文が**1件も作られない**
+        ・お店への通知も飛ばず、在庫も減らない
+        ・Stripeの再送は毎回同じ理由で失敗し続ける
+
+      お店には「無い注文」として何も現れない。お客様は届くのを待つ。
+
+      1個あたりの値段は、見せるための丸めた値にする。
+      お金の照合には、実際に決済された明細の合計（lineTotal）を使う。
+    */
+    if (!Number.isInteger(total) || total < 0) throw new Error('決済金額を確認できません');
     const name = (line.description || '').trim().slice(0, 200);
     if (!name) throw new Error('決済商品を確認できません');
-    return { name, variant: null, quantity, unit: total / quantity };
+    return { name, variant: null, quantity, unit: Math.round(total / quantity), lineTotal: total };
   });
 }

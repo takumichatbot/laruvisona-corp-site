@@ -35,7 +35,15 @@ test('Stripeの確定明細とカートの数量・金額を照合する', () =>
     [{ id: 'p1', q: 2 }],
     [{ description: '焼き菓子セット', quantity: 2, amount_total: 2400 }],
   );
-  assert.deepEqual(items, [{ name: '焼き菓子セット', variant: null, quantity: 2, unit: 1200 }]);
+  /*
+    lineTotal（その明細で実際に決済された額）を持つようになった。
+
+    以前は 1個あたり だけを残し、「合計が数量で割り切れること」を求めていた。
+    ところが決済画面はクーポンを受け付けている。2個以上に割引が入ると
+    割り切れず、例外になって**課金されたのに注文が1件も作られなかった。**
+    照合は lineTotal で行う（tests/shop-coupon-and-restock.test.ts）。
+  */
+  assert.deepEqual(items, [{ name: '焼き菓子セット', variant: null, quantity: 2, unit: 1200, lineTotal: 2400 }]);
   assert.throws(() => snapshotStripeItems([{ id: 'p1', q: 2 }], [{ description: '商品', quantity: 1, amount_total: 1200 }]));
   assert.throws(() => snapshotStripeItems([{ id: 'p1', q: 2 }], []));
 });
