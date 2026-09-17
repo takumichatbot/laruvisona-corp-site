@@ -1959,7 +1959,7 @@ function PaletteSwatches({ palette, onPick }: { palette: string[]; onPick: (c: s
   );
 }
 
-function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, designStyle, onDesignStyleChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus, onOpenImageLib, globalFooter, onGlobalFooterChange, customPalette, onCustomPaletteChange, lineNotifyToken, onLineNotifyTokenChange, clarityId, onClarityIdChange, webhookUrl, onWebhookUrlChange, sitePassword, onSitePasswordChange, siteId, onMemoChange }: {
+function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotChange, laruseo, onLaruseoChange, notifyEmail, onNotifyEmailChange, colorScheme, onColorSchemeChange, designStyle, onDesignStyleChange, gaTrackingId, onGaTrackingIdChange, larubotPublicId, onLarubotPublicIdChange, laruseoPublicId, onLaruseoPublicIdChange, siteName, customCss, onCustomCssChange, fontFamily, onFontFamilyChange, userPlan, subscriptionStatus, onOpenImageLib, globalFooter, onGlobalFooterChange, customPalette, onCustomPaletteChange, lineNotifyToken, onLineNotifyTokenChange, clarityId, onClarityIdChange, webhookUrl, onWebhookUrlChange, sitePassword, onSitePasswordChange, siteId, onMemoChange, abPartnerCount }: {
   block: Block | null;
   onDataChange: (id: string, data: Record<string, unknown>) => void;
   seo: SEOSettings;
@@ -2001,6 +2001,8 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
   sitePassword: string;
   onSitePasswordChange: (v: string) => void;
   siteId: string | null;
+  /** いま選んでいるブロックと同じ種類で、Bの印が付いていないものの数（A/Bの相方） */
+  abPartnerCount: number;
   onMemoChange: (id: string, memo: string) => void;
 }) {
   const [tab, setTab] = useState<'block' | 'seo' | 'integrations'>('block');
@@ -2299,7 +2301,25 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     />
                     <span className="text-slate-300 text-xs">このブロックをBバリアントに設定</span>
                   </label>
-                  <p className="text-slate-600 text-[10px] mt-1.5">同じページにヒーローが2つある場合、公開時に50/50でランダム表示されます</p>
+                  {/*
+                    以前はここに「2つある場合、50/50で表示されます」とだけ書いてあり、
+                    **無いときに何が起きるかは書いていなかった。**
+                    実際には、相方が無いままBを付けると来訪者の半分に何も出ない。
+                    しかも振り分けは端末ごとに固定されるので、作った本人は
+                    毎回同じ側しか見ない。自分の画面では、いつまでも正常に見える。
+                    いまは書き出す側が対のあるときだけ振り分けるが、
+                    「対が無い」ことはここで言う。
+                  */}
+                  {d.abVariant === 'b' && abPartnerCount === 0 ? (
+                    <p role="alert" className="text-amber-300 text-[10px] mt-1.5 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5 leading-relaxed">
+                      比べる相手がありません。このページに<strong>同じ種類のブロックをもう1つ</strong>置いてください。
+                      それまでは振り分けを行わず、このブロックを全員に出します。
+                    </p>
+                  ) : (
+                    <p className="text-slate-600 text-[10px] mt-1.5">
+                      同じページに同じ種類のブロックがもう1つあると、公開時に50/50で振り分けます（印の無いほうがA）。
+                    </p>
+                  )}
                 </div>
               </>
             )}
@@ -6627,6 +6647,7 @@ function BuilderContent() {
         {/* Right Panel */}
         {!preview && (
           <RightPanel
+            abPartnerCount={selectedBlock ? currentPage.blocks.filter(b => b.type === selectedBlock.type && b.id !== selectedBlock.id && !b.data?.abVariant).length : 0}
             block={selectedIds.size > 1 ? null : selectedBlock}
             onDataChange={updateBlockData}
             seo={currentPage.seo}

@@ -23,7 +23,7 @@ function renderEditorialMark(value: unknown, index: number): string {
   return `<span class="lhp-editorial-mark lhp-editorial-mark-text">${escapeHtml(text)}</span>`;
 }
 
-function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean }): string {
+function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean; abVariantFor?: (block: Block) => 'a' | 'b' | null }): string {
   const d = block.data;
   const str = (key: string) => escapeHtml(String(d[key] ?? ''));
   /* 属性・style に入れる値。エスケープしてから出す。
@@ -57,7 +57,26 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     }
 
     case 'hero': {
-      const abVariant = raw('abVariant');
+      /*
+        A/B の印は、**対になっているときだけ**付ける。
+
+        編集画面にあるのは「このブロックをBバリアントに設定」の1つだけで、
+        Aを指定する手立てが無い。書き出す側はBにしか印を付けていなかった。
+        振り分けの script は、印が自分の側と違うものを隠す。つまり:
+
+          ・ヒーローが1つで、それにBを付けた
+            → **来訪者の半分に、トップの主役が丸ごと出ない**
+          ・ヒーローが2つで、片方だけBを付けた
+            → 残り半分には、AとBが縦に2つ並ぶ
+
+        振り分けは sessionStorage で固定されるので、作った本人は毎回
+        同じ側しか見ない。**自分の画面では、いつまでも正常に見える。**
+
+        対（同じページに、印の無い同種のブロック）があるときだけ、
+        印の無いほうを a、付けたほうを b とする。
+        対が無ければ印を付けない ＝ 全員に出す。
+      */
+      const abVariant = ctx?.abVariantFor?.(block) ?? null;
       const abAttr = abVariant ? ` data-ab="${abVariant}"` : '';
       const layout = ['split', 'center', 'left'].includes(String(d.heroLayout)) ? String(d.heroLayout) : ctx?.heroLayout || 'center';
       const heroInnerStyle = layout === 'center'
@@ -1310,7 +1329,7 @@ async function lhpBuy(btn, priceId) {
   }
 }
 
-function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean }): string {
+function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean; abVariantFor?: (block: Block) => 'a' | 'b' | null }): string {
   const html = renderBlockInner(block, ctx);
   if (!html) return '';
   const d = block.data;
@@ -1885,9 +1904,28 @@ window.addEventListener('popstate',function(){
         : '<img loading="lazy" decoding="async" ');
   };
 
+  /*
+    そのページで、A/B の対が成立している種類だけを拾う。
+
+    成立の条件は「Bの印が付いたブロック」と「印の無い同じ種類のブロック」が
+    どちらもあること。片方しか無いときは振り分けない（全員に出す）。
+  */
+  function abVariantResolver(page: { blocks: Block[] }): (block: Block) => 'a' | 'b' | null {
+    const pairedTypes = new Set<string>();
+    for (const b of page.blocks) {
+      if (b.data?.['abVariant'] !== 'b') continue;
+      if (page.blocks.some(o => o.type === b.type && !o.data?.['abVariant'])) pairedTypes.add(b.type);
+    }
+    return (block: Block) => {
+      if (!pairedTypes.has(block.type)) return null;
+      return block.data?.['abVariant'] === 'b' ? 'b' : 'a';
+    };
+  }
+
   const pagesHtml = pages.map((page, idx) => {
+    const abVariantFor = abVariantResolver(page);
     const blocksHtml = decoratePage(
-      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor, imagePriority: idx === 0, bookingUrl: businessInfo?.siteId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/hp/scheduling/link?siteId=${encodeURIComponent(businessInfo.siteId)}` : undefined })).filter(Boolean).join('\n'),
+      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor, abVariantFor, imagePriority: idx === 0, bookingUrl: businessInfo?.siteId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/hp/scheduling/link?siteId=${encodeURIComponent(businessInfo.siteId)}` : undefined })).filter(Boolean).join('\n'),
       idx === 0,
     );
     return multiPage
@@ -1909,8 +1947,11 @@ window.addEventListener('popstate',function(){
     : `${appUrl}/api/og?title=${encodeURIComponent(title.slice(0, 40))}&desc=${encodeURIComponent(desc.slice(0, 60))}${businessInfo?.industry ? `&industry=${businessInfo.industry}` : ''}`;
 
   // A/B test: detect if any page has both A and B hero variants
+  // 振り分けの script を入れるのは、対が成立しているページがあるときだけ。
+  // 片方しか無いのに入れると、来訪者の半分に何も出なくなる。
   const hasABTest = pages.some(p =>
-    p.blocks.some(b => b.type === 'hero' && b.data.abVariant === 'b')
+    p.blocks.some(b => b.data?.['abVariant'] === 'b'
+      && p.blocks.some(o => o.type === b.type && !o.data?.['abVariant']))
   );
   const abScript = hasABTest ? `<script>
 (function(){
