@@ -86,6 +86,36 @@ export async function POST(req: Request) {
     .eq('status', 'pending')
     .lt('created_at', new Date(Date.now() - HOLD_MS).toISOString());
 
+  /*
+    空き枠の一覧が見ている所を、確定側も見る。
+
+    一覧（/api/hp/booking/availability）は hp_reservations に加えて、
+    古い形の予約（contacts の extra_fields.slot_id）も「埋まっている」と
+    して扱う。ところが確定側は hp_reservations の重複禁止インデックスだけを
+    頼りにしていた。
+
+    つまり**contacts にしか記録が無い枠へ直接送ると、予約が通る。**
+    お客様には「予約できました」と出て、お店には同じ時間に2件が並ぶ。
+    一覧からは消えている枠なので、店主には「なぜこの時間に2件？」しか見えない。
+
+    確認と確定が別の所を見ていると、いつかこうなる。同じ所を見る。
+  */
+  const { data: legacyHold, error: legacyError } = await supabase
+    .from('contacts')
+    .select('id')
+    .eq('site_id', siteId)
+    .eq('type', 'booking')
+    .eq('extra_fields->>slot_id', slotId)
+    .limit(1);
+  if (legacyError) {
+    // 確認できないまま通すと二重予約になる。通さない。
+    console.error('[booking/reserve] legacy hold check failed:', siteId, slotId, legacyError.message);
+    return NextResponse.json({ error: '空き状況を確認できませんでした。時間をおいてお試しください' }, { status: 503 });
+  }
+  if (legacyHold && legacyHold.length > 0) {
+    return NextResponse.json({ error: 'この枠は埋まりました。別の時間をお選びください' }, { status: 409 });
+  }
+
   const prepay = false;
   const amount = 0;
 

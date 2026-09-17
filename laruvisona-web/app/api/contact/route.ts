@@ -141,7 +141,34 @@ export async function POST(req: Request) {
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }
-  const { siteId, name, email, phone, message, type, extraFields } = submission;
+  const { siteId, name, email, phone, message, type } = submission;
+
+  /*
+    予約枠を押さえる鍵は、**外から名乗らせない。**
+
+    空き枠の一覧（/api/hp/booking/availability）は、contacts の
+    extra_fields.slot_id が付いた行を「その枠は埋まっている」として扱う。
+    ところがこの受け口は公開フォーム用で、追加項目は誰でも好きな鍵で送れた。
+    枠のIDは空き枠APIから読める。
+
+    つまり**誰でも、送信するだけでお店の枠を消せた。**
+    期限も無く、解除する手立ても無い。店の画面には普通の問い合わせが
+    1件増えるだけで、枠が消えたことは「予約が来なくなる」まで現れない。
+    同業者でも、ただの暇な人でも、カレンダーを丸ごと空にできる。
+
+    枠を押さえてよいのは、こちらの中から呼ぶとき（予約の確定）だけ。
+    そのときは x-internal-secret が付く。公開からの送信では、この鍵を落とす。
+    落としたことは記録に残す（誰かが試しているなら、それは知りたい）。
+  */
+  const RESERVED_EXTRA_KEYS = ['slot_id', 'prepaid'];
+  const extraFields = { ...submission.extraFields };
+  if (!internal) {
+    const taken = RESERVED_EXTRA_KEYS.filter(k => k in extraFields);
+    for (const k of taken) delete extraFields[k];
+    if (taken.length > 0) {
+      console.error('[Contact] reserved extra fields dropped from public submission:', siteId, taken.join(','));
+    }
+  }
 
   const supabase = getAdminClient();
   if (!internal) {
