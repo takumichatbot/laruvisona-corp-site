@@ -109,12 +109,29 @@ check_deploy() {
   local want live waited
   want="$(cat "$EXPECT")"
   waited="$(age "$EXPECT")"
-  live="$(curl -fsS --max-time 10 "$HEALTH_URL" 2>/dev/null | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')"
+  local body code
+  body="$(curl -sS --max-time 15 -w '\n%{http_code}' "$HEALTH_URL" 2>/dev/null)"
+  code="$(printf '%s' "$body" | tail -1)"
+  live="$(printf '%s' "$body" | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')"
   if [ -z "$live" ]; then
-    PROD_STATE="確認できません（本番から答えが返りません）"
+    # 「確認できません」だけだと、まだ配られていないのか、落ちているのかが
+    # 分からない。何が返ってきたかまで書く。
+    case "$code" in
+      404) PROD_STATE="まだ入れ替わっていません（/api/health がありません）" ;;
+      200) PROD_STATE="答えは返りますが、コミットが入っていません"
+           # 何が返っているのかが分からないと直しようがない。1時間に1回だけ残す。
+           if [ "$(age "$DEPLOY_STAMP")" -gt 3600 ]; then
+             : > "$DEPLOY_STAMP"
+             log "  本番は答えますが、コミットが入っていません。返ってきたもの:
+$(printf '%s' "$body" | head -c 300 | scrub | sed 's/^/    /')"
+           fi ;;
+      ''|000) PROD_STATE="本番に届きません（通信できません）" ;;
+      *)   PROD_STATE="本番が $code を返しました" ;;
+    esac
     return
   fi
-  if [ "$live" = "$want" ]; then
+  # 返ってくる識別子は7桁のこともある。先頭で合わせる。
+  if [ "${#live}" -ge 7 ] && [ "${want:0:${#live}}" = "$live" ]; then
     PROD_STATE="反映済み ${want:0:7}（$((waited/60))分）"
     : > "$EXPECT"
     return

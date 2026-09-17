@@ -1,7 +1,38 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
+import { execSync } from 'node:child_process';
+
+// いま動いているのがどのコミットかを、ビルドのときに焼き込む。
+//
+// 置き場所によって入る変数が違う（Vercel・Render・自前のサーバー…）ので、
+// 変数を1つに決め打ちできない。無ければ git に聞く。git も無ければ空のまま。
+// **分からないときに、それらしい値を作らないこと。**
+// 嘘の識別子が入ると、「反映済み」と出たまま古いものが動き続ける。
+function buildCommit(): string {
+  for (const v of [
+    process.env.BUILD_COMMIT,
+    process.env.VERCEL_GIT_COMMIT_SHA,
+    process.env.GIT_COMMIT_SHA,
+    process.env.RENDER_GIT_COMMIT,
+    process.env.SOURCE_VERSION,
+  ]) {
+    if (typeof v === 'string' && /^[0-9a-f]{7,40}$/.test(v)) return v;
+  }
+  try {
+    return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim();
+  } catch {
+    return '';
+  }
+}
+
+const BUILD_COMMIT = buildCommit();
 
 const nextConfig: NextConfig = {
+  // /api/health がこれを返す。出荷係が push と本番を突き合わせるのに使う。
+  env: { BUILD_COMMIT, BUILD_TIME: new Date().toISOString() },
+  // ビルドの識別子にも同じものを使う。どのコミットのビルドかが追える。
+  generateBuildId: async () => BUILD_COMMIT || null,
   async headers() {
     return [{
       source: '/:path*',

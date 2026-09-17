@@ -165,7 +165,7 @@ test('本番に出たかどうかまで、追いかける', () => {
   assert.match(src, /HEALTH_URL="https:\/\/laruvisona\.jp\/api\/health"/, '本番を見に行っていない');
   assert.match(src, /\[ -n "\$shipped" \] && printf '%s' "\$shipped" > "\$EXPECT"/,
     '出荷したコミットを控えていない');
-  assert.match(src, /if \[ "\$live" = "\$want" \]; then/, '突き合わせていない');
+  assert.match(src, /"\$\{want:0:\$\{#live\}\}" = "\$live"/, '突き合わせていない');
   assert.match(src, /DEPLOY_WARN_SEC=\d+/, '待ち続けるだけで知らせない');
   assert.match(src, /notify "本番が古いままです"/, '入れ替わらなくても黙っている');
   // 出荷が無いときも見に行くこと（出荷の直後だけ見ても、遅れて入るぶんを取り逃がす）
@@ -181,4 +181,52 @@ test('本番が何を動かしているかを、本番自身が答える', () =>
   assert.match(route, /'Cache-Control': 'no-store, private'/, '途中で保存されうる');
   // 鍵になるものを返さないこと
   assert.doesNotMatch(route, /SERVICE_ROLE|SECRET|STRIPE|ANON_KEY/, '返してはいけないものが入っている');
+});
+
+test('本番が何を返したかで、状態を書き分ける', () => {
+  /*
+    「確認できません」だけだと、まだ配られていないのか、落ちているのか、
+    識別子が入っていないのかが分からない。
+    実際に最初の版は 404 と 200 と通信不能を全部ひとまとめにしていて、
+    「コミットが入っていない」という本当の原因にたどり着けなかった。
+  */
+  const src = watch();
+  assert.match(src, /404\) PROD_STATE="まだ入れ替わっていません/, '未配布と区別していない');
+  assert.match(src, /200\) PROD_STATE="答えは返りますが、コミットが入っていません"/);
+  assert.match(src, /''\|000\) PROD_STATE="本番に届きません/, '通信できない場合と区別していない');
+  // 原因にたどり着けるよう、返ってきたものを残すこと（1時間に1回）
+  assert.match(src, /本番は答えますが、コミットが入っていません。返ってきたもの/);
+  assert.match(src, /head -c 300 \| scrub/, '素通しで書いている、または長すぎる');
+});
+
+test('識別子が短くても、突き合わせられる', () => {
+  const src = watch();
+  assert.match(src, /\[ "\$\{#live\}" -ge 7 \] && \[ "\$\{want:0:\$\{#live\}\}" = "\$live" \]/,
+    '完全一致しか見ていない');
+});
+
+test('どのコミットかが分からないとき、それらしい値を作らない', () => {
+  /*
+    嘘の識別子が入ると「反映済み」と出たまま古いものが動き続ける。
+    分からないなら null のままにして、「入っていません」と言わせる。
+  */
+  const cfg = read('next.config.ts');
+  assert.match(cfg, /return '';\s*\n\s*\}\s*\n\}/, 'git が無いときに作り物を返している');
+  assert.match(cfg, /\/\^\[0-9a-f\]\{7,40\}\$\//, '形を確かめずに使っている');
+  assert.match(cfg, /env: \{ BUILD_COMMIT, BUILD_TIME/, 'ビルド時に焼き込んでいない');
+
+  const route = read('app/api/health/route.ts');
+  assert.match(route, /if \(typeof value === 'string' && \/\^\[0-9a-f\]\{7,40\}\$\/\.test\(value\)\) return value;/);
+  assert.match(route, /return null;/, '見つからないときに嘘をついている');
+});
+
+test('置き場所を決め打ちしない', () => {
+  // Vercel とは限らない。実際 VERCEL_GIT_COMMIT_SHA は本番で空だった。
+  const route = read('app/api/health/route.ts');
+  for (const key of ['BUILD_COMMIT', 'VERCEL_GIT_COMMIT_SHA', 'RENDER_GIT_COMMIT', 'SOURCE_VERSION']) {
+    assert.ok(route.includes(key), `${key} を見ていない`);
+  }
+  // どこで動いているかは、変数の「名前があるか」だけ返す。中身は返さない
+  assert.match(route, /PLATFORM_HINTS\.filter\(\(key\) => !!process\.env\[key\]\)/,
+    '中身を返している');
 });
