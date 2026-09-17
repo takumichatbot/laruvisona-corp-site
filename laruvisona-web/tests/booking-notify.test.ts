@@ -13,14 +13,21 @@ const { finalizeBooking } = await import('../lib/booking-finalize.ts');
 
 interface Captured { url: string; headers: Record<string, string> }
 
-function captureFetch(status = 200) {
+/*
+  /api/contact は、店主あてメールが失敗しても 200 を返す（受付は保存できているため）。
+  だから 200 かどうかだけでなく、中の notified も返す。
+*/
+function captureFetch(status = 200, notified = true) {
   const calls: Captured[] = [];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     calls.push({
       url: String(input),
       headers: (init?.headers ?? {}) as Record<string, string>,
     });
-    return new Response(JSON.stringify({ ok: status < 400 }), { status });
+    return new Response(
+      JSON.stringify({ ok: status < 400, notified, ownerNotifyState: notified ? 'accepted' : 'failed' }),
+      { status },
+    );
   }) as typeof fetch;
   return calls;
 }
@@ -73,8 +80,33 @@ test('通知が失敗したら false を返す（成功として扱わない）'
 });
 
 test('通知が成功したら true を返す', async () => {
-  captureFetch(200);
+  captureFetch(200, true);
   assert.equal(await finalizeBooking(booking), true);
+});
+
+/*
+  ここが本命。
+
+  /api/contact は、店主あてメールが失敗しても 200 を返す。受付そのものは
+  保存できているので、それは正しい。だが呼ぶ側が res.ok しか見ていないと、
+  **届いていないのに「知らせた」と答える。**
+
+  そのまま流れると:
+    予約が入る → 店主には届かない → お客様には「送信できました」と出る
+    → 当日、誰も来ない。どちらにも理由が分からない。
+
+  お客様に出す「通知に失敗しました」は data.notified === false で出る。
+  ここが true のままだと、その警告は一度も出ない。
+*/
+test('200でも、店主に届いていなければ false を返す', async () => {
+  captureFetch(200, false);
+  assert.equal(await finalizeBooking(booking), false);
+});
+
+test('返事の形が想定外でも、成功と言わない', async () => {
+  // 本文が読めない・notified が無い → 分からないのだから、成功とは言えない
+  globalThis.fetch = (async () => new Response('<html>502</html>', { status: 200 })) as typeof fetch;
+  assert.equal(await finalizeBooking(booking), false);
 });
 
 test('INTERNAL_API_BASE_URL を設定するとその宛先になる', async () => {

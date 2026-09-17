@@ -322,14 +322,50 @@ export async function POST(req: Request) {
       }).eq('id', contactRow.id);
     }
   } else {
-    await supabase.from('contacts').update({ extra_fields: notificationFields }).eq('id', contactRow.id);
+    const saved = await supabase.from('contacts').update({ extra_fields: notificationFields }).eq('id', contactRow.id);
+    // ここに配信IDを残せないと、あとから来る webhook（届いた／戻ってきた）が
+    // この受付に結び付けられない。状態は永久に「受け付けました」のまま止まる。
+    if (saved.error) console.error('[Contact] delivery ids not recorded:', contactRow.id, saved.error.message);
   }
 
-  await sendUserPush(site.user_id, {
+  const push = await sendUserPush(site.user_id, {
     title: `${site.name}に${type === 'booking' ? '予約リクエスト' : 'お問い合わせ'}`,
     body: '新しい受付内容を管理画面で確認してください。',
     url: `/laruHP/contacts?site=${encodeURIComponent(siteId)}`,
     tag: `contact-${contactRow.id}`,
   }, supabase);
-  return NextResponse.json({ ok: true, notified: deliveryState.owner_email === 'success' });
+  // メールとLINEは状態を残しているのに、プッシュだけ何も残していなかった。
+  // 「スマホに出るはず」と思っている店主が、出ていないことに気づけない。
+  if (push && push.sent === 0 && push.failed > 0) {
+    console.error('[Contact] push notification failed for all devices:', contactRow.id, push);
+  }
+  /*
+    notified は「店主に知らせられたか」。
+
+    ここが 'success' と比べていた。ところが deliveryState が取る値は
+    'accepted' / 'failed' / 'not_configured' の3つだけで、**'success' は
+    絶対に作られない。** つまりこの旗は、いつ見ても false だった。
+
+    そのままでは害が見えにくいが、通る道がある。
+
+      お客様が予約する
+        → /api/hp/booking/reserve
+        → lib/booking-finalize.ts が、ここ（/api/contact）を内側で叩く
+        → 店主あてメールが失敗しても、HTTPは200なので finalize は true を返す
+        → reserve は notified: true を返す
+        → components/scheduling/PublicBooking.tsx は
+          data.notified === false のときだけ「通知に失敗」を出す
+
+    結果: **予約は入ったのに店主は知らず、お客様には「送信できました」と出る。**
+    当日、誰も来ない。どちらにも、何が起きたか分からない。
+
+    'accepted' は「メール配信の会社が受け取った」まで。届いたかは
+    あとから webhook（delivered / bounced）で入る。ここで言えるのはそこまで。
+  */
+  const ownerNotifyState = deliveryState.owner_email || 'not_configured';
+  return NextResponse.json({
+    ok: true,
+    notified: ownerNotifyState === 'accepted',
+    ownerNotifyState,
+  });
 }

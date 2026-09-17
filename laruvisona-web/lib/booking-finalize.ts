@@ -67,6 +67,22 @@ export async function finalizeBooking(opts: {
       console.error('[booking-finalize] notify failed: status', res.status);
       return false;
     }
+    /*
+      200 だけでは足りない。
+
+      /api/contact は、店主あてメールが失敗しても 200 を返す
+      （受付そのものは保存できているため）。中の notified を見ないと、
+      **届いていないのに「知らせた」と答えることになる。**
+
+      そのまま返すと、こう流れる。
+        予約が入る → 店主には届かない → お客様には「送信できました」
+        → 当日、誰も来ない。どちらにも理由が分からない。
+    */
+    const body = await res.json().catch(() => ({} as { notified?: boolean; ownerNotifyState?: string }));
+    if (body.notified !== true) {
+      console.error('[booking-finalize] owner not notified:', body.ownerNotifyState || 'unknown');
+      return false;
+    }
     return true;
   } catch (e) {
     console.error('[booking-finalize] notify failed:', (e as Error)?.message);
