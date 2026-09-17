@@ -22,6 +22,9 @@ export const LARUHP_ARTICLE_SLUGS = [
   'ai-hp-jidou-seisaku',
   'seo-chiiki-meo',
   'chatbot-jidou-outon',
+  // 「ホームページ作成 無料」で掲載順位10位（1ページ目）まで来ているのに
+  // クリック0だった。答える記事が1本も無かった（Search Console 2026-09-17）。
+  'hp-muryou-de-tsukureru-ka',
 ] as const;
 
 const FIXED_PUBLIC_PATHS = ['/plans', '/simulator', '/demo', '/faq', '/domains', '/contact', '/privacy', '/terms', '/tokusho'] as const;
