@@ -1,4 +1,5 @@
 import type { Block } from '@/types/laruHP';
+import { isPlaceholderText } from './placeholder-text';
 
 /**
  * 検索結果に出る説明文を、本文から作る。
@@ -9,6 +10,12 @@ import type { Block } from '@/types/laruHP';
  * 空のまま出ていく経路がある。
  *
  * 自分で書いたものがあれば、必ずそちらを使う。これは最後の砦。
+ *
+ * ただし、ひな形のままの文字は拾わない。
+ * 拾うと、検索結果とLINEに貼ったときのプレビューに
+ * 「紹介文を入力してください」と出る。**空っぽより悪い。**
+ * 空なら検索側が本文から拾うが、これは違う文が確定で出る。
+ * 実際、本番で公開中のページの og:description がそうなっていた。
  */
 
 const TEXT_KEYS = ['subheading', 'subtext', 'text', 'description', 'lead', 'body', 'heading', 'title'];
@@ -39,6 +46,8 @@ export function autoDescription(blocks: Block[], siteName = '', max = 110): stri
       const value = plain(data[key]);
       // 見出しだけの短い断片は、説明文としては読めない
       if (value.length < 8) continue;
+      // ひな形のままの文は、載せるより無いほうがよい
+      if (isPlaceholderText(value)) continue;
       if (value === siteName) continue;
       if (pieces.includes(value)) continue;
       pieces.push(value);

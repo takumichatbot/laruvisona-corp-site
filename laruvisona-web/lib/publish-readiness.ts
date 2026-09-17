@@ -15,6 +15,7 @@
  * 判定はデータだけを見る。外部への問い合わせはしない（画面を止めないため）。
  */
 import type { Page } from '@/types/laruHP';
+import { hasPlaceholderText } from './placeholder-text';
 
 export type ReadyLevel = 'must' | 'better';
 
@@ -41,9 +42,6 @@ export interface ReadyInput {
   ownerEmail?: string | null;
 }
 
-/** 例文のまま残りやすい言い回し */
-const PLACEHOLDER = /ここに|入力してください|サンプル|【例】|見出しを入力|商品名を入力/;
-
 /** 素朴なメール形式チェック。RFCの厳密な検査はしない。実APIも形式は検査していない。 */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -55,7 +53,6 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
   const pages = input.pages ?? [];
   const blocks = pages.flatMap(p => p.blocks ?? []);
   const firstPage = pages[0];
-  const text = JSON.stringify(blocks);
   const items: ReadyItem[] = [];
 
   // ── must ───────────────────────────────────────────────
@@ -67,7 +64,9 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
     detail: input.name?.trim() || '店名を入れてください',
   });
 
-  const hasPlaceholder = PLACEHOLDER.test(text) || blocks.some(b => b.data?.starterExampleName && b.data.starterExampleName === input.name);
+  // 一覧は lib/placeholder-text.ts にだけ置く。ここに書き写すと、
+  // 説明文を作る側（lib/auto-description.ts）と食い違う。実際そうなっていた。
+  const hasPlaceholder = hasPlaceholderText(blocks) || blocks.some(b => b.data?.starterExampleName && b.data.starterExampleName === input.name);
   items.push({
     id: 'placeholder',
     ok: !hasPlaceholder,
