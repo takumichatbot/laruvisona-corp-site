@@ -185,10 +185,47 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
 
   const frameWidth=device==='sp'?390:1100;
   const scale=Math.min(1,size.width/frameWidth)||1;
+  const frameHeight=Math.max(200,size.height/scale);
+
+  /*
+   * 2026-09-17: **できあがりが出ない／途中で切れる**を直した。
+   *
+   * 本番で開くと、真ん中のプレビューが白いままか、上の200pxだけ描かれて
+   * 残りが切れていた。枠の大きさも位置も正しく、中のHTMLも正しい。
+   * 枠の高さを1px動かすと、その場で全部出た。
+   *
+   * 起きていたこと。
+   *   1. 入れ物の大きさは ResizeObserver で**あとから**分かる。最初は 0。
+   *   2. だから枠は 1100×200 で作られ、その大きさで一度描かれる。
+   *   3. 大きさが分かって 1100×620 に変わる。
+   *   4. **中の文書が描き直されない。** 200pxぶんの古い絵が残る。
+   *
+   * ここは「完成像を見ながら作る」と言って売っている画面そのもので、
+   * 出ないと、作りかけの人はそこで手を止める。
+   *
+   * 直し方は2つ。
+   *   ・大きさが分かるまで枠を作らない（＝作った直後に大きさが変わらない）
+   *   ・それでも大きさが変わったとき（窓の幅、パソコン⇔スマホ、
+   *     パネルの開閉）は、1px動かして描き直させる
+   */
+  const measured = size.width > 0 && size.height > 0;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      // 中の文書はこちらから触れない（生成元を持たない箱にしてある）ので、
+      // 外から大きさをわずかに動かして描き直させる。
+      el.style.height = `${frameHeight + 0.5}px`;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [frameHeight, frameWidth, srcDoc]);
+
   // srcDoc の再ナビゲーションは親の「戻る」履歴を増やす。新しい隔離フレームの
   // 初期文書として置き換え、選択・スクロールは上の ready 往復で戻す。
-  return <div ref={box} className="se-frame-box"><iframe key={srcDoc} ref={ref} title="できあがりの見え方" sandbox="allow-scripts" srcDoc={srcDoc}
-    style={{width:frameWidth,height:Math.max(200,size.height/scale),transform:`scale(${scale})`,transformOrigin:'top left',left:Math.max(0,(size.width-frameWidth*scale)/2)}}/></div>;
+  return <div ref={box} className="se-frame-box">{measured && (
+    <iframe key={srcDoc} ref={ref} title="できあがりの見え方" sandbox="allow-scripts" srcDoc={srcDoc}
+      style={{width:frameWidth,height:frameHeight,transform:`scale(${scale})`,transformOrigin:'top left',left:Math.max(0,(size.width-frameWidth*scale)/2)}}/>
+  )}</div>;
 
 }
 
