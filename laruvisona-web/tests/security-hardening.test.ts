@@ -93,3 +93,15 @@ test('DBに足す列の手順が、リポジトリに残っている', () => {
   assert.match(sql, /drop policy if exists "sites_select_published"/, '匿名に公開サイトの全列を読ませない手当て');
   assert.match(sql, /laruhp_guard_profile_billing/, '課金・権限の列を本人が書き換えられない手当て');
 });
+
+test('運営はAI機能を試せる（契約状態で閉め出さない）', () => {
+  const src = code('lib/ai-access.ts');
+  // 公開処理には以前から管理者バイパスがあるのに、AI側だけ無く、
+  // 運営が自分の画面でAI機能を一度も試せない＝壊れていても気づけない状態だった。
+  assert.match(src, /isAdminUser/);
+  assert.match(src, /ADMIN_EMAIL/);
+  // 回数の上限は管理者にもかける（無制限にはしない）
+  const order = src.indexOf('isAdminUser(db,userId)');
+  const claim = src.indexOf('claimBuilderUsage');
+  assert.ok(claim < order || claim > 0, '回数制限そのものは残っていること');
+});
