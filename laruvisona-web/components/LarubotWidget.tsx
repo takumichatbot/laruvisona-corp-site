@@ -11,25 +11,24 @@ import { isLaruHpHost } from '@/lib/laruhp-host';
  * - トップページのイントロ演出中はウィジェットを出さず、完了後に遅延ロードする。
  * - 別プロダクト領域（/laruHP・公開HP /hp）は各自のembedを持つため対象外。
  */
-/**
- * embed.js は内部で requestIdleCallback を使ってランチャーを生成する。
- * トップページの3D描画（連続rAF）でメインスレッドがidleにならず、
- * この idle コールバックが発火せずランチャーが出ないことがある。
- * idle を尊重しつつ、最大800msで確実に発火するフォールバックを一度だけ適用する。
+/*
+ * 2026-09-17: ブラウザの requestIdleCallback を差し替える回避コードを外した。
+ *
+ * embed.js は中でランチャーの生成を requestIdleCallback に預けていた。
+ * これは「メインスレッドが暇になったら呼ぶ」約束なので、
+ * **暇にならないページでは永久に呼ばれない。**
+ * つまり、出ないのは重いページ＝いちばん見られているページだった。
+ * しかもエラーは1つも出ないので、こちらからは気づけない。
+ *
+ * LARUbot 側が両方の呼び出しに { timeout: 2000 } を付けた。
+ * timeout が付いていれば、暇にならなくても必ず呼ばれる（仕様上の保証）。
+ * 実物を読んで確認済み:
+ *   requestIdleCallback(loadSettings, { timeout: 2000 })
+ *   requestIdleCallback(fn, { timeout: 2000 })
+ *
+ * 向こうが timeout を外したら、また出なくなる。そのときは
+ * ここで差し替えるのではなく、向こうに直してもらうこと。
  */
-function ensureIdleCallback() {
-  const w = window as unknown as { __lvRICPatched?: boolean; requestIdleCallback?: (cb: (d: unknown) => void, opts?: { timeout?: number }) => number };
-  if (w.__lvRICPatched) return;
-  w.__lvRICPatched = true;
-  const native = typeof w.requestIdleCallback === 'function' ? w.requestIdleCallback.bind(w) : null;
-  w.requestIdleCallback = (cb, opts) => {
-    let done = false;
-    const run = (arg: unknown) => { if (done) return; done = true; try { cb(arg); } catch { /* noop */ } };
-    if (native) native(run, opts);
-    setTimeout(() => run({ didTimeout: true, timeRemaining: () => 0 }), (opts && opts.timeout) || 800);
-    return 0;
-  };
-}
 
 export default function LarubotWidget() {
   useEffect(() => {
@@ -56,7 +55,6 @@ export default function LarubotWidget() {
       injected = true;
       if (fallback) clearTimeout(fallback);
       if (document.getElementById('larubot-embed-script')) return;
-      ensureIdleCallback();
       const s = document.createElement('script');
       s.id = 'larubot-embed-script';
       s.src = 'https://larubot.tokyo/static/embed.js';
