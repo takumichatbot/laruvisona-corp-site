@@ -39,6 +39,22 @@ export function paymentService(
     if(!p.attempted_at || !p.return_url)return null;
     // Stripe retains idempotency keys at least 24h; never create a new charge after this window.
     if(Date.now()-Date.parse(p.attempted_at)>23*3600000)throw Error('payment_manual_review');
+    /*
+      押さえの残り時間が足りないときは、**作りに行かない。**
+
+      expires_at には hold_until を渡している。Stripe は30分より近い期限を
+      受け付けないので、押さえが切れかけ／切れている状態で作ろうとすると
+      **毎回失敗する。** そして失敗は投げられ、照合はそこで止まる。
+
+      止まると、下の「押さえが切れていたら手放す」所までたどり着かない。
+      予約は pending_payment のまま、**枠の押さえだけが永久に残る。**
+      お客様は一円も払っていないのに、その時間が埋まったままになる。
+
+      ここで null を返せば、照合は「セッションは無い」として扱い、
+      押さえが切れていれば手放す（＝枠が空く）。
+      DB側の条件も直してある（supabase/hp_scheduling_stuck_hold.sql）。
+    */
+    if(Date.parse(a.hold_until)-Date.now()<31*60000)return null;
     const s=await stripe.checkout.sessions.create({
       mode:'payment',payment_method_types:['card'],locale:'ja',
       expires_at:Math.floor(Date.parse(a.hold_until)/1000),
