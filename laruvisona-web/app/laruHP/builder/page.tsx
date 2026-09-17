@@ -4437,6 +4437,7 @@ function BuilderContent() {
   const [showImageLib, setShowImageLib] = useState(false);
   const [imageLibCallback, setImageLibCallback] = useState<((url: string) => void) | null>(null);
   const [showAiChat, setShowAiChat] = useState(false);
+  const [showAiMenu, setShowAiMenu] = useState(false);
   const [showUrlImport, setShowUrlImport] = useState(false);
   const [showPreviewLink, setShowPreviewLink] = useState(false);
   const [previewToken, setPreviewToken] = useState<string | null>(null);
@@ -5673,8 +5674,17 @@ function BuilderContent() {
               <div className="flex items-start gap-3 bg-white/5 rounded-xl px-4 py-3">
                 <span className="text-sky-400 font-bold text-sm flex-shrink-0 mt-0.5">3</span>
                 <div>
-                  <div className="text-white text-sm font-semibold mb-0.5">右上の「公開」で即時反映</div>
-                  <p className="text-slate-500 text-xs">保存は自動。完成したら「公開」ボタンを押すと世界中からアクセスできます。</p>
+                  <div className="text-white text-sm font-semibold mb-0.5">右上の「公開する」でインターネットに出ます</div>
+                  {/*
+                    以前はここに「保存は自動。」とだけ書いてあった。
+                    ところが同じ画面の右上には「未保存」と出ている。
+                    どちらを信じればいいか分からない人は、閉じるのが怖くなる。
+
+                    本当のところは「30秒ごとに自動、押せばすぐ」。それを書く。
+                    あわせて「公開するまでは誰にも見えない」も書く。
+                    これが分からないと、作りかけを人に見られている気がして手が止まる。
+                  */}
+                  <p className="text-slate-500 text-xs">保存は30秒ごとに自動で行われます。急ぐときは右上の「保存」を押してください。<strong className="text-slate-300">「公開する」を押すまでは、あなた以外には見えません。</strong></p>
                 </div>
               </div>
             </div>
@@ -6001,30 +6011,64 @@ function BuilderContent() {
           >
             URLインポート
           </button>
-          <button
-            onClick={handleAiLayout}
-            disabled={aiLayouting}
-            title={aiLayouting ? 'AIがレイアウトを提案中です…' : 'AIが最適なブロック構成を提案します'}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 disabled:opacity-50 disabled:cursor-wait"
-          >
-            {aiLayouting ? '提案中...' : 'AIレイアウト'}
-          </button>
-          <button
-            onClick={handleAiGenerate}
-            disabled={aiGenerating}
-            title={aiGenerating ? 'AIがコンテンツを生成中です…' : 'AIが各ブロックのテキストを自動生成します'}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 disabled:opacity-50 disabled:cursor-wait"
-          >
-            {aiGenerating ? '生成中...' : 'AI生成'}
-          </button>
-          <button
-            onClick={handleAiFullSite}
-            disabled={aiGenerating}
-            title="このページの既存ブロックをすべて削除して、AIで作り直します"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 disabled:opacity-50 disabled:cursor-wait"
-          >
-            {aiGenerating ? '生成中...' : 'AIで作り直す'}
-          </button>
+          {/*
+            以前はここに「AIレイアウト」「AI生成」「AIで作り直す」が横一列に並び、
+            すぐ左の「AIチャット」と合わせて **AIで始まるボタンが4つ** あった。
+            名前は技術の名前で、押すと何が起きるかは書いていない。
+            しかも一番右の「AIで作り直す」は、いま作ったページを全部消す。
+
+            美容室の店主が、どれを押せばいいか分かるはずがない。
+            分からないボタンは押されない。押されないまま下書きで止まる。
+
+            まとめて1つにし、**起きることの言葉**で並べ直す。
+            消えるものがある選択肢は、色と文で先に言う。
+          */}
+          <div className="relative hidden sm:block">
+            <button
+              onClick={() => setShowAiMenu(v => !v)}
+              disabled={aiGenerating || aiLayouting}
+              aria-haspopup="menu"
+              aria-expanded={showAiMenu}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 disabled:opacity-50 disabled:cursor-wait"
+            >
+              {aiLayouting ? '構成を考えています...' : aiGenerating ? '文章を書いています...' : 'AIにおまかせ'}
+              {!aiGenerating && !aiLayouting && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              )}
+            </button>
+            {showAiMenu && (
+              <>
+                {/* 外を触ったら閉じる。押せる物の裏に敷く */}
+                <div className="fixed inset-0 z-40" onClick={() => setShowAiMenu(false)} />
+                <div role="menu" className="absolute right-0 top-full mt-1.5 z-50 w-72 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                  <button
+                    role="menuitem"
+                    onClick={() => { setShowAiMenu(false); handleAiLayout(); }}
+                    className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5"
+                  >
+                    <div className="text-white text-xs font-bold mb-0.5">ページの構成を考えてもらう</div>
+                    <div className="text-slate-400 text-[11px] leading-relaxed">どのブロックをどの順に置くか、お店の情報から提案します。いまの中身は消えません。</div>
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setShowAiMenu(false); handleAiGenerate(); }}
+                    className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5"
+                  >
+                    <div className="text-white text-xs font-bold mb-0.5">文章を書いてもらう</div>
+                    <div className="text-slate-400 text-[11px] leading-relaxed">いま置いてあるブロックの見出しと本文を書き起こします。空欄が埋まります。</div>
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setShowAiMenu(false); handleAiFullSite(); }}
+                    className="w-full text-left px-4 py-3 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <div className="text-rose-300 text-xs font-bold mb-0.5">このページを一から作り直す</div>
+                    <div className="text-slate-400 text-[11px] leading-relaxed">いまのブロックを<strong className="text-rose-300">すべて消して</strong>から作り直します。押すと確認が出ます。</div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           {preview && (
             <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10">
               <button onClick={() => setPreviewDevice('desktop')} title="デスクトップ" aria-label="デスクトップ表示"
