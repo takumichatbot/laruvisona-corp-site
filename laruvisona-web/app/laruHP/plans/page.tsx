@@ -268,10 +268,10 @@ export default function PlansPage() {
             <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-2.5">
-            <Link href="/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">
+            <Link href="https://laruvisona.jp/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">
               ログイン
             </Link>
-            <Link href="/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
+            <Link href="https://laruvisona.jp/laruHP/studio" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all whitespace-nowrap">
               無料で始める →
             </Link>
           </div>
@@ -293,6 +293,11 @@ export default function PlansPage() {
             <span className="text-sky-600 font-bold text-xs tracking-[0.2em] uppercase">PLAN COMPARISON</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mt-4 mb-6 text-gray-900">プラン比較</h1>
+          <p className="mb-8">
+            <Link href="https://laruhp.com/simulator" className="inline-flex items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-700 transition-all hover:bg-white">
+              どれか迷ったら、やりたいことから見積る →
+            </Link>
+          </p>
 
           {/* Billing toggle */}
           <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-2 py-2 shadow-sm mb-4">

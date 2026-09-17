@@ -1,5 +1,24 @@
 import Link from 'next/link';
 import CompanyFooter from '@/components/company/CompanyFooter';
+
+/**
+ * 「作り直したほうが早い」ことがある困りごと。
+ *
+ * 検索から来る人の多くは、受託の見積りではなく目の前の症状を直したい。
+ * そのうち、いまのサイトが古くて直す先が多い人には、月額のサービス（LARU HP）のほうが
+ * 安く早い。会社サイトには、その出口がどこにも無かった。
+ * 症状と関係のないページに出すと邪魔になるので、当てはまるものだけに出す。
+ */
+const REBUILD_FITS = new Set<string>([
+  'site-slow',
+  'ssl-warning',
+  'wordpress-admin-locked-out',
+  'not-in-google',
+  'mobile-layout-broken',
+  'contact-form-not-arriving',
+  'vendor-unreachable',
+  'server-migration',
+]);
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { TROUBLES, getTrouble } from '@/lib/trouble-data';
@@ -146,6 +165,30 @@ export default async function TroublePage({ params }: { params: Promise<{ slug: 
               </Link>
             </div>
           </section>
+
+          {REBUILD_FITS.has(t.slug) && (
+            <section className="mb-14 rounded-2xl border border-white/10 bg-[#0f172a] p-7 md:p-9">
+              <span className="text-[10px] font-bold tracking-[0.3em] text-slate-500">直すより、作り直したほうが早いとき</span>
+              <h2 className="mt-4 mb-4 text-xl font-bold md:text-2xl">
+                いまのサイトが古く、直す先が多いなら
+              </h2>
+              <p className="mb-7 text-sm leading-[1.95] text-slate-300">
+                同じ症状が何度も出るサイトは、一つずつ直しても切りがないことがあります。
+                作り直しが向いている場合のために、当社は月額のホームページ制作サービス
+                「LARU HP」を運営しています。月額999円（税別）から、常時SSL・スマートフォン表示・
+                問い合わせフォーム・検索向けの基本設定まで含みます。
+                受託でお引き受けするより安く済む規模であれば、そちらをご案内します。
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <a href="https://laruhp.com/?ref=trouble" className="rounded-xl border border-white/20 px-7 py-3.5 text-center text-sm font-bold text-white transition-all hover:bg-white/5">
+                  LARU HP を見る
+                </a>
+                <a href="https://laruhp.com/demo?ref=trouble" className="rounded-xl border border-white/20 px-7 py-3.5 text-center text-sm font-bold text-white transition-all hover:bg-white/5">
+                  業種別の見本を見る（登録不要）
+                </a>
+              </div>
+            </section>
+          )}
 
           <section className="mb-14">
             <h2 className="text-2xl font-bold tracking-tight mb-8">よくある質問</h2>

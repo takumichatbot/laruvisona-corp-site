@@ -32,6 +32,20 @@ export default function CompanyFooter() {
             </Link>
           ))}
         </nav>
+        <nav aria-label="自社サービス" className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/10 pt-6 text-sm">
+          <span className="text-xs uppercase tracking-[0.2em] text-slate-600">Services</span>
+          {/*
+            受託を探して来た人のうち、予算や規模が合わない相手は、そのまま帰ってしまっていた。
+            月額のサービスなら合う人がいるので、出口をここに置く。
+            どこから来た申し込みかを数えられるように ?ref= を付ける。
+          */}
+          <a href="https://laruhp.com/?ref=corp" className="transition-colors hover:text-white">
+            LARU HP（月額のホームページ制作）
+          </a>
+          <a href="https://laruhp.com/demo?ref=corp" className="transition-colors hover:text-white">
+            業種別の見本を見る
+          </a>
+        </nav>
         <div className="text-xs leading-6 text-slate-500">
           <p>株式会社LaruVisona（東京都板橋区南常盤台1丁目11-6-101号室）</p>
           <p>

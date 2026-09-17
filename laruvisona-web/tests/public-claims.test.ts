@@ -161,19 +161,27 @@ test('実装で差がついていないサポートを、差があるように�
   assert.match(plans, /サポート（メール）/);
 });
 
-test('公開する文章に、ハングルが混ざっていない', () => {
-  // 日本語入力の取り違えで「公開」が「공開」になっていたことが2回ある。
+test('公開する文章に、日本語でない文字が紛れていない', () => {
+  // 日本語入力の取り違えで「公開」が「공開」になっていたことが2回、
+  // 「一つ」が「одно一つ」になっていたことが1回ある。
   // 目では気づきにくく、そのまま公開されると読み手の信用を落とす。
-  const hangul = /[ᄀ-ᇿ㄰-㆏가-힯]/;
+  // ハングルとキリル文字だけを見る（ラテン文字は英単語で普通に出てくる）。
+  const foreign = /[ᄀ-ᇿ㄰-㆏가-힯\u0400-\u04FF]/;
   for (const path of [
     'app/laruHP/articles/articles-data.ts',
     'lib/laruhp-industry-detail.ts',
     'lib/trouble-data.ts',
     'lib/studio-start.ts',
     'lib/laruhp-facts.ts',
+    // 本文を直接書いているページも見る。混入はテキストを打った場所で起きる。
+    'app/trouble/[slug]/page.tsx',
+    'app/laruHP/demo/demo-client.tsx',
+    'app/laruHP/demo/page.tsx',
+    'components/company/CompanyFooter.tsx',
+    'components/laruhp/PublicFooter.tsx',
   ]) {
     const src = code(path);
-    const hit = hangul.exec(src);
-    assert.equal(hit, null, `${path} にハングルが混ざっている: ${hit ? src.slice(Math.max(0, hit.index - 30), hit.index + 30) : ''}`);
+    const hit = foreign.exec(src);
+    assert.equal(hit, null, `${path} に日本語でない文字が混ざっている: ${hit ? src.slice(Math.max(0, hit.index - 30), hit.index + 30) : ''}`);
   }
 });

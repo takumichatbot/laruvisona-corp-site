@@ -5,6 +5,7 @@ import { LARUHP_PUBLIC_PATHS, LARUHP_VS_SLUGS, laruHpSitemapXml, internalLaruHpP
 import { ARTICLES } from '../app/laruHP/articles/articles-data';
 import { INDUSTRIES } from '../lib/laruhp-facts';
 import { TROUBLES } from '../lib/trouble-data';
+import { FAQ_PAGES, FAQ_SLUGS } from '../lib/laruhp-faq';
 
 const code = (p: string) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
@@ -163,4 +164,70 @@ test('見本が、登録だけで作りはじめられるかのように書い�
   assert.ok(!client.includes('クレジットカード登録のみ'), '登録だけで作れると読める');
   assert.ok(!client.includes('プロ品質'), '確かめようのない品質の断定');
   assert.match(client, /プランの申し込みが必要/);
+});
+
+test('質問ページが、1問1URLで配信・索引される', () => {
+  // LPの折りたたみの中だけにあると、答えを1つ探している検索にも、
+  // その質問へリンクを貼りたい人にも、返せるURLが無い。
+  assert.ok(LARUHP_PUBLIC_PATHS.includes('/faq'), '/faq が公開パスに無い');
+  for (const slug of FAQ_SLUGS) {
+    assert.ok(LARUHP_PUBLIC_PATHS.includes(`/faq/${slug}`), `/faq/${slug} が公開パスに無い`);
+    assert.equal(internalLaruHpPath(`/faq/${slug}`), `/laruHP/faq/${slug}`);
+    assert.ok(laruHpSitemapXml().includes(`https://laruhp.com/faq/${slug}`), `/faq/${slug} が sitemap に無い`);
+  }
+  assert.match(code('app/laruHP/faq/page.tsx'), /robots: \{ index: true, follow: true \}/);
+  assert.match(code('app/laruHP/faq/[slug]/page.tsx'), /robots: \{ index: true, follow: true \}/);
+});
+
+test('質問ページに、中身がある', () => {
+  // 一行だけのページを量産すると、かえって評価を落とす。
+  for (const page of FAQ_PAGES) {
+    assert.ok(page.sections.length >= 3, `${page.slug}: 節が3つ未満`);
+    const text = [page.short, ...page.sections.flatMap(s => s.body)].join('');
+    assert.ok(text.length >= 400, `${page.slug}: 本文が短すぎる（${text.length}字）`);
+    assert.ok(page.related.length >= 2, `${page.slug}: 次に行く先が無い`);
+    for (const link of page.related) {
+      assert.match(link.href, /^https:\/\/(laruhp\.com|laruvisona\.jp)\//, `${page.slug}: 相対パスは案内サイト側で404になる`);
+    }
+  }
+});
+
+test('質問の答えの金額が、料金定義から来ている', () => {
+  // 手で書き写すと、値上げ・値下げのときに片方だけ古くなる。
+  const src = code('lib/laruhp-faq.ts');
+  assert.match(src, /from '\.\/laruhp-facts'/);
+  // 主要な金額の直書きが無いこと
+  for (const literal of ['999円', '9,990円', '19,800円']) {
+    assert.ok(!src.includes(literal), `金額を直書きしている: ${literal}`);
+  }
+});
+
+test('質問ページへの入口がある', () => {
+  for (const file of ['components/laruhp/PublicFooter.tsx', 'app/laruHP/page.tsx']) {
+    assert.match(code(file), /https:\/\/laruhp\.com\/faq/, `${file}: 質問ページへの導線が無い`);
+  }
+});
+
+test('会社サイトから、月額のサービスへ出口がある', () => {
+  // 受託を探して来た人のうち、規模が合わない相手をそのまま帰していた。
+  assert.match(code('components/company/CompanyFooter.tsx'), /laruhp\.com\/\?ref=corp/);
+  const trouble = code('app/trouble/[slug]/page.tsx');
+  assert.match(trouble, /REBUILD_FITS/);
+  assert.match(trouble, /laruhp\.com\/\?ref=trouble/);
+  // 症状と関係のないページに出すと邪魔になるので、当てはまるものだけ
+  assert.match(trouble, /REBUILD_FITS\.has\(t\.slug\)/);
+});
+
+test('料金の見積りが、配信・索引・回遊に乗っている', () => {
+  assert.ok(LARUHP_PUBLIC_PATHS.includes('/simulator'), '/simulator が公開パスに無い');
+  assert.equal(internalLaruHpPath('/simulator'), '/laruHP/simulator');
+  assert.ok(laruHpSitemapXml().includes('https://laruhp.com/simulator'), 'sitemapに無い');
+  assert.match(code('app/laruHP/simulator/page.tsx'), /robots: \{ index: true, follow: true \}/);
+  for (const file of [
+    'components/laruhp/PublicFooter.tsx',
+    'app/laruHP/page.tsx',
+    'app/laruHP/plans/page.tsx',
+  ]) {
+    assert.match(code(file), /https:\/\/laruhp\.com\/simulator/, `${file}: 見積りへの導線が無い`);
+  }
 });

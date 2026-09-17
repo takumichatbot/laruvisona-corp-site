@@ -56,6 +56,22 @@ if ! curl -s "http://127.0.0.1:$FIXTURE_PORT/rest/v1/sites?slug=eq.site-a&select
   exit 2
 fi
 
+# すでに動いているサーバーは使い回すが、それが**いまのビルドとは限らない**。
+# 2026-09-17、前のビルドのまま動いていたサーバーに当ててしまい、
+# 足したばかりのページが404で返って、原因の分からない失敗になった。
+# 動いているサーバーのビルドIDと、いまの .next/BUILD_ID が違ったら止める。
+if up "$PORT" && [ -f "$ROOT/.next/BUILD_ID" ]; then
+  want="$(cat "$ROOT/.next/BUILD_ID")"
+  got="$(curl -s --max-time 5 "http://127.0.0.1:$PORT/laruHP" | grep -o '"buildId":"[^"]*"' | head -1 | cut -d'"' -f4)"
+  if [ -n "$got" ] && [ "$got" != "$want" ]; then
+    echo "ポート $PORT で動いているサーバーが、いまのビルドではありません。" >&2
+    echo "  動いている: $got" >&2
+    echo "  いまのビルド: $want" >&2
+    echo "そのサーバーを止めてから、もう一度実行してください。" >&2
+    exit 2
+  fi
+fi
+
 if ! up "$PORT"; then
   if [ ! -d "$ROOT/.next" ]; then
     echo "先に本番用ビルドを作ってください: npm run build" >&2; exit 2

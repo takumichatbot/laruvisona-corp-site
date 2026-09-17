@@ -35,6 +35,8 @@ const COLUMNS = [
       // 登録の手前で中身を見たい人の受け皿。前はどこからも辿れなかった。
       { href: 'https://laruhp.com/demo', label: '業種別の見本を見る' },
       { href: 'https://laruhp.com/plans', label: '料金プラン' },
+      { href: 'https://laruhp.com/simulator', label: '料金を見積る' },
+      { href: 'https://laruhp.com/faq', label: 'よくある質問' },
       { href: 'https://laruhp.com/domains', label: '独自ドメイン' },
       { href: 'https://laruhp.com/articles', label: 'ホームページ作成ガイド' },
       { href: 'https://laruhp.com/contact', label: 'お問い合わせ' },

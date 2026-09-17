@@ -402,6 +402,10 @@ export default async function LaruHPLandingPage({ searchParams }: {
             <p>
               {TERMS.annualNote}。{TERMS.domainNote}。{TERMS.payment}。
             </p>
+            <Link href="https://laruhp.com/simulator">
+              やりたいことから、うちの場合を見積る
+              <ArrowUpRight size={14} />
+            </Link>
             <Link href="https://laruvisona.jp/laruHP/plans">
               プランの詳しい内容を見る
               <ArrowUpRight size={14} />
@@ -459,6 +463,11 @@ export default async function LaruHPLandingPage({ searchParams }: {
             <p>
               迷ったら、お気軽に。
               <br />
+              <Link href="https://laruhp.com/faq" className="lp-text-link">
+                質問と答えを全部見る
+                <ArrowUpRight size={16} />
+              </Link>
+              <br />
               <Link href="https://laruhp.com/contact" className="lp-text-link">
                 相談する
                 <ArrowUpRight size={16} />
@@ -511,6 +520,8 @@ export default async function LaruHPLandingPage({ searchParams }: {
         <nav aria-label="フッター">
           <Link href="https://laruvisona.jp/">運営会社</Link>
           <Link href="https://laruhp.com/demo">業種別の見本</Link>
+          <Link href="https://laruhp.com/simulator">料金を見積る</Link>
+          <Link href="https://laruhp.com/faq">よくある質問</Link>
           <Link href="https://laruhp.com/articles">作成ガイド</Link>
           <Link href="https://laruhp.com/contact">お問い合わせ</Link>
           <Link href="https://laruhp.com/terms">利用規約</Link>

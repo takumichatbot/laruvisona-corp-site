@@ -1,3 +1,5 @@
+import { FAQ_SLUGS } from './laruhp-faq';
+
 export const LARUHP_INDUSTRIES = [
   'restaurant', 'beauty', 'clinic', 'legal', 'construction',
   'realestate', 'retail', 'fitness', 'hotel', 'education',
@@ -22,7 +24,7 @@ export const LARUHP_ARTICLE_SLUGS = [
   'chatbot-jidou-outon',
 ] as const;
 
-const FIXED_PUBLIC_PATHS = ['/plans', '/demo', '/domains', '/contact', '/privacy', '/terms', '/tokusho'] as const;
+const FIXED_PUBLIC_PATHS = ['/plans', '/simulator', '/demo', '/faq', '/domains', '/contact', '/privacy', '/terms', '/tokusho'] as const;
 
 /** 他社と比べるページ。app/laruHP/vs/[competitor] の COMPETITORS と揃えること。 */
 export const LARUHP_VS_SLUGS = ['jimdo', 'wix', 'canva', 'studio'] as const;
@@ -31,6 +33,7 @@ const PUBLIC_ASSET_PATHS = ['/opengraph-image'] as const;
 export const LARUHP_PUBLIC_PATHS = [
   '/',
   ...FIXED_PUBLIC_PATHS,
+  ...FAQ_SLUGS.map(slug => `/faq/${slug}`),
   ...LARUHP_INDUSTRIES.map(id => `/${id}`),
   '/articles',
   ...LARUHP_ARTICLE_SLUGS.map(slug => `/articles/${slug}`),
@@ -57,7 +60,10 @@ export const LARUHP_SITEMAP_UPDATED = '2026-09-17';
 export function laruHpSitemapXml(lastmod = LARUHP_SITEMAP_UPDATED): string {
   // lastmod が無いと、記事を直しても検索側に「見に来てよい」合図が出ない。
   // 会社サイト側（app/sitemap.ts）は出しているので、案内サイト側も揃える。
-  const priorityOf = (path: string) => (path === '/' ? '1.0' : path === '/plans' || path === '/demo' ? '0.9' : '0.7');
+  const priorityOf = (path: string) =>
+    path === '/' ? '1.0'
+    : path === '/plans' || path === '/demo' || path === '/simulator' ? '0.9'
+    : '0.7';
   const urls = LARUHP_PUBLIC_PATHS
     .map(path => `<url><loc>https://laruhp.com${path}</loc><lastmod>${lastmod}</lastmod><priority>${priorityOf(path)}</priority></url>`)
     .join('');
