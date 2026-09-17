@@ -15,6 +15,7 @@ import { track } from '@/lib/analytics';
 import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
 import { publishCompletion } from '@/lib/publish-result';
 import { TERMS } from '@/lib/laruhp-facts';
+import { isValidSiteSlug, isAutoSiteSlug, cleanSiteSlugInput, SITE_SLUG_RULE } from '@/lib/site-slug';
 
 interface SiteSettings {
   larubot?: boolean;
@@ -559,26 +560,26 @@ export default function DashboardPage() {
   };
 
   const handleSaveSlug = async (siteId: string) => {
-    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slugInput) || slugInput.length < 3 || slugInput.length > 60 || /--/.test(slugInput)) {
-      setSlugError('3〜60文字・英数字とハイフン（先頭末尾・連続ハイフン不可）');
-      return;
-    }
+    // 決まりは lib/site-slug.ts。受け口と同じものを使う。
+    if (!isValidSiteSlug(slugInput)) { setSlugError(SITE_SLUG_RULE); return; }
     setSavingSlug(true);
     setSlugError('');
-    const res = await fetch(`/api/sites/${siteId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: slugInput }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setSlugError(data.error || 'エラー');
+    try {
+      const res = await fetch(`/api/sites/${siteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: slugInput }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setSlugError(data.error || '保存できませんでした'); return; }
+      setSites(prev => prev.map(s => s.id === siteId ? { ...s, slug: data.site.slug } : s));
+      setEditingSlug(null);
+    } catch {
+      setSlugError('通信に失敗しました。もう一度お試しください。');
+    } finally {
+      // 途中で投げても、ボタンを押したまま固めない。
       setSavingSlug(false);
-      return;
     }
-    setSites(prev => prev.map(s => s.id === siteId ? { ...s, slug: data.site.slug } : s));
-    setEditingSlug(null);
-    setSavingSlug(false);
   };
 
   const handlePortal = async () => {
@@ -1539,7 +1540,7 @@ export default function DashboardPage() {
                             <input
                               type="text"
                               value={slugInput}
-                              onChange={e => { setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSlugError(''); }}
+                              onChange={e => { setSlugInput(cleanSiteSlugInput(e.target.value)); setSlugError(''); }}
                               onKeyDown={e => { if (e.key === 'Enter') handleSaveSlug(site.id); if (e.key === 'Escape') setEditingSlug(null); }}
                               className="flex-1 min-w-0 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[10px] font-mono text-gray-900 focus:outline-none focus:border-sky-500"
                               autoFocus
@@ -1549,10 +1550,20 @@ export default function DashboardPage() {
                             <button onClick={() => setEditingSlug(null)} className="text-[9px] text-gray-400 hover:text-gray-600 flex-shrink-0">✕</button>
                             {slugError && <span className="text-[9px] text-red-600 flex-shrink-0">{slugError}</span>}
                           </div>
+                        ) : site.slug && isAutoSiteSlug(site.slug) ? (
+                          /* 自動で付いた値。お客様に配るURLなので、本人に決めてもらう。
+                             指で触る画面には hover が無いので、鉛筆を出さずに文字で出す。 */
+                          <button
+                            onClick={() => startEditSlug(site)}
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 hover:bg-amber-100 transition-colors"
+                          >
+                            URLを決める
+                            <span className="font-mono font-normal text-amber-600 truncate">/hp/{site.slug}</span>
+                          </button>
                         ) : site.slug ? (
                           <button onClick={() => startEditSlug(site)} className="flex items-center gap-1 group/slug">
                             <span className="text-gray-500 text-[10px] font-mono truncate">/hp/{site.slug}</span>
-                            <span className="text-gray-400 opacity-0 group-hover/slug:opacity-100 transition-opacity"><IcEdit /></span>
+                            <span className="text-gray-400 opacity-60 group-hover/slug:opacity-100 transition-opacity"><IcEdit /></span>
                           </button>
                         ) : (
                           <button onClick={() => startEditSlug(site)} className="text-gray-400 text-[10px] hover:text-gray-600 transition-colors">URLを設定 →</button>

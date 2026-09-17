@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { makeSiteSlug } from '@/lib/site-slug';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { siteCreationAccess } from '@/lib/site-creation-access';
 import { readSiteCreate } from '@/lib/site-write-contract';
@@ -52,16 +53,10 @@ export async function POST(req: Request) {
   try { input = await readSiteCreate(req); }
   catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
 
-  // Generate unique slug from name
-  const normalizedSlug = input.name
-    .toLowerCase()
-    .replace(/[^a-z0-9ぁ-ん一-龯]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 30)
-    .replace(/-$/, '');
-  const baseSlug = normalizedSlug || 'my-site';
-  const slug = `${baseSlug}-${Date.now().toString(36)}`;
+  // 公開URLに入る値。決まりは lib/site-slug.ts にだけ置く。
+  // ここで独自に組むと、直す側（PATCH）の決まりと食い違い、
+  // 「生まれた時点で、直す側では通らない値」ができる。実際そうなっていた。
+  const slug = makeSiteSlug(input.name);
 
   const result = await createServiceClient().rpc('laruhp_create_site', {
     p_user: user.id,

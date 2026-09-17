@@ -80,8 +80,10 @@ test('押したまま固まるボタンが、他に残っていない', () => {
   const stuck: string[] = [];
   for (const file of files) {
     const src = fs.readFileSync(new URL(file, root), 'utf8');
-    for (const m of src.matchAll(/set(\w*?)(Loading|Saving|Busy|Pending)\(true\)/g)) {
-      const flag = m[1] + m[2];
+    // 2026-09-17: setSavingSlug のように**動詞が先に来る**名前を取りこぼしていた。
+    // 網の目が粗いと、見張っているつもりで見張れていない。
+    for (const m of src.matchAll(/set((?:\w*?(?:Loading|Saving|Busy|Pending))|(?:(?:Loading|Saving|Busy|Pending)\w*))\(true\)/g)) {
+      const flag = m[1];
       const tail = src.slice(m.index! + m[0].length, m.index! + m[0].length + 2500);
       const end = tail.indexOf(`set${flag}(false)`);
       const body = end > 0 ? tail.slice(0, end) : tail;

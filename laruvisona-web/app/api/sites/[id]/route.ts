@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { readSitePatch, readSiteUpdate } from '@/lib/site-write-contract';
+import { isValidSiteSlug, SITE_SLUG_RULE } from '@/lib/site-slug';
 
 // GET /api/sites/[id]
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -150,8 +151,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { slug } = body;
-  if (typeof slug !== 'string' || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug) || slug.length < 3 || slug.length > 60 || /--/.test(slug)) {
-    return NextResponse.json({ error: 'slugは3〜60文字・英数字とハイフン（先頭末尾・連続ハイフン不可）' }, { status: 400 });
+  // 決まりは lib/site-slug.ts にだけ置く。ここに書き写すと、作る側と食い違う。
+  if (!isValidSiteSlug(slug)) {
+    return NextResponse.json({ error: `URLは${SITE_SLUG_RULE}` }, { status: 400 });
   }
 
   const { data: existing, error: existingError } = await supabase.from('sites').select('id').eq('slug', slug).neq('id', id).limit(1);
