@@ -569,6 +569,20 @@ function StudioInner() {
   const [savedSincePublish, setSavedSincePublish] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishNote, setPublishNote] = useState('');
+  /*
+    公開に契約が要るのは、そのとおり。止める場所としても正しい
+    （app/api/sites/[id]/publish/route.ts）。問題はその出し方だった。
+
+    APIは { error: 'subscription_required', message: '…' } を返すのに、
+    ここは error のほうを拾って画面に出していた。つまり、サイトを作り終えて
+    公開を押した人に**「subscription_required」という生の文字**が出ていた。
+
+    そこはお金を払う直前の一瞬で、この製品でいちばん高い1行。
+    しかも、ここからプランへ行く導線が無かった。
+    編集画面（builder）と一覧（dashboard）にはプラン選択が出る作りがあるのに、
+    **いちばん新しい制作画面にだけ無かった。**
+  */
+  const [planNeeded, setPlanNeeded] = useState(false);
   /** ログイン中の利用者。控えの持ち主の照合と、通知先の案内に使う */
   const [account, setAccount] = useState<{ id: string; email: string | null } | null>(null);
   /** 利用者が誰か（または分からないこと）が決まったか。控えを戻す前に必ず待つ */
@@ -935,10 +949,19 @@ function StudioInner() {
     const seq = editSeq.current;
     setPublishing(true);
     setPublishNote('');
+    setPlanNeeded(false);
     try {
       const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'POST' });
       const b = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((b.error as string) || `公開できませんでした (${res.status})`);
+      if (b.error === 'subscription_required') {
+        setPlanNeeded(true);
+        setPublishNote('公開にはプランが必要です。作ったサイトはこのまま残ります。');
+        publishingRef.current = false;
+        setPublishing(false);
+        return;
+      }
+      // message（人に見せる文）が先。error は機械向けの合図なので画面に出さない。
+      if (!res.ok) throw new Error((b.message as string) || (b.error as string) || `公開できませんでした (${res.status})`);
       setPublishedAt(new Date().toISOString());
       // 公開しているあいだに続きを直していたら、「いまの内容が出ている」とは書かない
       setSavedSincePublish(editSeq.current !== seq);
@@ -1170,6 +1193,7 @@ function StudioInner() {
                 saveState={saveState}
                 publishing={publishing}
                 note={publishNote}
+                planNeeded={planNeeded}
                 onPublish={publish}
               />
             )}
@@ -1432,7 +1456,7 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
 }
 
 /* ── 公開の準備 ── */
-function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, onPublish }: {
+function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, onPublish }: {
   items: ReadyItem[];
   siteId: string | null;
   published: boolean;
@@ -1440,6 +1464,7 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
   saveState: SaveState;
   publishing: boolean;
   note: string;
+  planNeeded: boolean;
   onPublish: () => void;
 }) {
   /* 「直さないと困ること」と「直したほうが良いこと」を分ける。
@@ -1501,6 +1526,15 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
           {publishing ? '公開しています…' : published ? 'この内容で公開し直す' : '公開する'}
         </button>
         {note && <div className="text-[12px] mt-2 text-slate-700">{note}</div>}
+        {planNeeded && (
+          /* ここで行き止まりにしない。次に押すものを、その場に置く。 */
+          <Link
+            href={`/laruHP/plans${siteId ? `?siteId=${siteId}` : ''}`}
+            className="block w-full text-center mt-2 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-bold"
+          >
+            プランを選んで公開する
+          </Link>
+        )}
         {siteId && (
           <Link href={`/laruHP/builder?siteId=${siteId}`}
             className="block text-center text-[11px] text-slate-400 hover:text-slate-700 mt-3 underline"
