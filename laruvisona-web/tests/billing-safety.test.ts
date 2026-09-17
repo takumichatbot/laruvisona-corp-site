@@ -32,7 +32,10 @@ test('既存契約を読めないとき新しいCheckoutへ進まない', () => 
   assert.doesNotMatch(checkout, /falling back to new checkout/);
   assert.match(checkout, /stripe\.subscriptions\.list\(/);
   assert.match(checkout, /live\.id !== profile\?\.stripe_subscription_id/);
-  assert.match(checkout, /idempotencyKey: `laruhp-checkout-/);
+  // 2026-09-17: 鍵は注文の中身から作るようにした（固定の鍵は24時間で詰まる）。
+  // 詳しくは tests/stripe-checkout-key.test.ts。二度押しで2つ作らない仕組みは残す。
+  assert.match(checkout, /idempotencyKey: checkoutKey\(user\.id, sessionParams\)/);
+  assert.match(checkout, /laruhp-checkout-\$\{userId\}/);
 });
 
 test('プラン変更もプロフィール障害を契約なしへ変換せずStripe操作前に止める', () => {

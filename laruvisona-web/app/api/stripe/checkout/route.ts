@@ -6,6 +6,8 @@ import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { readContactBody } from '@/lib/contact-contract';
 import { verifyPrice, verifyFirstMonthCoupon } from '@/lib/price-integrity';
+import { createHash } from 'node:crypto';
+import type Stripe from 'stripe';
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   hp: process.env.STRIPE_PRICE_ID,
@@ -25,6 +27,31 @@ const PLAN_ANNUAL_PRICE_MAP: Record<string, string | undefined> = {
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * 二度押しで2つ作らないための鍵。
+ *
+ * 2026-09-17まで `laruhp-checkout-<利用者>-<プラン>-<支払方法>` の**固定**だった。
+ * Stripe は鍵を24時間覚えていて、**同じ鍵で中身が少しでも違うと拒否する。**
+ * 実際に本番で出た文面がこれ:
+ *
+ *   Keys for idempotent requests can only be used with the same parameters
+ *   they were first used with. Try using a key other than
+ *   'laruhp-checkout-159ff404-...-hp-monthly'
+ *
+ * どういうときに中身が変わるか。
+ *   ・別のサイトの「公開する」から入った（戻り先URLに siteId が入る）
+ *   ・初月無料クーポンの有無が変わった
+ *   ・値段を変えた
+ * つまり **一度やめたお客様が、24時間以内に別の入口から入り直すと、
+ * 二度と買えない。** 出るのは英語のエラーで、こちらの利用者IDまで載っていた。
+ *
+ * 中身から鍵を作れば、同じ注文は1つに、違う注文は別々になる。それが本来の形。
+ */
+function checkoutKey(userId: string, params: unknown): string {
+  const digest = createHash('sha256').update(JSON.stringify(params)).digest('hex').slice(0, 32);
+  return `laruhp-checkout-${userId}-${digest}`;
+}
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -193,7 +220,7 @@ export async function POST(req: Request) {
 
   // 月払いのみ初月無料クーポン適用（年払いは割引価格自体で節約）
   try {
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -215,14 +242,19 @@ export async function POST(req: Request) {
         : `${origin}/laruHP/dashboard?payment=success`,
       cancel_url: `${origin}/laruHP/plans?payment=canceled`,
       locale: 'ja',
-    }, { idempotencyKey: `laruhp-checkout-${user.id}-${plan}-${billing}` });
+    } satisfies Stripe.Checkout.SessionCreateParams;
+    const session = await stripe.checkout.sessions.create(
+      sessionParams,
+      { idempotencyKey: checkoutKey(user.id, sessionParams) },
+    );
     return NextResponse.json({ url: session.url });
   } catch (err: unknown) {
     const stripeErr = err as { message?: string; code?: string };
+    // 生の文面をそのまま返していた。英語のうえ、こちらの利用者IDまで載る。
     console.error('[stripe/checkout] error:', stripeErr?.code, stripeErr?.message);
     return NextResponse.json(
-      { error: stripeErr?.message || 'Stripe error', code: stripeErr?.code },
-      { status: 500 }
+      { error: 'お支払い画面を開けませんでした。少し時間をおいてお試しください。', code: stripeErr?.code || 'stripe_error' },
+      { status: 500 },
     );
   }
 }
