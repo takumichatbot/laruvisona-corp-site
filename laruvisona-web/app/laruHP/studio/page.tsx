@@ -30,6 +30,7 @@ import {
   type FieldDef, type IntakeAnswers,
 } from '@/lib/studio-schema';
 import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
+import { hasServiceAccess } from '@/lib/subscription-access';
 import { cleanIncomingText } from '@/lib/safe-markup';
 import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publish-readiness';
 import { publishCompletion } from '@/lib/publish-result';
@@ -850,6 +851,48 @@ function StudioInner() {
   };
 
   /* ── 保存 ── */
+  /*
+    支払いから戻ってきた直後。
+
+    契約が画面に反映されるのは Stripe の webhook が届いてからで、
+    戻ってきたその瞬間はまだ古いことがある。そこで「公開する」を押すと
+    もう一度「プランが必要です」と出る。**払った直後にそれを見るのが、
+    いちばん悪い。** 済むまで少し見に行って、済んだらそう伝える。
+
+    これまでの編集画面（builder）には同じ作りがあった。
+    新しく登録した人が通るこちらに無かった。
+  */
+  useEffect(() => {
+    if (params.get('payment') !== 'success') return;
+    let alive = true;
+    let tries = 0;
+    setPublishNote('お支払いを確認しています…');
+    const check = async () => {
+      if (!alive) return;
+      tries += 1;
+      const supabase = createBrowserSupabase();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !alive) return;
+      const { data } = await supabase.from('profiles')
+        .select('subscription_status').eq('id', user.id).single();
+      if (!alive) return;
+      if (data && hasServiceAccess(data.subscription_status)) {
+        setPlanNeeded(false);
+        setPublishNote('ご契約ありがとうございます。「公開する」を押すと公開できます。');
+        return;
+      }
+      if (tries >= 10) {
+        setPublishNote('お支払いは受け付けました。反映まで少しかかることがあります。');
+        return;
+      }
+      setTimeout(check, 2000);
+    };
+    check();
+    return () => { alive = false; };
+    // 初回の値だけ見る
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const save = useCallback(async () => {
     breakGroup();
     const s = siteRef.current;
@@ -1529,7 +1572,7 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
         {planNeeded && (
           /* ここで行き止まりにしない。次に押すものを、その場に置く。 */
           <Link
-            href={`/laruHP/plans${siteId ? `?siteId=${siteId}` : ''}`}
+            href={`/laruHP/plans${siteId ? `?siteId=${siteId}&returnTo=studio` : ''}`}
             className="block w-full text-center mt-2 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-bold"
           >
             プランを選んで公開する

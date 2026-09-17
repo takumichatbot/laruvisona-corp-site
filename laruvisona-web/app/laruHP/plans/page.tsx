@@ -85,9 +85,28 @@ function Cell({ value }: { value: Availability }) {
 function checkoutOnAppOrigin(plan: string, billing: 'monthly' | 'annual'): boolean {
   if (typeof window === 'undefined') return false;
   if (window.location.origin === LARUHP_APP_ORIGIN) return false;
-  const to = `${LARUHP_APP_ORIGIN}/laruHP/plans?checkout=${encodeURIComponent(plan)}&billing=${billing}`;
+  const to = `${LARUHP_APP_ORIGIN}/laruHP/plans?checkout=${encodeURIComponent(plan)}&billing=${billing}${handoffQuery()}`;
   window.location.href = to;
   return true;
+}
+
+/*
+  「公開する」から来た人は、URLに siteId と戻り先を持っている。
+  ここを落とすと、支払ったあとにサイトの文脈が消えて、
+  **何を押せば公開できるのか分からないまま**ダッシュボードに出る。
+  ログイン画面や別オリジンを経由しても、付けたまま運ぶ。
+*/
+function handoffParams(): { siteId?: string; returnTo?: string } {
+  if (typeof window === 'undefined') return {};
+  const q = new URLSearchParams(window.location.search);
+  const siteId = q.get('siteId') || '';
+  const returnTo = q.get('returnTo') === 'studio' ? 'studio' : '';
+  return { ...(siteId ? { siteId } : {}), ...(returnTo ? { returnTo } : {}) };
+}
+
+function handoffQuery(): string {
+  const p = handoffParams();
+  return Object.entries(p).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
 }
 
 async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promise<string | null> {
@@ -97,7 +116,7 @@ async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promi
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, billing }),
+      body: JSON.stringify({ plan, billing, ...handoffParams() }),
     });
     if (res.status === 401) {
       // 料金ページから「始める」を押す人は、ほとんどが初めての人である。
@@ -106,7 +125,7 @@ async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promi
       // 登録画面には「既にアカウントをお持ちの方は ログイン」があり、
       // どちらの画面も redirectTo（?checkout= を含む）を保つので、
       // 戻ってきたところで決済が再開される。
-      const back = `/laruHP/plans?checkout=${plan}&billing=${billing}`;
+      const back = `/laruHP/plans?checkout=${plan}&billing=${billing}${handoffQuery()}`;
       window.location.href = `/laruHP/auth/signup?redirectTo=${encodeURIComponent(back)}`;
       return null;
     }

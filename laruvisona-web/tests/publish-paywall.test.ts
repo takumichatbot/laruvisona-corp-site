@@ -48,7 +48,7 @@ test('その場に、次に押すものを置く', () => {
   // 行き止まりにしない。ここが受注の一歩手前。
   const src = read('app/laruHP/studio/page.tsx');
   assert.match(src, /planNeeded && \(/, '出す条件が無い');
-  assert.match(src, /href=\{`\/laruHP\/plans\$\{siteId \? `\?siteId=\$\{siteId\}` : ''\}`\}/,
+  assert.match(src, /href=\{`\/laruHP\/plans\$\{siteId \? `\?siteId=\$\{siteId\}&returnTo=studio` : ''\}`\}/,
     'プランへの導線が無い、またはサイトを持って行っていない');
   assert.match(src, /プランを選んで公開する/);
 });

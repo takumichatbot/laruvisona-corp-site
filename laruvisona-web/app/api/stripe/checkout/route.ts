@@ -64,7 +64,17 @@ export async function POST(req: Request) {
   let input: Record<string, unknown>;
   try { input = await readContactBody(req, 10_000); }
   catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
-  const { siteId, plan: rawPlan = 'hp', billing: rawBilling = 'monthly' } = input;
+  const { siteId, plan: rawPlan = 'hp', billing: rawBilling = 'monthly', returnTo: rawReturnTo } = input;
+  /*
+    支払ったあと、どの画面へ戻すか。
+
+    これまでは必ず builder（これまでの編集画面）へ戻していた。ところが
+    新しく登録した人が通るのは studio（制作画面）で、**見たこともない画面に
+    放り出されていた。** 払った直後にそれをやると、そこで手が止まる。
+
+    受け取るのは決め打ちの2つだけ。外から任意のURLを入れさせない。
+  */
+  const returnTo = rawReturnTo === 'studio' ? 'studio' : 'builder';
   if (typeof rawPlan !== 'string' || typeof rawBilling !== 'string') return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
   const plan = rawPlan;
   const billing = rawBilling;
@@ -238,7 +248,9 @@ export async function POST(req: Request) {
       // 「公開」を押して料金画面が出て、支払ったのにダッシュボードへ放り出されると、
       // 何を押せば公開できるのかが分からないまま終わる。
       success_url: ownedSiteId
-        ? `${origin}/laruHP/builder?siteId=${ownedSiteId}&payment=success`
+        ? (returnTo === 'studio'
+          ? `${origin}/laruHP/studio?siteId=${ownedSiteId}&step=edit&payment=success`
+          : `${origin}/laruHP/builder?siteId=${ownedSiteId}&payment=success`)
         : `${origin}/laruHP/dashboard?payment=success`,
       cancel_url: `${origin}/laruHP/plans?payment=canceled`,
       locale: 'ja',
