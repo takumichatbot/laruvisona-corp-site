@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "node --import ./tests/_resolve-ts.mjs --test \"tests/**/*.test.ts\"",
     "test:http": "bash tests/http/run.sh",
+    "test:billing": "bash tests/billing/run.sh",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "check:production": "node scripts/check-laruhp-production.mjs"
   },
