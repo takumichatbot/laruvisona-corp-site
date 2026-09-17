@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { EXPORT_VERSION } from '@/lib/html-export';
 import { sha256 } from '@/lib/content-hash';
-import { redact, logError } from '@/lib/api-error';
+import { redact, logError, safeErrorMessage } from '@/lib/api-error';
 import { verifySharedSecret } from '@/lib/shared-secret';
 import { readContactBody } from '@/lib/contact-contract';
 
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
   let query = service.from('sites').select('id, slug, name, updated_at, published_html').eq('published', true);
   if (slug) query = query.eq('slug', slug);
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeErrorMessage(error, '処理できませんでした') }, { status: 500 });
 
   return NextResponse.json({
     takenAt: new Date().toISOString(),

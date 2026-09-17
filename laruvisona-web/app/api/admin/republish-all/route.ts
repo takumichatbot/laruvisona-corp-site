@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { exportToHTML, EXPORT_VERSION } from '@/lib/html-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
-import { redact, logError } from '@/lib/api-error';
+import { redact, logError, safeErrorMessage } from '@/lib/api-error';
 import { sha256 } from '@/lib/content-hash';
 import { verifySharedSecret } from '@/lib/shared-secret';
 import { readContactBody } from '@/lib/contact-contract';
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
   if (typeof limit === 'number' && limit > 0) query = query.limit(Math.floor(limit));
   const { data: sites, error } = await query;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeErrorMessage(error, '処理できませんでした') }, { status: 500 });
 
   // 書かずに、何が対象になるかだけ返す。
   // いまの中身の指紋も返すので、あとで「変わったかどうか」を見比べられる。

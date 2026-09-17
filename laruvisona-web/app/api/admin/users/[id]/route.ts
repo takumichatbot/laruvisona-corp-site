@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isAdminEmail } from '@/lib/adminAuth';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { Resend } from 'resend';
@@ -17,7 +18,7 @@ const PLAN_LABEL: Record<string, string> = {
 async function isAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
-  return user.email === process.env.ADMIN_EMAIL;
+  return isAdminEmail(user.email);
 }
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {

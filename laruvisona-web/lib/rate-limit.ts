@@ -30,9 +30,24 @@ export function resetRateLimit(key: string): void {
   buckets.delete(key);
 }
 
-/** リクエスト元 IP。プロキシ配下では x-forwarded-for の先頭を使う。 */
+/**
+ * リクエスト元 IP。
+ *
+ * x-forwarded-for の**先頭**を使ってはいけない。逆プロキシは自分が見た相手を
+ * 右に足していくので、先頭は送信者が自由に書ける値になる。先頭を採ると、
+ *   X-Forwarded-For: 1.2.3.<毎回変える>
+ * を付けるだけで、回数制限のバケツが毎回新しくなり、制限が丸ごと無効になる。
+ * 管理PINの総当たり・会員ログインの総当たり・メール送信の連打が通ってしまう。
+ *
+ * 最後の要素が、こちらの手前にいるプロキシ（Render/CDN）が実際に見た接続元。
+ * 信頼できるのはそこだけなので、右から採る。
+ */
 export function clientIp(req: Request): string {
   const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
+  if (fwd) {
+    const hops = fwd.split(',').map(v => v.trim()).filter(Boolean);
+    const nearest = hops[hops.length - 1];
+    if (nearest) return nearest;
+  }
   return req.headers.get('x-real-ip')?.trim() || 'unknown';
 }

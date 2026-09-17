@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
+import { isAdminEmail } from '@/lib/adminAuth';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 async function isAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
-  return user.email === process.env.ADMIN_EMAIL;
+  return isAdminEmail(user.email);
 }
 
 export async function GET() {

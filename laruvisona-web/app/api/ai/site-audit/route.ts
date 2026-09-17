@@ -34,7 +34,11 @@ export async function POST(req: Request) {
 
   const { data: site } = await supabase
     .from('sites')
-    .select('id, name, industry, slug, blocks_json, seo_json, published, page_title, meta_description, settings_json')
+    // page_title / meta_description は DB に存在しない列だった。
+    // PostgREST は存在しない列を含む問い合わせを丸ごと失敗させるため、
+    // 「AI診断を押しても何も起きない」状態の原因になっていた。
+    // タイトルと説明文は seo_json に入っているので、そちらから読む。
+    .select('id, name, industry, slug, blocks_json, seo_json, published, settings_json')
     .eq('id', siteId)
     .eq('user_id', user.id)
     .single();
@@ -54,7 +58,7 @@ export async function POST(req: Request) {
 
   const seo = (site.seo_json as Record<string, unknown>) || {};
   const settings = (site.settings_json as Record<string, unknown>) || {};
-  const hasMetaDesc = !!site.meta_description;
+  const hasMetaDesc = !!(seo.description);
   const hasOgImage = !!(seo.ogImage);
   const hasKeywords = !!(seo.keywords);
   const hasChatbot = !!(settings.larubot_enabled);
@@ -77,7 +81,7 @@ export async function POST(req: Request) {
     hasKeywords,
     hasChatbot,
     hasAnalytics,
-    pageTitle: site.page_title,
+    pageTitle: (seo.title as string) || site.name,
   };
 
   const prompt = `あなたは日本のローカルビジネスのWebサイト診断専門家です。

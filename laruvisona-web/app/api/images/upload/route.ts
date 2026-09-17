@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { claimBuilderUsage, requireBuilderAccess } from '@/lib/ai-access';
+// DBの生メッセージ（テーブル名・列名・制約名）をそのまま返さない
+import { safeErrorMessage } from '@/lib/api-error';
 
 function getAdminStorage() {
   return createAdminClient(
@@ -18,6 +20,13 @@ export async function POST(req: Request) {
   const denied = await requireBuilderAccess(supabase, user.id);
   if (denied) return denied;
 
+  // multipart を全部読み込む前に、宣言サイズで打ち切る。
+  // file.size を見るのは formData() のあと＝すでにメモリに載せたあとなので、
+  // 大きな本文を並べて投げられるとサイズ判定に届く前に落ちる。
+  const declared = Number(req.headers.get('content-length') || 0);
+  if (declared > 12_000_000) {
+    return NextResponse.json({ error: 'ファイルサイズは10MB以下にしてください' }, { status: 413 });
+  }
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
   if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 });
@@ -76,7 +85,7 @@ export async function POST(req: Request) {
     .upload(path, buffer, { contentType, upsert: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: safeErrorMessage(error, '処理できませんでした') }, { status: 500 });
   }
 
   const { data: { publicUrl } } = admin.storage

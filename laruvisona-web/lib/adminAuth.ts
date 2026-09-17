@@ -43,3 +43,20 @@ export async function requireAdmin(req?: Request): Promise<NextResponse | null> 
   if (await isAdminRequest(req)) return null;
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 }
+
+/**
+ * ログイン中の利用者が管理者か。
+ *
+ * `user.email === process.env.ADMIN_EMAIL` と裸で比べてはいけない。
+ * ADMIN_EMAIL が未設定だと右辺は undefined になり、メールを持たない
+ * アカウント（左辺も undefined）が管理者として通ってしまう。
+ * 未設定なら必ず false、比較は小文字・前後の空白を落としてから行う。
+ */
+export function isAdminEmail(email: string | null | undefined): boolean {
+  const allowed = [process.env.ADMIN_EMAIL, process.env.NEXT_PUBLIC_ADMIN_EMAIL]
+    .filter(Boolean).join(',')
+    .split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+  if (!allowed.length) return false;
+  const actual = (email || '').trim().toLowerCase();
+  return !!actual && allowed.includes(actual);
+}

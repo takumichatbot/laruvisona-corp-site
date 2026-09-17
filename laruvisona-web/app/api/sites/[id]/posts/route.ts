@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { readNewsPost, validNewsId } from '@/lib/news-post-contract';
+// DBの生メッセージ（テーブル名・列名・制約名）をそのまま返さない
+import { safeErrorMessage } from '@/lib/api-error';
 
 // 書き込み・管理用は service role（RLSバイパス）。所有権はアプリ側で検証する。
 function admin() {
@@ -32,7 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .select('*')
       .eq('site_id', siteId)
       .order('published_at', { ascending: false });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: safeErrorMessage(error, '処理できませんでした') }, { status: 500 });
     return NextResponse.json({ posts: data || [] });
   }
 
