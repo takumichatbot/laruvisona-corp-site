@@ -105,3 +105,14 @@ test('運営はAI機能を試せる（契約状態で閉め出さない）', () 
   const claim = src.indexOf('claimBuilderUsage');
   assert.ok(claim < order || claim > 0, '回数制限そのものは残っていること');
 });
+
+test('IndexNowの送信口が、運営以外から叩けない', () => {
+  const src = code('app/api/admin/indexnow/route.ts');
+  assert.match(src, /isAdminEmail/, '誰でも叩けると、外部から何度でも送信させられる');
+  assert.match(src, /status: 403/);
+  // 鍵は応答にも記録にも出さない
+  assert.doesNotMatch(src, /key\s*\}\)/, '応答に鍵を混ぜていないこと');
+  assert.doesNotMatch(src, /console\.(log|error)\([^)]*key/, '記録に鍵を出していないこと');
+  // 形の違う鍵を送ると、以後その host ごと弾かれることがある
+  assert.match(src, /A-Za-z0-9-\]\{8,128\}/);
+});
