@@ -803,9 +803,9 @@ test('settings.design を持たない古いサイトは、スタッフ写真96px
   assert.match(split, /aspect-ratio:var\(--lhp-hero-split-ar-sp,4\/3\)/, '設定を持たない古いサイトの分割ヒーロー比率が変わっている');
 });
 
-test('生成HTMLの版数が20になっている', () => {
-  assert.equal(EXPORT_VERSION, 20);
-  assert.match(basic, /<!--lhpv:20-->$/);
+test('生成HTMLの版数が21になっている', () => {
+  assert.equal(EXPORT_VERSION, 21);
+  assert.match(basic, /<!--lhpv:21-->$/);
 });
 
 

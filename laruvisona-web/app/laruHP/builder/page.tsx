@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
+import { publicIdMismatch } from '@/lib/larubot-public-id';
 import { withPreviewBridge } from '@/lib/preview-frame';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getTemplateForIndustry, applyTemplateData } from '@/lib/templates';
@@ -3977,14 +3978,26 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                   {canUse ? (
                     laruseo ? (
                       <div className="px-3 pb-3 border-t border-emerald-500/20 pt-2.5">
-                        <label className="text-slate-400 text-[10px] mb-1.5 block font-medium">サイト ID <span className="text-slate-600">（LARUSEOダッシュボード → 設定 で確認）</span></label>
+                        <label className="text-slate-400 text-[10px] mb-1.5 block font-medium">サイト ID <span className="text-slate-600">（チャットの連携IDと同じ値です）</span></label>
                         <input
                           type="text"
-                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                          placeholder={larubotPublicId || 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'}
                           value={laruseoPublicId}
                           onChange={e => onLaruseoPublicIdChange(e.target.value)}
                           className="w-full bg-white/10 border border-white/15 rounded-lg px-2.5 py-1.5 text-white text-[10px] font-mono focus:outline-none focus:border-emerald-400/50 focus:ring-1 focus:ring-emerald-400/30"
                         />
+                        {/* 別の値を入れると、記事が0件になる。エラーは1つも出ないので、ここで知らせる。 */}
+                        {publicIdMismatch({ larubotPublicId, laruseoPublicId }) && (
+                          <p className="mt-1.5 text-[10px] leading-relaxed text-amber-300">
+                            チャットの連携IDと違う値が入っています。LARUbot では同じIDを使うため、
+                            このままだと記事が1件も出ません。空にすると、チャットのIDを使います。
+                          </p>
+                        )}
+                        {!laruseoPublicId && larubotPublicId && (
+                          <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
+                            空のままで構いません。チャットの連携IDを使います。
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="px-3 pb-3 pt-1">

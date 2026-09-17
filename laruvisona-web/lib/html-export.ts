@@ -1,4 +1,5 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
+import { blogPublicId, chatPublicId } from './larubot-public-id';
 import { schemaTypeFor } from './industry-schema';
 import { autoDescription } from './auto-description';
 import { designCss } from '@/lib/site-design';
@@ -9,7 +10,7 @@ import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeTo
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 20;
+export const EXPORT_VERSION = 21;
 
 
 function renderEditorialMark(value: unknown, index: number): string {
@@ -1887,12 +1888,19 @@ window.addEventListener('popstate',function(){
     ...(businessInfo?.slug ? { url: `${appUrl}/hp/${businessInfo.slug}` } : {}),
   };
 
-  const laruBotScript = (settings.larubot && settings.larubotPublicId)
-    ? `<script src="https://larubot.tokyo/static/embed.js" data-public-id="${escapeHtml(safeToken(settings.larubotPublicId))}" defer></script>`
+  // チャットとLARUSEOは、LARUbot 側では同じ public_id を指す（2026-09-17の回答）。
+  // 片方しか入っていなくても、もう片方から補う。
+  // 別々に持たせていたせいで、LARUSEO欄が空のままブログの設置タグが
+  // 出力されず、記事が0件になる状態が起こりえた。
+  const chatId = chatPublicId(settings);
+  const blogId = blogPublicId(settings);
+
+  const laruBotScript = (settings.larubot && chatId)
+    ? `<script src="https://larubot.tokyo/static/embed.js" data-public-id="${escapeHtml(safeToken(chatId))}" defer></script>`
     : '';
 
-  const laruSeoScript = (settings.laruseo && settings.laruseoPublicId)
-    ? `<script src="https://larubot.tokyo/embed/blog.js" data-id="${escapeHtml(safeToken(settings.laruseoPublicId))}" data-limit="6" defer></script>`
+  const laruSeoScript = (settings.laruseo && blogId)
+    ? `<script src="https://larubot.tokyo/embed/blog.js" data-id="${escapeHtml(safeToken(blogId))}" data-limit="6" defer></script>`
     : '';
 
   const gaScript = settings.gaTrackingId ? `
