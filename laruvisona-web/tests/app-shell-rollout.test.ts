@@ -125,6 +125,20 @@ test('画面いっぱいの画面は、詰めて出す型を使う', () => {
   assert.match(css, /\.shell\.is-fill \.shell-content \{[^}]*min-height: 0/, '中身が縮めること');
 });
 
+test('道しるべに、同じ行き先を2つ置かない', async () => {
+  // 上段と束の両方に置くと、その画面を開いたときに2つとも光り、
+  // 「いまどこにいるか」がかえって分からなくなる。
+  const nav = await import('../lib/laruhp-nav');
+  const all = [...nav.NAV_PRIMARY, ...nav.NAV_GROUPS.flatMap(g => g.items), ...nav.NAV_FOOTER];
+  const seen = new Map<string, number>();
+  for (const item of all) seen.set(item.href, (seen.get(item.href) || 0) + 1);
+  const dupes = [...seen.entries()].filter(([, n]) => n > 1).map(([href]) => href);
+  assert.deepEqual(dupes, [], `道しるべに二重の行き先: ${dupes.join(', ')}`);
+
+  // 自社用の画面は、お客様の道しるべに載せない。
+  assert.ok(!all.some(i => i.href.startsWith('/laruHP/admin')), '運営用の画面が道しるべに出ている');
+});
+
 test('道しるべは1箇所から作る', () => {
   const shell = read('components/laruhp/AppShell.tsx');
   assert.match(shell, /from '@\/lib\/laruhp-nav'/);

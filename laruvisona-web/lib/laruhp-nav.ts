@@ -75,7 +75,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: '応対', caption: '来た人に応える',
     items: [
-      { href: '/laruHP/contacts', label: '問い合わせ', icon: 'contacts', badge: 'contacts' },
+      // 問い合わせは上段にも置いてある。両方に出すと、道しるべに
+      // 同じ行き先が2つ並び、開いたときに2つとも光る。上段だけにする。
       { href: '/laruHP/larubot-logs', label: '会話ログ', icon: 'larubot-logs' },
       { href: '/laruHP/booking/schedule', label: '予約管理', icon: 'booking-schedule' },
       { href: '/laruHP/calendar', label: 'カレンダー', icon: 'calendar' },
@@ -105,7 +106,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/laruHP/analytics', label: 'BI分析', icon: 'analytics' },
       { href: '/laruHP/heatmap', label: 'ヒートマップ', icon: 'heatmap' },
       { href: '/laruHP/agency', label: 'エージェンシー', icon: 'agency' },
-      { href: '/laruHP/studio', label: '制作スタジオ', icon: 'studio' },
+      // 制作スタジオも上段にある。同じ行き先を2度出さない。
+      // （運営ダッシュボード /laruHP/admin は自社用。ここには載せない。）
     ],
   },
 ];
