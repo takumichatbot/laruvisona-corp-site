@@ -154,3 +154,31 @@ test('ファイルの時刻を、どちらのOSでも同じに読む', () => {
   assert.match(src, /case "\$m" in ''\|\*\[!0-9\]\*\) echo 0; return ;; esac/,
     '読めなかったときに壊す側へ倒している');
 });
+
+test('本番に出たかどうかまで、追いかける', () => {
+  /*
+    push が成功したのに本番が入れ替わらない状態が、**どこからも見えなかった。**
+    出荷係は push までしか知らず、Vercel の画面を人が開くまで誰も気づけない。
+    「出荷しました」と出ているのに古いまま、というのがいちばん困る。
+  */
+  const src = watch();
+  assert.match(src, /HEALTH_URL="https:\/\/laruvisona\.jp\/api\/health"/, '本番を見に行っていない');
+  assert.match(src, /\[ -n "\$shipped" \] && printf '%s' "\$shipped" > "\$EXPECT"/,
+    '出荷したコミットを控えていない');
+  assert.match(src, /if \[ "\$live" = "\$want" \]; then/, '突き合わせていない');
+  assert.match(src, /DEPLOY_WARN_SEC=\d+/, '待ち続けるだけで知らせない');
+  assert.match(src, /notify "本番が古いままです"/, '入れ替わらなくても黙っている');
+  // 出荷が無いときも見に行くこと（出荷の直後だけ見ても、遅れて入るぶんを取り逃がす）
+  const idle = src.indexOf('if [ ${#bundles[@]} -eq 0 ]; then');
+  assert.ok(idle > 0);
+  assert.match(src.slice(idle, idle + 600), /check_deploy/, '待ちなしのときに見ていない');
+});
+
+test('本番が何を動かしているかを、本番自身が答える', () => {
+  const route = read('app/api/health/route.ts');
+  assert.match(route, /VERCEL_GIT_COMMIT_SHA/, 'コミットを返していない');
+  assert.match(route, /export const dynamic = 'force-dynamic'/, '固めて配ると古い答えを返す');
+  assert.match(route, /'Cache-Control': 'no-store, private'/, '途中で保存されうる');
+  // 鍵になるものを返さないこと
+  assert.doesNotMatch(route, /SERVICE_ROLE|SECRET|STRIPE|ANON_KEY/, '返してはいけないものが入っている');
+});

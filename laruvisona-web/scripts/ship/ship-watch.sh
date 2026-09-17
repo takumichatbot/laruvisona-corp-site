@@ -48,6 +48,11 @@ FAILED_STAMP="$STATE/.failed-notified"
 LOCK_STALE_SEC=1800      # 30分。これを過ぎた .lock は落ちた跡とみなす
 GIT_LOCK_STALE_SEC=900   # 15分。これを過ぎた .git のロックも同じ
 REMOTE_EVERY_SEC=1800    # GitHubへ届くかの確認は30分に1回
+DEPLOY_WARN_SEC=900      # push から15分経っても本番が入れ替わらなければ知らせる
+
+HEALTH_URL="https://laruvisona.jp/api/health"
+EXPECT="$STATE/expect-sha"          # 出荷したコミット。本番に出るまで持っておく
+DEPLOY_STAMP="$STATE/.deploy-warned"
 
 shopt -s nullglob   # 数える所より先に立てる。下の count_bundles がこれに頼っている
 mkdir -p "$DROP" "$STATE"
@@ -95,6 +100,36 @@ count_bundles() { local -a a=("$1"/*.bundle); printf '%s' "${#a[@]}"; }
 queue_count()  { count_bundles "$DROP"; }
 failed_count() { count_bundles "$DROP/failed"; }
 
+# push は成功したのに本番が入れ替わらない、という状態が**どこからも見えなかった。**
+# 出荷係は push までしか知らない。Vercel の画面を人が開くまで誰も気づけない。
+# 本番の /api/health が返すコミットと、出荷したコミットを突き合わせる。
+PROD_STATE=""
+check_deploy() {
+  [ -s "$EXPECT" ] || { PROD_STATE="待ちなし"; return; }
+  local want live waited
+  want="$(cat "$EXPECT")"
+  waited="$(age "$EXPECT")"
+  live="$(curl -fsS --max-time 10 "$HEALTH_URL" 2>/dev/null | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')"
+  if [ -z "$live" ]; then
+    PROD_STATE="確認できません（本番から答えが返りません）"
+    return
+  fi
+  if [ "$live" = "$want" ]; then
+    PROD_STATE="反映済み ${want:0:7}（$((waited/60))分）"
+    : > "$EXPECT"
+    return
+  fi
+  PROD_STATE="まだ ${live:0:7}（出荷は ${want:0:7}・$((waited/60))分経過）"
+  if [ "$waited" -gt "$DEPLOY_WARN_SEC" ] && [ "$(age "$DEPLOY_STAMP")" -gt 3600 ]; then
+    : > "$DEPLOY_STAMP"
+    log "  push は済んでいるのに、本番がまだ入れ替わっていません。
+    出荷: $want
+    本番: $live
+    $((waited/60))分経過。Vercel の様子を見てください。"
+    notify "本番が古いままです" "出荷 ${want:0:7} / 本番 ${live:0:7}"
+  fi
+}
+
 # heartbeat は上書きで書く（_ship/ の中身を増減させないため）
 beat() {
   local state="$1"
@@ -104,6 +139,7 @@ beat() {
 待ち     : $(queue_count) 件
 不調     : $(failed_count) 件
 GitHub   : ${REMOTE_STATE:-未確認}
+本番     : ${PROD_STATE:-未確認}
 直近出荷 : ${LAST_SHIP:-$(grep '出荷しました' "$LOG" 2>/dev/null | tail -1 | sed 's/^ *//')}
 版       : 2026-09-18
 " > "$BEAT"
@@ -172,6 +208,7 @@ if [ ${#bundles[@]} -eq 0 ]; then
     log "  出荷できないままの bundle が $(failed_count) 件あります（_ship/failed/）。"
     notify "未処理あり" "出せていない bundle が $(failed_count) 件あります"
   fi
+  check_deploy
   beat "動いています"
   exit 0
 fi
@@ -194,6 +231,10 @@ fi
 if [ "$rc" -eq 0 ]; then
   LAST_SHIP="$(printf '%s' "$out" | grep '出荷しました' | head -1 | sed 's/^ *//')"
   [ -n "$LAST_SHIP" ] && notify "完了" "$LAST_SHIP"
+  # 本番に出るまで、出荷したコミットを控えておく
+  shipped="$(printf '%s' "$out" | sed -n 's/.*出荷しました: main -> \([0-9a-f]\{40\}\).*/\1/p' | tail -1)"
+  [ -n "$shipped" ] && printf '%s' "$shipped" > "$EXPECT"
+  check_deploy
   beat "動いています"
 else
   line="$(printf '%s' "$out" | grep -E '出荷しません|合いません|読めません|ありません|進んでいます' | head -1 | sed 's/^ *//')"
