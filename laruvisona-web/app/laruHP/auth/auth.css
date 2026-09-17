@@ -1,0 +1,256 @@
+/*
+ * ログイン・登録まわりの見た目。
+ *
+ * ログイン後の画面（app/laruHP/app-shell.css）と同じ色・角・影を使う。
+ * ここだけ別の設計にすると、「入る前」と「入った後」で別のサービスに見える。
+ * 数値を直接書かず、この :root の変数を使うこと。
+ */
+
+.auth {
+  --sf-app:    #f6f8fb;
+  --sf-card:   #ffffff;
+  --sf-side:   #0f172a;
+  --sf-sunken: #eef2f7;
+
+  --ln-soft:   #e6ebf2;
+  --ln-hard:   #d3dbe6;
+
+  --tx-strong: #0f172a;
+  --tx-body:   #475569;
+  --tx-muted:  #94a3b8;
+
+  --ac:        #0369a1;
+  --ac-hi:     #0284c7;
+  --ac-soft:   #e0f2fe;
+  --ac-line:   #7dd3fc;
+  --bad:       #b91c1c;
+  --bad-soft:  #fef2f2;
+  --bad-line:  #fecaca;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --sh-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  background: var(--sf-app);
+  color: var(--tx-body);
+  font-feature-settings: 'palt';
+}
+
+/* ── 左の面（説得）。小さい画面では出さない ───────────── */
+.auth-aside { display: none; }
+
+/* ── 右の面（入力） ─────────────────────────────── */
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 20px 48px;
+}
+.auth-box { width: 100%; max-width: 400px; }
+
+.auth-brand {
+  display: flex; justify-content: center;
+  margin-bottom: 28px;
+}
+
+.auth-card {
+  background: var(--sf-card);
+  border: 1px solid var(--ln-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+  padding: 28px 22px;
+}
+
+.auth-pill {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ac-line);
+  background: var(--ac-soft);
+  color: var(--ac);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.01em;
+}
+
+.auth-card h1 {
+  margin: 0 0 6px;
+  color: var(--tx-strong);
+  font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+}
+.auth-lead { margin: 0 0 22px; font-size: 13px; line-height: 1.7; color: var(--tx-muted); }
+
+/* ── 知らせ ───────────────────────────────────── */
+.auth-note {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-bottom: 18px; padding: 11px 13px;
+  border-radius: var(--r-md);
+  font-size: 13px; line-height: 1.6;
+}
+.auth-note-bad  { background: var(--bad-soft); border: 1px solid var(--bad-line); color: var(--bad); }
+.auth-note-info { background: var(--ac-soft);  border: 1px solid var(--ac-line);  color: var(--ac); }
+.auth-note-icon { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 2px; }
+.auth-note p { margin: 0; flex: 1; min-width: 0; }
+.auth-note button {
+  flex: 0 0 auto; background: none; border: 0; cursor: pointer; padding: 0;
+  color: inherit; font-size: 12px; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* ── 入力 ─────────────────────────────────────── */
+.auth-field { margin-bottom: 16px; }
+.auth-field-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px;
+}
+.auth-field label {
+  display: block;
+  color: var(--tx-strong);
+  font-size: 13px; font-weight: 700;
+}
+.auth-field-hint { font-size: 11px; color: var(--tx-muted); font-weight: 400; }
+
+.auth-input-wrap { position: relative; display: flex; }
+.auth-field input {
+  width: 100%;
+  /* 16px 未満だと、iPhone が入力のたびに画面を拡大する。 */
+  font-size: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--ln-hard);
+  border-radius: var(--r-md);
+  background: var(--sf-card);
+  color: var(--tx-strong);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.auth-field input::placeholder { color: #b6c0cd; }
+.auth-field input:focus {
+  outline: none;
+  border-color: var(--ac-hi);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+.auth-field input[aria-invalid='true'] { border-color: #ef4444; }
+.auth-field input[aria-invalid='true']:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+.auth-field input:disabled { background: var(--sf-sunken); color: var(--tx-muted); }
+
+/* 伏せ字の切り替え。入力欄の中に置く。 */
+.auth-peek {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  display: grid; place-items: center;
+  width: 46px;
+  background: none; border: 0; cursor: pointer;
+  color: var(--tx-muted); border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.auth-peek:hover { color: var(--tx-body); }
+.auth-peek:focus-visible { outline: 2px solid var(--ac-hi); outline-offset: -2px; }
+.auth-field input.has-peek { padding-right: 46px; }
+
+.auth-err { margin: 6px 0 0; font-size: 12px; color: var(--bad); }
+
+/* ── ボタン ───────────────────────────────────── */
+.auth-btn {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%;
+  /* 指で押す所は 44px 以上。これを下回ると押し間違えが増える。 */
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+.auth-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.auth-btn-primary { background: var(--ac); color: #fff; border: 1px solid var(--ac); }
+.auth-btn-primary:hover:not(:disabled) { background: var(--ac-hi); border-color: var(--ac-hi); }
+
+.auth-btn-plain {
+  background: var(--sf-card); color: var(--tx-strong);
+  border: 1px solid var(--ln-hard); font-size: 14px;
+}
+.auth-btn-plain:hover:not(:disabled) { background: var(--sf-sunken); }
+
+/* 待っているあいだの丸。押した直後に「効いた」と分かる。 */
+.auth-spin {
+  width: 15px; height: 15px; flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: auth-spin 0.65s linear infinite;
+}
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .auth-spin { animation-duration: 2s; }
+}
+
+/* ── 区切り ───────────────────────────────────── */
+.auth-or {
+  display: flex; align-items: center; gap: 12px;
+  margin: 18px 0;
+  color: var(--tx-muted); font-size: 11px;
+}
+.auth-or::before, .auth-or::after {
+  content: ''; flex: 1; height: 1px; background: var(--ln-soft);
+}
+
+/* ── 下の案内 ─────────────────────────────────── */
+.auth-foot { margin-top: 20px; text-align: center; font-size: 13px; color: var(--tx-muted); }
+.auth-foot p { margin: 0 0 8px; }
+.auth-foot p:last-child { margin-bottom: 0; }
+.auth-foot a { color: var(--ac); text-decoration: none; }
+.auth-foot a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.auth-fine {
+  margin-top: 16px; padding: 12px 14px;
+  border: 1px solid var(--ln-soft); border-radius: var(--r-md);
+  background: var(--sf-sunken);
+  font-size: 12px; line-height: 1.75; color: var(--tx-body);
+}
+.auth-fine b { color: var(--tx-strong); }
+.auth-fine a { color: var(--ac); }
+
+/* ── 大きい画面: 左に説得の面を出す ─────────────── */
+@media (min-width: 900px) {
+  .auth { grid-template-columns: 1fr 1fr; }
+
+  .auth-aside {
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 40px 44px;
+    background: var(--sf-side);
+    color: #cbd5e1;
+  }
+  .auth-aside-brand { display: flex; }
+  .auth-aside h2 {
+    margin: 0 0 14px;
+    color: #fff;
+    font-size: 30px; font-weight: 800; line-height: 1.45; letter-spacing: -0.02em;
+  }
+  .auth-aside-lead { margin: 0 0 30px; font-size: 14px; line-height: 1.9; color: #94a3b8; max-width: 30em; }
+
+  .auth-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+  .auth-points li { display: flex; gap: 12px; align-items: flex-start; }
+  .auth-point-mark {
+    flex: 0 0 auto;
+    display: grid; place-items: center;
+    width: 28px; height: 28px; border-radius: 9px;
+    background: rgba(56, 189, 248, 0.14);
+    color: #38bdf8;
+  }
+  .auth-point-mark svg { width: 15px; height: 15px; }
+  .auth-point b { display: block; color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .auth-point span { font-size: 12.5px; line-height: 1.7; color: #94a3b8; }
+
+  .auth-aside-foot { font-size: 11px; color: #64748b; }
+  .auth-aside-foot a { color: #94a3b8; text-decoration: none; }
+  .auth-aside-foot a:hover { color: #cbd5e1; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* 左に屋号が出るので、右の重ねは消す */
+  .auth-brand { display: none; }
+  .auth-main { padding: 40px; align-items: flex-start; }
+  .auth-box { max-width: 420px; margin: 0 auto; }
+  .auth-card { padding: 34px 32px; }
+  .auth-card h1 { font-size: 24px; }
+}

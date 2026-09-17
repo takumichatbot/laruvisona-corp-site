@@ -1,9 +1,22 @@
 'use client';
+
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import AuthShell, { ICON_LOCK } from '@/components/laruhp/AuthShell';
+import { AuthField, AuthSubmit, AuthNote } from '@/components/laruhp/auth-parts';
+
+/**
+ * 新しいパスワードを決める画面（メールのリンクから来る）。
+ *
+ * 直したこと。
+ *   ・伏せ字を外せず、2つの欄に同じ文字を打てたか確かめられなかった。
+ *     「一致しません」と言われても、どちらが違うのか分からない。
+ *   ・8文字未満かどうかを、押してから教えていた。打っている最中に出す。
+ *   ・更新後 1.2秒待ってから移動していた。何も押せない時間になっていたので、
+ *     その場で「移動します」と出したうえで待つ。
+ */
 
 function UpdatePasswordContent() {
   const [password, setPassword] = useState('');
@@ -16,110 +29,120 @@ function UpdatePasswordContent() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const valid = Boolean(data.session);
-      setTokenValid(valid);
-      if (!valid) setError('リンクが無効か期限切れです。パスワードリセットをやり直してください。');
-    });
+    supabase.auth.getSession().then(({ data }) => setTokenValid(Boolean(data.session)));
   }, [supabase.auth]);
+
+  // 打っている最中に出す。押してから言われるより早く直せる。
+  const tooShort = password.length > 0 && password.length < 8;
+  const mismatch = confirm.length > 0 && password !== confirm;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirm) { setError('パスワードが一致しません'); return; }
     if (password.length < 8) { setError('パスワードは8文字以上で入力してください'); return; }
+    if (password !== confirm) { setError('2つのパスワードが一致しません'); return; }
     setLoading(true);
     setError('');
-
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError) {
-      setError('パスワードの更新に失敗しました。リンクを開き直してお試しください。');
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        setError('パスワードの更新に失敗しました。メールのリンクを開き直してお試しください。');
+        setLoading(false);
+        return;
+      }
+      setDone(true);
+      setTimeout(() => router.replace('/laruHP/dashboard'), 1200);
+    } catch {
+      setError('通信に失敗しました。もう一度お試しください。');
       setLoading(false);
-      return;
     }
-    setDone(true);
-    setTimeout(() => { router.replace('/laruHP/dashboard'); }, 1200);
   };
 
-  return (
-    <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        <Link href="https://laruhp.com/" className="flex items-center justify-center gap-3 mb-10">
-          <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" />
-        </Link>
-
-        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">新しいパスワードを設定</h1>
-          <p className="text-gray-600 text-sm mb-8">8文字以上のパスワードを設定してください</p>
-
-          {done ? (
-            <div className="text-center py-4">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <p className="text-emerald-700 font-bold">パスワードを更新しました</p>
-              <p className="text-gray-600 text-sm mt-2">ダッシュボードに移動します</p>
-            </div>
-          ) : tokenValid === null ? (
-            <div className="text-center py-8 text-gray-500 text-sm">確認中...</div>
-          ) : tokenValid === false ? (
-            <div className="text-center py-4">
-              <p className="text-red-600 text-sm mb-4">{error}</p>
-              <Link href="/laruHP/auth/reset-password" className="text-sky-600 hover:text-sky-500 text-sm">
-                パスワードリセットをやり直す →
-              </Link>
-            </div>
-          ) : (
-            <>
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
-                  {error}
-                </div>
-              )}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-2">新しいパスワード</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="8文字以上"
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-2">パスワード（確認）</label>
-                  <input
-                    type="password"
-                    required
-                    value={confirm}
-                    onChange={e => setConfirm(e.target.value)}
-                    placeholder="もう一度入力"
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? '更新中...' : 'パスワードを更新'}
-                </button>
-              </form>
-            </>
-          )}
+  if (done) {
+    return (
+      <AuthShell heading="パスワードを更新しました" asideTitle="完了です。" asideLead="新しいパスワードで入り直せます。">
+        <AuthNote kind="info">更新しました。ホーム画面へ移動します…</AuthNote>
+        <div className="auth-foot">
+          <p><Link href="/laruHP/dashboard">移動しないときはこちら</Link></p>
         </div>
-      </div>
-    </div>
+      </AuthShell>
+    );
+  }
+
+  if (tokenValid === null) {
+    return (
+      <AuthShell heading="確認しています" asideTitle="もう少しです。">
+        <p className="auth-lead">リンクを確かめています…</p>
+      </AuthShell>
+    );
+  }
+
+  if (tokenValid === false) {
+    return (
+      <AuthShell
+        heading="リンクが使えません"
+        asideTitle="もう一度、送り直せます。"
+        asideLead="再設定のリンクは1時間で使えなくなります。"
+      >
+        <AuthNote kind="bad">リンクの期限が切れているか、すでに使われています。</AuthNote>
+        <div className="auth-foot">
+          <p><Link href="/laruHP/auth/reset-password">再設定メールを送り直す</Link></p>
+          <p><Link href="/laruHP/auth/login">← ログインに戻る</Link></p>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell
+      heading="新しいパスワードを決める"
+      lead="8文字以上で設定してください。"
+      asideTitle="鍵を掛け直します。"
+      asideLead="決めたパスワードで、次からログインできます。"
+      points={[{ title: '忘れないものを', body: 'ブラウザやパスワード管理ソフトに保存しておくと確実です。', icon: ICON_LOCK }]}
+    >
+      {error && <AuthNote kind="bad">{error}</AuthNote>}
+
+      <form onSubmit={handleSubmit} noValidate>
+        <AuthField
+          id="new-password"
+          label="新しいパスワード"
+          hint="8文字以上"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={setPassword}
+          placeholder="••••••••"
+          error={tooShort ? 'あと少しです（8文字以上）' : undefined}
+          disabled={loading}
+          required
+          autoFocus
+        />
+        <AuthField
+          id="new-password-confirm"
+          label="もう一度"
+          type="password"
+          autoComplete="new-password"
+          value={confirm}
+          onChange={setConfirm}
+          placeholder="••••••••"
+          error={mismatch ? '上と違います' : undefined}
+          disabled={loading}
+          required
+        />
+        <AuthSubmit busy={loading} busyLabel="更新しています…" disabled={tooShort || mismatch}>
+          パスワードを更新
+        </AuthSubmit>
+      </form>
+    </AuthShell>
   );
 }
 
 export default function UpdatePasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-sky-50 flex items-center justify-center">
-        <div className="text-gray-600 text-sm">読み込み中...</div>
-      </div>
+      <AuthShell heading="確認しています" asideTitle="もう少しです。">
+        <p className="auth-lead">読み込んでいます…</p>
+      </AuthShell>
     }>
       <UpdatePasswordContent />
     </Suspense>

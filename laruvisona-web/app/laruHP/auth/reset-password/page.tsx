@@ -1,7 +1,22 @@
 'use client';
+
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import AuthShell, { ICON_LOCK } from '@/components/laruhp/AuthShell';
+import { AuthField, AuthSubmit, AuthNote } from '@/components/laruhp/auth-parts';
+
+/**
+ * パスワードの再設定を頼む画面。
+ *
+ * 直したこと。
+ *   ・通信そのものが落ちると「送信中...」のまま戻らなかった
+ *     （fetch が投げると、その下の setLoading(false) まで届かない）。
+ *   ・「エラーが発生しました。メールアドレスをご確認ください。」と出していたが、
+ *     受け口は登録の有無にかかわらず必ず ok を返す。出る余地の無い文言だった。
+ *     しかも、もし出れば「そのアドレスは登録が無い」と教えることになる。
+ *   ・送ったあとに「迷惑メールを見る」が小さく1行あるだけだった。
+ *     届かない人のほとんどはそこに入っている。
+ */
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
@@ -11,84 +26,81 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim()) { setError('メールアドレスを入力してください'); return; }
     setLoading(true);
     setError('');
-    const res = await fetch('/api/auth/request-password-reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || 'エラーが発生しました。メールアドレスをご確認ください。');
-    } else {
+    try {
+      const res = await fetch('/api/auth/request-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      // 受け口は、登録の有無を外へ出さないため常に ok を返す。
+      // こちらも「送りました」以外は出さない。出せば、それが答えになってしまう。
+      if (!res.ok) { setError('送信できませんでした。しばらく経ってからお試しください。'); return; }
       setSent(true);
+    } catch {
+      setError('通信に失敗しました。電波の良い所でもう一度お試しください。');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  return (
-    <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        <Link href="https://laruhp.com/" className="flex items-center justify-center gap-3 mb-10">
-          <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" />
-        </Link>
-
-        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">パスワードをリセット</h1>
-          <p className="text-gray-600 text-sm mb-8">
-            登録済みのメールアドレスを入力してください。パスワードリセット用のリンクをお送りします。
-          </p>
-
-          {sent ? (
-            <div className="text-center py-4">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-700"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              </div>
-              <p className="text-emerald-700 font-bold mb-2">メールを送信しました</p>
-              <p className="text-gray-600 text-sm">
-                受信トレイをご確認ください。<br />
-                メールが届かない場合はスパムフォルダもご確認ください。
-              </p>
-              <Link href="/laruHP/auth/login" className="text-sky-600 hover:text-sky-500 text-sm mt-8 block">
-                ← ログインに戻る
-              </Link>
-            </div>
-          ) : (
-            <>
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
-                  {error}
-                </div>
-              )}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-2">メールアドレス</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? '送信中...' : 'リセットメールを送信'}
-                </button>
-              </form>
-            </>
-          )}
-        </div>
-
-        <p className="text-center text-gray-500 text-sm mt-6">
-          <Link href="/laruHP/auth/login" className="text-sky-600 hover:text-sky-500">← ログインに戻る</Link>
+  if (sent) {
+    return (
+      <AuthShell
+        heading="メールを送りました"
+        asideTitle="鍵は、すぐに掛け直せます。"
+        asideLead="メールの中のボタンから、新しいパスワードを決めてください。"
+      >
+        <p className="auth-lead">
+          <b>{email.trim()}</b> が登録されていれば、再設定用のリンクが届きます。<br />
+          リンクは<b>1時間</b>で使えなくなります。
         </p>
+        <div className="auth-fine">
+          <b>届かないときは</b><br />
+          ・迷惑メールフォルダに入っていることがあります<br />
+          ・数分かかることがあります<br />
+          ・Googleでログインしている場合、パスワードはありません。
+          ログイン画面の「Googleでログイン」からお入りください
+        </div>
+        <div className="auth-foot">
+          <p><Link href="/laruHP/auth/login">← ログインに戻る</Link></p>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell
+      heading="パスワードを再設定"
+      lead="登録しているメールアドレスを入れてください。再設定用のリンクをお送りします。"
+      asideTitle="鍵は、すぐに掛け直せます。"
+      asideLead="登録しているメールアドレスさえ分かれば、パスワードは何度でも決め直せます。"
+      points={[{ title: 'リンクは1時間だけ有効', body: '古いリンクは使えなくなります。', icon: ICON_LOCK }]}
+    >
+      {error && <AuthNote kind="bad">{error}</AuthNote>}
+
+      <form onSubmit={handleSubmit} noValidate>
+        <AuthField
+          id="reset-email"
+          label="メールアドレス"
+          type="email"
+          inputMode="email"
+          autoComplete="username"
+          value={email}
+          onChange={setEmail}
+          placeholder="your@email.com"
+          disabled={loading}
+          required
+          autoFocus
+        />
+        <AuthSubmit busy={loading} busyLabel="送信しています…">再設定メールを送る</AuthSubmit>
+      </form>
+
+      <div className="auth-foot">
+        <p><Link href="/laruHP/auth/login">← ログインに戻る</Link></p>
       </div>
-    </div>
+    </AuthShell>
   );
 }

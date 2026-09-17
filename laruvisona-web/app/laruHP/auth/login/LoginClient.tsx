@@ -1,26 +1,48 @@
 'use client';
+
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { safeLaruHpRedirect } from '@/lib/auth-redirect';
+import AuthShell, { ICON_EYE, ICON_BOLT, ICON_CHAT } from '@/components/laruhp/AuthShell';
+import { AuthField, AuthSubmit, AuthNote, AuthOr, GoogleButton } from '@/components/laruhp/auth-parts';
+
+/**
+ * ログイン。
+ *
+ * 直したこと。
+ *   ・autoComplete が無く、パスワード管理ソフトが欄を見つけられなかった。
+ *     保存した鍵が自動で入らないので、ここで諦める人がいた。
+ *   ・「パスワードをリセット」が同じ画面に2つあった（欄の横と下）。1つにする。
+ *   ・Googleで入るボタンを押しても何も起きないように見えた（画面が変わるまで
+ *     数秒かかるのに、待ちの表示が無い）。二度押しもできてしまっていた。
+ *   ・伏せ字を外せなかった。打ち間違いに気づけないまま「違います」と言われる。
+ *   ・画面の右半分が空だった。
+ */
+
+const POINTS = [
+  { title: '完成像を見ながら作る', body: '入力するそばから、実際のページが組み上がっていきます。', icon: ICON_EYE },
+  { title: '公開はボタン1つ', body: '住所も電話も、直したその場で公開できます。', icon: ICON_BOLT },
+  { title: '問い合わせを取りこぼさない', body: '届いた連絡は管理画面に残り、未読の数が出ます。', icon: ICON_CHAT },
+];
 
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [google, setGoogle] = useState(false);
   const [error, setError] = useState('');
   const [existingEmail, setExistingEmail] = useState<string | null>(null);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   // redirect は旧招待リンクとの互換用。どちらも管理画面内だけに限定する。
   const redirectTo = safeLaruHpRedirect(searchParams.get('redirectTo') ?? searchParams.get('redirect'));
   const supabase = createClient();
 
-  // Check if already logged in so user can see who and choose to switch
   useEffect(() => {
-    // パスワードリセット後の自動 prefill
+    // パスワード再設定のあと、メールを入れ直させない。
     const prefill = searchParams.get('prefill');
     if (prefill) queueMicrotask(() => setEmail(prefill));
 
@@ -34,141 +56,105 @@ function LoginForm() {
     if (!email.trim()) { setError('メールアドレスを入力してください'); return; }
     setLoading(true);
     setError('');
-
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) {
-      setError('メールアドレスまたはパスワードが正しくありません');
-      setLoading(false);
-    } else {
-      // window.location.href でフルリロード → Cookie がサーバーに確実に届く
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) {
+        // どちらが違うかは言わない。存在するメールアドレスを当てられてしまう。
+        setError('メールアドレスまたはパスワードが正しくありません');
+        setLoading(false);
+        return;
+      }
+      // フルリロードにして、Cookie を確実にサーバーへ渡す。
+      // ここで setLoading(false) はしない。画面が変わるまで押させないため。
       window.location.href = redirectTo;
+    } catch {
+      setError('通信に失敗しました。電波の良い所でもう一度お試しください。');
+      setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     setError('');
-    await supabase.auth.signOut();
-    const next = redirectTo;
-    const queryParams: Record<string, string> = { prompt: 'select_account' };
-    // メールが入力済みの場合は login_hint でそのアカウントを Google が強調表示する
-    if (email.trim()) queryParams.login_hint = email.trim();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
-        queryParams,
-      },
-    });
-    if (error) setError('Googleログインに失敗しました');
+    setGoogle(true);
+    try {
+      await supabase.auth.signOut();
+      const queryParams: Record<string, string> = { prompt: 'select_account' };
+      // 打ってあれば、Google 側でそのアカウントを目立たせる。
+      if (email.trim()) queryParams.login_hint = email.trim();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+          queryParams,
+        },
+      });
+      if (error) { setError('Googleログインに失敗しました'); setGoogle(false); }
+    } catch {
+      setError('Googleログインに失敗しました');
+      setGoogle(false);
+    }
   };
 
   const signupHref = redirectTo !== '/laruHP/dashboard'
     ? `/laruHP/auth/signup?redirectTo=${encodeURIComponent(redirectTo)}`
     : '/laruHP/auth/signup';
 
+  const busy = loading || google;
+
   return (
-    <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        <Link href="https://laruhp.com/" className="flex items-center justify-center gap-3 mb-10">
-          <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" />
-        </Link>
+    <AuthShell
+      heading="ログイン"
+      lead="アカウントに入って、サイトを直したり問い合わせを見たりできます。"
+      asideTitle="お店のホームページを、自分の手で。"
+      asideLead="作るのも、直すのも、公開するのも、この画面の中だけで終わります。"
+      points={POINTS}
+    >
+      {existingEmail && (
+        <AuthNote kind="info" action={{ label: 'そのまま続ける', onClick: () => router.push(redirectTo) }}>
+          <b>{existingEmail}</b> でログイン中です。
+        </AuthNote>
+      )}
 
-        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">ログイン</h1>
-          <p className="text-gray-600 text-sm mb-8">アカウントにアクセスしてサイトを管理します</p>
+      {error && <AuthNote kind="bad">{error}</AuthNote>}
 
-          {existingEmail && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl mb-6 flex items-center justify-between gap-3">
-              <span><span className="font-bold">{existingEmail}</span> でログイン中</span>
-              <button
-                onClick={() => router.push(redirectTo)}
-                className="text-xs font-bold text-amber-700 underline underline-offset-2 whitespace-nowrap"
-              >
-                そのまま続ける →
-              </button>
-            </div>
-          )}
+      <GoogleButton busy={google} disabled={loading} onClick={handleGoogleLogin} label="Googleでログイン" />
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
-              {error}
-            </div>
-          )}
+      <AuthOr>または メールアドレスで</AuthOr>
 
-          {/* Google ログイン */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 py-3.5 rounded-xl font-bold text-sm transition-all mb-5"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-            </svg>
-            Googleでログイン
-          </button>
+      <form onSubmit={handleLogin} noValidate>
+        <AuthField
+          id="login-email"
+          label="メールアドレス"
+          type="email"
+          inputMode="email"
+          autoComplete="username"
+          value={email}
+          onChange={setEmail}
+          placeholder="your@email.com"
+          disabled={busy}
+          required
+        />
+        <AuthField
+          id="login-password"
+          label="パスワード"
+          hint={<Link href="/laruHP/auth/reset-password">お忘れですか？</Link>}
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={setPassword}
+          placeholder="••••••••"
+          disabled={busy}
+          required
+        />
+        <AuthSubmit busy={loading} busyLabel="ログインしています…" disabled={google}>ログイン</AuthSubmit>
+      </form>
 
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-gray-400 text-xs">または メール／パスワードでログイン</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          {/* メール＋パスワードフォーム（email を内包） */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-bold text-gray-900">メールアドレス</label>
-                <Link href="/laruHP/auth/reset-password" className="text-xs text-sky-600 hover:text-sky-500">パスワードをリセット</Link>
-              </div>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">パスワード</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'ログイン中...' : 'ログイン'}
-            </button>
-          </form>
-        </div>
-
-        <div className="mt-6 space-y-3 text-center">
-          <p className="text-gray-500 text-sm">
-            アカウントをお持ちでない方は{' '}
-            <Link href={signupHref} className="text-sky-600 hover:text-sky-500">新規登録</Link>
-          </p>
-          <p>
-            <Link href="/laruHP/auth/reset-password" className="text-sky-600 hover:text-sky-500 text-sm transition-colors">
-              パスワードをお忘れですか？
-            </Link>
-          </p>
-          <p>
-            <Link href="https://laruhp.com/" className="text-gray-500 text-xs hover:text-gray-900">← LARU HPトップへ</Link>
-          </p>
-        </div>
+      <div className="auth-foot">
+        <p>
+          アカウントをお持ちでない方は <Link href={signupHref}>新規登録（初月無料）</Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
 

@@ -1,19 +1,43 @@
 'use client';
+
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { safeLaruHpRedirect } from '@/lib/auth-redirect';
+import { MONTHLY, TERMS } from '@/lib/laruhp-facts';
+import { LARUHP_ORIGIN } from '@/lib/laruhp-host';
+import AuthShell, { ICON_EYE, ICON_BOLT, ICON_LOCK } from '@/components/laruhp/AuthShell';
+import { AuthField, AuthSubmit, AuthNote, AuthOr, GoogleButton } from '@/components/laruhp/auth-parts';
+
+/**
+ * 新規登録。
+ *
+ * 直したこと。
+ *   ・autoComplete が無く、パスワード管理ソフトが新しい鍵を作ってくれなかった。
+ *   ・料金の説明が「999円・6ヶ月」と直に書いてあった。値段を変えたとき、
+ *     ここだけ古いまま残る。lib/laruhp-facts.ts から引く。
+ *   ・Googleで登録を押しても待ちが出なかった。
+ *   ・確認メールを送ったあとの画面に、次にすることが書いていなかった
+ *     （迷惑メールを見る、という当たり前がいちばん多い詰まり所）。
+ */
+
+const POINTS = [
+  { title: '作りながら、出来上がりが見える', body: '打ち込んだそばからページが組み上がります。', icon: ICON_EYE },
+  { title: '初月は無料', body: `${TERMS.firstMonthFree}。合わなければ、そこでやめられます。`, icon: ICON_BOLT },
+  { title: 'アカウント作成だけなら無料', body: '作って、触って、気に入ってから決済に進めます。', icon: ICON_LOCK },
+];
 
 function SignupForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [google, setGoogle] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ businessName?: string; email?: string; password?: string }>({});
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = safeLaruHpRedirect(searchParams.get('redirectTo'), '/laruHP/studio');
@@ -21,20 +45,22 @@ function SignupForm() {
 
   const handleGoogleSignup = async () => {
     setError('');
-    const next = redirectTo;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
-      },
-    });
-    if (error) setError('Googleログインに失敗しました');
+    setGoogle(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}` },
+      });
+      if (error) { setError('Googleログインに失敗しました'); setGoogle(false); }
+    } catch {
+      setError('Googleログインに失敗しました');
+      setGoogle(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // 各フィールドを検証し、未入力・不正値の場合はフィールド下部に日本語エラーを表示
     const errs: { businessName?: string; email?: string; password?: string } = {};
     if (!businessName.trim()) errs.businessName = '店舗名または会社名を入力してください';
     if (!email.trim()) errs.email = 'メールアドレスを入力してください';
@@ -55,153 +81,138 @@ function SignupForm() {
     let referredBy = '';
     try { referredBy = sessionStorage.getItem('laruHP_ref') || ''; } catch {}
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { business_name: businessName, ...(referredBy ? { referred_by: referredBy } : {}) },
-        emailRedirectTo: `${location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { business_name: businessName.trim(), ...(referredBy ? { referred_by: referredBy } : {}) },
+          emailRedirectTo: `${location.origin}/api/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        },
+      });
 
-    if (error) {
-      setError(error.message === 'User already registered'
-        ? 'このメールアドレスは既に登録されています'
-        : 'エラーが発生しました。もう一度お試しください。');
-      setLoading(false);
-      return;
-    }
+      if (error) {
+        setError(error.message === 'User already registered'
+          ? 'このメールアドレスは既に登録されています。ログインからお進みください。'
+          : 'エラーが発生しました。もう一度お試しください。');
+        setLoading(false);
+        return;
+      }
 
-    if (data.session) {
-      // Auto-confirmed (dev mode)
-      router.push(redirectTo);
-    } else {
+      if (data.session) {
+        router.push(redirectTo);   // 確認不要の設定のとき
+        return;                    // 画面が変わるので待ちは解かない
+      }
       setSent(true);
+      setLoading(false);
+    } catch {
+      setError('通信に失敗しました。電波の良い所でもう一度お試しください。');
+      setLoading(false);
     }
   };
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">確認メールを送信しました</h1>
-          <p className="text-gray-600 mb-6">
-            <strong className="text-gray-900">{email}</strong> に確認メールを送信しました。<br />
-            メール内のリンクをクリックしてアカウントを有効化してください。
-          </p>
-          <Link href="https://laruhp.com/" className="text-sky-600 hover:text-sky-500 text-sm">← LARU HPトップへ</Link>
+      <AuthShell
+        heading="確認メールを送りました"
+        asideTitle="あと1つだけ。"
+        asideLead="メールの中のボタンを押すと、すぐに作り始められます。"
+      >
+        <p className="auth-lead">
+          <b>{email.trim()}</b> 宛に送りました。<br />
+          メールの中のリンクを押すと、アカウントが使えるようになります。
+        </p>
+        <div className="auth-fine">
+          <b>届かないときは</b><br />
+          ・迷惑メールフォルダに入っていることがあります<br />
+          ・数分かかることがあります<br />
+          ・アドレスを打ち間違えていたら、もう一度<Link href="/laruHP/auth/signup">登録</Link>し直してください
         </div>
-      </div>
+        <div className="auth-foot">
+          <p><Link href="/laruHP/auth/login">ログイン画面へ</Link></p>
+          <p><a href={`${LARUHP_ORIGIN}/`}>← LARU HP トップへ</a></p>
+        </div>
+      </AuthShell>
     );
   }
 
+  const busy = loading || google;
+
   return (
-    <div className="min-h-screen bg-sky-50 flex items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        <Link href="https://laruhp.com/" className="flex items-center justify-center gap-3 mb-10">
-          <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" />
-        </Link>
+    <AuthShell
+      pill="初月無料キャンペーン中"
+      heading="無料で始める"
+      lead="アカウントを作ったあと、お店の情報を入れるとAIがページを組み立てます。"
+      asideTitle="まず作ってみて、気に入ってから決めてください。"
+      asideLead="アカウントを作るところまでは無料です。決済は、公開するときで構いません。"
+      points={POINTS}
+    >
+      {error && <AuthNote kind="bad">{error}</AuthNote>}
 
-        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-8">
-          <div className="inline-block bg-sky-50 text-sky-600 text-xs font-bold px-3 py-1 rounded-full mb-4 border border-sky-200">
-            初月無料キャンペーン中
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">無料で始める</h1>
-          <p className="text-gray-600 text-sm mb-8">アカウント作成後、サイト情報を入力してAI生成を開始します</p>
+      <GoogleButton busy={google} disabled={loading} onClick={handleGoogleSignup} label="Googleで登録" />
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
-              {error}
-            </div>
-          )}
+      <AuthOr>または メールアドレスで</AuthOr>
 
-          <button
-            type="button"
-            onClick={handleGoogleSignup}
-            className="w-full flex items-center justify-center gap-3 border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 py-3.5 rounded-xl font-bold text-sm transition-all mb-5"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-            </svg>
-            Googleで登録
-          </button>
+      <form onSubmit={handleSignup} noValidate>
+        <AuthField
+          id="signup-businessName"
+          label="店舗・会社名"
+          autoComplete="organization"
+          value={businessName}
+          onChange={v => { setBusinessName(v); setFieldErrors(f => ({ ...f, businessName: undefined })); }}
+          placeholder="例: 鈴木整体院"
+          error={fieldErrors.businessName}
+          disabled={busy}
+        />
+        <AuthField
+          id="signup-email"
+          label="メールアドレス"
+          type="email"
+          inputMode="email"
+          autoComplete="username"
+          value={email}
+          onChange={v => { setEmail(v); setFieldErrors(f => ({ ...f, email: undefined })); }}
+          placeholder="your@email.com"
+          error={fieldErrors.email}
+          disabled={busy}
+        />
+        <AuthField
+          id="signup-password"
+          label="パスワード"
+          hint="8文字以上"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={v => { setPassword(v); setFieldErrors(f => ({ ...f, password: undefined })); }}
+          placeholder="••••••••"
+          error={fieldErrors.password}
+          disabled={busy}
+        />
 
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-gray-400 text-xs">またはメールで登録</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
+        <AuthSubmit busy={loading} busyLabel="作成しています…" disabled={google}>アカウントを作成する</AuthSubmit>
+      </form>
 
-          <form onSubmit={handleSignup} noValidate className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">店舗・会社名</label>
-              <input
-                id="signup-businessName"
-                type="text"
-                value={businessName}
-                onChange={e => { setBusinessName(e.target.value); setFieldErrors(f => ({ ...f, businessName: undefined })); }}
-                placeholder="例: 鈴木整体院"
-                aria-invalid={!!fieldErrors.businessName}
-                className={`w-full bg-white border rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors ${fieldErrors.businessName ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-sky-500 focus:ring-sky-500'}`}
-              />
-              {fieldErrors.businessName && <p className="text-red-500 text-xs mt-1.5">{fieldErrors.businessName}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">メールアドレス</label>
-              <input
-                id="signup-email"
-                type="email"
-                value={email}
-                onChange={e => { setEmail(e.target.value); setFieldErrors(f => ({ ...f, email: undefined })); }}
-                placeholder="your@email.com"
-                aria-invalid={!!fieldErrors.email}
-                className={`w-full bg-white border rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors ${fieldErrors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-sky-500 focus:ring-sky-500'}`}
-              />
-              {fieldErrors.email && <p className="text-red-500 text-xs mt-1.5">{fieldErrors.email}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">パスワード（8文字以上）</label>
-              <input
-                id="signup-password"
-                type="password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setFieldErrors(f => ({ ...f, password: undefined })); }}
-                placeholder="••••••••"
-                aria-invalid={!!fieldErrors.password}
-                className={`w-full bg-white border rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-colors ${fieldErrors.password ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-sky-500 focus:ring-sky-500'}`}
-              />
-              {fieldErrors.password && <p className="text-red-500 text-xs mt-1.5">{fieldErrors.password}</p>}
-            </div>
-            <p className="text-gray-500 text-xs">
-              登録することで<a href="/laruHP/terms" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:text-sky-500">利用規約</a>・<a href="/laruHP/privacy" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:text-sky-500">プライバシーポリシー</a>に同意したものとみなします
-            </p>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-base hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? '処理中...' : 'アカウントを作成する →'}
-            </button>
-          </form>
+      <div className="auth-fine">
+        <b>料金について</b><br />
+        アカウント作成は無料です。サイトを公開するときに決済の設定が必要になります
+        （{TERMS.firstMonthFree}、以降は月額{MONTHLY.hp.toLocaleString('ja-JP')}円〜）。
+        最低利用期間は{TERMS.minimumMonths}ヶ月。{TERMS.taxNote}。
+        くわしくは<a href={`${LARUHP_ORIGIN}/plans`} target="_blank" rel="noopener noreferrer">料金ページ</a>をご覧ください。
+      </div>
 
-          <div className="mt-6 bg-sky-50 border border-sky-200 rounded-xl p-4 text-xs text-gray-600">
-            <p className="font-bold text-sky-600 mb-1">料金について</p>
-            <p>アカウント作成は無料です。サイト公開時にStripeで決済設定（初月無料→月額999円）が必要です。最低契約期間6ヶ月。</p>
-          </div>
-        </div>
-
-        <p className="text-center text-gray-500 text-sm mt-6">
+      <div className="auth-foot">
+        <p>
+          登録すると
+          <a href={`${LARUHP_ORIGIN}/terms`} target="_blank" rel="noopener noreferrer">利用規約</a>・
+          <a href={`${LARUHP_ORIGIN}/privacy`} target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
+          に同意したものとみなします。
+        </p>
+        <p>
           既にアカウントをお持ちの方は{' '}
-          <Link href={`/laruHP/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`} className="text-sky-600 hover:text-sky-500">ログイン</Link>
+          <Link href={`/laruHP/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`}>ログイン</Link>
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
 
