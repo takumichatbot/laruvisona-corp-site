@@ -85,6 +85,9 @@ test('絵を、縮小して見せない', () => {
   assert.doesNotMatch(tsx, /transform:\s*`?scale/);
   assert.doesNotMatch(tsx, /SCALE/);
   assert.match(tsx, /width: '100%'/);
+  // 読み込みが終わっても描かれないことがある。大きさを1px動かして描かせる。
+  assert.match(tsx, /requestAnimationFrame/);
+  assert.match(tsx, /calc\(100% \+ 1px\)/);
   const css = bare('app/laruHP/app-shell.css');
   const rule = css.slice(css.indexOf('.site-thumb-frame {'));
   assert.doesNotMatch(rule.slice(0, rule.indexOf('}')), /transform/);

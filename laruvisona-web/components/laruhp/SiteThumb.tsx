@@ -29,18 +29,18 @@ import { useEffect, useRef, useState } from 'react';
  */
 
 /**
- * 枠の高さ。カードより高くしておき、上から切って見せる。
+ * 枠は、カードと同じ大きさで置く。
  *
- * **縮小（transform: scale）はやめた。**
- * 3倍で描いて1/3に縮めると広い画面の姿が出るが、縮小を掛けた枠は
- * 中の読み込みが終わっても描き直されないことがあり、絵が白いまま残る。
- * 本番で7枚すべてがそうなった。枠も位置も大きさも正しく、返るHTMLも正しい。
- * **コードからは正常に見えるのに、出ない。**
+ * **縮小（transform: scale）はやめた。** 3倍で描いて1/3に縮めると
+ * 広い画面の姿が出るが、本番で7枚すべてが白いまま出なかった。
+ * 枠は読み込み済み、位置も大きさも正しく、返るHTMLも正しい。
+ * コードからは、どこも壊れていないように見える。
  *
- * いまは等倍のまま、カードの幅で描く。
- * 出るのはスマホでの姿で、これはお客様の訪問者がいちばん多く見る姿でもある。
+ * 高さをカードより大きく取るのも試したが、こんどは
+ * 上の152pxに何も無い（表題が真ん中にあるので、下に隠れる）。
+ * カードと同じ大きさにすると、枠の中の「画面の高さ」もカードと同じになり、
+ * 表題が真ん中＝見える位置に来る。
  */
-const FRAME_H = 420;
 
 export default function SiteThumb({
   siteId, name, gradient, updatedAt,
@@ -91,8 +91,15 @@ export default function SiteThumb({
           tabIndex={-1}
           aria-hidden="true"
           className="site-thumb-frame"
-          style={{ width: '100%', height: `${FRAME_H}px` }}
-          onLoad={() => setState('ready')}
+          style={{ width: '100%', height: '100%' }}
+          onLoad={e => {
+            setState('ready');
+            // 読み込みが終わっても、枠の中が**描かれないまま**残ることがある。
+            // 本番でそうなった。大きさを1px動かすと、その場で描かれる。
+            // 余った1pxはカードの外なので、見た目には出ない。
+            const el = e.currentTarget;
+            requestAnimationFrame(() => { el.style.height = 'calc(100% + 1px)'; });
+          }}
           onError={() => setState('failed')}
         />
       )}
