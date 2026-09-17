@@ -69,7 +69,8 @@ export default function HeroPreviewPage() {
     if (!sel) return;
     setBusy(true); setMsg('');
     const r = await api({ action: 'promote-hero', variant: sel });
-    const j = await r.json();
+    // 応答がJSONでないと json() が例外になり、下の setBusy(false) まで来ない。
+    const j = await r.json().catch(() => ({} as { error?: string }));
     setBusy(false);
     setMsg(r.ok
       ? `「${LABEL[sel] ?? sel}」を決定版にしました。見た目の設定は 濃さ${opacity}% / ぼかし${blur}px / 彩度を落とす${gray}% です。この3つを伝えてください。`

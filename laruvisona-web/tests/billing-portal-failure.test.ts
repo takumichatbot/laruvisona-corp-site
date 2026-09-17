@@ -51,3 +51,49 @@ test('押しても何も出ない、にしない', () => {
   const settings = code('app/laruHP/settings/page.tsx');
   assert.match(settings, /setPortalMsg\('通信に失敗しました/);
 });
+
+test('押したまま固まるボタンが、他に残っていない', () => {
+  // 2026-09-17: 契約管理のボタンと同じ形が9箇所あった。
+  //   setXxxLoading(true) → await res.json() → setXxxLoading(false)
+  // 応答がJSONでないと真ん中で例外になり、読み込み解除まで来ない。
+  // try も finally も無ければ、ボタンは押されたまま戻らない。
+  //
+  // 新しく書くときも同じ形になりやすいので、機械で見張る。
+  // 直し方は3つのどれかでよい:
+  //   ・try/finally で必ず解除する
+  //   ・await res.json().catch(() => ({})) で例外にしない
+  //   ・catch 節の中で解除する
+  const root = new URL('../', import.meta.url);
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(new URL(dir, root), { withFileTypes: true })) {
+      const next = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (['node_modules', '.next'].includes(entry.name)) continue;
+        walk(next);
+      } else if (entry.name.endsWith('.tsx')) files.push(next);
+    }
+  };
+  walk('app');
+  walk('components');
+
+  const stuck: string[] = [];
+  for (const file of files) {
+    const src = fs.readFileSync(new URL(file, root), 'utf8');
+    for (const m of src.matchAll(/set(\w*?)(Loading|Saving|Busy|Pending)\(true\)/g)) {
+      const flag = m[1] + m[2];
+      const tail = src.slice(m.index! + m[0].length, m.index! + m[0].length + 2500);
+      const end = tail.indexOf(`set${flag}(false)`);
+      const body = end > 0 ? tail.slice(0, end) : tail;
+      if (!body.includes('await')) continue;
+      const json = /await\s+\w+\??\.json\(\)(?!\.catch)/.exec(body);
+      if (!json) continue;
+      const before = body.slice(0, json.index);
+      if (before.includes('try {') || before.includes('try{')) continue;
+      if (body.includes('finally')) continue;
+      const line = src.slice(0, m.index!).split('\n').length;
+      stuck.push(`${file}:${line} (${flag})`);
+    }
+  }
+  assert.deepEqual(stuck, [], '押したまま戻らないボタンがある');
+});

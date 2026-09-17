@@ -288,7 +288,8 @@ export default function AiCommandPage() {
     if (res.ok) {
       const sessRes = await fetch('/api/ai-command/sessions');
       if (sessRes.ok) {
-        const data: Session[] = await sessRes.json();
+        // 応答がJSONでないと json() が例外になり、下の setPinLoading(false) まで来ない。
+        const data = await sessRes.json().catch(() => [] as Session[]) as Session[];
         setSessions(data);
         if (data.length > 0) setActiveId(data[0].id);
       }
@@ -307,7 +308,7 @@ export default function AiCommandPage() {
     if (res.ok) {
       const sessRes = await fetch('/api/ai-command/sessions');
       if (sessRes.ok) {
-        const data: Session[] = await sessRes.json();
+        const data = await sessRes.json().catch(() => [] as Session[]) as Session[];
         setSessions(data);
         if (data.length > 0) setActiveId(data[0].id);
       }

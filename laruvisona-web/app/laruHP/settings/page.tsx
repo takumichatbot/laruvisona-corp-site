@@ -223,14 +223,15 @@ export default function SettingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ access_token: igToken.trim() }),
     });
-    const d = await res.json();
+    // 応答がJSONでないと json() が例外になり、保存中の表示が戻らない。
+    const d = await res.json().catch(() => ({} as { error?: string; username?: string }));
     if (!res.ok) { setIgMsg(`エラー: ${d.error ?? '接続に失敗しました'}`); setIgSaving(false); return; }
     setIgConnected(true);
     setIgUsername(d.username);
     setIgMsg('接続しました');
     setIgToken('');
     const igRes = await fetch('/api/instagram');
-    const igData = await igRes.json();
+    const igData = await igRes.json().catch(() => ({} as { media?: unknown[] }));
     if (igData.media) setIgMedia(igData.media.slice(0, 6));
     setIgSaving(false);
   };

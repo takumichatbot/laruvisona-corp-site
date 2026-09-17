@@ -1706,9 +1706,11 @@ function ImageLibraryModal({ onSelect, onClose }: { onSelect: (url: string) => v
   const search = async (q: string) => {
     if (!q.trim()) return;
     setLoading(true);
-    const res = await fetch(`/api/images/unsplash?q=${encodeURIComponent(q)}`);
-    const data = await res.json();
-    setPhotos(data.photos || []);
+    // 応答がJSONでないと json() が例外になり、下の setLoading(false) まで来ない。
+    // 画面は「読み込み中」のまま固まり、押した人には理由が出ない。
+    const res = await fetch(`/api/images/unsplash?q=${encodeURIComponent(q)}`).catch(() => null);
+    const data = await res?.json().catch(() => ({})) as { photos?: unknown[] } | undefined;
+    setPhotos((data?.photos as never[]) || []);
     setLoading(false);
   };
 
@@ -4082,9 +4084,9 @@ function RightPanel({ block, onDataChange, seo, onSeoChange, larubot, onLarubotC
                     onClick={async () => {
                       if (webhookLogsLoading) return;
                       setWebhookLogsLoading(true);
-                      const res = await fetch(`/api/sites/${siteId}/webhook-logs`);
-                      const data = await res.json();
-                      setWebhookLogs(data.logs || []);
+                      const res = await fetch(`/api/sites/${siteId}/webhook-logs`).catch(() => null);
+                      const data = await res?.json().catch(() => ({})) as { logs?: unknown[] } | undefined;
+                      setWebhookLogs((data?.logs as never[]) || []);
                       setWebhookLogsLoading(false);
                     }}
                     className="text-[10px] text-sky-400 hover:text-sky-300 underline"
@@ -5293,9 +5295,9 @@ function BuilderContent() {
     setPageSpeedLoading(true);
     setPageSpeedData(null);
     setShowPageSpeed(true);
-    const res = await fetch(`/api/sites/${dbSiteId}/pagespeed`);
-    const data = await res.json();
-    setPageSpeedData(res.ok ? data : null);
+    const res = await fetch(`/api/sites/${dbSiteId}/pagespeed`).catch(() => null);
+    const data = await res?.json().catch(() => null);
+    setPageSpeedData(res?.ok ? data : null);
     setPageSpeedLoading(false);
   };
 
@@ -6561,9 +6563,9 @@ function BuilderContent() {
                   <button
                     onClick={async () => {
                       setPreviewTokenLoading(true);
-                      const res = await fetch(`/api/sites/${dbSiteId}/preview-token`, { method: 'POST' });
-                      const data = await res.json();
-                      if (data.token) setPreviewToken(data.token);
+                      const res = await fetch(`/api/sites/${dbSiteId}/preview-token`, { method: 'POST' }).catch(() => null);
+                      const data = await res?.json().catch(() => ({})) as { token?: string } | undefined;
+                      if (data?.token) setPreviewToken(data.token);
                       setPreviewTokenLoading(false);
                     }}
                     disabled={previewTokenLoading}
@@ -6584,9 +6586,9 @@ function BuilderContent() {
               <button
                 onClick={async () => {
                   setPreviewTokenLoading(true);
-                  const res = await fetch(`/api/sites/${dbSiteId}/preview-token`, { method: 'POST' });
-                  const data = await res.json();
-                  if (data.token) setPreviewToken(data.token);
+                  const res = await fetch(`/api/sites/${dbSiteId}/preview-token`, { method: 'POST' }).catch(() => null);
+                  const data = await res?.json().catch(() => ({})) as { token?: string } | undefined;
+                  if (data?.token) setPreviewToken(data.token);
                   setPreviewTokenLoading(false);
                 }}
                 disabled={previewTokenLoading}
