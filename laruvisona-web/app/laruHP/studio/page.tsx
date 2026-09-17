@@ -158,6 +158,22 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
   const onSelectRef = useRef(onSelect);
   useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
 
+  /**
+   * 枠の中を描き直させる。
+   *
+   * 中の文書には触れない（生成元を持たない箱にしてある）ので、
+   * 外から大きさをほんのわずか動かす。0.5px は目に見えない。
+   */
+  const repaint = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      const h = el.getBoundingClientRect().height;
+      if (!h) return;
+      el.style.height = `${parseFloat(el.style.height || '0') + 0.5}px`;
+    });
+  }, []);
+
   const post = useCallback((msg: Record<string, unknown>) => {
     const win = ref.current?.contentWindow;
     if (!win) return;
@@ -171,7 +187,15 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
       if (!ref.current || e.source !== ref.current.contentWindow) return;
       const d = e.data as { source?: string; type?: string; id?: string; kind?: string; y?: number } | null;
       if (!d || d.source !== 'lhp-studio-preview') return;
-      if (d.type === 'ready') { if(selectedRef.current)post({type:'select',id:selectedRef.current,focus:selectedFieldRef.current==='bgImage'?'image':'text',align:'start'});else post({type:'scrollTo',y:scrollRef.current}); return; }
+      if (d.type === 'ready') {
+        // 中の文書が生きた瞬間。ここで枠の大きさをわずかに動かして描き直させる。
+        // 作った直後に動かしても、そのときはまだ中が空なので効かない。
+        // **「読み込みが終わった」を教えてくれるのは、この便りだけ。**
+        repaint();
+        if(selectedRef.current)post({type:'select',id:selectedRef.current,focus:selectedFieldRef.current==='bgImage'?'image':'text',align:'start'});
+        else post({type:'scrollTo',y:scrollRef.current});
+        return;
+      }
       if (d.type === 'scroll') { scrollRef.current = Number(d.y) || 0; return; }
       if (d.type === 'select') { onSelectRef.current(String(d.id || ''),String(d.kind||'')); return; }
     };
@@ -209,16 +233,9 @@ function Preview({ html, device, selectedId, selectedField, onSelect }: {
    *     パネルの開閉）は、1px動かして描き直させる
    */
   const measured = size.width > 0 && size.height > 0;
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const id = requestAnimationFrame(() => {
-      // 中の文書はこちらから触れない（生成元を持たない箱にしてある）ので、
-      // 外から大きさをわずかに動かして描き直させる。
-      el.style.height = `${frameHeight + 0.5}px`;
-    });
-    return () => cancelAnimationFrame(id);
-  }, [frameHeight, frameWidth, srcDoc]);
+  // 大きさが変わったとき（窓の幅、パソコン⇔スマホ、パネルの開閉）も描き直させる。
+  // 作った直後は中がまだ空なので、そちらは上の ready の便りで行う。
+  useEffect(() => { repaint(); }, [frameHeight, frameWidth, repaint]);
 
   // srcDoc の再ナビゲーションは親の「戻る」履歴を増やす。新しい隔離フレームの
   // 初期文書として置き換え、選択・スクロールは上の ready 往復で戻す。

@@ -41,10 +41,17 @@ test('大きさが分かるまで、枠を作らない', () => {
   assert.doesNotMatch(studio, /height:Math\.max\(200,size\.height\/scale\),transform/);
 });
 
-test('大きさが変わったら、描き直させる', () => {
+test('中の文書が生きた瞬間に、描き直させる', () => {
+  // 作った直後に動かしても、そのときはまだ中が空なので効かない。
+  // 「読み込みが終わった」を教えてくれるのは、中からの ready の便りだけ。
+  assert.match(studio, /if \(d\.type === 'ready'\) \{[\s\S]{0,300}repaint\(\);/);
+  assert.match(studio, /const repaint = useCallback\(/);
+  assert.match(studio, /requestAnimationFrame\(\(\) => \{[\s\S]{0,240}el\.style\.height/);
+});
+
+test('大きさが変わったときも、描き直させる', () => {
   // 窓の幅、パソコン⇔スマホ、パネルの開閉でも大きさは変わる。
-  assert.match(studio, /requestAnimationFrame\(\(\) => \{[\s\S]{0,200}el\.style\.height/);
-  assert.match(studio, /\[frameHeight, frameWidth, srcDoc\]/);
+  assert.match(studio, /useEffect\(\(\) => \{ repaint\(\); \}, \[frameHeight, frameWidth, repaint\]\)/);
 });
 
 test('プレビューの中身は、編集画面に手が届かないままにする', () => {
