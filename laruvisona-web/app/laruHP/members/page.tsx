@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Users, X } from 'lucide-react';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface Member {
   id: string;
@@ -73,22 +73,14 @@ export default function MembersPage() {
   if (!loaded) return <div className="min-h-screen bg-sky-50 flex items-center justify-center"><div className="text-gray-500 text-sm">読み込み中...</div></div>;
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-screen-lg mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-800 text-sm">← ダッシュボード</Link>
-          <h1 className="font-bold">会員管理</h1>
-          <div className="ml-auto flex items-center gap-2">
+    <AppShell title="会員管理" actions={<><div className="flex items-center gap-2">
             {sites.length > 1 && (
               <select value={siteId} onChange={e => setSiteId(e.target.value)} className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
                 {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             )}
             {members.length > 0 && <button onClick={exportCsv} className="text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 font-semibold">CSV出力</button>}
-          </div>
-        </div>
-      </header>
-
+          </div></>}>
       <main className="max-w-screen-lg mx-auto px-4 py-6">
         {err && <p className="text-red-600 text-sm mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{err}</p>}
         <div className="flex gap-3 mb-4">
@@ -134,6 +126,7 @@ export default function MembersPage() {
           </div>
         )}
       </main>
-    </div>
+    
+    </AppShell>
   );
 }

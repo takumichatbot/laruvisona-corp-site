@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapPin, Package } from 'lucide-react';
 import { nextOrderStatuses, type OrderStatus } from '@/lib/order-contract';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface OrderItem { name: string; variant: string | null; quantity: number; unit: number }
 interface Shipping { name?: string; phone?: string; postal_code?: string; state?: string; city?: string; line1?: string; line2?: string; country?: string }
@@ -128,7 +128,11 @@ export default function OrdersPage() {
   if (!loaded) return <div className="min-h-screen bg-sky-50 flex items-center justify-center"><div className="text-gray-500 text-sm">読み込み中...</div></div>;
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
+    <AppShell title="注文管理" actions={<>{sites.length > 1 && (
+            <select value={siteId} onChange={e => setSiteId(e.target.value)} className="ml-auto bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
+              {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}</>}>
       {refundConfirmId&&(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="refund-title">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
@@ -141,18 +145,7 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-screen-lg mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/laruHP/dashboard" className="text-gray-500 hover:text-gray-800 text-sm">← ダッシュボード</Link>
-          <h1 className="font-bold">注文管理</h1>
-          {sites.length > 1 && (
-            <select value={siteId} onChange={e => setSiteId(e.target.value)} className="ml-auto bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
-              {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          )}
-        </div>
-      </header>
-
+      
       <main className="max-w-screen-lg mx-auto px-4 py-6">
         {err && <p className="text-red-600 text-sm mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{err}</p>}
         {ordersLoading ? (
@@ -212,6 +205,7 @@ export default function OrdersPage() {
           </div>
         )}
       </main>
-    </div>
+    
+    </AppShell>
   );
 }

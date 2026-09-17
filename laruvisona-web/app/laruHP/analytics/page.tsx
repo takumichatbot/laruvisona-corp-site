@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, BarChart3, Search } from 'lucide-react';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface DailyView {
   date: string;
@@ -246,15 +247,7 @@ export default function AnalyticsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          ダッシュボード
-        </Link>
-        <h1 className="text-sm font-bold text-gray-900 mx-auto">BIアナリティクス</h1>
-      </header>
-
+    <AppShell title="BIアナリティクス">
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
 
         {/* Controls */}
@@ -479,6 +472,7 @@ export default function AnalyticsPage() {
           </Link>
         </div>
       </div>
-    </div>
+    
+    </AppShell>
   );
 }

@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface Variant {
   id: string;
@@ -233,7 +233,7 @@ export default function ShopPage() {
   const deleteTarget = products.find(p => p.id === deleteConfirmId);
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
+    <AppShell title="ショップ管理">
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
@@ -248,14 +248,7 @@ export default function ShopPage() {
         </div>
       )}
 
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          ダッシュボード
-        </Link>
-        <h1 className="text-sm font-bold text-gray-900 mx-auto">ショップ管理</h1>
-      </header>
-
+      
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
 
         {/* Site picker */}
@@ -494,6 +487,7 @@ export default function ShopPage() {
         </section>
 
       </div>
-    </div>
+    
+    </AppShell>
   );
 }

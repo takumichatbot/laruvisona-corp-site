@@ -1388,7 +1388,7 @@ export default function DashboardPage() {
         <div className="mb-5">
           <div className="flex justify-between items-center mb-2.5" data-tour="sites">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">マイサイト</h1>
+              <h2 className="text-xl font-bold text-gray-900">マイサイト</h2>
               {!loading && sites.length > 0 && (() => {
                 const limit = planSiteLimit;
                 return (

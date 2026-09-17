@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import AppShell from '@/components/laruhp/AppShell';
 
 type CRMStatus = '未対応' | '対応中' | '成約' | 'NG';
 type ViewMode = 'kanban' | 'list';
@@ -246,7 +246,7 @@ export default function CRMPage() {
   const overdueFollowups = filtered.filter(c => c.extra_fields?.followup_at && isPast(c.extra_fields.followup_at) && !isToday(c.extra_fields.followup_at) && getStatus(c) !== '成約' && getStatus(c) !== 'NG');
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
+    <AppShell title="CRM パイプライン" lead="問い合わせを、成約まで追いかけます。">
       {/* 成約確認モーダル */}
       {saveError && (
         <div role="alert" className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm shadow-lg">
@@ -318,14 +318,9 @@ export default function CRMPage() {
           </div>
         </div>
       )}
-      <div className="border-b border-gray-200 bg-white backdrop-blur-sm sticky top-0 z-10">
+      <div className="mb-5 rounded-xl border border-gray-200 bg-white">
         <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
-          <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 text-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            ダッシュボード
-          </Link>
-          <h1 className="font-bold text-gray-900">CRM パイプライン</h1>
-          <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* View toggle */}
             <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
               <button
@@ -653,6 +648,7 @@ export default function CRMPage() {
           </div>
         </div>
       )}
-    </div>
+    
+    </AppShell>
   );
 }

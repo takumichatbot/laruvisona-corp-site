@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface Site {
   id: string;
@@ -130,22 +131,13 @@ export default function HeatmapPage() {
   const selectedSite = sites.find(s => s.id === selectedSiteId);
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          ダッシュボード
-        </Link>
-        <h1 className="text-sm font-bold text-gray-900 mx-auto">ヒートマップ</h1>
-        {selectedSite?.slug && (
+    <AppShell title="ヒートマップ" actions={<>{selectedSite?.slug && (
           <a href={`/hp/${selectedSite.slug}`} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-3 py-1.5 rounded-lg transition-colors">
             サイトを開く
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </a>
-        )}
-      </header>
-
+        )}</>}>
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
 
         {/* Controls */}
@@ -308,6 +300,7 @@ export default function HeatmapPage() {
           </div>
         )}
       </div>
-    </div>
+    
+    </AppShell>
   );
 }

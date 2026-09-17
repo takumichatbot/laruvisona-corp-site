@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
 import { Award, BadgeCheck, Star } from 'lucide-react';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface LoyaltyCard {
   id: string;
@@ -167,7 +167,7 @@ export default function LoyaltyPage() {
   );
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
+    <AppShell title="デジタルポイントカード">
       {/* Celebration modal */}
       {celebrationCard && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -186,14 +186,7 @@ export default function LoyaltyPage() {
         </div>
       )}
 
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          ダッシュボード
-        </Link>
-        <h1 className="text-sm font-bold text-gray-900 mx-auto">デジタルポイントカード</h1>
-      </header>
-
+      
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
 
         {loadError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
@@ -344,6 +337,7 @@ export default function LoyaltyPage() {
           )}
         </section>
       </div>
-    </div>
+    
+    </AppShell>
   );
 }

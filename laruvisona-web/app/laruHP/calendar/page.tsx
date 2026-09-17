@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface Post {
   id: string;
@@ -142,16 +143,7 @@ export default function CalendarPage() {
   }).length;
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          ダッシュボード
-        </Link>
-        <h1 className="text-sm font-bold text-gray-900 mx-auto">コンテンツカレンダー</h1>
-        <Link href="/laruHP/blog" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-3 py-1.5 rounded-lg transition-colors">ブログ管理</Link>
-      </header>
-
+    <AppShell title="コンテンツカレンダー" actions={<><Link href="/laruHP/blog" className="text-xs text-sky-600 hover:text-sky-500 border border-sky-200 px-3 py-1.5 rounded-lg transition-colors">ブログ管理</Link></>}>
       <div className="max-w-5xl mx-auto px-4 py-8">
 
         {loadError && (
@@ -316,6 +308,7 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
-    </div>
+    
+    </AppShell>
   );
 }

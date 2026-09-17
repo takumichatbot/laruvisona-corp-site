@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -140,20 +141,7 @@ export default function LarubotLogsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
-          <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            ダッシュボード
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-indigo-100 flex items-center justify-center text-indigo-700 text-[9px] font-bold">LB</div>
-            <h1 className="text-sm font-bold text-gray-900">LARUbot 会話ログ</h1>
-          </div>
-        </div>
-      </header>
-
+    <AppShell title="LARUbot 会話ログ" lead="チャットで実際に何を聞かれたかが残ります。">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {loading ? (
           <div className="min-h-[40vh] flex items-center justify-center">
@@ -397,6 +385,7 @@ export default function LarubotLogsPage() {
           </>
         )}
       </main>
-    </div>
+    
+    </AppShell>
   );
 }

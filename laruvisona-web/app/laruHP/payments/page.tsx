@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Check, ClipboardCopy, CreditCard, ExternalLink, Link2Off, ShoppingBag } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface PaymentLink {
   id: string;
@@ -81,15 +82,7 @@ export default function LegacyPaymentsPage() {
   if (loading) return <div className="min-h-screen bg-sky-50 grid place-items-center text-sm text-gray-500">読み込み中...</div>;
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="border-b border-sky-100 bg-white/90 px-4 py-4 shadow-sm backdrop-blur-xl sm:px-6">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-          <Link href="/laruHP/dashboard" className="text-sm text-gray-500 hover:text-gray-800">ダッシュボードへ</Link>
-          <h1 className="text-sm font-bold">旧決済リンク</h1>
-          <span className="w-24" aria-hidden="true" />
-        </div>
-      </header>
-
+    <AppShell title="旧決済リンク">
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         <section className="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
           <div className="grid gap-5 p-6 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -166,6 +159,7 @@ export default function LegacyPaymentsPage() {
           )}
         </section>
       </main>
-    </div>
+    
+    </AppShell>
   );
 }

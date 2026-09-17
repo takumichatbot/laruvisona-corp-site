@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import AppShell from '@/components/laruhp/AppShell';
 
 interface AbStats {
   a?: number;
@@ -169,15 +170,7 @@ export default function AbTestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-sky-50 text-gray-900">
-      <header className="border-b border-sky-100 bg-white/90 backdrop-blur-xl shadow-sm px-6 py-4 flex items-center gap-4">
-        <Link href="/laruHP/dashboard" className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          ダッシュボード
-        </Link>
-        <h1 className="text-sm font-bold text-gray-900 mx-auto">A/Bテスト結果</h1>
-      </header>
-
+    <AppShell title="A/Bテスト結果">
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
 
         {/* Global message */}
@@ -524,6 +517,7 @@ export default function AbTestPage() {
           </>
         )}
       </div>
-    </div>
+    
+    </AppShell>
   );
 }
