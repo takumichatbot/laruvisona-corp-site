@@ -1492,14 +1492,11 @@ export default function DashboardPage() {
               return (
                 <div key={site.id} className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden hover:border-sky-200 transition-all flex flex-col">
 
-                  {/* Thumbnail — 実際の見た目を縮小して出す（components/laruhp/SiteThumb） */}
+                  {/* カードの面（components/laruhp/SiteThumb）。
+                      実物を出す試みは本番で描かれず、白い四角になったので戻してある。
+                      経緯と次にやることは SiteThumb.tsx の頭に書いた。 */}
                   <div className="relative overflow-hidden">
-                    <SiteThumb
-                      siteId={site.id}
-                      name={site.name}
-                      gradient={gradient}
-                      updatedAt={site.updated_at}
-                    />
+                    <SiteThumb name={site.name} gradient={gradient} />
                     {site.industry && INDUSTRY_LABEL[site.industry] && (
                       <span className="absolute bottom-2.5 left-3 text-[9px] font-semibold text-gray-500 tracking-widest uppercase">
                         {INDUSTRY_LABEL[site.industry]}
