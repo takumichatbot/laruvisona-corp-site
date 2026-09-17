@@ -514,24 +514,34 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       const typeOptions = (d['typeOptions'] as string[])?.filter(Boolean) || [];
       const conditionalMap: Record<string, string[]> = (d['conditionalFields'] as Record<string, string[]>) || {};
       const typeSelectHtml = typeOptions.length > 0 ? `
-    <select name="inquiry_type" id="lhp-inquiry-type" onchange="lhpTypeChange(this.value)">
+    <select name="inquiry_type" id="lhp-inquiry-type" data-lhp-label="お問い合わせ種別" onchange="lhpTypeChange(this.value)">
       <option value="">お問い合わせ種別を選択</option>
       ${typeOptions.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')}
     </select>` : '';
+      /*
+        追加項目には、送るときの名前（半角）と、人が読む名前を両方持たせる。
+
+        受け口（lib/contact-contract.ts）は鍵に [a-zA-Z0-9_-] しか許さない。
+        以前は `cond_${f}` としていたので、f が日本語だと**鍵にできない名前**が
+        出来ていた。送るようにした途端に400で全部弾かれる。
+        だから送る名前は必ず半角にし、日本語は data-lhp-label に置く。
+      */
+      let condSeq = 0;
       const conditionalHtml = typeOptions.length > 0 ? Object.entries(conditionalMap).map(([val, fields]) =>
         `<div id="lhp-cond-${escapeHtml(val)}" style="display:none">${fields.map(f => {
-          if (f === 'date') return `<input type="datetime-local" name="cond_date" placeholder="希望日時" />`;
-          if (f === 'budget') return `<select name="cond_budget"><option value="">ご予算</option><option>〜5万円</option><option>5〜10万円</option><option>10〜30万円</option><option>30万円以上</option></select>`;
-          if (f === 'company') return `<input type="text" name="cond_company" placeholder="会社名・屋号" />`;
-          return `<input type="text" name="cond_${escapeHtml(f)}" placeholder="${escapeHtml(f)}" />`;
+          if (f === 'date') return `<input type="datetime-local" name="cond_date" data-lhp-label="希望日時" placeholder="希望日時" />`;
+          if (f === 'budget') return `<select name="cond_budget" data-lhp-label="ご予算"><option value="">ご予算</option><option>〜5万円</option><option>5〜10万円</option><option>10〜30万円</option><option>30万円以上</option></select>`;
+          if (f === 'company') return `<input type="text" name="cond_company" data-lhp-label="会社名・屋号" placeholder="会社名・屋号" />`;
+          const safe = f.replace(/[^a-zA-Z0-9_-]/g, '') || `x${++condSeq}`;
+          return `<input type="text" name="cond_${escapeHtml(safe)}" data-lhp-label="${escapeHtml(f)}" placeholder="${escapeHtml(f)}" />`;
         }).join('')}</div>`
       ).join('') : '';
       const conditionalScript = typeOptions.length > 0 ? `window.lhpTypeChange=function(v){${typeOptions.map(o => `document.getElementById('lhp-cond-${escapeHtml(o)}')&&(document.getElementById('lhp-cond-${escapeHtml(o)}').style.display=v===${js(o)}?'block':'none');`).join('')}};` : '';
       const extraFieldsHtml = extraFields.map(f => {
-        if (f === 'company') return `<input type="text" name="company" placeholder="会社名" />`;
-        if (f === 'date') return `<input type="datetime-local" name="date" />`;
-        if (f === 'budget') return `<select name="budget"><option value="">ご予算を選択</option><option>〜5万円</option><option>5〜10万円</option><option>10〜30万円</option><option>30万円以上</option></select>`;
-        if (f === 'prefer_contact') return `<select name="prefer_contact"><option value="">ご連絡方法</option><option value="email">メール</option><option value="phone">電話</option></select>`;
+        if (f === 'company') return `<input type="text" name="company" data-lhp-label="会社名" placeholder="会社名" />`;
+        if (f === 'date') return `<input type="datetime-local" name="date" data-lhp-label="希望日時" />`;
+        if (f === 'budget') return `<select name="budget" data-lhp-label="ご予算"><option value="">ご予算を選択</option><option>〜5万円</option><option>5〜10万円</option><option>10〜30万円</option><option>30万円以上</option></select>`;
+        if (f === 'prefer_contact') return `<select name="prefer_contact" data-lhp-label="ご連絡方法"><option value="">ご連絡方法</option><option value="email">メール</option><option value="phone">電話</option></select>`;
         return '';
       }).join('\n    ');
       const btnColor = raw('buttonColor') || '#1e3a8a';
@@ -598,13 +608,45 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       document.getElementById('lhp-mconfirm').innerHTML=html;
       show(3);}
   };
+    /*
+      お客様が書いた追加項目を、拾って送る。
+
+      これまで送っていたのは name / email / phone / message の4つだけ。
+      お店の人が「会社名」「ご希望日時」「ご予算」「連絡方法」「種別」を
+      足しても、**書かれた内容はどこにも届かなかった。** 欄は画面に出て、
+      送信も「完了しました」と成功するので、届いたメールに無いのを
+      「お客様が書かなかった」と読んでしまう。
+
+      受け口（/api/contact）は extraFields を受け取り、メールに行を足す
+      仕掛けを**もとから持っている。** 公開ページだけが送っていなかった。
+
+      鍵は半角のみ・20件まで・1件1000文字まで（lib/contact-contract.ts）。
+      ここで越えないように切る。越えると400で全部弾かれ、
+      **本文まで含めて何も届かなくなる。** それがいちばん困る。
+    */
+    function lhpExtra(scope){
+      var out={},n=0;
+      var nodes=scope.querySelectorAll('[data-lhp-label]');
+      for(var i=0;i<nodes.length;i++){
+        var el=nodes[i];
+        var key=(el.getAttribute('name')||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,64);
+        var val=(el.value||'').trim();
+        if(!key||!val||n>=20) continue;
+        var label=el.getAttribute('data-lhp-label')||'';
+        /* 鍵は半角しか使えない。日本語の項目名は、値の頭に付けて残す */
+        out[key]=(label&&label!==key?label+': ':'')+val;
+        if(out[key].length>1000) out[key]=out[key].slice(0,1000);
+        n++;
+      }
+      return out;
+    }
   window.lhpMBack=function(step){show(step-1);};
   window.lhpMSubmit=async function(){
     var btn=document.getElementById('lhp-mbtn-submit');
     var note=document.getElementById('lhp-mnote');
     btn.textContent='送信中...';btn.disabled=true;
     try{
-      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:v('lhp-mf-name'),email:v('lhp-mf-email'),phone:v('lhp-mf-phone'),message:v('lhp-mf-message')})});
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:v('lhp-mf-name'),email:v('lhp-mf-email'),phone:v('lhp-mf-phone'),message:v('lhp-mf-message'),extraFields:lhpExtra(document.getElementById('lhp-mform'))})});
       var res=await r.json();
       if(res.ok){document.getElementById('lhp-mform').innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '送信が完了しました。2営業日以内にご連絡いたします。'}</div>';${rawValue('redirectUrl') ? `setTimeout(function(){window.location.href=${js(safeUrl(rawValue('redirectUrl'), '/'))};},1500);` : ''}}
       else{btn.textContent='${btnText}';btn.disabled=false;note.textContent='送信に失敗しました。';}
@@ -644,6 +686,39 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
 </section>
 <script>
 (function(){
+    /*
+      お客様が書いた追加項目を、拾って送る。
+
+      これまで送っていたのは name / email / phone / message の4つだけ。
+      お店の人が「会社名」「ご希望日時」「ご予算」「連絡方法」「種別」を
+      足しても、**書かれた内容はどこにも届かなかった。** 欄は画面に出て、
+      送信も「完了しました」と成功するので、届いたメールに無いのを
+      「お客様が書かなかった」と読んでしまう。
+
+      受け口（/api/contact）は extraFields を受け取り、メールに行を足す
+      仕掛けを**もとから持っている。** 公開ページだけが送っていなかった。
+
+      鍵は半角のみ・20件まで・1件1000文字まで（lib/contact-contract.ts）。
+      ここで越えないように切る。越えると400で全部弾かれ、
+      **本文まで含めて何も届かなくなる。** それがいちばん困る。
+    */
+    function lhpExtra(scope){
+      var out={},n=0;
+      var nodes=scope.querySelectorAll('[data-lhp-label]');
+      for(var i=0;i<nodes.length;i++){
+        var el=nodes[i];
+        var key=(el.getAttribute('name')||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,64);
+        var val=(el.value||'').trim();
+        if(!key||!val||n>=20) continue;
+        var label=el.getAttribute('data-lhp-label')||'';
+        /* 鍵は半角しか使えない。日本語の項目名は、値の頭に付けて残す */
+        out[key]=(label&&label!==key?label+': ':'')+val;
+        if(out[key].length>1000) out[key]=out[key].slice(0,1000);
+        n++;
+      }
+      return out;
+    }
+
   ${conditionalScript}
   var f=document.getElementById('lhp-form-contact');
   if(!f)return;
@@ -668,7 +743,7 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     }
     btn.textContent='送信中...';btn.disabled=true;note.textContent='';
     try{
-      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:nm,email:em,phone:cv('phone'),message:ms})});
+      var r=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:window.__LHPSID||'',name:nm,email:em,phone:cv('phone'),message:ms,extraFields:lhpExtra(f)})});
       var d=await r.json();
       if(d.ok){
         f.innerHTML='<div class="lhp-form-success">${raw('thankYouMessage') || '送信が完了しました。2営業日以内にご連絡いたします。'}</div>';

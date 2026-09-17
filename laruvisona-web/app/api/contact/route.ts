@@ -59,8 +59,15 @@ function buildEmailHtml({
             date: '希望日時',
             budget: '予算感',
             prefer_contact: '連絡方法',
+            inquiry_type: 'お問い合わせ種別',
+            cond_company: '会社名・屋号',
+            cond_date: '希望日時',
+            cond_budget: '予算感',
+            slot_id: '予約枠',
+            prepaid: '事前決済',
           };
-          return row(labelMap[k] || k, v);
+          // 知らない鍵は、そのまま見出しにする（cond_ の接頭辞だけ落とす）
+          return row(labelMap[k] || k.replace(/^cond_/, ''), v);
         })
         .join('')
     : '';
