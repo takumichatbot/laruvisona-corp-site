@@ -48,6 +48,17 @@ test('日本語だけの屋号は、読み替えずに預かる', () => {
   assert.match(slug, /^site-/);
 });
 
+test('直す前に作られたサイトにも、「URLを決める」を出す', () => {
+  // 新しく作るものだけ直しても、**すでに作られている分は置き去りになる。**
+  // このアカウントの7件はすべて `新しい--xxxx` だった。困っているのはそちら。
+  for (const old of ['新しい--mqikh22t', '新しい--mtzlm6eu', '本番動作確認20260917-削除予定-mu49u3j2']) {
+    assert.ok(isAutoSiteSlug(old), `「${old}」に「URLを決める」が出ない`);
+  }
+  // ちゃんと決めてある値には出さない
+  assert.ok(!isAutoSiteSlug('laru-cafe'));
+  assert.ok(!isAutoSiteSlug('suzuki-seitai-2026'));
+});
+
 test('英字のある屋号は、その字を使う', () => {
   assert.match(makeSiteSlug('LARU Cafe', 1_700_000_000_000), /^laru-cafe-/);
   assert.match(makeSiteSlug('Suzuki Seitai', 1_700_000_000_000), /^suzuki-seitai-/);

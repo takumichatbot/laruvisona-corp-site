@@ -46,11 +46,20 @@ export function cleanSiteSlugInput(value: string): string {
 }
 
 /**
- * 自動で付けた値かどうか。
- * これが true のあいだは、画面で「URLを決めてください」と出す。
+ * 画面で「URLを決めてください」と出すべき値かどうか。
+ *
+ * 2つある。
+ *   1. こちらが自動で付けた `site-xxxx`
+ *   2. **いまの決まりを満たしていない値**
+ *
+ * 2 を忘れると、直した日より前に作られたサイトが置き去りになる。
+ * 実際、このアカウントの7件はすべて `新しい--xxxx` で、
+ * 新しく作るものだけ直しても、この7件には何も出ない。
+ * 困っているのは、いま困っている人のほう。
  */
 export function isAutoSiteSlug(slug: string): boolean {
-  return /^site-[a-z0-9]{4,}$/.test(slug);
+  if (/^site-[a-z0-9]{4,}$/.test(slug)) return true;
+  return !isValidSiteSlug(slug);
 }
 
 /**
