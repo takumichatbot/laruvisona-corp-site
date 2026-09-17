@@ -1168,11 +1168,26 @@ export default function DashboardPage() {
 
         {/* ── Getting Started ── */}
         {!loading && !startGuideDismissed && (() => {
+          /*
+            ここは「次に何をすればいいか」を出す場所なのに、押せない項目が並んでいた。
+
+            1番目の「サイトを作成」は、**どの状態でも押せなかった。**
+              サイトが0件 … href が undefined。リンクにならない
+              1件以上     … done になるので、そもそもリンクとして出さない
+            いちばん必要な、まだ何も無い人のときに、ただの灰色の文字だった。
+
+            「サイトを公開」と「独自ドメインを設定」は /laruHP/dashboard、
+            つまり**いま見ているこのページ**を指していた。押しても何も起きない。
+
+            未完了の項目は、その作業ができる場所へ連れて行くこと。
+          */
+          const firstSite = sites[0]?.id;
           const steps = [
-            { label: 'サイトを作成', done: sites.length > 0, href: sites.length === 0 ? undefined : `/laruHP/studio?siteId=${sites[0]?.id}` },
-            { label: 'サイトを公開', done: sites.some(s => s.published), href: '/laruHP/dashboard' },
+            { label: 'サイトを作成', done: sites.length > 0, href: '/laruHP/studio' },
+            { label: 'サイトを公開', done: sites.some(s => s.published),
+              href: firstSite ? `/laruHP/studio?siteId=${firstSite}&step=edit` : '/laruHP/studio' },
             { label: 'プランを契約', done: effectiveStatus === 'active', href: '/laruHP/plans' },
-            { label: '独自ドメインを設定', done: sites.some(s => s.custom_domain), href: '/laruHP/dashboard' },
+            { label: '独自ドメインを設定', done: sites.some(s => s.custom_domain), href: '/laruHP/domains' },
             { label: '問い合わせを受け取る', done: contacts.length > 0, href: '/laruHP/contacts' },
           ];
           const doneCount = steps.filter(s => s.done).length;
