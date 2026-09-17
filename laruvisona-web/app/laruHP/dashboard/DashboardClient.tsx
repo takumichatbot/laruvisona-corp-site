@@ -295,6 +295,24 @@ export default function DashboardPage() {
   const [deleteCountdown, setDeleteCountdown] = useState(5);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [newSiteError, setNewSiteError] = useState('');
+  /*
+    「新しいサイト」の二度押しを止める。
+
+    押しても画面はすぐには変わらない（POSTの往復と、そのあとの遷移がある）。
+    何も起きないように見えるので、**遅い回線の人ほどもう一度押す。**
+    押した分だけ空のサイトが作られ、
+      ・ダッシュボードに「新しいサイト」が2つ並んで、どちらが自分のか分からない
+      ・プランのサイト上限を、中身の無いサイトが食う
+    という状態で、いちばん最初の操作につまずく。
+
+    本番にその跡が残っている。10サイトのうち4つが中身ゼロで、
+    うち2つは同じ人が**同じ分**（06-20 14:16）に作ったもの。
+    その人はそれきり戻ってきていない。
+
+    state だけだと描画の間に合わない場合があるので、ref でも止める。
+  */
+  const creatingSiteRef = useRef(false);
+  const [creatingSite, setCreatingSite] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [fetchError, setFetchError] = useState('');
   const [showSiteLimitModal, setShowSiteLimitModal] = useState<{ limit: number; current: number } | null>(null);
@@ -814,7 +832,11 @@ export default function DashboardPage() {
   };
 
   const handleNewSite = async () => {
+    if (creatingSiteRef.current) return;
+    creatingSiteRef.current = true;
+    setCreatingSite(true);
     setNewSiteError('');
+    const done = () => { creatingSiteRef.current = false; setCreatingSite(false); };
     try {
       const res = await fetch('/api/sites', {
         method: 'POST',
@@ -826,14 +848,20 @@ export default function DashboardPage() {
         /* 中身が空のサイトは、機能が全部並んだ編集画面ではなく
            「4つの質問」から始める画面で開く。制作画面側は、中身が空なら
            質問から始め、答えたあとはこのサイトにそのまま書き込む。 */
+        // 画面が変わるので、押せない状態のままにする。
+        // ここで戻すと、遷移までのわずかな間にもう一度押せてしまう。
         router.push(`/laruHP/studio?siteId=${data.site.id}`);
-      } else if (data.code === 'site_limit') {
+        return;
+      }
+      if (data.code === 'site_limit') {
         setShowSiteLimitModal({ limit: data.limit as number, current: data.current as number });
       } else {
         setNewSiteError(data.error || 'サイトの作成に失敗しました');
       }
+      done();
     } catch {
       setNewSiteError('サイトの作成に失敗しました。もう一度お試しください。');
+      done();
     }
   };
 
@@ -1402,11 +1430,13 @@ export default function DashboardPage() {
             <button
               data-tour="new-site"
               onClick={handleNewSite}
-              className="flex items-center gap-1.5 bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all flex-shrink-0"
+              disabled={creatingSite}
+              aria-busy={creatingSite}
+              className="flex items-center gap-1.5 bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all flex-shrink-0 disabled:opacity-60 disabled:cursor-wait disabled:hover:bg-sky-600"
             >
               <IcPlus />
-              <span className="hidden sm:inline">新しいサイト</span>
-              <span className="sm:hidden">作成</span>
+              <span className="hidden sm:inline">{creatingSite ? '作成中…' : '新しいサイト'}</span>
+              <span className="sm:hidden">{creatingSite ? '作成中…' : '作成'}</span>
               {!loading && planSiteLimit < 999 && (
                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-0.5 ${sites.length >= planSiteLimit ? 'bg-red-400/30 text-red-200' : 'bg-white/20 text-white'}`}>
                   {sites.length}/{planSiteLimit}
@@ -2190,12 +2220,16 @@ export default function DashboardPage() {
             {/* New site card */}
             <button
               onClick={handleNewSite}
-              className="border border-gray-200 border-dashed rounded-xl min-h-[260px] flex flex-col items-center justify-center hover:border-sky-300 hover:bg-sky-50 transition-all group gap-2.5"
+              disabled={creatingSite}
+              aria-busy={creatingSite}
+              className="border border-gray-200 border-dashed rounded-xl min-h-[260px] flex flex-col items-center justify-center hover:border-sky-300 hover:bg-sky-50 transition-all group gap-2.5 disabled:opacity-60 disabled:cursor-wait"
             >
               <div className="w-9 h-9 rounded-lg border border-gray-200 group-hover:border-sky-200 flex items-center justify-center transition-all text-gray-400 group-hover:text-sky-600">
                 <IcPlus />
               </div>
-              <span className="text-gray-400 group-hover:text-sky-600 text-xs font-medium transition-colors">新しいサイトを作成</span>
+              <span className="text-gray-400 group-hover:text-sky-600 text-xs font-medium transition-colors">
+                {creatingSite ? '作成中…' : '新しいサイトを作成'}
+              </span>
             </button>
           </div>
         )}
