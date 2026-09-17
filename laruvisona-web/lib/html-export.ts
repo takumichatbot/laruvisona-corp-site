@@ -407,7 +407,15 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
     case 'shop-item': {
       const bid = block.id;
       const pid = raw('productId');
-      if (!pid) return `<section class="lhp-section"><p style="text-align:center;color:#94a3b8">（商品が選択されていません）</p></section>`;
+      /*
+        商品をまだ選んでいない商品ブロックは、**公開ページには出さない。**
+
+        以前は「（商品が選択されていません）」という編集者向けの文言が、
+        そのままお店のページに節として出ていた。編集画面のプレビューでは
+        自分への注意書きに見えるので、公開側にも同じ文が出ているとは思わない。
+        見に来た人には、ただ壊れている店に見える。
+      */
+      if (!pid) return '';
       return `
 <section data-lhp-anim class="lhp-section" id="lhp-item-${bid}" style="background:${raw('bgColor') || '#fff'}">
   <div id="lhp-item-box-${bid}" style="max-width:480px;margin:0 auto"><p style="text-align:center;color:#94a3b8">読み込み中...</p></div>
@@ -845,16 +853,28 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   <iframe src="${url('embedUrl', 'about:blank')}" class="lhp-map" style="height:${css('height', '400')}px" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
 </section>`;
 
-    case 'countdown':
+    case 'countdown': {
+      /*
+        名前をブロックごとに分ける。
+
+        以前は cd-d / cd-h / cd-m / cd-s という決め打ちの名前だった。
+        カウントダウンを2つ置くと、**どちらの仕掛けも同じ名前を書き換える。**
+        2つ目は 00 のまま止まり、1つ目には2つ目の日付が出る。
+
+        1つだけ置いて確かめている間は正しく動く。壊れるのは2つ目を足した
+        ときで、しかも**壊れて見えるのは先に置いたほう。**
+        だから原因と結びつかない。
+      */
+      const cdId = block.id.replace(/[^a-zA-Z0-9_-]/g, '') || 'cd';
       return `
 <section data-lhp-anim class="lhp-countdown" style="background-color:${raw('bgColor')};color:${raw('textColor')}">
   <h2>${str('heading')}</h2>
   <p>${str('subtext')}</p>
   <div class="lhp-countdown-timer" data-target="${str('targetDate')}">
-    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-d">00</span><span class="lhp-cdt-l">日</span></div>
-    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-h">00</span><span class="lhp-cdt-l">時間</span></div>
-    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-m">00</span><span class="lhp-cdt-l">分</span></div>
-    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-s">00</span><span class="lhp-cdt-l">秒</span></div>
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-d-${cdId}">00</span><span class="lhp-cdt-l">日</span></div>
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-h-${cdId}">00</span><span class="lhp-cdt-l">時間</span></div>
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-m-${cdId}">00</span><span class="lhp-cdt-l">分</span></div>
+    <div class="lhp-cdt-box"><span class="lhp-cdt-n" id="cd-s-${cdId}">00</span><span class="lhp-cdt-l">秒</span></div>
   </div>
 </section>
 <script>
@@ -863,14 +883,16 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
   function tick(){
     var d=t-Date.now();
     if(d<0)d=0;
-    document.getElementById('cd-d').textContent=String(Math.floor(d/86400000)).padStart(2,'0');
-    document.getElementById('cd-h').textContent=String(Math.floor(d%86400000/3600000)).padStart(2,'0');
-    document.getElementById('cd-m').textContent=String(Math.floor(d%3600000/60000)).padStart(2,'0');
-    document.getElementById('cd-s').textContent=String(Math.floor(d%60000/1000)).padStart(2,'0');
+    var el;
+    el=document.getElementById('cd-d-${cdId}');if(el)el.textContent=String(Math.floor(d/86400000)).padStart(2,'0');
+    el=document.getElementById('cd-h-${cdId}');if(el)el.textContent=String(Math.floor(d%86400000/3600000)).padStart(2,'0');
+    el=document.getElementById('cd-m-${cdId}');if(el)el.textContent=String(Math.floor(d%3600000/60000)).padStart(2,'0');
+    el=document.getElementById('cd-s-${cdId}');if(el)el.textContent=String(Math.floor(d%60000/1000)).padStart(2,'0');
   }
   tick(); setInterval(tick,1000);
 })();
 </script>`;
+    }
 
     case 'price-table': {
       type PricePlan = { name:string; price:string; period:string; description:string; features:string[]; highlighted:boolean; buttonText:string; buttonLink:string };
@@ -1164,10 +1186,15 @@ ${d['stickyCta'] ? `
     if(!list)return;
     var posts=data.posts||[];
     if(!posts.length){list.innerHTML='<p style="color:#9ca3af;font-size:.9rem;text-align:center;padding:24px">投稿がありません</p>';return;}
+    /* 記事のタイトルと分類は、お店の人が打った文字。逃がさずに innerHTML へ
+       つなぐと、小なり記号を含むタイトルで一覧の表示が崩れる。
+       ショップ側には同じ役の esc() があるのに、ここだけ無かった。 */
+    function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     list.innerHTML=posts.map(function(p){
       var d=new Date(p.published_at);
       var ds=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');
-      return '<a class="lhp-news-item" href="/hp/post/'+p.id+'" style="text-decoration:none;color:inherit;cursor:pointer">'+(p.category?'<span class="lhp-news-tag">'+p.category+'</span>':'')+'<span class="lhp-news-date">'+ds+'</span><span class="lhp-news-title">'+p.title+'</span></a>';
+      return '<a class="lhp-news-item" href="/hp/post/'+encodeURIComponent(p.id)+'" style="text-decoration:none;color:inherit;cursor:pointer">'+(p.category?'<span class="lhp-news-tag">'+esc(p.category)+'</span>':'')+'<span class="lhp-news-date">'+esc(ds)+'</span><span class="lhp-news-title">'+esc(p.title)+'</span></a>';
     }).join('');
   }).catch(function(){});
 })();
@@ -1175,6 +1202,16 @@ ${d['stickyCta'] ? `
     }
 
     case 'popup': {
+      /*
+        名前と、出したかの記録を、ブロックごとに分ける。
+
+        以前は lhp-popup-overlay という決め打ちの名前で、出したかの記録も
+        lhp-popup-shown ひとつだった。ポップアップを2つ置くと、
+        **2つ目は永久に出ない。** 1つ目が記録を立てるので、
+        2つ目は「もう出した」と判断する。
+        しかも閉じるボタンは、どちらを押しても1つ目を閉じにいく。
+      */
+      const popId = block.id.replace(/[^a-zA-Z0-9_-]/g, '') || 'popup';
       const trigger = raw('trigger') || 'delay';
       const delay = raw('delay') || '3';
       const scrollPct = Number(raw('scrollPercent') || '50') / 100;
@@ -1186,9 +1223,9 @@ ${d['stickyCta'] ? `
         ? `document.addEventListener('click',function h(){show();document.removeEventListener('click',h);});`
         : `setTimeout(show,${Number(delay)*1000});`;
       return `
-<div id="lhp-popup-overlay" style="display:none;position:fixed;inset:0;background:${raw('overlayColor')||'rgba(0,0,0,0.6)'};z-index:9990;align-items:center;justify-content:center;">
+<div id="lhp-popup-${popId}" style="display:none;position:fixed;inset:0;background:${raw('overlayColor')||'rgba(0,0,0,0.6)'};z-index:9990;align-items:center;justify-content:center;">
   <div style="background:${raw('bgColor')};color:${raw('textColor')};max-width:480px;width:90%;border-radius:20px;padding:40px 32px;position:relative;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)">
-    <button onclick="document.getElementById('lhp-popup-overlay').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:${raw('textColor')};font-size:1.25rem;cursor:pointer;opacity:.7">✕</button>
+    <button onclick="document.getElementById('lhp-popup-${popId}').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;color:${raw('textColor')};font-size:1.25rem;cursor:pointer;opacity:.7">✕</button>
     <h2 style="font-size:1.4rem;font-weight:900;margin-bottom:12px">${str('heading')}</h2>
     <p style="opacity:.85;margin-bottom:28px;line-height:1.6">${str('text')}</p>
     <a href="${url('buttonLink')}" style="display:inline-block;background:${css('buttonColor', '#fff')};color:${css('buttonTextColor', '#111')};padding:14px 40px;border-radius:9999px;font-weight:700;text-decoration:none;font-size:1rem">${str('buttonText')}</a>
@@ -1196,9 +1233,11 @@ ${d['stickyCta'] ? `
 </div>
 <script>
 (function(){
-  function show(){var o=document.getElementById('lhp-popup-overlay');if(o&&!sessionStorage.getItem('lhp-popup-shown')){o.style.display='flex';sessionStorage.setItem('lhp-popup-shown','1');}}
+  var key='lhp-popup-shown-${popId}';
+  function show(){var o=document.getElementById('lhp-popup-${popId}');if(o&&!sessionStorage.getItem(key)){o.style.display='flex';sessionStorage.setItem(key,'1');}}
   ${triggerJs}
-  document.getElementById('lhp-popup-overlay').addEventListener('click',function(e){if(e.target===this)this.style.display='none';});
+  var ov=document.getElementById('lhp-popup-${popId}');
+  if(ov)ov.addEventListener('click',function(e){if(e.target===this)this.style.display='none';});
 })();
 </script>`;
     }
@@ -1922,6 +1961,27 @@ window.addEventListener('popstate',function(){
     };
   }
 
+  /*
+    Cookieの帯から出す「プライバシーポリシー」の行き先。
+
+    以前は /privacy 決め打ちだった。**お店のポリシーには決して飛ばない。**
+      ・laruvisona.jp/hp/<slug> では、LaruVisona社のポリシーへ飛ぶ
+        （見に来た人は、お店のポリシーだと思って読む）
+      ・独自ドメインでは proxy が /hp/<slug>/privacy へ写すので 404
+
+    帯は同意を1回押すと localStorage で二度と出ない。だから作った本人は
+    最初の1回で消してしまい、リンクの先を見ない。
+
+    お店がフッターに「プライバシーポリシー」等のリンクを置いていれば
+    そこへ。無ければ**リンク自体を出さない。** 無い行き先を指すより、
+    何も指さないほうがよい。
+  */
+  const footerPrivacy = (settings.globalFooter?.links || [])
+    .find(l => /プライバシー|個人情報|privacy/i.test(l.label || '') && (l.href || '').trim());
+  const privacyLink = footerPrivacy
+    ? `<a href="${escapeHtml(safeUrl(footerPrivacy.href, "#"))}" style="color:#60a5fa;text-decoration:underline;margin-left:4px">${escapeHtml(footerPrivacy.label)}</a>`
+    : '';
+
   const pagesHtml = pages.map((page, idx) => {
     const abVariantFor = abVariantResolver(page);
     const blocksHtml = decoratePage(
@@ -2264,8 +2324,7 @@ ${animScript}
 <div id="lhp-cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e293b;border-top:1px solid rgba(255,255,255,0.1);padding:14px 20px;font-family:inherit">
   <div style="max-width:800px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
     <p style="margin:0;font-size:13px;color:#cbd5e1;flex:1;min-width:240px">
-      このサイトはCookieを使用してユーザー体験を向上させています。続けることで同意したとみなします。
-      <a href="/privacy" style="color:#60a5fa;text-decoration:underline;margin-left:4px">プライバシーポリシー</a>
+      このサイトはCookieを使用してユーザー体験を向上させています。続けることで同意したとみなします。${privacyLink}
     </p>
     <div style="display:flex;gap:8px;flex-shrink:0">
       <button id="lhp-cookie-reject" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:#94a3b8;font-size:13px;cursor:pointer;font-family:inherit">拒否</button>
