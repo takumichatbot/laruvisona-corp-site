@@ -1,12 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { safeLaruHpRedirect } from '@/lib/auth-redirect';
+
+/**
+ * メールのリンクを踏んだ人を、ログインした状態にする。
+ *
+ * ── ここが塞がっていた ──
+ *
+ * 入口は `code` だけを見ていた。`code` を session に換えるには、
+ * **登録したときのブラウザに残っている控え（code_verifier）が要る**（PKCE）。
+ *
+ * ところが人は、パソコンで登録して、**メールはスマホで開く。**
+ * スマホにその控えは無い。だから
+ *
+ *   1. リンクを踏む → Supabase 側は「確認済み」にする（メールは本人のものなので）
+ *   2. こちらへ戻ってくる → 控えが無いので交換に失敗する
+ *   3. /laruHP/auth/login?error=auth へ飛ばす
+ *   4. **ログイン画面はそのerrorを一切読んでいない。** 何の断りも無い素の画面が出る
+ *
+ * 登録した直後の人から見ると「メールのボタンを押したら、ログイン画面に戻された」。
+ * 自分が登録できたのかも分からない。
+ *
+ * 本番にその跡が残っている。メールで登録した外部の2人が、
+ * **確認済みなのに一度もログインしていない。** 2人ともそれきり来ていない。
+ *
+ * ── 直し方 ──
+ *
+ * token_hash を受け取って verifyOtp で確かめる形にする。こちらは控えが要らないので、
+ * **どの端末・どのブラウザで開いても通る。** パスワード再設定も同じ経路に乗せる
+ * （あちらは管理APIで作るリンクなので、そもそも控えが存在せず、
+ *   実質ずっと通っていなかった）。
+ *
+ * `code` の道は残す。Google のログインは同じブラウザで始まって同じブラウザで
+ * 終わるので、あちらは PKCE のままで正しい。
+ */
+
+/** verifyOtp に渡してよい種類だけを通す。 */
+const OTP_TYPES = ['signup', 'recovery', 'invite', 'magiclink', 'email_change'] as const;
+function otpType(value: string | null): EmailOtpType | null {
+  return (OTP_TYPES as readonly string[]).includes(value || '') ? (value as EmailOtpType) : null;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const requestHeaders = Object.fromEntries(request.headers.entries());
   const code = searchParams.get('code');
+  const tokenHash = searchParams.get('token_hash');
+  const type = otpType(searchParams.get('type'));
   const next = safeLaruHpRedirect(searchParams.get('next'));
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -14,7 +56,7 @@ export async function GET(request: NextRequest) {
   const forwardedProto = requestHeaders['x-forwarded-proto'] || 'https';
   const origin = appUrl || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : new URL(request.url).origin);
 
-  if (code) {
+  if (code || (tokenHash && type)) {
     // Build the redirect response FIRST so we can attach cookies to it directly.
     // Using cookies().set() + NextResponse.redirect() loses the Set-Cookie headers.
     const redirectTo = `${origin}${next}`;
@@ -35,13 +77,22 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: sessionData, error } = tokenHash && type
+      ? await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
+      : await supabase.auth.exchangeCodeForSession(code!);
     if (error) {
       // recovery コードが切れていた場合 → ログイン画面でなく再リセット画面へ誘導
       if (next.startsWith('/laruHP/auth/update-password')) {
         return NextResponse.redirect(`${origin}/laruHP/auth/reset-password?expired=1`);
       }
-      return NextResponse.redirect(`${origin}/laruHP/auth/login?error=auth`);
+      /*
+        ここに落ちたとき、登録そのものは済んでいることが多い
+        （Supabase 側はリンクを踏んだ時点で確認済みにする）。
+        黙ってログイン画面へ戻すと、本人には**登録できたのかどうかも分からない。**
+        何が起きたかを伝えて、次にすることを示す。
+      */
+      const reason = type === 'signup' ? 'confirmed_no_session' : 'auth';
+      return NextResponse.redirect(`${origin}/laruHP/auth/login?error=${reason}`);
     }
     if (!error) {
       // Send welcome email once on first login

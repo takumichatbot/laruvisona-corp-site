@@ -21,7 +21,22 @@ export async function POST(req: Request) {
   const origin = (process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp').replace(/\/$/, '');
   const redirectTo = `${origin}/api/auth/callback?next=${encodeURIComponent('/laruHP/auth/update-password')}`;
   const generated = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo } });
-  const link = generated.data?.properties?.action_link;
+  /*
+    action_link をそのまま貼ってはいけない。
+
+    あれは Supabase の /auth/v1/verify を通り、そこから戻ってくる。
+    戻り方は PKCE で、**登録したブラウザに残っている控えが要る。**
+    ところがこのリンクは管理APIでサーバー側が作ったもので、控えはどこにも無い。
+    つまり、どの端末で開いても交換できない。**ずっと通っていなかった。**
+
+    hashed_token を自分で組み立てて、こちらの入口へ直接渡す。
+    verifyOtp は控えを使わないので、スマホで開いても通る。
+  */
+  const hashed = generated.data?.properties?.hashed_token;
+  const link = hashed
+    ? `${origin}/api/auth/callback?token_hash=${encodeURIComponent(hashed)}&type=recovery`
+      + `&next=${encodeURIComponent('/laruHP/auth/update-password')}`
+    : generated.data?.properties?.action_link;
   // 登録有無と外部メール障害を応答から判別できないよう、公開応答は常に同じにする。
   if (generated.error || !link) {
     console.warn('[password-reset] recovery link unavailable:', generated.error?.code || 'not_found');

@@ -41,6 +41,27 @@ function LoginForm() {
   const redirectTo = safeLaruHpRedirect(searchParams.get('redirectTo') ?? searchParams.get('redirect'));
   const supabase = createClient();
 
+  /*
+    メールのリンクから戻された人に、何が起きたかを伝える。
+
+    これまで ?error= を**一度も読んでいなかった。**
+    登録の確認メールを押した人が、何の断りも無い素のログイン画面に立たされ、
+    自分が登録できたのかどうかも分からないまま去っていた。
+    本番に、まさにその形の跡が2人分ある（確認済みなのに一度もログインしていない）。
+  */
+  const notice = (() => {
+    switch (searchParams.get('error')) {
+      case 'confirmed_no_session':
+        return 'メールの確認が終わりました。このままログインしてください。'
+          + '（登録したときと違う端末でリンクを開くと、ここに戻ります）';
+      case 'auth':
+        return 'リンクの期限が切れているか、すでに使われています。'
+          + 'もう一度ログインするか、パスワードの再設定からお進みください。';
+      default:
+        return '';
+    }
+  })();
+
   useEffect(() => {
     // パスワード再設定のあと、メールを入れ直させない。
     const prefill = searchParams.get('prefill');
@@ -115,6 +136,7 @@ function LoginForm() {
         </AuthNote>
       )}
 
+      {notice && !error && <AuthNote kind="info">{notice}</AuthNote>}
       {error && <AuthNote kind="bad">{error}</AuthNote>}
 
       <GoogleButton busy={google} disabled={loading} onClick={handleGoogleLogin} label="Googleでログイン" />
