@@ -86,7 +86,16 @@ export default function SiteThumb({
             height: `${SCALE * 100}%`,
             transform: `scale(${1 / SCALE})`,
           }}
-          onLoad={() => setState('ready')}
+          onLoad={e => {
+            setState('ready');
+            // 縮小を掛けた枠は、中の読み込みが終わっても**描き直されない**ことがある。
+            // 枠は読み込み済み・位置も大きさも正しいのに、絵だけ白いまま。
+            // 本番の7枚すべてがこの状態だった。ほんのわずかに動かして、描き直させる。
+            const el = e.currentTarget;
+            requestAnimationFrame(() => {
+              el.style.transform = `scale(${(1 / SCALE) * 1.000001})`;
+            });
+          }}
           onError={() => setState('failed')}
         />
       )}

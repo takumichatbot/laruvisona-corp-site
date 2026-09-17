@@ -225,4 +225,6 @@
   border: 0;
   pointer-events: none;      /* 縮小した絵なので、触らせない */
   background: #fff;
+  /* 縮小した枠を自分の面として扱わせる。描き直しの取りこぼしが減る。 */
+  will-change: transform;
 }

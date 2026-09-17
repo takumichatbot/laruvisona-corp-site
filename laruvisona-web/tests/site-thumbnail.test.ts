@@ -66,3 +66,12 @@ test('絵を、移り変わり頼みで見せない', () => {
   assert.doesNotMatch(css, /\.site-thumb-frame\.is-ready/);
   assert.doesNotMatch(code('components/laruhp/SiteThumb.tsx'), /is-ready/);
 });
+
+test('縮小した枠を、読み込み後に描き直させる', () => {
+  // 枠は読み込み済み、位置も大きさも正しいのに、絵だけ白いまま出ることがある。
+  // 本番の7枚すべてがこの状態だった。わずかに動かすと、その場で出る。
+  const tsx = code('components/laruhp/SiteThumb.tsx');
+  assert.match(tsx, /requestAnimationFrame/);
+  assert.match(tsx, /el\.style\.transform/);
+  assert.match(code('app/laruHP/app-shell.css'), /will-change: transform;/);
+});
