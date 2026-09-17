@@ -112,7 +112,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (targetUser?.email) {
           const resend = new Resend(process.env.RESEND_API_KEY);
           const appUrl = billingAppOrigin();
-          await resend.emails.send({
+          // Resend は拒否されても throw せず error を返す。戻り値を捨てると、
+          // 送ったのか送っていないのかを、あとから調べる手段が無くなる。
+          const notice = await resend.emails.send({
             from: 'LARU HP <noreply@laruvisona.jp>',
             to: targetUser.email,
             subject: '【LARU HP】プランが変更されました',
@@ -133,8 +135,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   </div>
 </body></html>`,
           });
+          if (notice.error) console.error('[admin] plan-change mail not accepted:', id, notice.error.message);
         }
-      } catch { /* non-fatal */ }
+      } catch (e) { console.error('[admin] plan-change mail failed:', id, (e as Error)?.message); }
     }
     return NextResponse.json({ ok: true });
   }

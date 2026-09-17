@@ -29,7 +29,7 @@ async function recordContactDelivery(
   service: ReturnType<typeof createServiceClient>,
   emailId: string,
   state: string,
-): Promise<boolean> {
+): Promise<'recorded' | 'not-a-contact' | 'write-failed'> {
   for (const channel of ['owner_email', 'customer_email'] as const) {
     const { data } = await service
       .from('contacts')
@@ -39,12 +39,34 @@ async function recordContactDelivery(
       .maybeSingle();
     if (!data) continue;
     const extra = (data.extra_fields || {}) as Record<string, unknown>;
-    await service.from('contacts').update({
+    /*
+      書けたかを確かめる。
+
+      以前は結果を見ずに true を返していた。書けていなくても 200 を返すので
+      Resend は再送しない。問い合わせ一覧は「送信を受け付けました（到着は未確認）」
+      のまま**永久に止まる。**
+
+      いちばん困るのは bounced（宛先から戻ってきた）のとき。
+      店主は「まだ返事が来ないだけ」と思って待ち続ける。
+      実際にはメールが一通も届いていない。
+    */
+    const saved = await service.from('contacts').update({
       extra_fields: { ...extra, [`${channel}_status`]: state },
     }).eq('id', data.id);
-    return true;
+    if (saved.error) {
+      console.error('[Resend webhook] status not recorded:', data.id, channel, state, saved.error.message);
+      return 'write-failed';
+    }
+    return 'recorded';
   }
-  return false;
+  /*
+    「この受付ではなかった」と「書けなかった」を、同じ値で返さない。
+
+    同じにすると、書けなかったときに次の処理（ニュースレター側）へ流れ、
+    そこで 200 を返してしまう。Resend は再送しない。
+    **書けなかったことが、どこにも残らない。**
+  */
+  return 'not-a-contact';
 }
 
 export async function POST(req: Request) {
@@ -75,8 +97,14 @@ export async function POST(req: Request) {
 
   // 問い合わせの通知メールなら、そこへ書いて終わり。
   const contactState = CONTACT_EVENT[event.type];
-  if (contactState && await recordContactDelivery(service, emailId, contactState)) {
-    return NextResponse.json({ ok: true });
+  if (contactState) {
+    const result = await recordContactDelivery(service, emailId, contactState);
+    if (result === 'recorded') return NextResponse.json({ ok: true });
+    // 書けなかったときは 500。Resend が再送してくれるので、次で入る。
+    if (result === 'write-failed') {
+      return NextResponse.json({ error: 'Delivery status could not be recorded' }, { status: 500 });
+    }
+    // not-a-contact のときだけ、ニュースレター側へ進む
   }
 
   const eventType = EVENT_MAP[event.type];

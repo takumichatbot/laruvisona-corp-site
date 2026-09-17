@@ -10,10 +10,23 @@ declare global {
   var bridgeQuickQueue: QuickTask[] | undefined;
 }
 
-function safeSendToMac(mac: MacEntry, data: object) {
+/**
+ * 送れたかを返す。
+ *
+ * 以前は投げられた例外を握りつぶし、呼ぶ側は無条件に
+ * 「✅ Macに送信しました」と答えていた。送れていなければ、その仕事は
+ * Macにも届かず、オフライン用のキューにも入らないまま**消える。**
+ * 記録にも残らないので、「実行されなかった」こと自体が分からない。
+ */
+function safeSendToMac(mac: MacEntry, data: object): boolean {
   try {
-    if (mac.ws.readyState === 1) mac.ws.send(JSON.stringify(data));
-  } catch { /* ignore */ }
+    if (mac.ws.readyState !== 1) return false;
+    mac.ws.send(JSON.stringify(data));
+    return true;
+  } catch (e) {
+    console.error('[bridge/quick] send failed:', (e as Error)?.message);
+    return false;
+  }
 }
 
 export async function POST(req: Request) {
@@ -46,11 +59,13 @@ export async function POST(req: Request) {
         if (task.project) {
           safeSendToMac(target, { type: 'select_project', project: task.project });
         }
-        safeSendToMac(target, { type: 'message', content: task.input });
-        return NextResponse.json({
-          ok: true, taskId: task.id, mode: 'immediate', mac_id: targetId,
-          message: '✅ Macに送信しました。完了後に通知が届きます。',
-        });
+        if (safeSendToMac(target, { type: 'message', content: task.input })) {
+          return NextResponse.json({
+            ok: true, taskId: task.id, mode: 'immediate', mac_id: targetId,
+            message: '✅ Macに送信しました。完了後に通知が届きます。',
+          });
+        }
+        // 送れなかった。消さずに、次の接続へ回す。
       }
     }
 

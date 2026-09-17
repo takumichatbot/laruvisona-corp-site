@@ -90,9 +90,21 @@ export async function GET(request: NextRequest) {
 </body>
 </html>`,
           });
-          if (!welcome.error) await supabase.auth.updateUser({ data: { welcome_sent: true } });
-        } catch {
-          // Non-fatal
+          /*
+            送れたか／印を付けられたかを、記録に残す。
+
+            以前はどちらも黙っていた。届かなくても初回ログインは成功するので、
+            **「送ったが失敗した」と「そもそも送っていない」が区別できない。**
+            印の更新に失敗した場合は、次のログインで同じメールをもう一度送る。
+          */
+          if (welcome.error) {
+            console.error('[auth] welcome mail not accepted:', welcome.error.message);
+          } else {
+            const marked = await supabase.auth.updateUser({ data: { welcome_sent: true } });
+            if (marked.error) console.error('[auth] welcome_sent not recorded (may resend):', marked.error.message);
+          }
+        } catch (e) {
+          console.error('[auth] welcome mail failed:', (e as Error)?.message);
         }
       }
       return response;

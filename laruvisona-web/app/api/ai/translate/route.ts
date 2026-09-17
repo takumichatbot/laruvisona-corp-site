@@ -153,7 +153,24 @@ ${JSON.stringify(unique)}`;
     },
   };
 
-  await supabase.from('sites').update({ settings_json: merged }).eq('id', siteId);
+  /*
+    保存できたかを確かめてから「翻訳できました」と答える。
+
+    以前は update の結果を一切見ず、翻訳の見本だけ返していた。
+    保存に失敗していても画面には「英語への翻訳が完了しました（120件）」と出る。
+    しかも画面側は成功前提で手元の控えを先に書き換えるので、
+    **リロードするまで消えたことが分からない。** サーバにも記録が残らない。
+
+    店主から見れば、お金と時間を使った翻訳が、翌日には無い。
+  */
+  const saved = await supabase.from('sites').update({ settings_json: merged }).eq('id', siteId);
+  if (saved.error) {
+    console.error('[translate] settings not saved:', siteId, targetLocale, saved.error.message);
+    return NextResponse.json(
+      { error: '翻訳はできましたが、保存できませんでした。もう一度お試しください' },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({
     locale: targetLocale,
