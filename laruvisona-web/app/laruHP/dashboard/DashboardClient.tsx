@@ -9,6 +9,7 @@ import QRCodeModal from '@/components/QRCodeModal';
 import CommandPalette from '@/components/CommandPalette';
 import OnboardingTour from '@/components/OnboardingTour';
 import AppShell from '@/components/laruhp/AppShell';
+import SiteThumb from '@/components/laruhp/SiteThumb';
 import { getSiteLimit } from '@/lib/plan-limits';
 import { track } from '@/lib/analytics';
 import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
@@ -1027,6 +1028,10 @@ export default function DashboardPage() {
 
       <div className="mx-auto w-full max-w-[1200px]">
 
+        {/* 並びの決めごと（2026-09-17）:
+            入ってすぐ目に入るのは「いま何をすればいいか」と「自分のサイト」。
+            契約・検索連携・紹介は毎日見るものではないので、サイト一覧より下に置く。
+            機能への近道（ビルダー/問い合わせ/ブログ/SEO）は左の道しるべにあるので、ここには出さない。 */}
         {/* ── Banners ── */}
         {paymentBanner === 'success' && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-4 mb-6">
@@ -1112,6 +1117,68 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── Churn alert: 7-day unpublished ── */}
+        {!loading && (() => {
+          const stale = sites.filter(s => !s.published && (Date.now() - new Date(s.created_at).getTime()) > 7 * 86400000);
+          if (stale.length === 0) return null;
+          const daysSince = Math.floor((Date.now() - new Date(stale[0].created_at).getTime()) / 86400000);
+          return (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5 mb-6 flex items-start gap-3">
+              <span className="flex-shrink-0 mt-0.5 text-amber-700"><IcAlert /></span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-amber-800 mb-0.5">「{stale[0].name}」を作成してから{daysSince}日が経ちました</div>
+                <p className="text-xs text-amber-700 leading-relaxed">サイトがまだ非公開です。内容を確認し、準備ができたら公開へ進んでください。不明な点があればサポートへご連絡ください。</p>
+              </div>
+              <a href={`/laruHP/studio?siteId=${stale[0].id}`}
+                className="flex-shrink-0 text-xs font-bold text-amber-700 hover:text-amber-600 border border-amber-300 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                公開する →
+              </a>
+            </div>
+          );
+        })()}
+
+        {/* ── Getting Started ── */}
+        {!loading && !startGuideDismissed && (() => {
+          const steps = [
+            { label: 'サイトを作成', done: sites.length > 0, href: sites.length === 0 ? undefined : `/laruHP/studio?siteId=${sites[0]?.id}` },
+            { label: 'サイトを公開', done: sites.some(s => s.published), href: '/laruHP/dashboard' },
+            { label: 'プランを契約', done: effectiveStatus === 'active', href: '/laruHP/plans' },
+            { label: '独自ドメインを設定', done: sites.some(s => s.custom_domain), href: '/laruHP/dashboard' },
+            { label: '問い合わせを受け取る', done: contacts.length > 0, href: '/laruHP/contacts' },
+          ];
+          const doneCount = steps.filter(s => s.done).length;
+          if (doneCount === steps.length) return null;
+          const pct = Math.round((doneCount / steps.length) * 100);
+          return (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">はじめてガイド</h3>
+                  <p className="text-gray-400 text-xs mt-0.5">{doneCount}/{steps.length} 完了</p>
+                </div>
+                <button onClick={() => setStartGuideDismissed(true)} className="text-gray-300 hover:text-gray-500 text-lg leading-none transition-colors">×</button>
+              </div>
+              <div className="w-full h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
+                <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="grid sm:grid-cols-5 gap-2">
+                {steps.map((step, i) => (
+                  <div key={i} className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 border transition-colors ${step.done ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${step.done ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                      {step.done ? '✓' : i + 1}
+                    </span>
+                    {!step.done && step.href ? (
+                      <Link href={step.href} className="hover:text-sky-600 transition-colors">{step.label}</Link>
+                    ) : (
+                      <span>{step.label}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Weekly summary banner ── */}
         {weekSummary && !weekSummaryDismissed && (weekSummary.pvThisWeek > 0 || weekSummary.contactsThisWeek > 0) && (
           <div className="bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200 rounded-xl px-4 py-3.5 mb-6 flex items-start gap-4">
@@ -1144,65 +1211,6 @@ export default function DashboardPage() {
             </button>
           </div>
         )}
-
-        {/* ── Subscription Card ── */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <div className="flex items-center gap-2.5 mb-1.5">
-                <h2 className="text-sm font-semibold text-gray-900">{profile?.business_name || userEmail}</h2>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status.color}`}>
-                  {status.label}
-                </span>
-              </div>
-              {effectiveStatus === 'active' && profile?.contract_ends_at && (
-                <p className="text-gray-500 text-xs">
-                  最低契約期間: 〜{new Date(profile.contract_ends_at).toLocaleDateString('ja-JP')}
-                </p>
-              )}
-              {portalError && <p className="text-red-600 text-xs mt-1.5">{portalError}</p>}
-              {portalNotice && (
-                <div className="mt-2 rounded-lg border border-slate-300 bg-slate-50 p-3">
-                  <p className="text-slate-700 text-xs leading-relaxed">{portalNotice.text}</p>
-                  <a
-                    href={portalNotice.url}
-                    className="inline-block mt-2 text-xs font-bold text-blue-700 underline"
-                  >
-                    支払方法の変更へ進む
-                  </a>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              {(effectiveStatus === 'active' || effectiveStatus === 'past_due') ? (
-                <button
-                  onClick={handlePortal}
-                  disabled={portalLoading}
-                  className={`flex items-center gap-1.5 text-xs border px-3.5 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    effectiveStatus === 'past_due'
-                      ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                  }`}
-                >
-                  <IcCard />
-                  {portalLoading ? '処理中...' : effectiveStatus === 'past_due' ? '支払い情報を更新する' : 'サブスクリプション管理'}
-                </button>
-              ) : (
-                <button
-                  onClick={handleCheckout}
-                  className="bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all"
-                >
-                  初月無料で始める
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Search Console Widget ── */}
-        <div data-tour="search-console">
-          <SearchConsoleWidget />
-        </div>
 
         {/* ── Insight Cards ── */}
         {loading && (
@@ -1299,101 +1307,6 @@ export default function DashboardPage() {
           );
         })()}
 
-        {/* ── Referral ── */}
-        {effectiveStatus === 'active' && userId && (() => {
-          const refCode = userId.slice(0, 8);
-          const refUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://laruvisona.jp'}/laruHP/r/${refCode}`;
-          return (
-            <div className="bg-gradient-to-r from-indigo-50 to-sky-50 border border-indigo-200 rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-gray-900 mb-0.5">友達に紹介する</div>
-                <p className="text-xs text-gray-500">紹介リンクを共有するだけ。紹介した方が契約したらお知らせします。</p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
-                <input
-                  readOnly
-                  value={refUrl}
-                  className="flex-1 sm:w-60 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 outline-none select-all"
-                  onClick={e => (e.target as HTMLInputElement).select()}
-                />
-                <button
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(refUrl);
-                    setRefCopied(true);
-                    setTimeout(() => setRefCopied(false), 2000);
-                  }}
-                  className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
-                >
-                  {refCopied ? <IcCheck /> : <IcCopy />}
-                  {refCopied ? 'コピー済み' : 'コピー'}
-                </button>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── Getting Started ── */}
-        {!loading && !startGuideDismissed && (() => {
-          const steps = [
-            { label: 'サイトを作成', done: sites.length > 0, href: sites.length === 0 ? undefined : `/laruHP/studio?siteId=${sites[0]?.id}` },
-            { label: 'サイトを公開', done: sites.some(s => s.published), href: '/laruHP/dashboard' },
-            { label: 'プランを契約', done: effectiveStatus === 'active', href: '/laruHP/plans' },
-            { label: '独自ドメインを設定', done: sites.some(s => s.custom_domain), href: '/laruHP/dashboard' },
-            { label: '問い合わせを受け取る', done: contacts.length > 0, href: '/laruHP/contacts' },
-          ];
-          const doneCount = steps.filter(s => s.done).length;
-          if (doneCount === steps.length) return null;
-          const pct = Math.round((doneCount / steps.length) * 100);
-          return (
-            <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">はじめてガイド</h3>
-                  <p className="text-gray-400 text-xs mt-0.5">{doneCount}/{steps.length} 完了</p>
-                </div>
-                <button onClick={() => setStartGuideDismissed(true)} className="text-gray-300 hover:text-gray-500 text-lg leading-none transition-colors">×</button>
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
-                <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-              </div>
-              <div className="grid sm:grid-cols-5 gap-2">
-                {steps.map((step, i) => (
-                  <div key={i} className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 border transition-colors ${step.done ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${step.done ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                      {step.done ? '✓' : i + 1}
-                    </span>
-                    {!step.done && step.href ? (
-                      <Link href={step.href} className="hover:text-sky-600 transition-colors">{step.label}</Link>
-                    ) : (
-                      <span>{step.label}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── Churn alert: 7-day unpublished ── */}
-        {!loading && (() => {
-          const stale = sites.filter(s => !s.published && (Date.now() - new Date(s.created_at).getTime()) > 7 * 86400000);
-          if (stale.length === 0) return null;
-          const daysSince = Math.floor((Date.now() - new Date(stale[0].created_at).getTime()) / 86400000);
-          return (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5 mb-6 flex items-start gap-3">
-              <span className="flex-shrink-0 mt-0.5 text-amber-700"><IcAlert /></span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-amber-800 mb-0.5">「{stale[0].name}」を作成してから{daysSince}日が経ちました</div>
-                <p className="text-xs text-amber-700 leading-relaxed">サイトがまだ非公開です。内容を確認し、準備ができたら公開へ進んでください。不明な点があればサポートへご連絡ください。</p>
-              </div>
-              <a href={`/laruHP/studio?siteId=${stale[0].id}`}
-                className="flex-shrink-0 text-xs font-bold text-amber-700 hover:text-amber-600 border border-amber-300 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
-                公開する →
-              </a>
-            </div>
-          );
-        })()}
-
         {/* ── Plan upgrade nudge ── */}
         {upgradeError && <p className="text-red-600 text-xs mb-3">{upgradeError}</p>}
         {effectiveStatus === 'active' && effectivePlan === 'hp' && (
@@ -1459,83 +1372,6 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* ── Quick Access Cards ── */}
-        {!loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            {[
-              {
-                title: 'ビルダー',
-                desc: 'AIでサイトを作成・編集',
-                cta: 'ビルダーはこちら',
-                href: sites.length > 0 ? `/laruHP/studio?siteId=${sites[0]?.id}` : '/laruHP/studio',
-                iconColor: 'bg-sky-50 text-sky-600',
-                borderHover: 'hover:border-sky-300',
-                ctaColor: 'text-sky-600',
-                icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                ),
-              },
-              {
-                title: '問い合わせ',
-                desc: '顧客からの連絡を一括管理',
-                cta: '問い合わせはこちら',
-                href: '/laruHP/contacts',
-                iconColor: 'bg-emerald-50 text-emerald-600',
-                borderHover: 'hover:border-emerald-300',
-                ctaColor: 'text-emerald-600',
-                badge: contacts.filter(c => !c.read).length,
-                icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                ),
-              },
-              {
-                title: 'AIブログ',
-                desc: 'SEO記事を自動生成・公開',
-                cta: 'ブログはこちら',
-                href: '/laruHP/blog',
-                iconColor: 'bg-indigo-50 text-indigo-600',
-                borderHover: 'hover:border-indigo-300',
-                ctaColor: 'text-indigo-600',
-                icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                ),
-              },
-              {
-                title: 'SEO設定',
-                desc: '検索エンジン最適化を管理',
-                cta: 'SEO設定はこちら',
-                href: '/laruHP/seo',
-                iconColor: 'bg-violet-50 text-violet-600',
-                borderHover: 'hover:border-violet-300',
-                ctaColor: 'text-violet-600',
-                icon: (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                ),
-              },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`group bg-white border border-gray-200 ${item.borderHover} hover:shadow-sm rounded-xl p-4 flex flex-col transition-all relative`}
-              >
-                {item.badge != null && item.badge > 0 && (
-                  <span className="absolute top-3 right-3 w-5 h-5 bg-sky-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-                <div className={`w-9 h-9 rounded-lg ${item.iconColor} flex items-center justify-center mb-3 transition-colors`}>
-                  {item.icon}
-                </div>
-                <div className="text-xs font-bold text-gray-900 mb-0.5">{item.title}</div>
-                <div className="text-[10px] text-gray-400 leading-relaxed mb-3 flex-1">{item.desc}</div>
-                <div className={`text-[11px] font-semibold ${item.ctaColor} group-hover:opacity-80 transition-opacity`}>
-                  {item.cta} →
-                </div>
-              </Link>
-            ))}
           </div>
         )}
 
@@ -1653,17 +1489,17 @@ export default function DashboardPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sites.map(site => {
               const gradient = INDUSTRY_GRADIENT[site.industry || ''] || 'from-slate-100 to-slate-200';
-              const initial = site.name.charAt(0).toUpperCase();
               return (
                 <div key={site.id} className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden hover:border-sky-200 transition-all flex flex-col">
 
-                  {/* Thumbnail */}
-                  <div className={`bg-gradient-to-br ${gradient} h-32 flex items-center justify-center relative overflow-hidden`}>
-                    <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/30" />
-                    <div className="absolute -left-4 -bottom-6 w-20 h-20 rounded-full bg-white/30" />
-                    <span className="text-[84px] font-bold text-gray-500/[0.15] select-none leading-none relative z-10 -mb-2">
-                      {initial}
-                    </span>
+                  {/* Thumbnail — 実際の見た目を縮小して出す（components/laruhp/SiteThumb） */}
+                  <div className="relative overflow-hidden">
+                    <SiteThumb
+                      siteId={site.id}
+                      name={site.name}
+                      gradient={gradient}
+                      updatedAt={site.updated_at}
+                    />
                     {site.industry && INDUSTRY_LABEL[site.industry] && (
                       <span className="absolute bottom-2.5 left-3 text-[9px] font-semibold text-gray-500 tracking-widest uppercase">
                         {INDUSTRY_LABEL[site.industry]}
@@ -2334,6 +2170,100 @@ export default function DashboardPage() {
             </button>
           </div>
         )}
+
+        {/* ── Search Console Widget ── */}
+        <div data-tour="search-console">
+          <SearchConsoleWidget />
+        </div>
+
+        {/* ── Subscription Card ── */}
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <h2 className="text-sm font-semibold text-gray-900">{profile?.business_name || userEmail}</h2>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status.color}`}>
+                  {status.label}
+                </span>
+              </div>
+              {effectiveStatus === 'active' && profile?.contract_ends_at && (
+                <p className="text-gray-500 text-xs">
+                  最低契約期間: 〜{new Date(profile.contract_ends_at).toLocaleDateString('ja-JP')}
+                </p>
+              )}
+              {portalError && <p className="text-red-600 text-xs mt-1.5">{portalError}</p>}
+              {portalNotice && (
+                <div className="mt-2 rounded-lg border border-slate-300 bg-slate-50 p-3">
+                  <p className="text-slate-700 text-xs leading-relaxed">{portalNotice.text}</p>
+                  <a
+                    href={portalNotice.url}
+                    className="inline-block mt-2 text-xs font-bold text-blue-700 underline"
+                  >
+                    支払方法の変更へ進む
+                  </a>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              {(effectiveStatus === 'active' || effectiveStatus === 'past_due') ? (
+                <button
+                  onClick={handlePortal}
+                  disabled={portalLoading}
+                  className={`flex items-center gap-1.5 text-xs border px-3.5 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    effectiveStatus === 'past_due'
+                      ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                  }`}
+                >
+                  <IcCard />
+                  {portalLoading ? '処理中...' : effectiveStatus === 'past_due' ? '支払い情報を更新する' : 'サブスクリプション管理'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleCheckout}
+                  className="bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all"
+                >
+                  初月無料で始める
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Referral ── */}
+        {effectiveStatus === 'active' && userId && (() => {
+          const refCode = userId.slice(0, 8);
+          const refUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://laruvisona.jp'}/laruHP/r/${refCode}`;
+          return (
+            <div className="bg-gradient-to-r from-indigo-50 to-sky-50 border border-indigo-200 rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-gray-900 mb-0.5">友達に紹介する</div>
+                <p className="text-xs text-gray-500">紹介リンクを共有するだけ。紹介した方が契約したらお知らせします。</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+                <input
+                  readOnly
+                  value={refUrl}
+                  className="flex-1 sm:w-60 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 outline-none select-all"
+                  onClick={e => (e.target as HTMLInputElement).select()}
+                />
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(refUrl);
+                    setRefCopied(true);
+                    setTimeout(() => setRefCopied(false), 2000);
+                  }}
+                  className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
+                >
+                  {refCopied ? <IcCheck /> : <IcCopy />}
+                  {refCopied ? 'コピー済み' : 'コピー'}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+
       </div>
 
       {/* Command Palette */}

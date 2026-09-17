@@ -174,3 +174,31 @@
 @media (min-width: 1440px) {
   .shell-content { padding-left: 40px; padding-right: 40px; }
 }
+
+/* ── サイトカードの見た目（SiteThumb） ───────────── */
+.site-thumb {
+  position: relative;
+  width: 100%;
+  height: 152px;
+  overflow: hidden;
+  background: var(--sf-sunken, #eef2f7);
+}
+.site-thumb-fallback {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+}
+.site-thumb-initial {
+  font-size: 84px; font-weight: 700; line-height: 1;
+  color: rgba(100, 116, 139, 0.16);
+  user-select: none;
+}
+.site-thumb-frame {
+  position: absolute; top: 0; left: 0;
+  transform-origin: 0 0;
+  border: 0;
+  pointer-events: none;      /* 縮小した絵なので、触らせない */
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.site-thumb-frame.is-ready { opacity: 1; }
