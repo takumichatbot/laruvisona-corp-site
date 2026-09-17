@@ -1,6 +1,10 @@
 import { LARUHP_ORIGIN, LARUHP_APP_ORIGIN, isLaruHpHost } from './lib/laruhp-host';
 import { internalLaruHpPath, laruHpSitemapXml, publicPathFromLegacy } from './lib/laruhp-public';
 import { createServerClient } from '@supabase/ssr';
+import {
+  sitePasswordCookieName, sitePasswordCookieValid, sitePasswordMatches,
+  sitePasswordPageHtml, sitePasswordToken,
+} from '@/lib/site-password';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const PROTECTED = [
@@ -117,6 +121,69 @@ async function isAgencyAdminDomain(host: string): Promise<boolean> {
   }
 }
 
+// 閲覧パスワードが設定されたサイトを、**本文を配る前に**止める。
+//
+// これまでの作りは、ページを丸ごと配信してから、JSで白い覆いを被せるだけ
+// だった。パスワードは公開HTMLに平文で入り、本文もそこに全部あった。
+// 編集画面は「アクセス時にパスワードの入力が必要になります」と書いている。
+// その約束を守るには、配る前に止めるしかない。
+//
+// ここ（配信の手前）で止める理由:
+//   ページ側で出し分けると、ISR（revalidate=3600）のキャッシュに
+//   **最初の1回の結果が載って全員に配られる。** 入口の画面が焼き付くか、
+//   もっと悪ければ本文が焼き付いて誰でも見られる。
+//
+// 代わりに、パスワードのあるサイトだけを毎回1回のRESTで引く。
+// キャッシュは持たない。持つと「パスワードを設定した直後に開いていられる
+// 時間」ができる。このファイルの他の照会も同じ理由でキャッシュを持たない。
+async function sitePasswordFor(slug: string): Promise<{ password: string; name: string } | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const r = await fetch(
+      `${url}/rest/v1/sites?slug=eq.${encodeURIComponent(slug)}&published=is.true`
+      + `&select=name,settings_json->>sitePassword&limit=1`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' },
+    );
+    const d = await r.json();
+    const row = Array.isArray(d) ? d[0] : null;
+    const password = row?.sitePassword;
+    if (typeof password !== 'string' || !password) return null;
+    return { password, name: typeof row?.name === 'string' ? row.name : 'このサイト' };
+  } catch {
+    // 引けないときは止めない。引けないことを理由に、
+    // パスワードを設定していないお店のサイトまで閉じてしまうほうが害が大きい。
+    return null;
+  }
+}
+
+/** 入口で止めるべきなら Response を返す。通してよければ null。 */
+async function sitePasswordGate(request: NextRequest, slug: string): Promise<NextResponse | null> {
+  const site = await sitePasswordFor(slug);
+  if (!site) return null;
+
+  const cookieName = sitePasswordCookieName(slug);
+  const noStore = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, private' };
+
+  if (request.method === 'POST') {
+    let attempt = '';
+    try { attempt = String((await request.formData()).get('password') ?? ''); } catch { attempt = ''; }
+    if (attempt && sitePasswordMatches(site.password, attempt)) {
+      // 合鍵を渡して、同じURLをもう一度開かせる（再読み込みで再送信にならない）
+      const back = NextResponse.redirect(request.nextUrl, 303);
+      back.cookies.set(cookieName, sitePasswordToken(slug, site.password), {
+        httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 12,
+      });
+      return back;
+    }
+    return new NextResponse(sitePasswordPageHtml(site.name, { failed: true }), { status: 401, headers: noStore });
+  }
+
+  if (sitePasswordCookieValid(slug, site.password, request.cookies.get(cookieName)?.value)) return null;
+  return new NextResponse(sitePasswordPageHtml(site.name), { status: 401, headers: noStore });
+}
+
 export async function proxy(request: NextRequest) {
   const hostname = (request.headers.get('host') || '').split(':')[0];
   const pathname = request.nextUrl.pathname;
@@ -186,6 +253,20 @@ export async function proxy(request: NextRequest) {
     return new NextResponse(null, { status: 404 });
   }
 
+  /*
+    標準URL（laruvisona.jp/hp/<slug>）からの直アクセス。
+
+    サブドメインや独自ドメインは下で書き換えるときに見るが、この道は
+    書き換えを通らないので、ここで見る。**どの入口も漏らさない。**
+    下のパス（/post/x、/shop、sitemap.xml など）も全部止める。
+    入口を1つでも開けておくと、そこから本文が読める。
+  */
+  const directSite = /^\/hp\/([^/]+)(?:\/|$)/.exec(pathname);
+  if (directSite && !pathname.startsWith('/hp/post/')) {
+    const gated = await sitePasswordGate(request, decodeURIComponent(directSite[1]));
+    if (gated) return gated;
+  }
+
   const isSystemHost =
     !hostname ||
     hostname === 'localhost' ||
@@ -223,6 +304,8 @@ export async function proxy(request: NextRequest) {
       ? hostname.slice(0, -(MAIN_HOST.length + 1))
       : null;
     if (sub && !sub.includes('.')) {
+      const gated = await sitePasswordGate(request, sub);
+      if (gated) return gated;
       const url = request.nextUrl.clone();
       url.pathname = `/hp/${sub}${pathname === '/' ? '' : pathname}`;
       return NextResponse.rewrite(url);
@@ -257,6 +340,8 @@ export async function proxy(request: NextRequest) {
         }
         return new NextResponse(null, { status: 404 });
       }
+      const gated = await sitePasswordGate(request, slug);
+      if (gated) return gated;
       const url = request.nextUrl.clone();
       url.pathname = `/hp/${slug}${pathname === '/' ? '' : pathname}`;
       return NextResponse.rewrite(url);

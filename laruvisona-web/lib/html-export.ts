@@ -1927,23 +1927,22 @@ window.addEventListener('popstate',function(){
 })();
 </script>` : '';
 
-  const pwScript = settings.sitePassword ? `<script>(function(){
-  var pw=${jsonForScript(settings.sitePassword)};
-  var key='lhp-pw-ok';
-  if(sessionStorage.getItem(key)===pw)return;
-  var ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:#0f172a;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
-  ov.innerHTML='<div style="background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:40px 32px;max-width:360px;width:90%;text-align:center"><div style="font-size:.68rem;font-weight:800;letter-spacing:.18em;color:#94a3b8;margin-bottom:14px">閲覧制限</div><h2 style="color:#fff;font-size:1.25rem;font-weight:700;margin:0 0 8px">このサイトはパスワード保護されています</h2><p style="color:#94a3b8;font-size:.875rem;margin:0 0 24px">パスワードを入力してください</p><input id="lhp-pw-in" type="password" placeholder="パスワード" style="width:100%;box-sizing:border-box;background:#0f172a;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:12px 16px;color:#fff;font-size:1rem;outline:none;margin-bottom:12px"><button id="lhp-pw-btn" style="width:100%;background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px;font-size:1rem;font-weight:700;cursor:pointer">入る</button><p id="lhp-pw-err" style="color:#f87171;font-size:.8rem;margin:8px 0 0;display:none">パスワードが違います</p></div>';
-  document.body.appendChild(ov);
-  document.getElementById('lhp-pw-btn').onclick=check;
-  document.getElementById('lhp-pw-in').addEventListener('keydown',function(e){if(e.key==='Enter')check();});
-  function check(){
-    var v=document.getElementById('lhp-pw-in').value;
-    if(v===pw){sessionStorage.setItem(key,pw);ov.remove();}
-    else{document.getElementById('lhp-pw-err').style.display='block';}
-  }
-  document.body.style.overflow='hidden';
-})();</script>` : '';
+  /*
+    閲覧パスワードは、**公開HTMLには一切入れない。**
+
+    2026-09-17まで、ここでこう書き出していた。
+
+      <script>(function(){ var pw="実際のパスワード"; ...白い覆いを被せる... })()</script>
+
+    ページは丸ごと配信されたあとで覆われるだけ。ソースを表示すれば
+    パスワードは読めるし、本文もそこに全部ある。保護になっていなかった。
+    編集画面は「アクセス時にパスワードの入力が必要になります」と書いている。
+
+    いまは配信の手前（proxy.ts の sitePasswordGate）で止める。
+    合っているときだけ本文を返すので、ここには何も出さない。
+    ここに戻すと、パスワードがまた平文で世に出る。
+  */
+  const pwScript = '';
 
   // 業種 → schema.org の型は lib/industry-schema.ts に置く。
   // ここに直書きしていたため、15業種を売りながら5業種しか対応していなかった。
