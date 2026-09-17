@@ -1691,7 +1691,17 @@ function MobileOverlay({ siteId }: { siteId: string | null }) {
   if (dismissed) return null;
   return (
     <div className="md:hidden fixed inset-0 z-[999] bg-[#030712] flex flex-col items-center justify-center p-8 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-3xl mb-6">スマホ</div>
+      {/*
+        ここには絵の代わりに「スマホ」という文字が、64pxの枠に30pxで入っていた。
+        枠からはみ出す。しかもすぐ下の見出しが「スマホでは編集画面へ」なので、
+        同じ言葉が続けて2回出る。スマホで開いた人が**最初に見る画面**がそれ。
+        部品一覧と同じ直し方（lib/laruhp-block-icons.ts）に揃える。
+      */}
+      <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-blue-300">
+          <rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M10 5.5h4"/><path d="M12 18.5v.01"/>
+        </svg>
+      </div>
       <h1 className="text-2xl font-bold text-white mb-3">スマホでは編集画面へ</h1>
       <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-xs">
         ドラッグでレイアウトを組むビルダーはパソコン向けです。
@@ -5617,7 +5627,13 @@ function BuilderContent() {
     return (
       <div className="h-screen bg-[#030712] flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-3xl mx-auto mb-6">会員</div>
+          {/* ここも絵の代わりの文字（64pxの枠に30pxで「会員」）だった。
+              お支払いが通らなかったお客様が最初に見る画面。はみ出して見える。 */}
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-red-300">
+              <rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><path d="M12 14.5v2"/>
+            </svg>
+          </div>
           <h1 className="text-2xl font-bold text-white mb-3">
             {subscriptionStatus === 'past_due' ? 'お支払いの確認が必要です' : 'サブスクリプションが無効です'}
           </h1>
