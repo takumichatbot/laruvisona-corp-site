@@ -47,7 +47,7 @@ const SUB_BADGE: Record<string, string> = {
   active: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
   inactive: 'bg-gray-50 text-gray-500 border border-gray-200',
   trialing: 'bg-sky-50 text-sky-600 border border-sky-200',
-  past_due: 'bg-red-500/20 text-red-600 border border-red-500/30',
+  past_due: 'bg-red-50 text-red-600 border border-red-200',
   canceled: 'bg-gray-100 text-gray-500 border border-gray-100',
 };
 const SUB_LABEL: Record<string, string> = {
@@ -244,10 +244,10 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
                 {[
                   { label: 'HP (¥999)', value: stats.planBreakdown.hp || 0, color: 'text-gray-600' },
-                  { label: 'Lite (¥2,980)', value: stats.planBreakdown['lite'] || 0, color: 'text-purple-300' },
-                  { label: 'HP+Bot (¥4,980)', value: stats.planBreakdown['hp-bot'] || 0, color: 'text-indigo-300' },
-                  { label: 'HP+Bot+SEO (¥9,800)', value: stats.planBreakdown['hp-bot-seo'] || 0, color: 'text-emerald-300' },
-                  { label: 'Agency (¥19,800)', value: stats.planBreakdown['agency'] || 0, color: 'text-amber-300' },
+                  { label: 'Lite (¥2,980)', value: stats.planBreakdown['lite'] || 0, color: 'text-purple-600' },
+                  { label: 'HP+Bot (¥4,980)', value: stats.planBreakdown['hp-bot'] || 0, color: 'text-indigo-600' },
+                  { label: 'HP+Bot+SEO (¥9,800)', value: stats.planBreakdown['hp-bot-seo'] || 0, color: 'text-emerald-600' },
+                  { label: 'Agency (¥19,800)', value: stats.planBreakdown['agency'] || 0, color: 'text-amber-600' },
                 ].map((p, i) => (
                   <div key={i} className="bg-white/[0.03] border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between">
                     <span className="text-gray-500 text-xs">{p.label}</span>
@@ -345,7 +345,7 @@ export default function AdminPage() {
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${SUB_BADGE[user.subscription_status] || SUB_BADGE.inactive}`}>
                         {SUB_LABEL[user.subscription_status] || user.subscription_status}
                       </span>
-                      {user.is_suspended && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-500/30 text-red-600 border border-red-200">停止中</span>}
+                      {user.is_suspended && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200">停止中</span>}
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-[11px] text-gray-500">
                       <span>サイト {user.site_count}件</span>
@@ -353,7 +353,7 @@ export default function AdminPage() {
                       {user.last_sign_in_at && <span>最終ログイン {relTime(user.last_sign_in_at)}</span>}
                     </div>
                     {user.admin_notes && (
-                      <p className="text-xs text-amber-400/80 mt-1 bg-amber-500/5 border border-amber-200 rounded-lg px-2.5 py-1.5">{user.admin_notes}</p>
+                      <p className="text-xs text-amber-600 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">{user.admin_notes}</p>
                     )}
                   </div>
 
@@ -403,7 +403,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => changePlan(user.id)}
                         disabled={planChanging === user.id || !planSelects[user.id] || planSelects[user.id] === user.plan}
-                        className="text-xs px-2.5 py-1.5 rounded-lg border border-sky-200 text-sky-600 hover:bg-sky-500/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-sky-200 text-sky-600 hover:bg-sky-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {planChanging === user.id ? '...' : '変更'}
                       </button>
@@ -419,7 +419,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => toggleSuspend(user)}
                         disabled={saving === user.id}
-                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${user.is_suspended ? 'border-emerald-200 text-emerald-600 hover:bg-green-500/10' : 'border-amber-200 text-amber-400/70 hover:text-amber-400 hover:border-amber-500/40'}`}
+                        className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${user.is_suspended ? 'border-emerald-200 text-emerald-600 hover:bg-green-50' : 'border-amber-200 text-amber-600 hover:text-amber-700 hover:border-amber-300'}`}
                       >
                         {saving === user.id ? '...' : user.is_suspended ? '停止解除' : '停止'}
                       </button>
@@ -427,7 +427,7 @@ export default function AdminPage() {
                         <button
                           onClick={() => forceCancel(user.id, user.email)}
                           disabled={canceling === user.id}
-                          className="text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-400/70 hover:text-red-600 hover:border-red-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 hover:text-red-600 hover:border-red-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {canceling === user.id ? '...' : '強制解約'}
                         </button>

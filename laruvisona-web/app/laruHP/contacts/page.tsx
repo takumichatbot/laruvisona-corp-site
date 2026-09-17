@@ -373,7 +373,7 @@ export default function ContactsPage() {
           {exportOverdue && !exportDone && (
             <>
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full" />
-              <p className="text-[9px] text-amber-400 mt-1 text-right whitespace-nowrap">30日以上未出力</p>
+              <p className="text-[9px] text-amber-600 mt-1 text-right whitespace-nowrap">30日以上未出力</p>
             </>
           )}
         </div></>}
@@ -383,10 +383,10 @@ export default function ContactsPage() {
         <div className="fixed top-4 right-4 z-[100] flex items-center gap-3 bg-white border border-blue-200 text-gray-900 text-sm font-medium px-4 py-3 rounded-xl shadow-2xl shadow-blue-100 animate-slideIn ring-1 ring-blue-200">
           <span className="relative flex-shrink-0">
             <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-40" />
-            <span className="relative w-7 h-7 rounded-full bg-sky-600/20 border border-blue-400/40 flex items-center justify-center text-blue-600"><Inbox size={15} aria-hidden="true" /></span>
+            <span className="relative w-7 h-7 rounded-full bg-sky-50 border border-blue-200 flex items-center justify-center text-blue-600"><Inbox size={15} aria-hidden="true" /></span>
           </span>
           <div>
-            <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wide mb-0.5">新着問い合わせ</p>
+            <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide mb-0.5">新着問い合わせ</p>
             <p className="text-sm text-gray-900">{newContactToast}</p>
           </div>
           <button onClick={() => setNewContactToast(null)} className="ml-2 text-gray-400 hover:text-gray-700 text-base leading-none flex-shrink-0">×</button>
@@ -434,12 +434,12 @@ export default function ContactsPage() {
               )}
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <span className="text-[10px] text-gray-500">今週</span>
-                <span className="text-xs font-bold text-sky-400">+{thisWeek}</span>
+                <span className="text-xs font-bold text-sky-600">+{thisWeek}</span>
               </div>
               {overdue > 0 && (
                 <button
                   onClick={() => setShowOverdueOnly(v => !v)}
-                  className={`flex items-center gap-1.5 flex-shrink-0 px-2 py-0.5 rounded border transition-all ${showOverdueOnly ? 'bg-red-500/20 border-red-500/40 text-red-300' : 'border-transparent text-red-400 hover:bg-red-500/10'}`}
+                  className={`flex items-center gap-1.5 flex-shrink-0 px-2 py-0.5 rounded border transition-all ${showOverdueOnly ? 'bg-red-50 border-red-200 text-red-600' : 'border-transparent text-red-600 hover:bg-red-50'}`}
                 >
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold"><Clock3 size={12} aria-hidden="true" />フォロー期限超過 {overdue}件</span>
                 </button>
@@ -466,7 +466,7 @@ export default function ContactsPage() {
                     >
                       <span className="font-semibold truncate max-w-[80px]">{site.name}</span>
                       <span className="text-gray-400">{siteContacts.length}件</span>
-                      {siteNew > 0 && <span className="text-sky-400 font-bold">新{siteNew}</span>}
+                      {siteNew > 0 && <span className="text-sky-600 font-bold">新{siteNew}</span>}
                     </button>
                   );
                 })}
@@ -517,7 +517,7 @@ export default function ContactsPage() {
                   <button
                     key={tag}
                     onClick={() => setTagFilter(tagFilter === tag ? '' : tag)}
-                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${tagFilter === tag ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-purple-200 hover:text-purple-500'}`}
+                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${tagFilter === tag ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-purple-200 hover:text-purple-700'}`}
                   >
                     {tag} <span className="opacity-60">{count}</span>
                   </button>
@@ -585,12 +585,12 @@ export default function ContactsPage() {
               <div className="p-6 text-center text-gray-400 text-sm">読み込み中...</div>
             ) : filtered.length === 0 ? (
               <div className="p-6 text-center">
-                <Inbox size={30} aria-hidden="true" className="mx-auto mb-2 text-gray-300" />
+                <Inbox size={30} aria-hidden="true" className="mx-auto mb-2 text-gray-600" />
                 <div className="text-gray-500 text-sm">{searchQ || statusFilter ? '該当なし' : 'まだ問い合わせがありません'}</div>
                 {!searchQ && !statusFilter && !siteFilter && !typeFilter && (
                   <div className="mt-3 space-y-1">
                     <p className="text-xs text-gray-400">HPにお問い合わせフォームを設置しましょう</p>
-                    <Link href="/laruHP/studio" className="text-xs text-sky-500 hover:text-sky-400 underline underline-offset-2">
+                    <Link href="/laruHP/studio" className="text-xs text-sky-600 hover:text-sky-700 underline underline-offset-2">
                       ビルダーでフォームを追加 →
                     </Link>
                   </div>
@@ -628,7 +628,7 @@ export default function ContactsPage() {
                           </div>
                         )}
                         {c.crm_followup_at && (
-                          <div className={`text-[9px] mt-1 ${new Date(c.crm_followup_at) < new Date() ? 'text-red-400' : 'text-amber-400'}`}>
+                          <div className={`text-[9px] mt-1 ${new Date(c.crm_followup_at) < new Date() ? 'text-red-600' : 'text-amber-600'}`}>
                             <CalendarClock size={11} aria-hidden="true" /> フォロー: {new Date(c.crm_followup_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
                           </div>
                         )}
@@ -692,7 +692,7 @@ export default function ContactsPage() {
                           <button
                             onClick={() => handleAiSummarize(selected.message!)}
                             disabled={aiSummarizing}
-                            className="text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="text-[10px] text-sky-600 hover:text-sky-700 font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {aiSummarizing ? (
                               <><svg className="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>要約中...</>
@@ -767,7 +767,7 @@ export default function ContactsPage() {
                         const val = date.toISOString().split('T')[0];
                         return (
                           <button key={d} onClick={() => setEditFollowup(val)}
-                            className="text-[10px] font-bold text-sky-400 bg-sky-500/10 hover:bg-sky-500/25 px-2 py-0.5 rounded-md transition-all">
+                            className="text-[10px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-50 px-2 py-0.5 rounded-md transition-all">
                             +{d}日
                           </button>
                         );
@@ -789,7 +789,7 @@ export default function ContactsPage() {
                     <div className="relative">
                       <button
                         onClick={() => setShowTemplateDropdown(v => !v)}
-                        className="text-[10px] text-sky-400 border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 px-2 py-1 rounded-lg transition-all font-semibold"
+                        className="text-[10px] text-sky-600 border border-sky-200 bg-sky-50 hover:bg-sky-50 px-2 py-1 rounded-lg transition-all font-semibold"
                       >
                         テンプレートから挿入
                       </button>
@@ -898,7 +898,7 @@ export default function ContactsPage() {
                   アドレスをコピー
                 </button>
                 <button onClick={() => deleteContact(selected.id)}
-                  className="px-3 py-2.5 text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 rounded-lg transition-colors text-sm">
+                  className="px-3 py-2.5 text-gray-400 hover:text-red-700 border border-gray-200 hover:border-red-200 rounded-lg transition-colors text-sm">
                   削除
                 </button>
               </div>

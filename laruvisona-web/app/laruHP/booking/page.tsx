@@ -305,7 +305,7 @@ export default function BookingPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900 text-sm">{formatDt(slot.datetime)}</span>
                       {formatDtLocal(slot.datetime) && (
-                        <span className="inline-flex items-center gap-1 text-sky-700 text-[10px] bg-sky-500/15 border border-sky-200 px-1.5 py-0.5 rounded-full font-semibold"><Globe2 size={11} aria-hidden="true" />{formatDtLocal(slot.datetime)}</span>
+                        <span className="inline-flex items-center gap-1 text-sky-700 text-[10px] bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded-full font-semibold"><Globe2 size={11} aria-hidden="true" />{formatDtLocal(slot.datetime)}</span>
                       )}
                       <span className="text-gray-500 text-xs">{slot.duration}分</span>
                       <span className="text-gray-500 text-xs">{slot.label}</span>
@@ -319,7 +319,7 @@ export default function BookingPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!taken && (
                       <button onClick={() => toggleSlot(slot.id)}
-                        className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all flex items-center gap-1 ${slot.available ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-500/20' : 'border-green-500/50 text-emerald-600 bg-emerald-50 hover:bg-green-900/30'}`}>
+                        className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all flex items-center gap-1 ${slot.available ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-50' : 'border-green-200 text-emerald-600 bg-emerald-50 hover:bg-green-50'}`}>
                         {slot.available ? '✕ 無効化' : '✓ 有効化'}
                       </button>
                     )}
@@ -384,7 +384,7 @@ export default function BookingPage() {
                 <div className="text-gray-900 text-sm font-semibold">事前決済・担当者・設備の管理</div>
                 <p className="text-gray-500 text-[11px] mt-1.5 leading-relaxed">店舗ごとのStripe入金先と、空き枠・担当者・設備をまとめて確認できる新しい予約管理で設定します。</p>
                 <Link href={`/laruHP/booking/schedule${siteId ? `?siteId=${encodeURIComponent(siteId)}` : ''}`}
-                  className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 text-xs font-semibold text-sky-200 hover:bg-sky-400/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300">
+                  className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300">
                   新しい予約管理を開く
                 </Link>
                 <p className="text-gray-500 text-[11px] mt-2 leading-relaxed">※ 公開サイトで予約を受けるには、ビルダーの<strong className="text-gray-500">「予約フォーム」ブロックを「カレンダー」モード</strong>に設定してください。</p>

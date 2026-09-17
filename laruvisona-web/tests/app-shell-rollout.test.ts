@@ -64,6 +64,7 @@ const WAS_DARK = [
   'app/laruHP/agency/page.tsx',
   'app/laruHP/blog/page.tsx',
   'app/laruHP/booking/page.tsx',
+  'app/laruHP/contacts/page.tsx',
 ];
 
 test('明色に直した画面に、面へ溶ける文字を残さない', () => {
@@ -123,6 +124,23 @@ test('画面いっぱいの画面は、詰めて出す型を使う', () => {
   const css = read('app/laruHP/app-shell.css');
   assert.match(css, /\.shell\.is-fill \.shell-main \{[^}]*overflow: hidden/, 'ページ全体は動かさない');
   assert.match(css, /\.shell\.is-fill \.shell-content \{[^}]*min-height: 0/, '中身が縮めること');
+});
+
+test('明色の面に、薄すぎて読めない文字や面を残さない', () => {
+  // 濃い面の上でだけ成り立つ書き方が2つある。
+  //   ・薄い文字色（text-sky-300 など）。濃い面では映えるが、白い面では消える。
+  //   ・不透明度で重ねる面（bg-sky-500/10 など）。濃い面では締まるが、
+  //     白い面ではほとんど白のまま、枠も見えなくなる。
+  // 実際、予約枠管理の「新しい予約管理を開く」が、白地に薄い水色で
+  // ほぼ読めない状態で出ていた。
+  const thin = /(?:hover:|focus:)?text-(?:sky|emerald|amber|rose|red|green|blue|indigo|purple|cyan)-[1-4]00(?![\w/-])/;
+  const veil = /(?:hover:|focus:)?(?:bg|border)-(?:sky|emerald|amber|rose|red|green|blue|indigo|purple|cyan|slate|gray)-\d{3}\/\d+(?![\w/-])/;
+  for (const file of WAS_DARK) {
+    read(file).split('\n').forEach((line, i) => {
+      assert.doesNotMatch(line, thin, `${file}:${i + 1} 白い面では薄すぎる文字色`);
+      assert.doesNotMatch(line, veil, `${file}:${i + 1} 重ねて出す面（濃い面用の書き方）`);
+    });
+  }
 });
 
 test('道しるべに、同じ行き先を2つ置かない', async () => {

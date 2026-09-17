@@ -10,8 +10,8 @@ type LarubotPlan = 'lite' | 'starter' | 'pro' | 'laru-cloud';
 const LARUBOT_PLANS: { id: LarubotPlan; label: string; desc: string; color: string }[] = [
   { id: 'lite',       label: 'Lite',       desc: '基本チャット・シンプルなFAQ対応',       color: 'text-gray-600 bg-gray-100 border-gray-300' },
   { id: 'starter',    label: 'Starter',    desc: 'カスタム対応・基本分析・週次レポート',   color: 'text-sky-700 bg-sky-50 border-sky-200' },
-  { id: 'pro',        label: 'Pro',        desc: '高度な分析・優先サポート・多言語対応',   color: 'text-purple-300 bg-purple-900/40 border-purple-700' },
-  { id: 'laru-cloud', label: 'LARU Cloud', desc: '完全カスタム・専任担当・SLA保証',        color: 'text-amber-300 bg-amber-900/40 border-amber-700' },
+  { id: 'pro',        label: 'Pro',        desc: '高度な分析・優先サポート・多言語対応',   color: 'text-purple-600 bg-purple-50 border-purple-700' },
+  { id: 'laru-cloud', label: 'LARU Cloud', desc: '完全カスタム・専任担当・SLA保証',        color: 'text-amber-600 bg-amber-50 border-amber-700' },
 ];
 
 interface Site {
@@ -351,7 +351,7 @@ export default function AgencyPage() {
                         )}
                         <div className="font-bold text-gray-900">{site.name}</div>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${site.published ? 'bg-green-900/40 text-emerald-600 border border-emerald-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${site.published ? 'bg-green-50 text-emerald-600 border border-emerald-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
                         {site.published ? '公開中' : '下書き'}
                       </span>
                     </div>
@@ -408,7 +408,7 @@ export default function AgencyPage() {
                     </Link>
                     <button
                       onClick={() => { setLarubotTarget(site); setLarubotPlan(site.settings_json?.larubotPlan ?? 'lite'); setLarubotClientEmail(site.data?.clientEmail ?? ''); setLarubotError(''); }}
-                      className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${site.settings_json?.larubot ? 'bg-indigo-900/40 text-indigo-700 border border-indigo-700 hover:bg-indigo-900/60' : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900'}`}>
+                      className={`text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${site.settings_json?.larubot ? 'bg-indigo-50 text-indigo-700 border border-indigo-700 hover:bg-indigo-50' : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900'}`}>
                       AI {site.settings_json?.larubot ? 'LARUbot変更' : 'LARUbot設定'}
                     </button>
                     <button onClick={() => { setSelected(site); setEditForm({ clientName: site.data?.clientName ?? '', clientEmail: site.data?.clientEmail ?? '', clientPhone: site.data?.clientPhone ?? '', clientNote: site.data?.clientNote ?? '' }); setEditMode(false); }}

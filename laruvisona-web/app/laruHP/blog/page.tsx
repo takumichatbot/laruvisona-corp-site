@@ -260,7 +260,7 @@ export default function BlogPage() {
                 </select>
                 <span className="text-gray-500 text-sm">{posts.length} 件</span>
                 {posts.filter(p => !p.published).length > 0 && (
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 border border-amber-200">
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
                     下書き {posts.filter(p => !p.published).length}
                   </span>
                 )}
@@ -294,21 +294,21 @@ export default function BlogPage() {
               </div>
             </div>
             {aiMsg && (
-              <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${aiMsg.startsWith('✓') ? 'bg-emerald-50 text-emerald-600 border border-green-500/20' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+              <div className={`text-xs px-3 py-2 rounded-lg mb-3 ${aiMsg.startsWith('✓') ? 'bg-emerald-50 text-emerald-600 border border-green-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
                 {aiMsg}
               </div>
             )}
             {aiLimitReached && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-3 text-xs">
                 <p className="font-bold text-amber-600 mb-1">今月の生成上限に達しました</p>
-                <p className="text-amber-300/80 mb-2">上位プランにアップグレードすると毎月100件まで生成できます。</p>
+                <p className="text-amber-600 mb-2">上位プランにアップグレードすると毎月100件まで生成できます。</p>
                 <Link href="/laruHP/plans" className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-3 py-1.5 rounded-lg transition-all">
                   プランを確認する →
                 </Link>
               </div>
             )}
             {firstPostToast && (
-              <div className="bg-emerald-50 border border-emerald-500/20 rounded-xl px-4 py-3 mb-3 text-xs text-emerald-600">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-3 text-xs text-emerald-600">
                 <p className="font-bold mb-1">最初の記事を作成しました</p>
                 <p>次のステップ: <Link href="/laruHP/seo" className="underline hover:text-emerald-700">SEO設定</Link>でビジネス情報を登録すると検索結果に強くなります。</p>
               </div>
@@ -342,7 +342,7 @@ export default function BlogPage() {
                         ) : (
                           <button
                             onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
-                            className={`text-[11px] px-3 py-1 rounded-full font-semibold transition-all ${categoryFilter === cat ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-600 hover:bg-sky-500/20'}`}
+                            className={`text-[11px] px-3 py-1 rounded-full font-semibold transition-all ${categoryFilter === cat ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-600 hover:bg-sky-50'}`}
                           >
                             {cat} ({count})
                           </button>
@@ -406,7 +406,7 @@ export default function BlogPage() {
                             : <span className="text-amber-500 font-semibold">未公開</span>}
                         </td>
                         <td className="px-4 py-3">
-                          <button onClick={() => handleTogglePublish(post)} className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${post.published ? 'text-emerald-600 bg-green-400/10 hover:bg-green-400/20' : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
+                          <button onClick={() => handleTogglePublish(post)} className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${post.published ? 'text-emerald-600 bg-green-50 hover:bg-green-50' : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}>
                             {post.published ? '公開中' : '下書き'}
                           </button>
                         </td>
@@ -484,13 +484,13 @@ export default function BlogPage() {
                   const plain = form.content.replace(/#+\s*/g, '').replace(/\*\*/g, '').replace(/\n+/g, ' ').trim();
                   const suggestion = plain.slice(0, 150);
                   return (
-                    <div className="mt-1.5 bg-sky-500/5 border border-sky-500/15 rounded-lg px-3 py-2 flex items-start gap-2">
+                    <div className="mt-1.5 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 flex items-start gap-2">
                       <span className="text-[10px] text-sky-600 font-bold flex-shrink-0 mt-0.5">💡 メタ説明候補</span>
                       <p className="text-[10px] text-gray-500 flex-1 leading-relaxed">{suggestion}{plain.length > 150 ? '…' : ''}</p>
                       <button
                         type="button"
                         onClick={() => { navigator.clipboard.writeText(suggestion + (plain.length > 150 ? '…' : '')); }}
-                        className="text-[9px] flex-shrink-0 bg-sky-100 hover:bg-sky-500/30 text-sky-600 px-1.5 py-0.5 rounded font-bold transition-all"
+                        className="text-[9px] flex-shrink-0 bg-sky-100 hover:bg-sky-50 text-sky-600 px-1.5 py-0.5 rounded font-bold transition-all"
                         title="クリップボードにコピー"
                       >コピー</button>
                     </div>
