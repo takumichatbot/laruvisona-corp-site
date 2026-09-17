@@ -169,6 +169,8 @@ export default function SettingsPage() {
   const [gmbReviews, setGmbReviews] = useState<{ author_name: string; rating: number; text: string; relative_time_description: string }[]>([]);
   const [reviewReplies, setReviewReplies] = useState<Record<number, string[]>>({});
   const [reviewReplyLoading, setReviewReplyLoading] = useState<number | null>(null);
+  // 返信案を作れなかった理由。出さないと、押しても何も起きない画面になる
+  const [reviewReplyError, setReviewReplyError] = useState('');
   const [reviewReplySelected, setReviewReplySelected] = useState<Record<number, string>>({});
 
   const handleEmailChange = async (e: React.FormEvent) => {
@@ -263,21 +265,28 @@ export default function SettingsPage() {
   const handleReviewReply = async (idx: number, review: { author_name: string; rating: number; text: string }) => {
     if (!gmbPreview) return;
     setReviewReplyLoading(idx);
-    const res = await fetch('/api/ai/review-reply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reviewText: review.text,
-        reviewerName: review.author_name,
-        rating: review.rating,
-        businessName: gmbPreview.name,
-      }),
-    });
-    const d = await res.json();
-    if (res.ok && d.replies) {
-      setReviewReplies(prev => ({ ...prev, [idx]: d.replies }));
+    setReviewReplyError('');
+    try {
+      const res = await fetch('/api/ai/review-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewText: review.text,
+          reviewerName: review.author_name,
+          rating: review.rating,
+          businessName: gmbPreview.name,
+        }),
+      });
+      const d = await res.json().catch(() => ({} as { replies?: string[]; error?: string }));
+      if (res.ok && d.replies) setReviewReplies(prev => ({ ...prev, [idx]: d.replies }));
+      // 以前は else が無く、上限(429)でもサーバ落ち(500)でも**何も出なかった**。
+      // 押しても画面が変わらないので「AIが遅い」と思われ、不具合として届かない。
+      else setReviewReplyError(d.error || `返信案を作れませんでした (${res.status})`);
+    } catch {
+      setReviewReplyError('返信案を作れませんでした。通信を確かめて、もう一度お試しください');
+    } finally {
+      setReviewReplyLoading(null);
     }
-    setReviewReplyLoading(null);
   };
 
   const handleGmbSave = async () => {
@@ -300,7 +309,14 @@ export default function SettingsPage() {
   const handleIgDisconnectCancel = () => setIgDisconnectConfirm(false);
   const handleIgDisconnectConfirm = async () => {
     setIgDisconnectConfirm(false);
-    await fetch('/api/instagram', { method: 'DELETE' });
+    // 結果を見ずに「解除しました」と出していた。失敗しても必ず成功表示になる。
+    // 一度そう出た後は誰も確かめないので、繋がったままなのに気づけない。
+    let ok = false;
+    try {
+      const res = await fetch('/api/instagram', { method: 'DELETE' });
+      ok = res.ok;
+    } catch { ok = false; }
+    if (!ok) { setIgMsg('連携を解除できませんでした。通信を確かめて、もう一度お試しください'); return; }
     setIgConnected(false);
     setIgUsername('');
     setIgMedia([]);
@@ -870,13 +886,20 @@ export default function SettingsPage() {
                       ))}
                     </div>
                   ) : (
-                    <button
-                      onClick={() => handleReviewReply(idx, review)}
-                      disabled={reviewReplyLoading === idx}
-                      className="w-full text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-bold py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {reviewReplyLoading === idx ? 'AIが生成中...' : '✨ AI返信案を生成する'}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleReviewReply(idx, review)}
+                        disabled={reviewReplyLoading === idx}
+                        className="w-full text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-bold py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {reviewReplyLoading === idx ? 'AIが生成中...' : '✨ AI返信案を生成する'}
+                      </button>
+                      {reviewReplyError && (
+                        <p role="alert" className="mt-2 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                          {reviewReplyError}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               ))}

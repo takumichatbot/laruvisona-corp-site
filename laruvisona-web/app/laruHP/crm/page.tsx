@@ -211,24 +211,39 @@ export default function CRMPage() {
     setSavingNote(false);
   };
 
+  /*
+    お客様への返信。ここで固まると、返事が出たのかどうかも分からない。
+
+    以前は fetch と res.json() が try の外にあった。回線が切れたときや、
+    サーバが JSON でない応答（エラーページなど）を返したときに例外が飛び、
+    **setSendingReply(false) に届かない。** ボタンは「送信中...」のまま固まり、
+    書いた文面も残ったまま、送れたのかも分からない。
+
+    打ち込んだ文面は消さない。送れていないのに消えるのが、いちばん困る。
+  */
   const sendReply = async () => {
     if (!selected || !replyText.trim()) return;
     setSendingReply(true);
     setReplyMsg('');
-    const res = await fetch('/api/crm/reply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contactId: selected.id, message: replyText }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setReplyMsg('送信しました');
-      setReplyText('');
-      await updateExtra(selected.id, { last_replied_at: new Date().toISOString() });
-    } else {
-      setReplyMsg(data.error || '送信に失敗しました');
+    try {
+      const res = await fetch('/api/crm/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: selected.id, message: replyText }),
+      });
+      const data = await res.json().catch(() => ({} as { error?: string }));
+      if (res.ok) {
+        setReplyMsg('送信しました');
+        setReplyText('');
+        await updateExtra(selected.id, { last_replied_at: new Date().toISOString() });
+      } else {
+        setReplyMsg(data.error || `送信に失敗しました (${res.status})`);
+      }
+    } catch {
+      setReplyMsg('送信できませんでした。通信を確かめて、もう一度お試しください（文面は残してあります）');
+    } finally {
+      setSendingReply(false);
     }
-    setSendingReply(false);
   };
 
   const filtered = siteFilter ? contacts.filter(c => c.site_id === siteFilter) : contacts;

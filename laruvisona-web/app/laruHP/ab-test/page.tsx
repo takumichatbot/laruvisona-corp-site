@@ -109,30 +109,49 @@ export default function AbTestPage() {
     setResetLoading(null);
   };
 
+  /*
+    保存できたか確かめてから「保存しました」と出す。
+
+    以前は結果を見ずに緑のトーストを出していた。401でも500でも
+    「メモを保存しました」と出る。店主は保存されたと信じ、次に開いたとき
+    空でも「入力し忘れた」と解釈する。**嘘をつくほうが、黙るより悪い。**
+  */
   const handleSaveVariantNotes = async (siteId: string, noteA: string, noteB: string) => {
-    await fetch(`/api/sites/${siteId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings_patch: { abVariantANote: noteA, abVariantBNote: noteB } }),
-    });
-    setSites(prev => prev.map(s => s.id === siteId
-      ? { ...s, settings_json: { ...(s.settings_json || {}), abVariantANote: noteA, abVariantBNote: noteB } }
-      : s
-    ));
-    showMsg('メモを保存しました');
+    try {
+      const res = await fetch(`/api/sites/${siteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings_patch: { abVariantANote: noteA, abVariantBNote: noteB } }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      setSites(prev => prev.map(s => s.id === siteId
+        ? { ...s, settings_json: { ...(s.settings_json || {}), abVariantANote: noteA, abVariantBNote: noteB } }
+        : s
+      ));
+      showMsg('メモを保存しました');
+    } catch {
+      showMsg('メモを保存できませんでした。もう一度お試しください', 'error');
+    }
   };
 
+  /* 逆に、こちらは成功も失敗も何も出していなかった。押しても無反応に見える。 */
   const handleSetTestStart = async (siteId: string, autoEndDays: number) => {
     const now = new Date().toISOString();
-    await fetch(`/api/sites/${siteId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings_patch: { abTestStartedAt: now, abTestAutoEndDays: autoEndDays } }),
-    });
-    setSites(prev => prev.map(s => s.id === siteId
-      ? { ...s, settings_json: { ...(s.settings_json || {}), abTestStartedAt: now, abTestAutoEndDays: autoEndDays } }
-      : s
-    ));
+    try {
+      const res = await fetch(`/api/sites/${siteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings_patch: { abTestStartedAt: now, abTestAutoEndDays: autoEndDays } }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      setSites(prev => prev.map(s => s.id === siteId
+        ? { ...s, settings_json: { ...(s.settings_json || {}), abTestStartedAt: now, abTestAutoEndDays: autoEndDays } }
+        : s
+      ));
+      showMsg('テストの開始日を設定しました');
+    } catch {
+      showMsg('開始日を設定できませんでした。もう一度お試しください', 'error');
+    }
   };
 
   // Chi-square test for statistical significance (df=1)

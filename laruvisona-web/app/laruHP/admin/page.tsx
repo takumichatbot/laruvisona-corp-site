@@ -128,15 +128,45 @@ export default function AdminPage() {
     }
   };
 
+  /*
+    運営の操作は、結果を見てから画面を変える。
+
+    以前は4つとも `await fetch(...)` の戻り値を一切見ず、その場で
+    setUsers(...) して画面を書き換えていた。APIが500でも画面上は
+    「強制解約済み」に変わり、**リロードすると元に戻る。**
+
+    自社用の画面なので被害は自分に返ってくるが、
+    「解約したつもり」で請求が続く、のは取り返しがつかない。
+  */
+  const [opError, setOpError] = useState('');
+
+  const patchUser = async (userId: string, body: Record<string, unknown>): Promise<boolean> => {
+    setOpError('');
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return true;
+      const d = await res.json().catch(() => ({} as { error?: string }));
+      setOpError(d.error || `反映できませんでした (${res.status})`);
+      return false;
+    } catch {
+      setOpError('反映できませんでした。通信を確かめて、もう一度お試しください');
+      return false;
+    }
+  };
+
   const updateUser = async (userId: string, patch: Partial<Pick<AdminUser, 'features' | 'is_suspended' | 'admin_notes'>>) => {
     setSaving(userId);
-    await fetch(`/api/admin/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    });
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...patch } : u));
-    setSaving(null);
+    try {
+      if (await patchUser(userId, patch)) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...patch } : u));
+      }
+    } finally {
+      setSaving(null);
+    }
   };
 
   const toggleFeature = (user: AdminUser, key: keyof UserFeatures) => {
@@ -157,25 +187,25 @@ export default function AdminPage() {
     const plan = planSelects[userId];
     if (!plan) return;
     setPlanChanging(userId);
-    await fetch(`/api/admin/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan }),
-    });
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan } : u));
-    setPlanChanging(null);
+    try {
+      if (await patchUser(userId, { plan })) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan } : u));
+      }
+    } finally {
+      setPlanChanging(null);
+    }
   };
 
   const forceCancel = async (userId: string, email: string) => {
     if (!confirm(`${email} のサブスクリプションを強制解約しますか？\nこの操作は取り消せません。`)) return;
     setCanceling(userId);
-    await fetch(`/api/admin/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ force_cancel: true }),
-    });
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, subscription_status: 'canceled', plan: null, stripe_subscription_id: null } : u));
-    setCanceling(null);
+    try {
+      if (await patchUser(userId, { force_cancel: true })) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, subscription_status: 'canceled', plan: null, stripe_subscription_id: null } : u));
+      }
+    } finally {
+      setCanceling(null);
+    }
   };
 
   const filtered = users.filter(u => {
@@ -218,6 +248,11 @@ export default function AdminPage() {
 
   return (
     <AppShell title="運営ダッシュボード" lead="契約と稼働の全体像。自社用の画面です。" actions={<span className="text-xs bg-red-50 text-red-600 border border-red-200 px-2.5 py-1 rounded-full font-bold">ADMIN</span>}>
+      {opError && (
+        <div role="alert" className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {opError}
+        </div>
+      )}
       {/* Header */}
       
 
