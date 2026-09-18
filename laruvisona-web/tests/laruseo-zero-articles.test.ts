@@ -53,7 +53,8 @@ test('サイトがまだ無いときは、識別子を預かる', () => {
 test('預けられなかったら、記録に残す', () => {
   // 列がまだ無い状態（SQL未実行）も、ここで分かる。
   const src = read('lib/larubot-provision.ts');
-  assert.match(src, /console\.error\('\[larubot\] public ids not held for later:'/);
+  // 2026-09-18: 届け先をログから運営宛てのメールに変えた（lib/larubot-alert.ts）。
+  assert.match(src, /kind: 'held', userId, plan: null, siteId: null,/);
 });
 
 test('最初のサイトを作るときに、預けた識別子を移す', () => {

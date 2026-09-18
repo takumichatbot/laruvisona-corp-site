@@ -54,7 +54,9 @@ test('頼めなくても、契約処理は止めない', () => {
   const at = src.indexOf('if (isSeoPlan(plan) && (seoPublicId || publicId)) {');
   const block = src.slice(at, src.indexOf('return registration;', at));
   assert.doesNotMatch(block, /throw /, '失敗で投げている');
-  assert.match(block, /console\.error\('\[larubot\] 自動運転を始められませんでした:'/, '失敗を黙っている');
+  // 2026-09-18: ログだけでは誰も見ないので、運営へ届ける形に変えた。
+  assert.match(block, /await alertLarubotFailure\(\{/, '失敗を黙っている');
+  assert.match(block, /kind: 'autopilot'/);
   assert.match(block, /console\.info\('\[larubot\] 自動運転を開始しました:'/, '成功も残す');
 });
 
@@ -81,7 +83,9 @@ test('曜日と時刻は、受け取る形だけ通す', () => {
 test('キーワードは材料を渡すだけ。こちらで作り込まない', () => {
   const k = initialSeoKeywords({ name: '結い庵', industry: 'beauty', city: '東京都足立区1-2-3' });
   assert.ok(k.includes('東京都足立区 美容室・サロン'), 'エリア×業種が無い');
-  assert.ok(k.includes('結い庵'), '店名が無い');
+  // 店名は「エリア＋店名」の形で入る。1語だけの語は作らない（競合が強すぎる）。
+  assert.ok(k.some(w => w.includes('結い庵')), '店名が無い');
+  assert.ok(!k.includes('結い庵'), '1語だけの店名を送っている');
   assert.ok(k.every(w => !/\d/.test(w)), '番地が混ざっている');
   assert.ok(k.length <= 10, '多すぎる');
   assert.equal(new Set(k).size, k.length, '重複している');
@@ -153,4 +157,85 @@ test('こちらに記事生成も定期実行も無いまま', () => {
   for (const job of jobs) assert.ok(!/seo|blog|article/i.test(job), `SEOの定期実行を作っている: ${job}`);
   const lib = fs.readFileSync(new URL('../lib/larubot-seo.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(lib, /generate_now|autopilot_setting/, '画面用の内部APIを叩いている');
+});
+
+test('状態の項目名を、最新の仕様に合わせる', () => {
+  /*
+    LARUbot `7fe6a3b` で名前が揃った。
+      status 側 unused_keywords → keywords_unused
+      status 側 total_keywords  → keywords_total
+    autopilot の応答と同じ名前になった。**古い名前で読むと、
+    キーワードが何本あっても常に「不足」と出る。**
+  */
+  const active = { autopilot_active: true, quota: { used: 1, limit: 5 } };
+  assert.equal(seoDisplayState({ ...active, keywords_unused: 3 }), 'waiting');
+  assert.equal(seoDisplayState({ ...active, keywords_unused: 0 }), 'no_keywords');
+  // 古い名前も一応見る（向こうを戻されたときに黙って0扱いしないため）
+  assert.equal(seoDisplayState({ ...active, unused_keywords: 3 }), 'waiting');
+});
+
+test('飛ばした理由を、数より先に見る', () => {
+  // `skipped` は 7fe6a3b で入った。理由が取れるなら、そのまま出す。
+  const base = { autopilot_active: true, last_result: 'skipped' };
+  assert.equal(seoDisplayState({ ...base, last_skip: { reason: 'quota_reached' }, keywords_unused: 6, quota: { used: 1, limit: 5 } }), 'quota_reached');
+  assert.equal(seoDisplayState({ ...base, last_skip: { reason: 'no_unused_keywords' }, keywords_unused: 6, quota: { used: 1, limit: 5 } }), 'no_keywords');
+  // 理由が取れないときだけ、数から推し量る
+  assert.equal(seoDisplayState({ autopilot_active: true, quota: { used: 5, limit: 5 }, keywords_unused: 3 }), 'quota_reached');
+});
+
+test('キーワードは2〜4語のロングテールにする', () => {
+  // 「美容室」のような1語は競合が強すぎて取れない（LARUbot 側の推奨）。
+  const k = initialSeoKeywords({ name: '結い庵', industry: 'beauty', city: '東京都足立区1-2-3' });
+  assert.ok(k.length >= 4 && k.length <= 10, `件数が想定外: ${k.length}`);
+  for (const w of k) {
+    assert.ok(w.split(/\s+/).length >= 2, `1語だけの語がある: ${w}`);
+    assert.ok(w.length <= 255, '255字を超えている');
+  }
+  assert.ok(k.some(w => w.includes('東京都足立区')), 'エリアを使っていない');
+  assert.ok(k.some(w => !w.includes('東京都足立区')), 'エリア無しの語が無い');
+});
+
+test('連携の失敗を、運営に届ける', () => {
+  /*
+    これまでは console.error だけ。ログは誰も見ないので、
+    「契約は通ったのにボットもSEOも付いていない」が起きても、
+    **お客様が連絡してくるまで誰も知らない。**
+    LARUbot 側からも同じ指摘を受けている。
+
+    ⚠️ 決済の流れは変えない。止めるかどうかは別の判断で、ここではしない。
+  */
+  const alert = fs.readFileSync(new URL('../lib/larubot-alert.ts', import.meta.url), 'utf8');
+  assert.match(alert, /process\.env\.ADMIN_EMAIL/, '運営宛てに送っていない');
+  assert.match(alert, /console\.error\('\[larubot\] 連携に失敗:'/, 'メールが出せないときに記録が残らない');
+  assert.doesNotMatch(alert, /throw /, '通知で例外を投げている（契約処理を巻き込む）');
+  assert.match(alert, /idempotencyKey: `larubot-fail-/, '同じ失敗で何通も送りうる');
+
+  // 4つの入口すべてから届くこと
+  const callers: Array<[string, string]> = [
+    ['app/api/stripe/webhook/route.ts', 'register'],
+    ['app/api/stripe/checkout/route.ts', 'register'],
+    ['app/api/stripe/upgrade/route.ts', 'register'],
+    ['app/api/admin/users/[id]/route.ts', 'register'],
+  ];
+  for (const [file, kind] of callers) {
+    const src = read(file);
+    // 文の頭であること。`if (false) await ...` で潰されても気づけるように
+    // （同じ書き方で一度、変異が素通りした）。
+    assert.match(src, /^\s*await alertLarubotFailure\(\{$/m, `${file}: 失敗を届けていない、または条件で潰されている`);
+    assert.match(src, new RegExp(`kind: '${kind}'`), `${file}: 種類が違う`);
+  }
+  // 自動運転と預かりの失敗も
+  const prov = read('lib/larubot-provision.ts');
+  assert.match(prov, /kind: 'autopilot'/, '自動運転の失敗を届けていない');
+  assert.match(prov, /kind: 'held'/, '預かりの失敗を届けていない');
+});
+
+test('決済の流れは変えていない', () => {
+  // 失敗しても契約処理は進む（既存仕様のまま）。通知を足しただけ。
+  const webhook = read('app/api/stripe/webhook/route.ts');
+  const at = webhook.indexOf("kind: 'register', userId, plan: plan || 'hp'");
+  assert.ok(at > 0);
+  const around = webhook.slice(Math.max(0, at - 500), at + 300);
+  assert.match(around, /\} catch \(err\) \{/, 'try/catch の外で呼んでいる');
+  assert.doesNotMatch(around, /return NextResponse\.json\([^)]*status: 5/, '失敗で決済処理を落としている');
 });

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
+import { alertLarubotFailure } from '@/lib/larubot-alert';
 import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { readContactBody } from '@/lib/contact-contract';
@@ -180,7 +181,11 @@ export async function POST(req: Request) {
         try {
           await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, siteId: ownedSiteId || undefined, prevPlan: profile.plan });
         } catch (e) {
-          console.error('[stripe/checkout] LARUbot provision on upgrade failed:', e);
+          // 決済は止めない。ただし運営には届ける（ログだけでは誰も見ない）。
+          await alertLarubotFailure({
+            kind: 'register', userId: user.id, plan, siteId: ownedSiteId || null,
+            reason: (e as Error)?.message || 'unknown',
+          });
         }
 
         return NextResponse.json({ upgraded: true, plan });

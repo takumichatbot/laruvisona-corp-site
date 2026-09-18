@@ -89,8 +89,13 @@ test('管理画面からのプラン付与も、LARUbot に伝える', () => {
     'try で囲っていない（失敗すると管理操作ごと落ちる）');
   assert.match(admin, /prevPlan: profileResult\.data\?\.plan \?\? null,/, '前のプランを渡していない');
   assert.match(admin, /\.select\('stripe_subscription_id,stripe_customer_id,plan'\)/, '前のプランを読んでいない');
-  // 失敗しても管理操作は止めない。ただし黙らない
-  assert.match(admin, /\[admin\/plan\] LARUbot への登録に失敗:/, '失敗を握りつぶしている');
+  /*
+    失敗しても管理操作は止めない。ただし黙らない。
+    2026-09-18: 届け先をログから運営宛てのメールに変えた
+    （ログは誰も見ないという指摘を LARUbot 側からも受けたため）。
+  */
+  assert.match(admin, /^\s*await alertLarubotFailure\(\{$/m, '失敗を握りつぶしている');
+  assert.match(admin, /kind: 'register', userId: id, plan: body\.plan,/);
 });
 
 test('画面用の内部APIを、外から叩いていない', () => {

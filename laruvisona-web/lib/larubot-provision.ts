@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { isSeoPlan, initialSeoKeywords, startLarubotAutopilot } from '@/lib/larubot-seo';
+import { alertLarubotFailure } from '@/lib/larubot-alert';
 
 // LARUbot（AIチャットボット）が付くプラン。ここに含まれるプランへ切り替わったときに
 // LARUbot 側のアカウントを自動登録する。
@@ -228,7 +229,11 @@ export async function provisionLarubotOnPlan(params: {
       console.info('[larubot] 自動運転を開始しました:', userId,
         `初回=${started.generatedFirst}`, started.generateReason ?? '', `未使用KW=${started.keywordsUnused ?? '-'}`);
     } else {
-      console.error('[larubot] 自動運転を始められませんでした:', userId, started.reason, started.status ?? '');
+      // ログだけだと誰も見ない。運営に1通届ける（決済の流れは変えない）。
+      await alertLarubotFailure({
+        kind: 'autopilot', userId, plan, siteId: siteId ?? null,
+        reason: started.reason, status: started.status ?? null,
+      });
     }
   }
 
@@ -330,7 +335,10 @@ export async function linkLarubotIds(params: {
     }).eq('id', userId).select('id');
     if (held.error || held.data?.length !== 1) {
       // 列がまだ無い場合もここに来る（supabase/profiles_pending_larubot.sql を実行する）
-      console.error('[larubot] public ids not held for later:', userId, held.error?.message || 'no profile row');
+      await alertLarubotFailure({
+        kind: 'held', userId, plan: null, siteId: null,
+        reason: held.error?.message || 'no profile row',
+      });
     }
     return;
   }

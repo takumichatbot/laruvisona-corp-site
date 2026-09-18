@@ -3,7 +3,8 @@ import { invoiceSubscriptionId, subscriptionPeriodEnd, subscriptionStartedAt } f
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
 import { finalizeBooking } from '@/lib/booking-finalize';
-import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
+import { provisionLarubotOnPlan, LarubotRegisterError } from '@/lib/larubot-provision';
+import { alertLarubotFailure } from '@/lib/larubot-alert';
 import { Resend } from 'resend';
 import type Stripe from 'stripe';
 import { readRequestText } from '@/lib/contact-contract';
@@ -265,8 +266,16 @@ export async function POST(req: Request) {
       try {
         await provisionLarubotOnPlan({ userId, email: adminCheck?.email, plan: plan || 'hp', siteId });
       } catch (err) {
-        console.error('[LARUbot register] failed:', err);
-        // Non-fatal: LARUbot will retry or callback handles public_id later
+        /*
+          決済は止めない（既存のとおり）。ただしログだけで終わらせない。
+          ここで失敗すると、契約は通っているのにボットもSEOも付かない。
+          お客様が気づいて連絡してくるまで、誰も知らないままだった。
+        */
+        await alertLarubotFailure({
+          kind: 'register', userId, plan: plan || 'hp', siteId: siteId ?? null,
+          reason: err instanceof LarubotRegisterError ? err.code : ((err as Error)?.message || 'unknown'),
+          status: err instanceof LarubotRegisterError ? err.httpStatus : null,
+        });
       }
       break;
     }

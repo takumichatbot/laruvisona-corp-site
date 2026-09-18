@@ -60,13 +60,19 @@ export function initialSeoKeywords(input: {
   // 住所の頭（都道府県・市区）だけ使う。番地まで入れても検索語にならない。
   const area = city.replace(/\d.*$/, '').trim();
 
+  /*
+    2〜4語のロングテールにする（LARUbot 側の推奨・2026-09-18）。
+    「美容室」のような1語は競合が強すぎて取れない。
+    エリア名は入れても入れなくてもよいとのことなので、両方を混ぜる。
+    初回は5〜10語で十分（週1本なら1〜2か月分）。
+  */
   const words = [
     area && industryName ? `${area} ${industryName}` : '',
+    area && industryName ? `${area} ${industryName} 予約` : '',
+    area && industryName ? `${area} ${industryName} 料金` : '',
+    industryName ? `${industryName} 初めて 選び方` : '',
+    industryName ? `${industryName} 料金 相場` : '',
     area && name ? `${area} ${name}` : '',
-    industryName,
-    name,
-    industryName ? `${industryName} おすすめ` : '',
-    area ? `${area} おすすめ` : '',
   ];
   const seen = new Set<string>();
   const out: string[] = [];
@@ -163,9 +169,18 @@ export function seoDisplayState(seo: Record<string, unknown> | null | undefined)
   const num = (v: unknown) => (typeof v === 'number' ? v : null);
   const quota = (seo.quota ?? {}) as Record<string, unknown>;
   const articles = (seo.articles ?? {}) as Record<string, unknown>;
+  const lastSkip = (seo.last_skip ?? {}) as Record<string, unknown>;
   const active = seo.autopilot_active === true;
   const lastResult = typeof seo.last_result === 'string' ? seo.last_result : '';
-  const unused = num(seo.unused_keywords);
+  const skipReason = typeof lastSkip.reason === 'string' ? lastSkip.reason : '';
+  /*
+    2026-09-18（LARUbot `7fe6a3b`）で名前が揃った。
+      status 側 unused_keywords → **keywords_unused**
+      status 側 total_keywords  → **keywords_total**
+    autopilot の応答と同じ名前になった。古い名前も一応見る
+    （向こうを戻されたときに、こちらが黙って0扱いしないため）。
+  */
+  const unused = num(seo.keywords_unused) ?? num(seo.unused_keywords);
   const used = num(quota.used);
   const limit = num(quota.limit);
   const published = num(articles.published);
@@ -174,6 +189,13 @@ export function seoDisplayState(seo: Record<string, unknown> | null | undefined)
   if (published !== null && published > 0 && lastResult === 'published') return 'published';
   if (lastResult === 'draft') return 'draft';
   if (!active) return 'stopped';
+  /*
+    飛ばした回の理由を先に見る（`skipped` は 7fe6a3b で入った）。
+    「枠が残っているのにキーワードが無い」も、その逆も、理由がそのまま出る。
+    理由が取れないときだけ、数から推し量る。
+  */
+  if (skipReason === 'quota_reached') return 'quota_reached';
+  if (skipReason === 'no_unused_keywords') return 'no_keywords';
   if (used !== null && limit !== null && used >= limit) return 'quota_reached';
   if (unused === 0) return 'no_keywords';
   return 'waiting';

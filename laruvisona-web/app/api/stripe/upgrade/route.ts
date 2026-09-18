@@ -3,6 +3,7 @@ import { verifyPrice } from '@/lib/price-integrity';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
+import { alertLarubotFailure } from '@/lib/larubot-alert';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { readContactBody } from '@/lib/contact-contract';
 
@@ -105,7 +106,9 @@ export async function POST(req: Request) {
   try {
     await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, prevPlan: profile.plan });
   } catch (e) {
-    console.error('[stripe/upgrade] LARUbot provision failed:', e);
+    await alertLarubotFailure({
+      kind: 'register', userId: user.id, plan, reason: (e as Error)?.message || 'unknown',
+    });
   }
 
   return NextResponse.json({ ok: true, plan });

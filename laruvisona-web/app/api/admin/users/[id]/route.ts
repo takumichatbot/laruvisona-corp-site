@@ -7,6 +7,7 @@ import { readContactBody } from '@/lib/contact-contract';
 import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
+import { alertLarubotFailure } from '@/lib/larubot-alert';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: 'HP単体 (¥999/月)',
@@ -129,7 +130,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         prevPlan: profileResult.data?.plan ?? null,
       });
     } catch (err) {
-      console.error('[admin/plan] LARUbot への登録に失敗:', err instanceof Error ? err.message : 'unknown');
+      await alertLarubotFailure({
+        kind: 'register', userId: id, plan: body.plan,
+        reason: err instanceof Error ? err.message : 'unknown',
+      });
     }
 
     // プラン変更メール
