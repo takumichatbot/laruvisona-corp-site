@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { configuredStripeMode, eventMatchesConfiguredMode } from '@/lib/stripe-mode';
+import { alertStripeSignatureFailure } from '@/lib/stripe-signature-alert';
 import { invoiceSubscriptionId, subscriptionPeriodEnd, subscriptionStartedAt } from '@/lib/stripe-shape';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -99,12 +100,28 @@ export async function POST(req: Request) {
   } catch (error) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: (error as Error).message === 'too_large' ? 413 : 400 });
   }
-  const sig = req.headers.get('stripe-signature')!;
+  const sig = req.headers.get('stripe-signature');
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch {
+    event = stripe.webhooks.constructEvent(body, sig ?? '', process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch (error) {
+    /*
+      400 を返すのは今までどおり。**知らせる**のを足した。
+
+      本番の STRIPE_WEBHOOK_SECRET が送信先と一致しているかは、
+      本番の決済が来るまで確かめられない（2026-09-19 時点で配信0件）。
+      一致していなければ、最初のお客様の決済がここで弾かれ、
+      契約が有効にならないまま、誰にも知らされない。
+
+      ⚠️ 署名ヘッダ・本文・鍵は渡さない。渡すのは受け口・時刻・例外の種類だけ。
+      ⚠️ 通知は送信先ごとに1時間1通（lib/stripe-signature-alert.ts）。
+    */
+    await alertStripeSignatureFailure(createServiceClient(), {
+      endpoint: '/api/stripe/webhook',
+      hadSignatureHeader: !!sig,
+      errorName: error instanceof Error ? error.name : 'unknown',
+    });
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
