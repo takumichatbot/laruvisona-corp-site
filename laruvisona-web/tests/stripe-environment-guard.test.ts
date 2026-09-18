@@ -173,3 +173,51 @@ test('価格の確認画面が、どちらの環境の鍵かを返す', () => {
   assert.match(s, /agrees: byPrefix === byStripe,/, '鍵の先頭とStripeの値を突き合わせていない');
   assert.ok(!/STRIPE_SECRET_KEY\s*\}/.test(s), '鍵の値を返している');
 });
+
+test('もう1つのStripeの口（予約・注文）も環境を見ている', () => {
+  const s2 = readFileSync('app/api/stripe/scheduling-webhook/route.ts', 'utf8');
+  const sig = s2.indexOf('constructEvent');
+  const guard = s2.indexOf('if(!eventMatchesConfiguredMode(');
+  const firstWrite = s2.indexOf('db.from(');
+  assert.ok(guard > sig, '署名検証より前に見ている');
+  assert.ok(guard < firstWrite, 'DBを書いたあとで見ている');
+  assert.match(s2, /skipped:'mode_mismatch'/);
+});
+
+/**
+ * Stripeに存在しない契約を、運営が片付けられること。
+ * ここが塞がっていたので、今回の1件はDBを手で書き換えるしかなかった。
+ */
+
+const ADMIN_USER = 'app/api/admin/users/[id]/route.ts';
+
+test('Stripeが「無い」と言った契約だけ、Stripeに触らず片付ける', () => {
+  const s = readFileSync(ADMIN_USER, 'utf8');
+  assert.match(s, /code === 'resource_missing' \|\| status === 404/, '無い契約を見分けていない');
+  assert.match(s, /missingInStripe = true;/);
+  // それ以外の失敗は今までどおり止める
+  assert.match(s, /return NextResponse\.json\(\{ error: 'Stripeの解約を確定できませんでした' \}, \{ status: 502 \}\);/,
+    '通信不良まで消してしまう');
+});
+
+test('片付けるときに契約期間も消す（古い期限を残さない）', () => {
+  const s = readFileSync(ADMIN_USER, 'utf8');
+  const block = s.slice(s.indexOf("subscription_status: 'canceled',"), s.indexOf(".eq('id', id).eq('stripe_subscription_id', subscriptionId)"));
+  for (const f of ['stripe_subscription_id: null', 'plan: null', 'contract_starts_at: null', 'contract_ends_at: null']) {
+    assert.ok(block.includes(f), `${f} を消していない`);
+  }
+});
+
+test('片付けても、他のプロフィール情報は消さない', () => {
+  const s = readFileSync(ADMIN_USER, 'utf8');
+  const block = s.slice(s.indexOf("subscription_status: 'canceled',"), s.indexOf(".eq('id', id).eq('stripe_subscription_id', subscriptionId)"));
+  for (const keep of ['business_name', 'stripe_customer_id', 'features', 'admin_notes', 'brand_logo_url']) {
+    assert.ok(!block.includes(keep), `${keep} まで消している`);
+  }
+});
+
+test('対象は1行だけ（契約IDでも絞る）', () => {
+  const s = readFileSync(ADMIN_USER, 'utf8');
+  assert.match(s, /\.eq\('id', id\)\.eq\('stripe_subscription_id', subscriptionId\)\.select\('id'\)/,
+    '利用者IDだけで書き換えている');
+});

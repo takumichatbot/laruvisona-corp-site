@@ -7,12 +7,25 @@ import type Stripe from 'stripe';
 import { commitShopCheckout } from '@/lib/shop-webhook';
 import { readRequestText } from '@/lib/contact-contract';
 import { syncShopRefund } from '@/lib/shop-refunds';
+import { configuredStripeMode, eventMatchesConfiguredMode } from '@/lib/stripe-mode';
 export const dynamic='force-dynamic';
 export async function POST(req:Request){
  const secret=process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
  if(!secret)return reply({error:'Webhook not configured'},503);
  let e:Stripe.Event;
  try{e=getStripe().webhooks.constructEvent(await readRequestText(req,1_000_000),req.headers.get('stripe-signature')||'',secret);}catch{return reply({error:'Invalid signature'},400);}
+ /*
+   こちらの口も、署名だけでなく**どの環境のイベントか**を見る。
+   注文・返金・決済アカウントの状態を書き換えるので、
+   テスト環境のイベントで本番の注文が動くと、売上の記録が壊れる。
+   （2026-09-18、契約側で同じ穴が実害を出した）
+   ⚠️ 400ではなく200。再送させ続けても直らない。
+ */
+ const mode=configuredStripeMode();
+ if(!eventMatchesConfiguredMode(e.livemode,mode)){
+  console.error('[scheduling-webhook] 環境が一致しないので何もしません',{type:e.type,eventLivemode:e.livemode,configured:mode});
+  return reply({received:true,skipped:'mode_mismatch'});
+ }
  if(!e.account)return reply({received:true});
  const db=createServiceClient();
  const accountUpdate=merchantAccountEvent(e);

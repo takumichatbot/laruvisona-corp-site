@@ -192,6 +192,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
       return NextResponse.json({ error: 'Stripe契約を特定できないため解約できません' }, { status: 409 });
     }
+    /*
+      ⚠️ **Stripeに無い契約を、消せないままにしない。**
+
+      2026-09-18: Stripeのサンドボックスから紛れ込んだ契約が profiles に
+      残っていた。ここは retrieve の失敗をすべて 502 で返していたので、
+      「Stripeに存在しない契約」を運営が消す手段が無かった。
+      DBを手で書き換えるしかない状態になっていて、それは記録も残らない。
+
+      Stripeが「そんな契約は無い」と言った場合だけ、Stripe側へは何もせず
+      こちら側の記録を片付ける。それ以外の失敗（通信不良など）は今までどおり
+      502 で止める。消してよいのかが分からないまま消さない。
+    */
+    let missingInStripe = false;
     try {
       const sub = await stripe.subscriptions.retrieve(subscriptionId);
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
@@ -202,18 +215,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         await stripe.subscriptions.cancel(subscriptionId, {}, { idempotencyKey: `laruhp-admin-cancel-${subscriptionId}` });
       }
     } catch (err) {
-      console.error('[admin/cancel] stripe error:', err instanceof Error ? err.message : 'unknown');
-      return NextResponse.json({ error: 'Stripeの解約を確定できませんでした' }, { status: 502 });
+      const code = (err as { code?: string })?.code;
+      const status = (err as { statusCode?: number })?.statusCode;
+      if (code === 'resource_missing' || status === 404) {
+        missingInStripe = true;
+        console.error('[admin/cancel] Stripeに存在しない契約を片付けます', id);
+      } else {
+        console.error('[admin/cancel] stripe error:', err instanceof Error ? err.message : 'unknown');
+        return NextResponse.json({ error: 'Stripeの解約を確定できませんでした' }, { status: 502 });
+      }
     }
+    /*
+      契約期間も一緒に消す。残しておくと、契約が無いのに
+      ダッシュボードが「最低契約期間: 〜◯月◯日」を出し続ける。
+    */
     const canceled = await service.from('profiles').update({
       subscription_status: 'canceled',
       stripe_subscription_id: null,
       plan: null,
+      contract_starts_at: null,
+      contract_ends_at: null,
     }).eq('id', id).eq('stripe_subscription_id', subscriptionId).select('id');
     if (canceled.error || canceled.data?.length !== 1) {
       return NextResponse.json({ error: '解約後の契約状態を保存できませんでした' }, { status: 503 });
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, ...(missingInStripe ? { missingInStripe: true } : {}) });
   }
 
   // 通常の更新（features / is_suspended / admin_notes）
