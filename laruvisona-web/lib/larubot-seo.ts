@@ -156,7 +156,7 @@ export async function fetchLarubotStatus(publicId: string): Promise<Record<strin
 }
 
 export type SeoDisplayState =
-  | 'published' | 'waiting' | 'no_keywords' | 'quota_reached' | 'stopped' | 'failed' | 'draft' | 'unknown';
+ | 'waiting' | 'no_keywords' | 'quota_reached' | 'stopped' | 'failed' | 'draft' | 'unknown';
 
 /**
  * 画面に出す状態を1つに決める。
@@ -185,8 +185,17 @@ export function seoDisplayState(seo: Record<string, unknown> | null | undefined)
   const limit = num(quota.limit);
   const published = num(articles.published);
 
+  /*
+    ⚠️ 「公開済み」は **現在の状態ではなく履歴** なので、ここでは返さない。
+
+    2026-09-18まで、記事が1本でもあると「公開済み」が判定の先頭で勝っていた。
+    翌月に枠が切れても、キーワードが尽きても、生成が失敗していても、
+    画面は「公開済み」のまま。**いま何が起きているかを隠していた。**
+
+    公開した本数は articles.published として、状態とは別枠で常に出す
+    （app/laruHP/seo が「公開 N本」として表示する）。
+  */
   if (lastResult === 'failed') return 'failed';
-  if (published !== null && published > 0 && lastResult === 'published') return 'published';
   if (lastResult === 'draft') return 'draft';
   if (!active) return 'stopped';
   /*
@@ -203,7 +212,6 @@ export function seoDisplayState(seo: Record<string, unknown> | null | undefined)
 
 /** 画面に出す短い文。状態と1対1。 */
 export const SEO_STATE_LABEL: Record<SeoDisplayState, string> = {
-  published: '公開済み',
   waiting: '自動生成待ち',
   no_keywords: 'キーワード不足',
   quota_reached: '今月の枠切れ',
@@ -212,3 +220,78 @@ export const SEO_STATE_LABEL: Record<SeoDisplayState, string> = {
   draft: '下書きで止まりました',
   unknown: '未連携',
 };
+
+/*
+  ここから下は、顧客に見せる文言を作るところ（app/laruHP/seo のカード）。
+
+  ⚠️ **LARUbot が返した文言を、そのまま顧客に見せない。**
+  `last_error.message` は向こうの内部で作られた文字列で、
+  例外の型・ファイル名・URL・鍵らしきものが混ざる可能性がある。
+  何が入るかをこちらで保証できない以上、**出さない**のが正しい。
+  顧客が取るべき行動は「こちらに連絡する」で変わらないので、決め打ちの一文にする。
+*/
+
+/** 状態ごとの「次にすること」。1行で、次の動作が決まる言い方にする。 */
+export function seoNextAction(
+  state: SeoDisplayState,
+  seo: Record<string, unknown> | null | undefined,
+): string {
+  const s = (seo ?? {}) as Record<string, unknown>;
+  const quota = (s.quota ?? {}) as Record<string, unknown>;
+  switch (state) {
+    case 'waiting': {
+      const at = formatSeoDateTime(s.next_run_at);
+      return at ? `${at} に次の記事が出ます。このままで大丈夫です。` : 'このままで大丈夫です。';
+    }
+    case 'no_keywords':
+      return 'キーワードを追加すると、次回から記事が出ます。';
+    case 'quota_reached': {
+      const at = formatSeoDate(quota.resets_at);
+      return at ? `${at} に今月の枠が戻ります。` : '来月になると枠が戻ります。';
+    }
+    case 'stopped':
+      return '自動生成が止まっています。再開するとまた記事が出ます。';
+    case 'failed':
+      return '記事の生成に失敗しました。こちらで確認しますのでご連絡ください。';
+    case 'draft':
+      return '品質の確認で止まっています。内容をご確認ください。';
+    default:
+      return '';
+  }
+}
+
+/** 「9月24日(木) 5:07」のような表示。読めない値は空で返す。 */
+export function formatSeoDateTime(value: unknown): string {
+  const d = toDate(value);
+  if (!d) return '';
+  const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+  return `${d.getMonth() + 1}月${d.getDate()}日(${w}) ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** 「10月1日」のような表示。読めない値は空で返す。 */
+export function formatSeoDate(value: unknown): string {
+  const d = toDate(value);
+  if (!d) return '';
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+function toDate(value: unknown): Date | null {
+  if (typeof value !== 'string' || !value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** これまでに公開した本数。状態とは別に、履歴として常に出す。 */
+export function seoPublishedCount(seo: Record<string, unknown> | null | undefined): number {
+  const articles = ((seo ?? {}) as Record<string, unknown>).articles as Record<string, unknown> | undefined;
+  const n = articles?.published;
+  return typeof n === 'number' && n >= 0 ? n : 0;
+}
+
+/** 今月の枠。分からなければ null。 */
+export function seoQuota(seo: Record<string, unknown> | null | undefined): { used: number; limit: number } | null {
+  const quota = ((seo ?? {}) as Record<string, unknown>).quota as Record<string, unknown> | undefined;
+  const used = quota?.used, limit = quota?.limit;
+  if (typeof used !== 'number' || typeof limit !== 'number') return null;
+  return { used, limit };
+}

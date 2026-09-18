@@ -97,14 +97,21 @@ test('画面の状態は、あちらの値だけで決める', () => {
   const q = (used: number, limit: number) => ({ used, limit });
   assert.equal(seoDisplayState(null), 'unknown');
   assert.equal(seoDisplayState({ last_result: 'failed' }), 'failed');
-  assert.equal(seoDisplayState({ articles: { published: 1 }, last_result: 'published' }), 'published');
+  /*
+    2026-09-18（本番疎通のあと）に決めたこと:
+    **「公開済み」は現在の状態ではなく履歴**なので、状態としては返さない。
+    記事が1本でもあると判定の先頭で勝ってしまい、枠切れ・キーワード切れ・
+    生成失敗を隠していた。公開本数は articles.published として
+    画面が別枠で出す（tests/seo-status-card.test.ts）。
+  */
+  assert.notEqual(seoDisplayState({ articles: { published: 1 }, last_result: 'published' }), 'published');
   assert.equal(seoDisplayState({ last_result: 'draft' }), 'draft');
   assert.equal(seoDisplayState({ autopilot_active: false }), 'stopped');
   assert.equal(seoDisplayState({ autopilot_active: true, quota: q(5, 5), unused_keywords: 3 }), 'quota_reached');
   assert.equal(seoDisplayState({ autopilot_active: true, quota: q(1, 5), unused_keywords: 0 }), 'no_keywords');
   assert.equal(seoDisplayState({ autopilot_active: true, quota: q(1, 5), unused_keywords: 3 }), 'waiting');
-  // 7つの状態すべてに、画面に出す言葉があること
-  for (const state of ['published','waiting','no_keywords','quota_reached','stopped','failed','draft','unknown'] as const) {
+  // 状態すべてに、画面に出す言葉があること
+  for (const state of ['waiting','no_keywords','quota_reached','stopped','failed','draft','unknown'] as const) {
     assert.ok(SEO_STATE_LABEL[state], `${state} の表示名が無い`);
   }
 });

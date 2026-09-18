@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { configuredStripeMode, eventMatchesConfiguredMode } from '@/lib/stripe-mode';
 import { invoiceSubscriptionId, subscriptionPeriodEnd, subscriptionStartedAt } from '@/lib/stripe-shape';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -107,6 +108,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
+  /*
+    署名が正しいだけでは足りない。**どの環境のイベントか**を見る。
+
+    2026-09-18: Stripeのサンドボックス（テスト環境）の
+    checkout.session.completed が本番の profiles を
+    subscription_status:'active' に書き換えていた。
+    実売上0円のまま、管理画面が「稼働中1件 / MRR ¥999」と出していた。
+
+    ⚠️ 400 ではなく 200 で返す。400にするとStripeが再送し続け、
+       送信先の失敗率だけが上がって、何も解決しない。
+    ⚠️ 鍵の値は出さない。出すのは環境の種別だけ。
+  */
+  const stripeMode = configuredStripeMode();
+  if (!eventMatchesConfiguredMode(event.livemode, stripeMode)) {
+    console.error('[Stripe webhook] 環境が一致しないので何もしません', {
+      type: event.type, eventLivemode: event.livemode, configured: stripeMode,
+    });
+    return NextResponse.json({ received: true, skipped: 'mode_mismatch' });
+  }
+
   const supabase = await createServiceClient();
 
   if (['refund.created', 'refund.updated', 'refund.failed'].includes(event.type)) {
@@ -197,37 +218,59 @@ export async function POST(req: Request) {
       const { data: { user: adminCheck } } = await supabase.auth.admin.getUserById(userId);
       if (adminCheck?.email === process.env.ADMIN_EMAIL) break;
 
-      // Fetch subscription to get accurate period dates
-      const subId = typeof session.subscription === 'string' ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id;
-      let contractStart = new Date();
-      let contractEnd = new Date();
-      contractEnd.setMonth(contractEnd.getMonth() + 6);
-      if (subId) {
-        try {
-          const sub = await stripe.subscriptions.retrieve(subId);
-          // 契約の始まりは start_date（契約が始まった日）で固定する。
-          // 請求期間の始まりは請求のたびに翌月へ動くため、最低利用期間の
-          // 判定（lib/billing-portal-mode.ts）が明けなくなる。定期同期
-          // （app/api/cron/subscription-sync）も start_date を正としている。
-          //
-          // 期間の終わりは、この版では items の中にある。直に読むと undefined になり、
-          // contract_ends_at が既定値（処理時刻＋6ヶ月）のまま入っていた。
-          // ダッシュボードが見せている「最低契約期間: 〜◯月◯日」が、
-          // Stripe の実際の契約と**無関係な数字**になっていた。
-          const startedAt = subscriptionStartedAt(sub);
-          if (startedAt) contractStart = new Date(startedAt * 1000);
-          const periodEnd = subscriptionPeriodEnd(sub);
-          if (periodEnd) contractEnd = new Date(periodEnd * 1000);
-          else console.error('[Stripe webhook] period end not found for', subId);
-        } catch { /* fall through to default */ }
+      /*
+        Stripeで契約を確かめられたときだけ、有効な契約として記録する。
+
+        2026-09-18まで、ここは「契約期間の既定値を先に作っておき、
+        Stripe から取れたら上書きする」という書き方だった。
+        既定値は **処理時刻の6ヶ月後**。取りに行く処理は try で囲ってあり、
+        失敗しても何も言わずに既定値のまま先へ進んでいた。
+        実際にこれで、サンドボックスの契約が本番に入った。
+        Stripe上の本当の期間終わりは 2026-09-29 だったのに、
+        DBには「処理時刻＋6ヶ月」の 2026-12-29 が入っていた。
+        契約の中身を読めていないのに、有効な契約として記録していたということ。
+        しかも、その食い違いは誰にも知らされなかった。
+
+        いまは、読めなければ **何も書かない。**
+        推測した期間・プラン・有効状態は、どれも書かない。
+      */
+      const subId = typeof session.subscription === 'string'
+        ? session.subscription
+        : (session.subscription as Stripe.Subscription | null)?.id;
+      if (!subId) {
+        // 契約IDが無いものは、何度送り直しても変わらない。再送させない。
+        console.error('[Stripe webhook] 契約IDが無いので記録しません', session.id);
+        return NextResponse.json({ received: true, skipped: 'no_subscription_id' });
       }
 
+      let sub: Stripe.Subscription;
+      try {
+        sub = await stripe.subscriptions.retrieve(subId);
+      } catch (error) {
+        // 一時的な失敗かもしれないので、500で返してStripeに送り直してもらう。
+        console.error('[Stripe webhook] 契約を確認できないので記録しません', subId,
+          error instanceof Error ? error.name : 'unknown');
+        return NextResponse.json({ error: 'Subscription could not be verified' }, { status: 500 });
+      }
+
+      // 契約の始まりは start_date（契約が始まった日）で固定する。
+      // 請求期間の始まりは請求のたびに翌月へ動くため、最低利用期間の
+      // 判定（lib/billing-portal-mode.ts）が明けなくなる。定期同期
+      // （app/api/cron/subscription-sync）も start_date を正としている。
+      const startedAt = subscriptionStartedAt(sub);
+      const periodEnd = subscriptionPeriodEnd(sub);
+      if (!periodEnd) console.error('[Stripe webhook] period end not found for', subId);
+
+      /*
+        ⚠️ 取れなかった項目は **null を書く。** 推測値を入れない。
+        「分かっていない」と「6ヶ月後」は、まったく違う意味になる。
+      */
       const profileUpdates: Record<string, unknown> = {
-        stripe_subscription_id: subId ?? (session.subscription as string),
+        stripe_subscription_id: sub.id,
         subscription_status: 'active',
         plan: plan || 'hp',
-        contract_starts_at: contractStart.toISOString(),
-        contract_ends_at: contractEnd.toISOString(),
+        contract_starts_at: startedAt ? new Date(startedAt * 1000).toISOString() : null,
+        contract_ends_at: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       };
       // Save customer ID if session has one (e.g. guest checkout)
       if (session.customer) profileUpdates['stripe_customer_id'] = session.customer as string;

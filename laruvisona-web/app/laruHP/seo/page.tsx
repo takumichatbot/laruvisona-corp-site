@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import SeoStatusCard from '@/components/SeoStatusCard';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Check, RefreshCw, Search } from 'lucide-react';
@@ -375,6 +376,9 @@ export default function SeoPage() {
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         )}
+
+        {/* LARU SEO の様子。連携していない人には何も出ない（カード側で判定） */}
+        <SeoStatusCard siteId={selectedSite?.id ?? null} />
 
         {needsRepublish && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-3">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdminEmail } from '@/lib/adminAuth';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { fetchStripeTruth } from '@/lib/stripe-truth';
 
 async function isAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -8,13 +9,18 @@ async function isAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   return isAdminEmail(user.email);
 }
 
-const PLAN_PRICE: Record<string, number> = {
-  'hp': 999,
-  'hp-bot': 4980,
-  'hp-bot-seo': 9800,
-  'agency': 19800,
-  'lite': 4980,
-};
+/*
+  ⚠️ **金額の正はここではない。Stripeの契約が正。**
+
+  2026-09-18まで、MRRはこの表を profiles の件数に掛けて出していた。
+  Stripeを一度も見ていなかったので、Stripeのサンドボックスから
+  紛れ込んだ1行のせいで、実売上0円のまま「MRR ¥999」と出続けた。
+
+  この表はもう金額には使わない。プラン名の並び順を決めるためだけに残す。
+  （ここの数字と Stripe の請求額が合っているかは
+    /api/admin/price-check が別に見ている）
+*/
+const PLAN_ORDER = ['hp', 'lite', 'hp-bot', 'hp-bot-seo', 'agency'] as const;
 
 export async function GET() {
   const supabase = await createClient();
@@ -37,17 +43,51 @@ export async function GET() {
     service.from('profiles').select('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
     service.from('sites').select('*', { count: 'exact', head: true }),
     service.from('sites').select('*', { count: 'exact', head: true }).eq('published', true),
-    service.from('profiles').select('id, plan, contract_starts_at').eq('subscription_status', 'active'),
+    service.from('profiles').select('id, plan, contract_starts_at, stripe_subscription_id').eq('subscription_status', 'active'),
     service.from('sites').select('id, user_id, published, updated_at'),
     service.from('contacts').select('site_id').gte('created_at', THIRTY_DAYS_AGO),
   ]);
 
+  /*
+    契約と売上は **Stripe を正として数える。**
+
+    profiles に active と書いてあっても、Stripe にその契約が無ければ数えない。
+    （2026-09-18: サンドボックスの契約が本番の profiles に入り込んでいた）
+
+    ⚠️ Stripe に聞けなかったときは、DBの数字を正しい数字として出さない。
+       mrr は 0 にして stripe.ok=false を返し、画面は「確認できません」と出す。
+       ここでDBの数字を返すと、また同じ嘘が静かに戻る。
+  */
+  const truth = await fetchStripeTruth();
+
   const planBreakdown: Record<string, number> = { hp: 0, 'hp-bot': 0, 'hp-bot-seo': 0, agency: 0, lite: 0 };
+  for (const key of PLAN_ORDER) planBreakdown[key] = planBreakdown[key] ?? 0;
+
+  /** profiles が active と言っているのに、Stripeに課金中の契約が無い人 */
+  const unverified: { id: string; plan: string | null; reason: string }[] = [];
   let mrr = 0;
-  for (const p of activeProfiles || []) {
-    const plan = (p.plan as string) || 'hp';
-    planBreakdown[plan] = (planBreakdown[plan] || 0) + 1;
-    mrr += PLAN_PRICE[plan] || 999;
+  let verifiedCount = 0;
+
+  if (truth.ok) {
+    for (const p of activeProfiles || []) {
+      const subId = (p.stripe_subscription_id as string | null) || null;
+      const live = subId ? truth.billable.get(subId) : undefined;
+      if (!live) {
+        unverified.push({
+          id: p.id as string,
+          plan: (p.plan as string) ?? null,
+          reason: !subId ? 'no_subscription_id'
+            : truth.all.has(subId) ? `stripe_status_${truth.all.get(subId)!.status}`
+            : 'not_in_stripe',
+        });
+        continue;
+      }
+      verifiedCount += 1;
+      // 金額は Stripe の実際の請求額。固定表は使わない。
+      mrr += live.monthlyAmount;
+      const plan = (p.plan as string) || 'hp';
+      planBreakdown[plan] = (planBreakdown[plan] || 0) + 1;
+    }
   }
 
   // Churn risk: active users with no published site OR no activity in 30 days
@@ -93,7 +133,15 @@ export async function GET() {
 
   return NextResponse.json({
     totalUsers: totalUsers ?? 0,
-    activeUsers: (activeProfiles || []).length,
+    // Stripeで確かめられた契約だけを「稼働中」として数える
+    activeUsers: truth.ok ? verifiedCount : 0,
+    /** DBがactiveと言っている数（照合前）。食い違いを見るためだけに出す。 */
+    activeProfilesInDb: (activeProfiles || []).length,
+    stripe: {
+      ok: truth.ok,
+      ...(truth.ok ? {} : { reason: truth.reason ?? 'unknown' }),
+      unverified,
+    },
     pastDueUsers: pastDueUsers ?? 0,
     totalSites: totalSites ?? 0,
     publishedSites: publishedSites ?? 0,

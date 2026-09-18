@@ -9,6 +9,9 @@ interface Stats {
   totalSites: number;
   publishedSites: number;
   mrr: number;
+  /** Stripeと照合できたか。できていないときは、数字を数字として出さない。 */
+  stripe?: { ok: boolean; reason?: string; unverified?: { id: string; plan: string | null; reason: string }[] };
+  activeProfilesInDb?: number;
   planBreakdown: Record<string, number>;
   churnRisk: ChurnUser[];
 }
@@ -372,7 +375,7 @@ export default function AdminPage() {
                 { label: '支払遅延', value: stats.pastDueUsers, color: stats.pastDueUsers > 0 ? 'text-red-400' : 'text-slate-500' },
                 { label: '総サイト', value: stats.totalSites, color: 'text-white' },
                 { label: '公開中', value: stats.publishedSites, color: 'text-blue-400' },
-                { label: 'MRR', value: `¥${stats.mrr.toLocaleString()}`, color: 'text-yellow-400' },
+                { label: 'MRR', value: stats.stripe && !stats.stripe.ok ? '確認できません' : `¥${stats.mrr.toLocaleString()}`, color: 'text-yellow-400' },
               ].map(s => (
                 <div key={s.label} className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-4 text-center">
                   <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>

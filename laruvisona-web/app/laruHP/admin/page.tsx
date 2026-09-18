@@ -39,6 +39,9 @@ interface Stats {
   totalSites: number;
   publishedSites: number;
   mrr: number;
+  /** Stripeと照合できたか。できていないときは、数字を数字として出さない。 */
+  stripe?: { ok: boolean; reason?: string; unverified?: { id: string; plan: string | null; reason: string }[] };
+  activeProfilesInDb?: number;
   planBreakdown: { hp: number; lite: number; 'hp-bot': number; 'hp-bot-seo': number; agency: number };
   churnRisk: ChurnRiskUser[];
 }
@@ -260,6 +263,20 @@ export default function AdminPage() {
         {/* Stats */}
         {stats && (
           <>
+            {/* Stripeと照合できていない契約を、黙って数字に混ぜない */}
+            {stats.stripe && !stats.stripe.ok && (
+              <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                Stripeに問い合わせできませんでした（{stats.stripe.reason}）。
+                <strong>契約数とMRRは確認できていません。</strong>ここの数字は使わないでください。
+              </div>
+            )}
+            {stats.stripe?.ok && (stats.stripe.unverified?.length ?? 0) > 0 && (
+              <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                DBでは契約中なのに、<strong>Stripeに課金中の契約が無い人が {stats.stripe.unverified!.length} 件</strong>あります
+                （理由: {Array.from(new Set(stats.stripe.unverified!.map(u => u.reason))).join(' / ')}）。
+                この分は契約数にもMRRにも入れていません。
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
               {[
                 { label: '総ユーザー', value: stats.totalUsers, color: 'text-gray-900' },
@@ -267,7 +284,7 @@ export default function AdminPage() {
                 { label: '支払い遅延', value: stats.pastDueUsers, color: 'text-red-600' },
                 { label: '総サイト数', value: stats.totalSites, color: 'text-sky-600' },
                 { label: '公開中', value: stats.publishedSites, color: 'text-cyan-600' },
-                { label: 'MRR', value: `¥${stats.mrr.toLocaleString()}`, color: 'text-emerald-600' },
+                { label: 'MRR', value: stats.stripe && !stats.stripe.ok ? '確認できません' : `¥${stats.mrr.toLocaleString()}`, color: 'text-emerald-600' },
               ].map((s, i) => (
                 <div key={i} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-center">
                   <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>

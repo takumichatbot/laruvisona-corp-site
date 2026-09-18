@@ -4,6 +4,7 @@ import { requireBearer } from '@/lib/scheduled-email';
 import { stripe } from '@/lib/stripe';
 import { MONTHLY, ANNUAL_TOTAL } from '@/lib/laruhp-facts';
 import { verifyFirstMonthCoupon } from '@/lib/price-integrity';
+import { configuredStripeMode } from '@/lib/stripe-mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,8 @@ type Row = {
   plan: string; billing: 'monthly' | 'annual'; shown: number;
   stripe: number | null; currency: string | null; interval: string | null;
   priceId: string | null; status: 'ok' | 'mismatch' | 'unset' | 'unreadable';
+  /** その価格IDが本番のものか（Stripeが返す値。鍵の環境と必ず一致する） */
+  livemode?: boolean;
   note?: string;
 };
 
@@ -57,6 +60,7 @@ async function check(
     const same = amount === shown && price.currency === 'jpy' && interval === wantInterval;
     return {
       plan, billing, shown, stripe: amount, currency: price.currency, interval, priceId,
+      livemode: price.livemode,
       status: same ? 'ok' : 'mismatch',
       ...(same ? {} : { note: amount !== shown
         ? `画面は ${shown} 円、Stripeは ${amount} 円`
@@ -105,7 +109,29 @@ export async function GET(req: Request) {
     }
   }
 
+  /*
+    ⚠️ 鍵の値は出さない。出すのは「どの環境の鍵か」だけ。
+
+    2026-09-18: Stripeのサンドボックスの契約が本番DBに入っていた。
+    どちらの環境で動いているのかを、画面から確かめる手段が無かった。
+    price.livemode は Stripe が返す値なので、**鍵の実際の環境そのもの**である。
+  */
+  const byPrefix = configuredStripeMode();
+  const seen = rows.map(r => r.livemode).filter(v => typeof v === 'boolean') as boolean[];
+  const byStripe = seen.length === 0 ? 'unknown'
+    : seen.every(v => v === true) ? 'live'
+    : seen.every(v => v === false) ? 'test'
+    : 'mixed';
+
   return NextResponse.json({
+    environment: {
+      /** 鍵の先頭から見た環境 */
+      byKeyPrefix: byPrefix,
+      /** Stripeが返した価格の livemode から見た環境（こちらが確実） */
+      byStripe,
+      /** 両者が食い違っていたら、設定がおかしい */
+      agrees: byPrefix === byStripe,
+    },
     ok: problems.length === 0 && firstMonthCoupon.status === 'ok',
     firstMonthCoupon,
     problems,
