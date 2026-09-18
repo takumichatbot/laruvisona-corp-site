@@ -8,6 +8,7 @@ import { buildJsonLd, type BusinessInfo } from '@/lib/site-jsonld';
 import { chatPublicId, blogPublicId } from '@/lib/larubot-public-id';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
+import { stripDuplicateHeadMeta } from '@/lib/published-html';
 import { applyTranslationToHtml, isTranslationLocale, translationFor, TRANSLATION_LOCALES } from '@/lib/translate-apply';
 
 // 注: 以前ここで revalidateTag を再エクスポートしていたが、
@@ -184,7 +185,16 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
     '',
   );
 
-  const eagerHtml = withoutBakedEmbeds.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
+  /*
+    書き出し用の <head> に入っている身元のタグ（title・description・og:・
+    twitter:・canonical）を、配信のときだけ落とす。
+    残すと、このページ自身が <head> で出しているものと二重になり、
+    og:image と canonical が **食い違ったまま2つ** 名乗る状態になる。
+    詳しい経緯は lib/published-html.ts。
+  */
+  const deduped = stripDuplicateHeadMeta(withoutBakedEmbeds);
+
+  const eagerHtml = deduped.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
 
   /*
     businessInfo が無くても出す。

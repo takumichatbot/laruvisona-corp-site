@@ -2,6 +2,14 @@ import { MetadataRoute } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
 import { WORKS } from '@/lib/works-data';
 import { listArticles } from '@/lib/laruseo-articles';
+import { listPublishedPathSites, sitemapUrlForSlug } from '@/lib/published-sites-index';
+
+/*
+  公開のたびに変わるので、作り置きにしない。
+  ⚠️ 無しにすると組み立て時の一覧が焼き付き、あとから公開した人が
+     いつまでも載らない。
+*/
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = 'https://laruvisona.jp';
@@ -11,7 +19,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 取りに行けなかった日も 0件で返るので、結果としてその日は載らない。
   const { articles } = await listArticles({ limit: 50 });
 
+  /*
+    顧客が公開したサイト。ここに載せるまで、検索側から辿る道が無かった。
+    独自ドメインの人と、noIndex を選んだ人は入っていない。
+    取得に失敗した日は 0件で返るので、その日は載らない（会社サイトの
+    sitemap 自体は出る）。
+  */
+  const customerSites = await listPublishedPathSites();
+
   return [
+
     // 会社サイト
     { url: base, lastModified: now, changeFrequency: 'monthly', priority: 1.0 },
 
@@ -61,5 +78,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/contact`, lastModified: now, changeFrequency: 'yearly', priority: 0.6 },
     { url: `${base}/terms`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
     { url: `${base}/privacy`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
+
+    // 顧客の公開サイト。会社の項目のあと。
+    ...customerSites.map(site => ({
+      url: sitemapUrlForSlug(base, site.slug),
+      lastModified: site.updatedAt ?? now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    })),
   ];
 }
