@@ -113,6 +113,16 @@ test('IndexNowの送信口が、運営以外から叩けない', () => {
   // 鍵は応答にも記録にも出さない
   assert.doesNotMatch(src, /key\s*\}\)/, '応答に鍵を混ぜていないこと');
   assert.doesNotMatch(src, /console\.(log|error)\([^)]*key/, '記録に鍵を出していないこと');
-  // 形の違う鍵を送ると、以後その host ごと弾かれることがある
-  assert.match(src, /A-Za-z0-9-\]\{8,128\}/);
+  /*
+    形の違う鍵を送ると、以後その host ごと弾かれることがある。
+
+    2026-09-18、顧客サイトの公開時にも送るようになったので、
+    送信そのものは lib/indexnow.ts に1つへ寄せた（2か所に書くと、
+    片方だけ直したときに食い違う）。鍵の形の確認もそちらにある。
+  */
+  const lib = code('lib/indexnow.ts');
+  assert.match(lib, /A-Za-z0-9-\]\{8,128\}/, '鍵の形を確かめずに送っている');
+  assert.match(lib, /if \(!KEY_SHAPE\.test\(key\)\) return \{ ok: false, reason: 'key_invalid' \};/);
+  assert.doesNotMatch(lib, /console\.(log|error)\([^)]*\bkey\b/, '記録に鍵を出していないこと');
+  assert.doesNotMatch(lib, /return \{[^}]*\bkey\b/, '応答に鍵を混ぜていないこと');
 });

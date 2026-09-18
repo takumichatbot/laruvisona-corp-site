@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { isAdminEmail } from '@/lib/adminAuth';
 import { createClient } from '@/lib/supabase/server';
 import { laruHpSitemapXml } from '@/lib/laruhp-public';
+import { submitIndexNow } from '@/lib/indexnow';
 
 /**
  * IndexNow へ「このURLが変わった」と知らせる。
@@ -21,7 +20,6 @@ import { laruHpSitemapXml } from '@/lib/laruhp-public';
 
 export const runtime = 'nodejs';
 
-const ENDPOINT = 'https://api.indexnow.org/indexnow';
 const HOST = 'laruhp.com';
 
 export async function POST() {
@@ -31,36 +29,28 @@ export async function POST() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let key: string;
-  try {
-    key = (await readFile(path.join(process.cwd(), 'public', 'indexnow-key.txt'), 'utf8')).trim();
-  } catch {
-    return NextResponse.json({ error: '鍵のファイルが読めません。' }, { status: 500 });
-  }
-  // 形が違う鍵を送ると、以後その host が弾かれることがある。先に止める。
-  if (!/^[A-Za-z0-9-]{8,128}$/.test(key)) {
-    return NextResponse.json({ error: '鍵の形式が正しくありません。' }, { status: 500 });
-  }
-
+  /*
+    送る処理そのものは lib/indexnow.ts に1つだけ置いてある。
+    顧客サイトの公開時（app/api/sites/[id]/publish）も同じものを呼ぶ。
+    鍵の形の確認も、host の照合も、あちらに入っている。
+    ここで書き直すと、片方だけ直したときに食い違う。
+  */
   const urlList = [...laruHpSitemapXml().matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
-  if (!urlList.length || urlList.some(url => new URL(url).host !== HOST)) {
-    return NextResponse.json({ error: '送る先のURL一覧が正しくありません。' }, { status: 500 });
+  const sent = await submitIndexNow(HOST, urlList);
+  if (!sent.ok) {
+    const message: Record<string, string> = {
+      key_unreadable: '鍵のファイルが読めません。',
+      key_invalid: '鍵の形式が正しくありません。',
+      no_urls: '送る先のURL一覧が正しくありません。',
+      host_mismatch: '送る先のURL一覧が正しくありません。',
+      unreachable: 'IndexNow へ届きませんでした。',
+      rejected: 'IndexNow に受け付けてもらえませんでした。',
+    };
+    const serverSide = sent.reason === 'key_unreadable' || sent.reason === 'key_invalid' || sent.reason === 'no_urls' || sent.reason === 'host_mismatch';
+    return NextResponse.json(
+      { error: message[sent.reason], reason: sent.reason, ...(sent.status ? { status: sent.status } : {}) },
+      { status: serverSide ? 500 : 502 },
+    );
   }
-
-  let status: number;
-  try {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ host: HOST, key, keyLocation: `https://${HOST}/indexnow-key.txt`, urlList }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    status = res.status;
-  } catch {
-    return NextResponse.json({ error: 'IndexNow へ届きませんでした。' }, { status: 502 });
-  }
-
-  // 200/202 以外は受け付けられていない。202 は「受け取った、これから見る」。
-  const accepted = status === 200 || status === 202;
-  return NextResponse.json({ ok: accepted, status, submitted: urlList.length }, { status: accepted ? 200 : 502 });
+  return NextResponse.json({ ok: true, status: sent.status, submitted: sent.count });
 }

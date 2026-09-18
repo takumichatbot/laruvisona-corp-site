@@ -5,6 +5,7 @@ import { exportToHTML } from '@/lib/html-export';
 import { pagesFromBlocksJson } from '@/lib/site-export';
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { hasServiceAccess } from '@/lib/subscription-access';
+import { submitIndexNow } from '@/lib/indexnow';
 import { canonicalBase } from '@/lib/public-site-url';
 import { sitePublishedEmail } from '@/lib/site-published-email';
 import { Resend } from 'resend';
@@ -119,12 +120,38 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     settings_json: site.settings_json,
   });
 
+  /*
+    検索エンジンに「このURLが出た」と知らせる。
+
+    これまで公開しても**どこにも伝えていなかった。** 見つけてもらえるのは、
+    どこかからリンクされるか、クロールが偶然通るまで。
+    「検索流入を継続的に獲得」と売っている製品で、いちばん最初の一歩が
+    抜けていた。
+
+    独自ドメインのサイトは送れない。IndexNow は「そのドメインに鍵ファイルが
+    置いてあること」で持ち主を確かめる作りで、こちらは相手のドメインに
+    ファイルを置けないため。送らずに、そう記録する（黙って落とさない）。
+
+    **届かなくても公開は成功。** 投げるだけで、公開そのものは止めない。
+  */
+  const canonical = canonicalBase({ slug: updated.slug, custom_domain: site.custom_domain });
+  let indexnow: string;
+  if (site.custom_domain) {
+    indexnow = 'skipped_custom_domain';
+    console.warn('[publish] 独自ドメインのため IndexNow へ送れません:', updated.slug);
+  } else {
+    const sent = await submitIndexNow(new URL(canonical).host, [canonical]);
+    indexnow = sent.ok ? 'sent' : `failed_${sent.reason}`;
+    if (!sent.ok) console.error('[publish] IndexNow へ送れませんでした:', updated.slug, sent.reason, sent.status ?? '');
+  }
+
   return NextResponse.json({
     success: true,
     versionSaved: !versionResult.error,
     ...versionResult.error ? { warning: '公開は完了しましたが、版履歴を保存できませんでした' } : {},
     slug: updated.slug,
     url: `/hp/${updated.slug}`,
+    indexnow,
   });
 }
 
