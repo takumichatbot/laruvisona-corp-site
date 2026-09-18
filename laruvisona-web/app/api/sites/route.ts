@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { makeSiteSlug } from '@/lib/site-slug';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { siteCreationAccess } from '@/lib/site-creation-access';
+import { isSeoPlan, initialSeoKeywords, startLarubotAutopilot } from '@/lib/larubot-seo';
 import { readSiteCreate } from '@/lib/site-write-contract';
 
 // GET /api/sites — list user's sites
@@ -122,6 +123,32 @@ export async function POST(req: Request) {
         await svc.from('profiles')
           .update({ pending_larubot_public_id: null, pending_laruseo_public_id: null })
           .eq('id', user.id);
+
+        /*
+          預かっていたということは、**サイトが無い状態で契約した人**。
+          そのとき register は site_id なしで通っているので、
+          はじめのキーワードの材料（店名・業種・エリア）が無いまま
+          自動運転だけ始まっている。ここで材料を渡す。
+
+          ⚠️ 記事を作るのはあちら。こちらは材料を渡して頼むだけ。
+          generate_first は再送しても2本目が出ない（あちらで止めている）。
+        */
+        if (seoId && isSeoPlan(plan)) {
+          const keywords = initialSeoKeywords({
+            name: input.name,
+            industry: input.industry,
+            city: (() => {
+              const bi = ((input.settings as Record<string, unknown>)?.businessInfo ?? {}) as Record<string, unknown>;
+              return typeof bi.city === 'string' ? bi.city : (typeof bi.address === 'string' ? bi.address : null);
+            })(),
+          });
+          if (keywords.length) {
+            const started = await startLarubotAutopilot({ publicId: seoId, keywords, generateFirst: true });
+            if (!started.ok) {
+              console.error('[larubot] 最初のサイトでキーワードを渡せませんでした:', created.id, started.reason, started.status ?? '');
+            }
+          }
+        }
       }
     } catch (e) {
       // 列がまだ無い場合もここに来る（supabase/profiles_pending_larubot.sql を実行する）

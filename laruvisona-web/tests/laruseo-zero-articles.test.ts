@@ -69,7 +69,9 @@ test('移せなくても、サイトの作成は成功として返す', () => {
   // サイトはもう出来ている。ここで失敗を返すと「作れなかった」と思わせる。
   const src = read('app/api/sites/route.ts');
   const at = src.indexOf('pending_larubot_public_id, pending_laruseo_public_id');
-  const around = src.slice(Math.max(0, at - 400), at + 1200);
+  // 窓の広さは、あいだに処理を足すと足りなくなる。囲いと記録の両方が
+  // 入る所までを見る（2026-09-18、自動運転の依頼を足したときに足りなくなった）。
+  const around = src.slice(Math.max(0, at - 400), at + 2600);
   assert.match(around, /try \{/, '投げうる処理を囲っていない');
   assert.match(around, /console\.error\('\[larubot\] held public ids not applied/, '黙っている');
 });

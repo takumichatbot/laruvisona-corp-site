@@ -93,10 +93,14 @@ test('管理画面からのプラン付与も、LARUbot に伝える', () => {
   assert.match(admin, /\[admin\/plan\] LARUbot への登録に失敗:/, '失敗を握りつぶしている');
 });
 
-test('未実装のAPIを、本番から呼んでいない', () => {
+test('画面用の内部APIを、外から叩いていない', () => {
   /*
-    自動運転（/api/hp/seo/autopilot）と状態取得の public_id 対応は、
-    LARUbot 側で実装中。存在する前提で呼ばない。
+    2026-09-18、LARUbot 側で `/api/hp/seo/autopilot` と
+    `status?public_id=` の実装が終わった（3efcbc0）。**この2つは呼んでよい。**
+
+    叩いてはいけないのは、あちらの画面が使う内部の口
+    （`/api/seo/generate_now`・`/api/seo/autopilot_setting`）。
+    ログインを前提にした口で、こちらから叩く想定ではない。
   */
   const dir = new URL('../', import.meta.url);
   const hits: string[] = [];
@@ -107,13 +111,13 @@ test('未実装のAPIを、本番から呼んでいない', () => {
       if (entry.isDirectory()) { walk(next); continue; }
       if (!/\.(ts|tsx)$/.test(entry.name)) continue;
       const body = fs.readFileSync(new URL(next, dir), 'utf8');
-      if (/\/api\/hp\/seo\/autopilot|\/api\/seo\/generate_now|\/api\/seo\/autopilot_setting/.test(body)) {
+      if (/\/api\/seo\/generate_now|\/api\/seo\/autopilot_setting/.test(body)) {
         hits.push(next);
       }
     }
   };
   for (const root of ['app/', 'lib/', 'components/']) walk(root);
-  assert.deepEqual(hits, [], `未実装のAPIを呼んでいる: ${hits.join(', ')}`);
+  assert.deepEqual(hits, [], `画面用の内部APIを叩いている: ${hits.join(', ')}`);
 });
 
 test('記事生成も定期実行も、こちらに無いまま', () => {

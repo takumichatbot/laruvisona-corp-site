@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server';
+import { isSeoPlan, initialSeoKeywords, startLarubotAutopilot } from '@/lib/larubot-seo';
 
 // LARUbot（AIチャットボット）が付くプラン。ここに含まれるプランへ切り替わったときに
 // LARUbot 側のアカウントを自動登録する。
@@ -135,9 +136,17 @@ export async function provisionLarubotOnPlan(params: {
   }
 
   let siteName = '';
+  // はじめのキーワードの材料。整え直しも重複排除もあちらの store_keywords がやる。
+  let seoSeed: { name?: string | null; industry?: string | null; city?: string | null } = {};
   if (siteId) {
-    const { data: site } = await supabase.from('sites').select('name').eq('id', siteId).single();
+    const { data: site } = await supabase.from('sites').select('name, industry, settings_json').eq('id', siteId).single();
     siteName = site?.name || '';
+    const bi = ((site?.settings_json as Record<string, unknown>)?.businessInfo ?? {}) as Record<string, unknown>;
+    seoSeed = {
+      name: site?.name ?? null,
+      industry: (site?.industry as string | null) ?? null,
+      city: typeof bi.city === 'string' ? bi.city : (typeof bi.address === 'string' ? bi.address : null),
+    };
   }
 
   const base = process.env.LARUBOT_API_URL || 'https://larubot.tokyo';
@@ -190,6 +199,37 @@ export async function provisionLarubotOnPlan(params: {
   // コールバックが来れば同じ値で上書きされるだけなので、二重にはならない。
   if (publicId || seoPublicId) {
     await linkLarubotIds({ userId, siteId, publicId, seoPublicId, plan });
+  }
+
+  /*
+    SEOが付くプランなら、**自動運転を始めてくださいと伝える。**
+
+    これまでは register だけで終わっていた。あちらでは SEOオプションが
+    有効になり、月の枠も入るが、**自動運転はOFF・キーワード0**のまま。
+    つまり「連携は成功しているのに記事が永久に出ない」状態になっていた
+    （LARUbot 側の調査 2026-09-18）。
+
+    ⚠️ ここで記事を作るのではない。作るのは向こうの毎時07分の定期実行だけ。
+    こちらは入口を叩くだけ。二重生成になるので、こちらに生成を持たないこと。
+
+    generate_first は「契約したその日に1本出す」ため。
+    再送しても2本目は出ず、枠も減らない（あちらで止めている）。
+    失敗しても契約処理は止めない。ただし黙らない。
+  */
+  if (isSeoPlan(plan) && (seoPublicId || publicId)) {
+    const keywords = initialSeoKeywords(seoSeed);
+    const started = await startLarubotAutopilot({
+      publicId: (seoPublicId || publicId) as string,
+      keywords,
+      // キーワードが1つも無いまま初回生成を頼んでも出ない。材料があるときだけ。
+      generateFirst: keywords.length > 0,
+    });
+    if (started.ok) {
+      console.info('[larubot] 自動運転を開始しました:', userId,
+        `初回=${started.generatedFirst}`, started.generateReason ?? '', `未使用KW=${started.keywordsUnused ?? '-'}`);
+    } else {
+      console.error('[larubot] 自動運転を始められませんでした:', userId, started.reason, started.status ?? '');
+    }
   }
 
   return registration;
