@@ -78,6 +78,35 @@ export async function provisionLarubotOnPlan(params: {
 
   const supabase = createServiceClient();
 
+  /*
+    既に連携情報を持っているなら、**登録し直さない。**
+
+    2026-09-18、LARUbot 側の実コード調査で確認を求められた点
+    （「同一サイトでLARUbot登録処理が複数回走らないか」）。
+
+    通常の経路は1回で済んでいる。
+      新規契約     … Stripe の checkout.session.completed から1回
+      既存の差し替え … app/api/stripe/checkout から1回（prevPlan で弾く）
+    ただし **Stripe の webhook は再送される。** 2xx を返せなかった回は
+    もう一度同じ event が来るので、そのたびに register を叩いていた。
+
+    さらに、解約してから入り直した人は prevPlan が bot でなくなるので、
+    そこでも register が走る。LARUbot 側はメールでテナントを引くので、
+    **登録メールが変わっていれば別テナントになる。** そのとき新しい
+    public_id で上書きすると、記事が入っている元のテナントを見失う。
+
+    だから、持っているものがあればそれを返して終わる。
+    連携情報は失わない（LARUbot 側からの依頼3）。
+  */
+  const held = await existingLarubotIds(userId, siteId);
+  if (held.unknown) {
+    // 分からないまま登録すると、記事が入っているテナントを見失う恐れがある。
+    return { publicId: null, seoPublicId: null, status: 'link_check_failed' };
+  }
+  if (held.publicId || held.seoPublicId) {
+    return { publicId: held.publicId, seoPublicId: held.seoPublicId, status: 'already_linked' };
+  }
+
   let siteName = '';
   if (siteId) {
     const { data: site } = await supabase.from('sites').select('name').eq('id', siteId).single();
@@ -137,6 +166,47 @@ export async function provisionLarubotOnPlan(params: {
   }
 
   return registration;
+}
+
+/**
+ * すでに保存してある public_id を探す。
+ *
+ * site_id があればそのサイト。無ければ、その人のどれかのサイト。
+ * どのサイトにも無ければ、サイトが出来るまでの預かり先（profiles）を見る。
+ *
+ * 読めなかったときは「持っていない」ではなく**分からない**として扱う。
+ * 持っているのに持っていないと答えると、登録し直して上書きしてしまう。
+ */
+async function existingLarubotIds(
+  userId: string,
+  siteId?: string,
+): Promise<{ publicId: string | null; seoPublicId: string | null; unknown?: true }> {
+  const supabase = createServiceClient();
+  const query = supabase.from('sites').select('settings_json').eq('user_id', userId);
+  const { data: sites, error } = siteId ? await query.eq('id', siteId) : await query;
+  if (error) {
+    // 分からないまま登録すると上書きの危険がある。持っている前提で止める。
+    console.error('[larubot] 連携情報を確認できないため登録を見送ります:', userId, error.message);
+    return { publicId: null, seoPublicId: null, unknown: true };
+  }
+  for (const site of sites ?? []) {
+    const settings = (site.settings_json ?? {}) as Record<string, unknown>;
+    const publicId = typeof settings.larubotPublicId === 'string' ? settings.larubotPublicId : null;
+    const seoPublicId = typeof settings.laruseoPublicId === 'string' ? settings.laruseoPublicId : null;
+    if (publicId || seoPublicId) return { publicId, seoPublicId };
+  }
+  const profile = await supabase.from('profiles')
+    .select('pending_larubot_public_id, pending_laruseo_public_id').eq('id', userId).maybeSingle();
+  if (profile.error) {
+    // 列がまだ無い環境もここに来る。見送るほどではないので、無い扱いにする。
+    console.error('[larubot] 預かり分を確認できませんでした:', userId, profile.error.message);
+    return { publicId: null, seoPublicId: null };
+  }
+  const row = profile.data as Record<string, unknown> | null;
+  return {
+    publicId: typeof row?.pending_larubot_public_id === 'string' ? row.pending_larubot_public_id : null,
+    seoPublicId: typeof row?.pending_laruseo_public_id === 'string' ? row.pending_laruseo_public_id : null,
+  };
 }
 
 /**
