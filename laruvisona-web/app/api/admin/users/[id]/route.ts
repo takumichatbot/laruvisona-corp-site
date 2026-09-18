@@ -6,6 +6,7 @@ import { Resend } from 'resend';
 import { readContactBody } from '@/lib/contact-contract';
 import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
+import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: 'HP単体 (¥999/月)',
@@ -61,7 +62,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (rate !== 'allowed') return NextResponse.json({ error: rate === 'limited' ? '少し待ってからお試しください' : '決済受付を確認できません' }, { status: rate === 'limited' ? 429 : 503 });
 
     const profileResult = await service.from('profiles')
-      .select('stripe_subscription_id,stripe_customer_id')
+      .select('stripe_subscription_id,stripe_customer_id,plan')
       .eq('id', id)
       .maybeSingle();
     if (profileResult.error) {
@@ -103,6 +104,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       .select('id');
     if (saved.error || saved.data?.length !== 1) {
       return NextResponse.json({ error: '決済変更後の契約状態を保存できませんでした' }, { status: 503 });
+    }
+
+    /*
+      LARUbot にも伝える。
+
+      ここは profiles.plan を書き換えるだけで、**LARUbot の登録を呼んでいなかった。**
+      手でプランを付けた相手は、あちらに登録されないままになる。
+      決済経路（checkout / webhook / upgrade）には前からあるのに、
+      管理画面から付けたときだけ抜けていた。
+
+      LARUbot の register は email 単位で冪等なので、既に登録済みの人へ
+      叩き直しても public_id は変わらず、記事もキーワードも壊れない
+      （LARUbot 側の回答 2026-09-18）。
+
+      失敗しても管理操作そのものは止めない。ただし黙らない。
+    */
+    try {
+      const { data: { user: planUser } } = await service.auth.admin.getUserById(id);
+      await provisionLarubotOnPlan({
+        userId: id,
+        email: planUser?.email,
+        plan: body.plan,
+        prevPlan: profileResult.data?.plan ?? null,
+      });
+    } catch (err) {
+      console.error('[admin/plan] LARUbot への登録に失敗:', err instanceof Error ? err.message : 'unknown');
     }
 
     // プラン変更メール

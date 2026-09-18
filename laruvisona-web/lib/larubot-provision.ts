@@ -64,7 +64,24 @@ export async function provisionLarubotOnPlan(params: {
   const { userId, email, plan, siteId, prevPlan } = params;
 
   if (!isBotPlan(plan)) return null;
-  if (isBotPlan(prevPlan)) return null; // 既に LARUbot 利用中 → 再登録不要
+  /*
+    2026-09-18、LARUbot 側の実コード調査の回答で方針が変わった所。
+
+    以前はここで `if (isBotPlan(prevPlan)) return null;` として、
+    bot から bot へのプラン変更では register を叩いていなかった。
+    そのため **lite（SEOなし）→ hp-bot-seo（SEOあり）に上がった人の
+    SEOオプションが、あちらで有効にならなかった。**
+
+    あちらの回答:
+      ・register は email 単位で冪等。public_id は再発行されない
+      ・再呼び出しで SEO オプションは有効になる
+      ・記事・キーワード・顧客データ・人が選んだ曜日と時刻・既に買った枠は
+        一切触らない
+      ・「壊れるものはありません。遠慮なく叩いてください」
+
+    なので、プランが変わったときは叩く。抑止するのは下の「同じプランでの
+    叩き直し」（webhook の再送）だけにする。
+  */
 
   // 鍵が無いときに黙って戻っていた。課金は通っているのにボットだけ用意されず、
   // 本人にも運用にも何も出ない状態が成立していた。決済は止めないが、
@@ -103,7 +120,17 @@ export async function provisionLarubotOnPlan(params: {
     // 分からないまま登録すると、記事が入っているテナントを見失う恐れがある。
     return { publicId: null, seoPublicId: null, status: 'link_check_failed' };
   }
-  if (held.publicId || held.seoPublicId) {
+  /*
+    抑止するのは「同じプランで、もう一度来た」場合だけ。
+
+    Stripe の webhook は再送される。2xx を返せなかった回は同じイベントが
+    もう一度来るので、そのたびに register を叩いていた。
+    ただし**プランが変わったときまで止めてはいけない。**
+    止めると、上の lite → hp-bot-seo が伝わらなくなる（同じ穴を作り直す）。
+
+    そこで、登録したときのプランを控えておき、それと同じときだけ見送る。
+  */
+  if ((held.publicId || held.seoPublicId) && held.registeredPlan === plan) {
     return { publicId: held.publicId, seoPublicId: held.seoPublicId, status: 'already_linked' };
   }
 
@@ -162,7 +189,7 @@ export async function provisionLarubotOnPlan(params: {
   // 応答で分かった時点で書き込む。コールバックを待たない。
   // コールバックが来れば同じ値で上書きされるだけなので、二重にはならない。
   if (publicId || seoPublicId) {
-    await linkLarubotIds({ userId, siteId, publicId, seoPublicId });
+    await linkLarubotIds({ userId, siteId, publicId, seoPublicId, plan });
   }
 
   return registration;
@@ -180,32 +207,36 @@ export async function provisionLarubotOnPlan(params: {
 async function existingLarubotIds(
   userId: string,
   siteId?: string,
-): Promise<{ publicId: string | null; seoPublicId: string | null; unknown?: true }> {
+): Promise<{ publicId: string | null; seoPublicId: string | null; registeredPlan: string | null; unknown?: true }> {
   const supabase = createServiceClient();
   const query = supabase.from('sites').select('settings_json').eq('user_id', userId);
   const { data: sites, error } = siteId ? await query.eq('id', siteId) : await query;
   if (error) {
     // 分からないまま登録すると上書きの危険がある。持っている前提で止める。
     console.error('[larubot] 連携情報を確認できないため登録を見送ります:', userId, error.message);
-    return { publicId: null, seoPublicId: null, unknown: true };
+    return { publicId: null, seoPublicId: null, registeredPlan: null, unknown: true };
   }
   for (const site of sites ?? []) {
     const settings = (site.settings_json ?? {}) as Record<string, unknown>;
     const publicId = typeof settings.larubotPublicId === 'string' ? settings.larubotPublicId : null;
     const seoPublicId = typeof settings.laruseoPublicId === 'string' ? settings.laruseoPublicId : null;
-    if (publicId || seoPublicId) return { publicId, seoPublicId };
+    const registeredPlan = typeof settings.larubotRegisteredPlan === 'string' ? settings.larubotRegisteredPlan : null;
+    if (publicId || seoPublicId) return { publicId, seoPublicId, registeredPlan };
   }
   const profile = await supabase.from('profiles')
     .select('pending_larubot_public_id, pending_laruseo_public_id').eq('id', userId).maybeSingle();
   if (profile.error) {
     // 列がまだ無い環境もここに来る。見送るほどではないので、無い扱いにする。
     console.error('[larubot] 預かり分を確認できませんでした:', userId, profile.error.message);
-    return { publicId: null, seoPublicId: null };
+    return { publicId: null, seoPublicId: null, registeredPlan: null };
   }
   const row = profile.data as Record<string, unknown> | null;
   return {
     publicId: typeof row?.pending_larubot_public_id === 'string' ? row.pending_larubot_public_id : null,
     seoPublicId: typeof row?.pending_laruseo_public_id === 'string' ? row.pending_laruseo_public_id : null,
+    // 預かり中はまだサイトが無いので、どのプランで登録したかも持てない。
+    // 次に叩くときは「変わったかもしれない」として通す（冪等なので問題ない）。
+    registeredPlan: null,
   };
 }
 
@@ -220,14 +251,17 @@ export async function linkLarubotIds(params: {
   siteId?: string;
   publicId: string | null;
   seoPublicId: string | null;
+  /** どのプランで登録したか。同じプランでの叩き直しを見送るために控える。 */
+  plan?: string;
 }): Promise<void> {
-  const { userId, siteId, publicId, seoPublicId } = params;
+  const { userId, siteId, publicId, seoPublicId, plan } = params;
   if (!publicId && !seoPublicId) return;
 
   const supabase = createServiceClient();
   const patch = {
     ...(publicId ? { larubotPublicId: publicId, larubot: true } : {}),
     ...(seoPublicId ? { laruseoPublicId: seoPublicId, laruseo: true } : {}),
+    ...(plan ? { larubotRegisteredPlan: plan } : {}),
   };
 
   const query = supabase.from('sites').select('id, settings_json').eq('user_id', userId);

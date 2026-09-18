@@ -32,7 +32,13 @@ test('すでに連携情報があれば、登録し直さない', () => {
   assert.match(s, /const held = await existingLarubotIds\(userId, siteId\);/, '持っているか確かめていない');
   // 条件そのものを見る。ここを見ないと、条件を false に潰されても気づけない
   // （最初そう書いて、変異が素通りした）。
-  assert.match(s, /if \(held\.publicId \|\| held\.seoPublicId\) \{/, '持っているかを見ていない');
+  /*
+    2026-09-18 に条件が1つ増えた。LARUbot 側の回答で
+    「プラン変更のときは register を叩き直すのが正しい」と決まったため、
+    見送るのは**同じプランでの叩き直し**だけになった（tests/larubot-replan.test.ts）。
+  */
+  assert.match(s, /if \(\(held\.publicId \|\| held\.seoPublicId\) && held\.registeredPlan === plan\) \{/,
+    '持っているかを見ていない、またはプランを見ていない');
   assert.match(s, /return \{ publicId: held\.publicId, seoPublicId: held\.seoPublicId, status: 'already_linked' \};/,
     '持っていても登録に進んでいる');
   // register を叩く前に確かめること
@@ -56,15 +62,24 @@ test('分からないときは、登録しない', () => {
     **記事が入っているテナントを見失う。** 分からないときは止める。
   */
   const s = src();
-  assert.match(s, /return \{ publicId: null, seoPublicId: null, unknown: true \};/);
+  assert.match(s, /return \{ publicId: null, seoPublicId: null, registeredPlan: null, unknown: true \};/);
   assert.match(s, /if \(held\.unknown\) \{/, '分からない場合を区別していない');
   assert.match(s, /status: 'link_check_failed'/);
   assert.match(s, /連携情報を確認できないため登録を見送ります/, '黙って見送っている');
 });
 
-test('bot → bot のプラン変更では、これまでどおり叩かない', () => {
+test('bot → bot のプラン変更では、叩く（2026-09-18 に方針が変わった）', () => {
+  /*
+    以前はここで門前払いしていた。その結果
+    lite（SEOなし）→ hp-bot-seo（SEOあり）に上がった人の SEOオプションが
+    あちらで有効にならなかった。
+
+    LARUbot 側の回答: register は冪等、public_id は変わらない、
+    記事もキーワードも人が選んだ曜日・時刻も壊さない。だから叩いてよい。
+  */
   const s = src();
-  assert.match(s, /if \(isBotPlan\(prevPlan\)\) return null;/);
+  assert.doesNotMatch(s, /if \(isBotPlan\(prevPlan\)\) return null;/,
+    '門前払いが復活している（SEOが有効にならない）');
 });
 
 test('こちらに記事生成も定期実行も持たない', () => {
