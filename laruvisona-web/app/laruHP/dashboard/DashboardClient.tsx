@@ -634,14 +634,33 @@ export default function DashboardPage() {
     }
   };
 
+  const [checkoutStarting, setCheckoutStarting] = useState(false);
+  /*
+    「初月無料で始める」——契約していない人が最初に押す、いちばん大事なボタン。
+
+    2026-09-19まで、失敗をどこにも出していなかった。
+    決済側が 429（連打）・503（料金の確認中）・400 を返しても、
+    押した人には**何も起きない**。壊れていると思って帰る。
+    同じ画面の別の決済ボタンは失敗を出しているのに、ここだけ抜けていた。
+  */
   const handleCheckout = async () => {
-    const res = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
+    if (checkoutStarting) return;
+    setCheckoutStarting(true);
+    setPublishToast(null);
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) { window.location.href = data.url; return; }
+      setPublishToast({ message: data.error || '決済ページの取得に失敗しました。もう一度お試しください。', type: 'warn' });
+    } catch {
+      setPublishToast({ message: '通信に失敗しました。時間をおいてもう一度お試しください。', type: 'warn' });
+    } finally {
+      setCheckoutStarting(false);
+    }
   };
 
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
@@ -2299,9 +2318,10 @@ export default function DashboardPage() {
               ) : (
                 <button
                   onClick={handleCheckout}
-                  className="bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all"
+                  disabled={checkoutStarting}
+                  className="bg-sky-600 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  初月無料で始める
+                  {checkoutStarting ? '決済ページへ移動中...' : '初月無料で始める'}
                 </button>
               )}
             </div>
