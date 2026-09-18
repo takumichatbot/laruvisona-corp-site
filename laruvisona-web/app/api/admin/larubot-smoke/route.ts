@@ -22,6 +22,8 @@ export const dynamic = 'force-dynamic';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const short = (v: unknown) => (typeof v === 'string' && v ? `${v.slice(0, 8)}…` : null);
+/** 長い英数字の連なりは伏せる。鍵やトークンが混ざっていても外に出さない。 */
+const scrub = (text: string) => text.replace(/[A-Za-z0-9_-]{24,}/g, '…');
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -56,9 +58,29 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ step: 'register', error: 'LARUbot へ届きませんでした' }, { status: 502 });
   }
-  const regBody = await reg.json().catch(() => null) as Record<string, unknown> | null;
+  /*
+    失敗したときに「何が返ってきたか」まで残す。
+
+    最初に通したとき 403 が返り、`code` が空だった。あちらの仕様では
+    401 unauthorized のはずで、**アプリの応答なのか、手前の何か（WAF等）が
+    返したのかが分からなかった。** 状態コードだけでは、次の一手が決まらない。
+
+    ⚠️ 鍵は絶対に出さない。中身は頭200文字だけ、それらしい文字列は伏せる。
+  */
+  const regText = await reg.text().catch(() => '');
+  let regBody: Record<string, unknown> | null = null;
+  try { regBody = JSON.parse(regText) as Record<string, unknown>; } catch { regBody = null; }
   if (!reg.ok) {
-    return NextResponse.json({ step: 'register', status: reg.status, code: regBody?.code ?? null }, { status: 502 });
+    return NextResponse.json({
+      step: 'register',
+      status: reg.status,
+      code: regBody?.code ?? null,
+      contentType: reg.headers.get('content-type'),
+      server: reg.headers.get('server'),
+      looksJson: regBody !== null,
+      // JSONでない＝アプリではなく手前が返している見込み。頭だけ見る。
+      preview: scrub(regText).slice(0, 200),
+    }, { status: 502 });
   }
   const publicId = [regBody?.laruseo_public_id, regBody?.larubot_public_id, regBody?.public_id]
     .find(v => typeof v === 'string' && v) as string | undefined;
