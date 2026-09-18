@@ -34,6 +34,7 @@ import { hasServiceAccess } from '@/lib/subscription-access';
 import { cleanIncomingText } from '@/lib/safe-markup';
 import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publish-readiness';
 import { publishCompletion } from '@/lib/publish-result';
+import { canonicalBase } from '@/lib/public-site-url';
 import { withPreviewBridge } from '@/lib/preview-frame';
 import { ImageField, FocalField, ImageUploadContext } from '@/components/studio/ImageField';
 import { editStudioBlock } from '@/lib/studio-image';
@@ -567,6 +568,18 @@ function StudioInner() {
   useEffect(()=>{if(!fieldFocus)return; const frame=requestAnimationFrame(()=>{const el=settingsPane.current?.querySelector<HTMLElement>(`[data-field-key="${fieldFocus}"]`);if(el)settingsPane.current?.scrollTo({top:el.offsetTop-80,behavior:'instant'});});return()=>cancelAnimationFrame(frame)},[fieldFocus,focusRequest]);
   const [saveState, setSaveState] = useState<SaveState>({ kind: 'clean', at: null });
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
+  /*
+    公開したあと、**その住所を画面に出す。**
+
+    これまでは公開を押すと「公開しました」という5文字が出るだけで、
+    **URLがどこにも出なかった。** 作り終えて、いちばん見たいものが出ない。
+
+    公開APIは前から `slug` を返している（app/api/sites/[id]/publish）。
+    一覧画面はそれを使っているのに、ここは捨てていた。
+    名刺やSNSに載せるのはこの住所なので、押したその場に出す。
+  */
+  const [publicUrl, setPublicUrl] = useState('');
+  const publicSiteRef = useRef<{ slug: string | null; custom_domain: string | null }>({ slug: null, custom_domain: null });
   const [savedSincePublish, setSavedSincePublish] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishNote, setPublishNote] = useState('');
@@ -759,6 +772,12 @@ function StudioInner() {
           },
         });
         setPublishedAt(s.published ? (s.updated_at as string) : null);
+        publicSiteRef.current = {
+          slug: (s.slug as string | null) ?? null,
+          custom_domain: (s.custom_domain as string | null) ?? null,
+        };
+        // 独自ドメインがあればそちらが正規。無ければ /hp/<slug>。
+        setPublicUrl(s.published ? canonicalBase(publicSiteRef.current) : '');
         setSelectedId(pages[0]?.blocks?.[0]?.id ?? null);
         hydrating.current = true;   // この差し替えは編集ではない
 
@@ -1006,6 +1025,11 @@ function StudioInner() {
       // message（人に見せる文）が先。error は機械向けの合図なので画面に出さない。
       if (!res.ok) throw new Error((b.message as string) || (b.error as string) || `公開できませんでした (${res.status})`);
       setPublishedAt(new Date().toISOString());
+      publicSiteRef.current = {
+        ...publicSiteRef.current,
+        slug: typeof b.slug === 'string' && b.slug ? b.slug : publicSiteRef.current.slug,
+      };
+      setPublicUrl(canonicalBase(publicSiteRef.current));
       // 公開しているあいだに続きを直していたら、「いまの内容が出ている」とは書かない
       setSavedSincePublish(editSeq.current !== seq);
       setPublishNote(publishCompletion(b).message);
@@ -1239,6 +1263,7 @@ function StudioInner() {
                 publishing={publishing}
                 note={publishNote}
                 planNeeded={planNeeded}
+                publicUrl={publicUrl}
                 onPublish={publish}
               />
             )}
@@ -1501,7 +1526,7 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
 }
 
 /* ── 公開の準備 ── */
-function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, onPublish }: {
+function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, publicUrl, onPublish }: {
   items: ReadyItem[];
   siteId: string | null;
   published: boolean;
@@ -1510,8 +1535,10 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
   publishing: boolean;
   note: string;
   planNeeded: boolean;
+  publicUrl: string;
   onPublish: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
   /* 「直さないと困ること」と「直したほうが良いこと」を分ける。
      数の割合（4/7）は、重さの違う項目を同じ1として数えてしまうので出さない。 */
   const blocking = blockingItems(items);
@@ -1552,6 +1579,37 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
           {siteId && published && savedSincePublish && '公開したあとに直した内容があります。もう一度公開すると、その内容が出ます。'}
           {siteId && published && !savedSincePublish && '公開しています。いまの内容が出ています。'}
         </div>
+        {published && publicUrl && (
+          /* ここが、作った人がいちばん見たいもの。名刺・SNS・張り紙に載せる住所。 */
+          <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="text-[11px] font-bold text-slate-500 mb-1">このサイトの住所</div>
+            <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+              className="block text-[12px] text-sky-700 underline break-all leading-relaxed">
+              {publicUrl}
+            </a>
+            <div className="flex gap-2 mt-2">
+              <button type="button"
+                onClick={async () => {
+                  /* 端末や設定によっては使えない。使えなかったことを黙らない
+                     （「押したのに何も起きない」がいちばん困る）。 */
+                  try {
+                    await navigator.clipboard.writeText(publicUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch {
+                    window.prompt('この住所をコピーしてください', publicUrl);
+                  }
+                }}
+                className="flex-1 py-1.5 rounded-md border border-slate-300 bg-white text-[12px] font-bold text-slate-700">
+                {copied ? 'コピーしました' : '住所をコピー'}
+              </button>
+              <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+                className="flex-1 text-center py-1.5 rounded-md border border-slate-300 bg-white text-[12px] font-bold text-slate-700">
+                開いて確かめる
+              </a>
+            </div>
+          </div>
+        )}
         {saveState.kind === 'dirty' && (
           <div className="text-[12px] font-bold text-amber-700 mb-2">先に「保存」を押してください。公開されるのは、保存された内容です。</div>
         )}
