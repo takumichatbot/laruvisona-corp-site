@@ -46,6 +46,53 @@ export async function POST(req: Request) {
   if (!secret) return NextResponse.json({ error: 'LARU_HP_API_SECRET が未設定です' }, { status: 500 });
   const base = process.env.LARUBOT_API_URL || 'https://larubot.tokyo';
 
+  /*
+    切り分け用。3つの口を individually 叩いて、何が通って何が止まるかを見る。
+
+    register が 403 を返し、本文が
+    「お手数ですが、もう一度お試しください。時間が経って、操作の有効…」
+    だった。これは CSRF／セッション期限切れの文面で、
+    **機械からの呼び出しが、画面用の守りに引っかかっている**見込み。
+
+    POST だけが止まって GET は通るなら、その裏付けになる。
+    存在しない public_id を渡すので、通れば 404 が返るはず（副作用なし）。
+  */
+  if (body.probe === true) {
+    const probe = async (label: string, url: string, init: RequestInit) => {
+      try {
+        const res = await fetch(url, { ...init, signal: AbortSignal.timeout(15_000) });
+        const text = await res.text().catch(() => '');
+        let parsed: Record<string, unknown> | null = null;
+        try { parsed = JSON.parse(text) as Record<string, unknown>; } catch { parsed = null; }
+        return {
+          label, status: res.status, server: res.headers.get('server'),
+          contentType: res.headers.get('content-type'), looksJson: parsed !== null,
+          error: parsed?.error ?? null,
+          preview: scrub(text).slice(0, 160),
+        };
+      } catch (e) {
+        return { label, status: 0, error: (e as Error)?.name || 'failed' };
+      }
+    };
+    const json = { 'Content-Type': 'application/json', 'x-laru-secret': secret };
+    return NextResponse.json({
+      probe: [
+        await probe('register(POST)', `${base}/api/hp/register`, {
+          method: 'POST', headers: json,
+          body: JSON.stringify({ email: 'probe-does-not-exist@example.invalid', plan: 'hp', site_name: 'probe' }),
+        }),
+        await probe('seo/autopilot(POST)', `${base}/api/hp/seo/autopilot`, {
+          method: 'POST', headers: json,
+          body: JSON.stringify({ public_id: 'probe-unknown-id', active: true }),
+        }),
+        await probe('status(GET)', `${base}/api/hp/status?public_id=probe-unknown-id`, {
+          headers: { 'x-laru-secret': secret },
+        }),
+        await probe('status(GET・鍵なし)', `${base}/api/hp/status?public_id=probe-unknown-id`, {}),
+      ],
+    });
+  }
+
   // 1. 登録
   let reg: Response;
   try {
