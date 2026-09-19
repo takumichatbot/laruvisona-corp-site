@@ -169,6 +169,7 @@ test('公開する文章に、日本語でない文字が紛れていない', ()
   const foreign = /[ᄀ-ᇿ㄰-㆏가-힯\u0400-\u04FF]/;
   for (const path of [
     'app/laruHP/articles/articles-data.ts',
+    'app/laruHP/articles/articles-2026-09-19.ts',
     'lib/laruhp-industry-detail.ts',
     'lib/trouble-data.ts',
     'lib/studio-start.ts',

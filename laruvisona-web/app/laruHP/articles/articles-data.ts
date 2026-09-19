@@ -1,3 +1,5 @@
+import { ARTICLES_2026_09_19 } from './articles-2026-09-19';
+
 export interface ArticleSource {
   title: string;
   url: string;
@@ -858,6 +860,8 @@ LARU HPの対応プランでは、LARUbot Liteをホームページへ組み合�
 「無料で作れるか」を調べている段階なら、まずここで、**自分の場合にいくらかかるのか**を見てから決めてください。
     `,
   },
+  // 業種別の悩みに1本ずつ答える10本（2026-09-19）。本文は articles-2026-09-19.ts。
+  ...ARTICLES_2026_09_19,
 ];
 
 export function getArticle(slug: string): Article | undefined {

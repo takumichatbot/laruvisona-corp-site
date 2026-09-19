@@ -25,6 +25,18 @@ export const LARUHP_ARTICLE_SLUGS = [
   // 「ホームページ作成 無料」で掲載順位10位（1ページ目）まで来ているのに
   // クリック0だった。答える記事が1本も無かった（Search Console 2026-09-17）。
   'hp-muryou-de-tsukureru-ka',
+  // 業種別の悩みに1本ずつ答える10本（2026-09-19）。主要ページは登録済みだが
+  // 検索から来た人がまだいないので、探されている言葉に近い題で足した。
+  'biyoushitsu-hp-jibun-de-tsukuru',
+  'inshokuten-hp-nani-wo-noseru',
+  'koumuten-sekou-jirei-kakikata',
+  'seitai-chiryouin-hp-hyougen',
+  'shigyou-hp-toiawase-konai',
+  'hp-dokuji-domain-hitsuyou-ka',
+  'hp-koushin-tsuzukanai',
+  'hp-toiawase-konai-kakunin',
+  'hp-yoyaku-uketsuke-tsukeru',
+  'kaigyou-mae-ni-hp-wo-tsukuru',
 ] as const;
 
 const FIXED_PUBLIC_PATHS = ['/plans', '/simulator', '/demo', '/faq', '/domains', '/contact', '/privacy', '/terms', '/tokusho'] as const;
@@ -58,7 +70,7 @@ export function publicPathFromLegacy(pathname: string): string | null {
 }
 
 /** 更新した日。記事を書き直したら、ここも変える（sitemapのlastmodに出る）。 */
-export const LARUHP_SITEMAP_UPDATED = '2026-09-17';
+export const LARUHP_SITEMAP_UPDATED = '2026-09-19';
 
 export function laruHpSitemapXml(lastmod = LARUHP_SITEMAP_UPDATED): string {
   // lastmod が無いと、記事を直しても検索側に「見に来てよい」合図が出ない。

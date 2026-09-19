@@ -7,6 +7,7 @@ import { jsonForScript } from '@/lib/safe-markup';
 import { laruhpOgImage } from '@/lib/laruhp-seo';
 import PublicFooter from '@/components/laruhp/PublicFooter';
 import { INDUSTRIES } from '@/lib/laruhp-facts';
+import { inlineMarkdown } from '@/lib/article-inline';
 
 export async function generateStaticParams() {
   return ARTICLES.map(a => ({ slug: a.slug }));
@@ -66,7 +67,7 @@ function renderMarkdown(md: string) {
       }
       elements.push(
         <ul key={`ul-${i}`} className="list-disc list-inside space-y-1.5 my-3 text-sm text-gray-700 leading-relaxed">
-          {items.map((item, j) => <li key={j} dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />)}
+          {items.map((item, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inlineMarkdown(item) }} />)}
         </ul>
       );
       continue;
@@ -78,7 +79,7 @@ function renderMarkdown(md: string) {
       }
       elements.push(
         <ol key={`ol-${i}`} className="list-decimal list-inside space-y-1.5 my-3 text-sm text-gray-700 leading-relaxed">
-          {items.map((item, j) => <li key={j} dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />)}
+          {items.map((item, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inlineMarkdown(item) }} />)}
         </ol>
       );
       continue;
@@ -101,7 +102,7 @@ function renderMarkdown(md: string) {
             <tbody>
               {rows.slice(1).map((row, ri) => (
                 <tr key={ri} className={ri % 2 === 1 ? 'bg-gray-50' : ''}>
-                  {row.map((cell, ci) => <td key={ci} className="border border-gray-200 px-4 py-2 text-gray-700" dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }} />)}
+                  {row.map((cell, ci) => <td key={ci} className="border border-gray-200 px-4 py-2 text-gray-700" dangerouslySetInnerHTML={{ __html: inlineMarkdown(cell) }} />)}
                 </tr>
               ))}
             </tbody>
@@ -109,13 +110,22 @@ function renderMarkdown(md: string) {
         </div>
       );
       continue;
+    } else if (line.startsWith('> ')) {
+      // 引用。続く「> 」の行をひとつの枠にまとめる（施工事例の型などに使う）。
+      const quoted: string[] = [];
+      while (i < lines.length && lines[i].startsWith('> ')) {
+        quoted.push(inlineMarkdown(lines[i].slice(2)));
+        i++;
+      }
+      elements.push(
+        <blockquote key={`bq-${i}`} className="border-l-4 border-sky-200 bg-white pl-4 pr-3 py-3 my-4 text-sm text-gray-700 leading-relaxed rounded-r-lg"
+          dangerouslySetInnerHTML={{ __html: quoted.join('<br />') }} />
+      );
+      continue;
     } else if (line.trim() === '') {
       // skip blank lines
     } else {
-      const html = line
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/`(.+?)`/g, '<code class="bg-gray-100 px-1 rounded text-[13px] font-mono">$1</code>');
-      elements.push(<p key={i} className="text-sm text-gray-700 leading-relaxed my-2" dangerouslySetInnerHTML={{ __html: html }} />);
+      elements.push(<p key={i} className="text-sm text-gray-700 leading-relaxed my-2" dangerouslySetInnerHTML={{ __html: inlineMarkdown(line) }} />);
     }
     i++;
   }

@@ -26,6 +26,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'LARU HP紹介': 'bg-indigo-100 text-indigo-700',
   'SEO・集客': 'bg-amber-100 text-amber-700',
   'AI活用術': 'bg-purple-100 text-purple-700',
+  '業種別ガイド': 'bg-rose-100 text-rose-700',
 };
 
 function formatDate(s: string) {
