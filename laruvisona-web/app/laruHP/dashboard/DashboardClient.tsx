@@ -748,20 +748,29 @@ export default function DashboardPage() {
 
   const handleAbWinner = async (siteId: string, winner: 'a' | 'b') => {
     setAbWinnerLoading(siteId);
-    const res = await fetch(`/api/sites/${siteId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings_patch: { abStats: null, abWinner: winner } }),
-    });
-    if (res.ok) {
-      setSites(prev => prev.map(s => s.id === siteId
-        ? { ...s, settings_json: { ...(s.settings_json || {}), abStats: undefined } }
-        : s
-      ));
-      setPublishToast({ message: `バリアント ${winner.toUpperCase()} を勝者として確定しました。ビルダーで内容を確認してください。`, type: 'success' });
-      setTimeout(() => setPublishToast(null), 6000);
+    try {
+      const res = await fetch(`/api/sites/${siteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings_patch: { abStats: null, abWinner: winner } }),
+      });
+      if (res.ok) {
+        setSites(prev => prev.map(s => s.id === siteId
+          ? { ...s, settings_json: { ...(s.settings_json || {}), abStats: undefined } }
+          : s
+        ));
+        setPublishToast({ message: `バリアント ${winner.toUpperCase()} を勝者として確定しました。公開サイトにはこの版だけが出ます。`, type: 'success' });
+        setTimeout(() => setPublishToast(null), 6000);
+      } else {
+        // 2026-09-19まで、失敗しても何も出なかった。確定したつもりでテストが続く。
+        const d = await res.json().catch(() => ({}));
+        setPublishToast({ message: d.error || '勝者を確定できませんでした。もう一度お試しください。', type: 'warn' });
+      }
+    } catch {
+      setPublishToast({ message: '通信に失敗しました。もう一度お試しください。', type: 'warn' });
+    } finally {
+      setAbWinnerLoading(null);
     }
-    setAbWinnerLoading(null);
   };
 
   const handleLogout = async () => {
@@ -795,12 +804,22 @@ export default function DashboardPage() {
   const handleSnapshotRestore = async (siteId: string, versionId: string, label: string) => {
     if (!confirm(`「${label}」の時点に復元しますか？現在のコンテンツは上書きされます。`)) return;
     setSnapshotRestoring(versionId);
-    const res = await fetch(`/api/sites/${siteId}/versions/${versionId}`, { method: 'POST' });
-    if (res.ok) {
-      setPublishToast({ message: `「${label}」に復元しました。ビルダーで確認してください。`, type: 'success' });
-      setTimeout(() => setPublishToast(null), 6000);
+    try {
+      const res = await fetch(`/api/sites/${siteId}/versions/${versionId}`, { method: 'POST' });
+      if (res.ok) {
+        setPublishToast({ message: `「${label}」に復元しました。ビルダーで確認してください。`, type: 'success' });
+        setTimeout(() => setPublishToast(null), 6000);
+      } else {
+        // 2026-09-19まで、失敗しても何も出なかった。「上書きされます」と言われて
+        // 押したのに何も起きず、戻したはずの内容を探しに行くことになる。
+        const d = await res.json().catch(() => ({}));
+        setPublishToast({ message: d.error || '復元できませんでした。もう一度お試しください。', type: 'warn' });
+      }
+    } catch {
+      setPublishToast({ message: '通信に失敗しました。もう一度お試しください。', type: 'warn' });
+    } finally {
+      setSnapshotRestoring(null);
     }
-    setSnapshotRestoring(null);
   };
 
   const handleAudit = async (siteId: string) => {

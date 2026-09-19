@@ -43,7 +43,13 @@ export async function GET() {
     service.from('profiles').select('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
     service.from('sites').select('*', { count: 'exact', head: true }),
     service.from('sites').select('*', { count: 'exact', head: true }).eq('published', true),
-    service.from('profiles').select('id, plan, contract_starts_at, stripe_subscription_id').eq('subscription_status', 'active'),
+    /*
+      trialing も数える。lib/subscription-reconcile.ts が profiles に trialing を書き、
+      lib/stripe-truth.ts も active/trialing を「課金が生きている契約」としているのに、
+      ここだけ active しか見ていなかった（2026-09-19 に確認）。
+      試用中の人が、契約数にも食い違いの表にも出なかった。
+    */
+    service.from('profiles').select('id, plan, contract_starts_at, stripe_subscription_id').in('subscription_status', ['active', 'trialing']),
     service.from('sites').select('id, user_id, published, updated_at'),
     service.from('contacts').select('site_id').gte('created_at', THIRTY_DAYS_AGO),
   ]);

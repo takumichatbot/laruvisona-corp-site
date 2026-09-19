@@ -84,6 +84,26 @@ export async function POST(req: Request) {
   const currentPrice = subscription.items.data[0].price.id;
   if (currentPrice === priceId) return NextResponse.json({ error: 'Already on this plan' }, { status: 400 });
 
+  /*
+    年払いの契約を、ここで月払いに切り替えない。
+
+    この口が持っている価格IDは月額だけ（PLAN_PRICE_MAP）。年払いの人が
+    上位プランに変えると、**年払い→月払いに黙って切り替わり、日割り請求が
+    発生する**（2026-09-19 に確認。年払いは checkout で実際に売っている）。
+    請求サイクルが本人の同意なく変わるのは、金額の間違いと同じ重さ。
+
+    年払いのままプランを変えるには年額の価格IDが要るが、それは別の判断なので
+    ここでは**止めるだけ**にする。Stripe には何も書かない。
+  */
+  const currentInterval = subscription.items.data[0].price.recurring?.interval;
+  if (currentInterval && currentInterval !== 'month') {
+    console.error('[stripe/upgrade] 年払い契約のプラン変更は受け付けません', { userId: user.id, interval: currentInterval });
+    return NextResponse.json(
+      { error: '年払いのご契約はこの画面からプランを変更できません。お問い合わせください。', code: 'annual_plan_change_unsupported' },
+      { status: 409 },
+    );
+  }
+
   // Update subscription item to new price (prorate immediately)
   try {
     await stripe.subscriptions.update(profile.stripe_subscription_id, {

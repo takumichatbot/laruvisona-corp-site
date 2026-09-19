@@ -3,6 +3,7 @@ import { makeSiteSlug } from '@/lib/site-slug';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { siteCreationAccess } from '@/lib/site-creation-access';
 import { isSeoPlan, initialSeoKeywords, startLarubotAutopilot } from '@/lib/larubot-seo';
+import { alertLarubotFailure } from '@/lib/larubot-alert';
 import { readSiteCreate } from '@/lib/site-write-contract';
 
 // GET /api/sites — list user's sites
@@ -112,17 +113,35 @@ export async function POST(req: Request) {
       const bot = held.data?.pending_larubot_public_id as string | null | undefined;
       const seoId = held.data?.pending_laruseo_public_id as string | null | undefined;
       if (bot || seoId) {
-        await svc.from('sites').update({
+        /*
+          ⚠️ サイトへ書けたことを確かめてから、預かりを空にする。
+
+          2026-09-19まで、書けたかを見ずに空にしていた。supabase-js は
+          例外ではなく error を返すので、書けなくても catch には来ない。
+          その場合、識別子は**HP側のどこにも残らない**（LARUbot側にだけ
+          テナントがある）。契約は通っているのにボットもSEOも付かず、
+          運営が気づく手段も無かった。
+        */
+        const moved = await svc.from('sites').update({
           settings_json: {
             ...(input.settings as Record<string, unknown>),
             ...(bot ? { larubotPublicId: bot, larubot: true } : {}),
             ...(seoId ? { laruseoPublicId: seoId, laruseo: true } : {}),
           },
-        }).eq('id', created.id).eq('user_id', user.id);
-        // 移したら空にする。残すと2件目のサイトにも同じ識別子が入る。
-        await svc.from('profiles')
-          .update({ pending_larubot_public_id: null, pending_laruseo_public_id: null })
-          .eq('id', user.id);
+        }).eq('id', created.id).eq('user_id', user.id).select('id');
+        if (moved.error || moved.data?.length !== 1) {
+          // 預かりは残す。次のサイト作成でもう一度移せる。運営にも知らせる。
+          console.error('[larubot] 預かった public_id をサイトへ移せませんでした:', created.id, moved.error?.message ?? 'no rows');
+          await alertLarubotFailure({
+            kind: 'link', userId: user.id, plan: null, siteId: created.id,
+            reason: moved.error?.message ?? 'no_rows',
+          });
+        } else {
+          // 移したら空にする。残すと2件目のサイトにも同じ識別子が入る。
+          await svc.from('profiles')
+            .update({ pending_larubot_public_id: null, pending_laruseo_public_id: null })
+            .eq('id', user.id);
+        }
 
         /*
           預かっていたということは、**サイトが無い状態で契約した人**。

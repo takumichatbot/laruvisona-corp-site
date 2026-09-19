@@ -22,6 +22,17 @@ export async function GET(req: Request) {
 
   const settings = result.data.settings_json && typeof result.data.settings_json === 'object'
     ? result.data.settings_json as Record<string, unknown> : {};
+  /*
+    閲覧パスワードを掛けたサイトの文面を、ここから取らせない。
+    proxy の門は /hp/... には掛かるが /api は素通りするので、
+    2026-09-19まで `GET /api/popup?slug=` で門の内側の文面が読めた。
+    ページ本体は門で止まっているので、ここも同じ扱いにする。
+    （合っている人にだけ出すには合言葉の照合が要るが、ポップアップの
+      ために鍵を渡り歩かせる価値は無い。保護中は出さない、で足りる。）
+  */
+  if (typeof settings.sitePassword === 'string' && settings.sitePassword.trim()) {
+    return javascript('// Protected site', 200);
+  }
   const source = Array.isArray(settings.popups) ? settings.popups : [];
   const popups = source.map(sanitizePopup).filter(p => p !== null).slice(0, 20);
   if (!popups.length) return javascript('// No active popups');

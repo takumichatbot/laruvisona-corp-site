@@ -87,7 +87,10 @@ test('配信ページが、実際にこれを通してから差し込んでい�
   const page = readFileSync('app/hp/[slug]/page.tsx', 'utf8');
   assert.match(page, /^\s*const deduped = stripDuplicateHeadMeta\(withoutBakedEmbeds\);$/m,
     '配信ページで stripDuplicateHeadMeta を通していない');
-  assert.match(page, /const eagerHtml = deduped\.replace\(/,
+  // 重複除去 → A/B確定 → 差し込み。途中で元の文書に戻っていないこと。
+  assert.match(page, /const decided = applyAbWinner\(deduped,/,
+    'A/B確定が、重複除去のあとの文書を受け取っていない');
+  assert.match(page, /const eagerHtml = decided\.replace\(/,
     '差し込む値が、通したあとのものになっていない');
 });
 

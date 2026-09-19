@@ -8,7 +8,7 @@ import { buildJsonLd, type BusinessInfo } from '@/lib/site-jsonld';
 import { chatPublicId, blogPublicId } from '@/lib/larubot-public-id';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
-import { stripDuplicateHeadMeta } from '@/lib/published-html';
+import { stripDuplicateHeadMeta, applyAbWinner } from '@/lib/published-html';
 import { applyTranslationToHtml, isTranslationLocale, translationFor, TRANSLATION_LOCALES } from '@/lib/translate-apply';
 
 // 注: 以前ここで revalidateTag を再エクスポートしていたが、
@@ -46,7 +46,21 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!data) return { title: 'Not Found' };
 
   const seo = (data.seo_json ?? {}) as { title?: string; description?: string; ogTitle?: string; ogDescription?: string; ogImage?: string };
-  const settings = (data.settings_json ?? {}) as { noIndex?: boolean; translations?: Record<string, { map?: Record<string, string> }> };
+  const settings = (data.settings_json ?? {}) as {
+    noIndex?: boolean;
+    translations?: Record<string, { map?: Record<string, string> }>;
+    businessInfo?: { ogImage?: string };
+  };
+  /*
+    OGP画像は2か所で入力できる。ビルダー（seo_json.ogImage）と、SEO設定画面
+    （settings_json.businessInfo.ogImage）。2026-09-19まで、後者は**どこにも
+    使われていなかった。** 画面はX/LINEのカードを試写し「次の公開時に反映」と
+    言っていたのに、その画像は出なかった。
+    ビルダー側を優先し、空ならSEO設定画面の値を使う。どちらも無ければ自動生成。
+    ⚠️ http(s) の絶対URLだけ。相対パスや javascript: を og:image に出さない。
+  */
+  const bizOg = settings.businessInfo?.ogImage;
+  const ogImage = seo.ogImage || (typeof bizOg === 'string' && /^https?:\/\//.test(bizOg) ? bizOg : '');
   const translated = isTranslationLocale(lang) ? translationFor(settings as Record<string, unknown>, lang) : null;
   // 同じサイトがパス形式・サブドメイン形式・独自ドメイン形式で開ける。
   // 開かれたホストに合わせて、そのサイトの正規URLを1つに決める。
@@ -80,13 +94,13 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       url: canonical,
       type: 'website',
       // If ogImage is explicitly set in builder, use it; otherwise opengraph-image.tsx handles it
-      ...(seo.ogImage ? { images: [{ url: seo.ogImage, width: 1200, height: 630, alt: ogTitle }] } : {}),
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: ogTitle }] } : {}),
     },
     twitter: {
       card: 'summary_large_image',
       title: ogTitle,
       description: ogDesc,
-      ...(seo.ogImage ? { images: [seo.ogImage] } : {}),
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
   };
 
@@ -194,7 +208,10 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
   */
   const deduped = stripDuplicateHeadMeta(withoutBakedEmbeds);
 
-  const eagerHtml = deduped.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
+  // A/Bテストで勝者を確定してあれば、その版だけを出す（lib/published-html.ts）
+  const decided = applyAbWinner(deduped, (settings as Record<string, unknown>).abWinner);
+
+  const eagerHtml = decided.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
 
   /*
     businessInfo が無くても出す。

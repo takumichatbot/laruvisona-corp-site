@@ -73,3 +73,25 @@ export function stripDuplicateHeadMeta(html: string): string {
   for (const re of DUPLICATE_TAGS) cleaned = cleaned.replace(re, '');
   return cleaned + rest;
 }
+
+/*
+  A/Bテストの「勝者を確定」を、公開側に効かせる。
+
+  2026-09-19 に確認: 画面は「勝者として確定し、A/Bテストを終了しました」と言うが、
+  公開HTMLに焼き込まれた振り分け script は abWinner を知らず、**確定後も
+  50/50 で負けた方を出し続けていた。** しかも公開し直しても直らない。
+
+  振り分け script は lib/html-export.ts が生成する決まった文字列なので、
+  配信時にその2箇所だけを置き換える。
+    v=Math.random()<0.5?'a':'b'   → v='<勝者>'
+    var isNew=!v;                  → var isNew=false;   （集計への送信を止める）
+  ⚠️ 本文には触らない。置き換えは <script> の中の、この2つの文字列だけ。
+*/
+export function applyAbWinner(html: string, winner: unknown): string {
+  if (winner !== 'a' && winner !== 'b') return html;
+  const s = String(html ?? '');
+  if (!s.includes("v=Math.random()<0.5?'a':'b'")) return s;
+  return s
+    .replace("v=Math.random()<0.5?'a':'b'", `v='${winner}'`)
+    .replace('var isNew=!v;', 'var isNew=false;');
+}

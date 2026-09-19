@@ -31,6 +31,16 @@ export async function GET(
     return new Response('Not found', { status: 404 });
   }
 
+  /*
+    「検索結果に出さない」を選んだサイトは、sitemap も出さない。
+    2026-09-19まで、meta robots と robots.txt は noIndex を見ていたのに
+    ここだけ見ておらず、全URLを列挙した sitemap を配っていた。
+  */
+  const settingsForIndex = (site.settings_json as Record<string, unknown>) || {};
+  if (settingsForIndex.noIndex === true) {
+    return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
+  }
+
   // 正規URLは入口のホストに依存させない
   const loc = canonicalBase(site as { slug?: string | null; custom_domain?: string | null });
   const lastmod = site.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0];

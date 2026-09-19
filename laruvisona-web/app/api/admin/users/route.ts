@@ -37,12 +37,18 @@ export async function GET() {
     siteCountMap.set(s.user_id, (siteCountMap.get(s.user_id) ?? 0) + 1);
   }
 
+  /*
+    auth の項目（登録日・最終ログイン）を先に置き、profiles をあとから広げていた。
+    profiles にも created_at があるので、**登録日が profiles の作成日で上書き**されていた
+    （2026-09-19 に確認）。通常は同じ瞬間だが、profiles を作り直した人では食い違う。
+    auth 側を最後に置いて、上書きされないようにする。
+  */
   const users = allAuthUsers.map(u => ({
+    ...profileMap.get(u.id),
     id: u.id,
     email: u.email,
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at,
-    ...profileMap.get(u.id),
     site_count: siteCountMap.get(u.id) ?? 0,
   }));
 

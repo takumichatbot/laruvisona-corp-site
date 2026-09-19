@@ -48,7 +48,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const PLAN_PRICE: Record<string, number> = {
-  hp: 999, lite: 4980, 'hp-bot': 4980, 'hp-bot-seo': 9800, agency: 19800,
+  hp: 999, lite: 2980, 'hp-bot': 4980, 'hp-bot-seo': 9800, agency: 19800,  // 正は lib/laruhp-facts.ts
 };
 
 const PLAN_COLOR: Record<string, string> = {
