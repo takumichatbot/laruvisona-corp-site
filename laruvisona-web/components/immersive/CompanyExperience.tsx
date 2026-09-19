@@ -208,7 +208,7 @@ function Products({
         <h2 id="products-title">
           アイデアで終わらない。
           <br />
-          <span>動いている、その先へ。</span>
+          <span>サービスとして、世に出す。</span>
         </h2>
         <p>
           自らつくり、育てる。
@@ -365,9 +365,9 @@ function Users() {
       </div>
       <div className="lv-section-heading">
         <h2 id="users-title">
-          つくったものは、
+          つくったものが、
           <br />
-          <span>もう現場で動いています。</span>
+          <span>誰に、どう使われているか。</span>
         </h2>
         <p>
           創業50年を超える会社の、
