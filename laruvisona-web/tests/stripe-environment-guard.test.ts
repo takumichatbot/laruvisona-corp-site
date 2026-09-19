@@ -158,6 +158,10 @@ test('画面が、照合できていないMRRを金額として出さない', ()
     const s = readFileSync(p, 'utf8');
     assert.match(s, /stats\.stripe && !stats\.stripe\.ok \? '確認できません'/, `${p} が金額を出し続ける`);
   }
+  // 旧管理画面は、契約者数と年間収益も 0 ではなく「確認できません」にする
+  const legacy = readFileSync('app/admin/page.tsx', 'utf8');
+  assert.match(legacy, /label: 'アクティブ', value: stats\.stripe && !stats\.stripe\.ok \? '確認できません' : stats\.activeUsers/, '旧管理画面の契約者数が 0 を出す');
+  assert.match(legacy, /stats\.stripe && !stats\.stripe\.ok \? '確認できません' : `¥\$\{\(stats\.mrr \* 12\)/, '旧管理画面のARRが ¥0 を出す');
 });
 
 test('食い違いが画面に出る', () => {

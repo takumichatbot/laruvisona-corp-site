@@ -371,7 +371,8 @@ export default function AdminPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
                 { label: '総ユーザー', value: stats.totalUsers, color: 'text-white' },
-                { label: 'アクティブ', value: stats.activeUsers, color: 'text-green-400' },
+                // Stripe と照合できないときの 0 は「契約者0」ではなく「分からない」。laruHP/admin と同じ扱いにする。
+                { label: 'アクティブ', value: stats.stripe && !stats.stripe.ok ? '確認できません' : stats.activeUsers, color: 'text-green-400' },
                 { label: '支払遅延', value: stats.pastDueUsers, color: stats.pastDueUsers > 0 ? 'text-red-400' : 'text-slate-500' },
                 { label: '総サイト', value: stats.totalSites, color: 'text-white' },
                 { label: '公開中', value: stats.publishedSites, color: 'text-blue-400' },
@@ -419,7 +420,7 @@ export default function AdminPage() {
               </div>
               <div className="mt-5 pt-4 border-t border-white/[0.07] flex items-center justify-between">
                 <span className="text-xs text-slate-500">推計年間収益 (ARR)</span>
-                <span className="text-lg font-black text-yellow-400">¥{(stats.mrr * 12).toLocaleString()}</span>
+                <span className="text-lg font-black text-yellow-400">{stats.stripe && !stats.stripe.ok ? '確認できません' : `¥${(stats.mrr * 12).toLocaleString()}`}</span>
               </div>
             </div>
 
