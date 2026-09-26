@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
-import { track } from '@/lib/analytics';
+import { trackBeginCheckout } from '@/lib/funnel';
 import { hasServiceAccess } from '@/lib/subscription-access';
 import PublicFooter from '@/components/laruhp/PublicFooter';
 import { LARUHP_APP_ORIGIN } from '@/lib/laruhp-host';
@@ -110,7 +110,8 @@ function handoffQuery(): string {
 }
 
 async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promise<string | null> {
-  track('begin_checkout', { plan, billing });
+  // begin_checkout は Stripe へ移る直前にだけ送る。ここで送ると、laruhp.com から
+  // アプリ側へ渡すときと、ログインから戻って再開するときで2〜3回数えていた。
   if (checkoutOnAppOrigin(plan, billing)) return null;
   try {
     const res = await fetch('/api/stripe/checkout', {
@@ -138,6 +139,7 @@ async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promi
       return null;
     }
     if (data.url) {
+      trackBeginCheckout(plan, billing);
       window.location.href = data.url;
       return null;
     }

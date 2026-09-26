@@ -19,7 +19,12 @@ export default function GoogleAnalytics() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_ID}', { page_path: window.location.pathname });
+          // laruhp.com（案内）と laruvisona.jp（制作・決済）を1つの訪問として数える。
+          // GA4 標準の linker。行き来するリンクに _gl が付く。
+          gtag('config', '${GA_ID}', {
+            page_path: window.location.pathname,
+            linker: { domains: ['laruhp.com', 'laruvisona.jp'] },
+          });
         `}
       </Script>
     </>

@@ -15,6 +15,7 @@ import { migrationBlockData } from '@/lib/migration-block';
 import Link from 'next/link';
 import Image from 'next/image';
 import { blockIconPath } from '@/lib/laruhp-block-icons';
+import { trackSiteCreate, trackPublishAttempt, trackPublish, trackPurchaseComplete, trackBeginCheckout } from '@/lib/funnel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BlockType =
@@ -4592,6 +4593,7 @@ function BuilderContent() {
   // 数秒だけ様子を見て、反映されたら公開できることを伝える。
   useEffect(() => {
     if (searchParams.get('payment') !== 'success') return;
+    trackPurchaseComplete();
     let alive = true;
     let tries = 0;
     setBuilderToast('お支払いを確認しています…');
@@ -5465,7 +5467,7 @@ function BuilderContent() {
         });
         if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `保存エラー (${res.status})`); }
         const { site: created } = await res.json();
-        if (created?.id) setDbSiteId(created.id);
+        if (created?.id) { setDbSiteId(created.id); trackSiteCreate(created.id, onboardingData?.industry as string | undefined); }
       }
       try { localStorage.setItem('laruHP_builder', JSON.stringify(s0)); } catch { /* 容量超過は無視 */ }
       setLastSavedAt(new Date());
@@ -5534,7 +5536,7 @@ function BuilderContent() {
         }
         const { site: s } = await res.json().catch(() => ({ site: null }));
         id = s?.id;
-        if (id) setDbSiteId(id);
+        if (id) { setDbSiteId(id); trackSiteCreate(id, onboardingData?.industry as string | undefined); }
       }
       if (!id) { setSaveError('公開の準備に失敗しました。通信環境を確認してもう一度お試しください。'); return; }
 
@@ -5546,17 +5548,21 @@ function BuilderContent() {
       }
       const data = await res.json().catch(() => ({}));
       if (data.error === 'subscription_required') {
+        trackPublishAttempt('plan_required');
           setPendingSiteId(id);
         setShowPlanModal(true);
         return;
       }
       if (data.success) {
+        trackPublishAttempt('published');
+        trackPublish();
         setPublished(true);
         setPublishedSlug(data.slug);
         const completion = publishCompletion(data);
         if (completion.warning) setBuilderToast(completion.message);
         if (fromOnboarding) setShowPublishSuccess(true);
       } else {
+        trackPublishAttempt('error');
         setSaveError(data.message || data.error || '公開に失敗しました。もう一度お試しください。');
       }
     } catch {
@@ -7089,7 +7095,7 @@ function BuilderContent() {
                       body: JSON.stringify({ siteId: pendingSiteId, plan: plan.id }),
                     });
                     const d = await res.json();
-                    if (d.url) window.location.href = d.url;
+                    if (d.url) { trackBeginCheckout(plan.id, 'monthly'); window.location.href = d.url; }
                     else setCheckoutError('決済ページの取得に失敗しました。もう一度お試しください。');
                   }}
                   className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-xl px-4 py-3 transition-all text-left"

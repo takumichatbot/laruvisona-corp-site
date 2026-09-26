@@ -11,7 +11,7 @@ import OnboardingTour from '@/components/OnboardingTour';
 import AppShell from '@/components/laruhp/AppShell';
 import SiteThumb from '@/components/laruhp/SiteThumb';
 import { getSiteLimit } from '@/lib/plan-limits';
-import { track } from '@/lib/analytics';
+import { trackPublishAttempt, trackPublish, trackPurchaseComplete, trackBeginCheckout, trackSiteCreate } from '@/lib/funnel';
 import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
 import { publishCompletion } from '@/lib/publish-result';
 import { TERMS } from '@/lib/laruhp-facts';
@@ -335,7 +335,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const p = searchParams.get('payment');
     if (p === 'success' || p === 'canceled') {
-      if (p === 'success') track('purchase_complete');
+      if (p === 'success') trackPurchaseComplete();
       setPaymentBanner(p);
       router.replace('/laruHP/dashboard');
     }
@@ -483,14 +483,18 @@ export default function DashboardPage() {
       const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (data.error === 'subscription_required') {
+        trackPublishAttempt('plan_required');
         setPendingSiteId(siteId);
         setShowPlanModal(true);
         return;
       }
       if (!res.ok || !data.success) {
+        trackPublishAttempt('error');
         setPublishToast({ message: data.message || data.error || 'サイトを公開できませんでした', type: 'warn' });
         return;
       }
+      trackPublishAttempt('published');
+      trackPublish();
       setSites(prev => {
         const updated = prev.map(s => s.id === siteId ? { ...s, published: true, slug: data.slug || s.slug } : s);
         const site = updated.find(s => s.id === siteId);
@@ -654,7 +658,7 @@ export default function DashboardPage() {
         body: JSON.stringify({}),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.url) { window.location.href = data.url; return; }
+      if (res.ok && data.url) { trackBeginCheckout('hp', 'monthly'); window.location.href = data.url; return; }
       setPublishToast({ message: data.error || '決済ページの取得に失敗しました。もう一度お試しください。', type: 'warn' });
     } catch {
       setPublishToast({ message: '通信に失敗しました。時間をおいてもう一度お試しください。', type: 'warn' });
@@ -740,7 +744,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ plan }),
       });
       const checkoutData = await checkoutRes.json();
-      if (checkoutData.url) window.location.href = checkoutData.url;
+      if (checkoutData.url) { trackBeginCheckout(plan, 'monthly'); window.location.href = checkoutData.url; }
       else setUpgradeError('エラーが発生しました');
     }
     setUpgradeLoading(null);
@@ -883,6 +887,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.site) {
+        trackSiteCreate(data.site.id);
         /* 中身が空のサイトは、機能が全部並んだ編集画面ではなく
            「4つの質問」から始める画面で開く。制作画面側は、中身が空なら
            質問から始め、答えたあとはこのサイトにそのまま書き込む。 */
@@ -2461,7 +2466,7 @@ export default function DashboardPage() {
                     setShowSiteLimitModal(null);
                     const res = await fetch('/api/stripe/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: p.id }) });
                     const d = await res.json();
-                    if (d.url) window.location.href = d.url;
+                    if (d.url) { trackBeginCheckout(p.id, 'monthly'); window.location.href = d.url; }
                   }}
                   className="w-full flex items-center justify-between bg-sky-50 hover:bg-sky-100 border border-gray-200 hover:border-sky-300 rounded-xl px-4 py-3 transition-all text-left"
                 >
@@ -2529,7 +2534,7 @@ export default function DashboardPage() {
                           body: JSON.stringify({ siteId: pendingSiteId, plan: plan.id, billing: planModalAnnual ? 'annual' : 'monthly' }),
                         });
                         const d = await res.json();
-                        if (d.url) window.location.href = d.url;
+                        if (d.url) { trackBeginCheckout(plan.id, planModalAnnual ? 'annual' : 'monthly'); window.location.href = d.url; }
                         else setCheckoutError('決済ページの取得に失敗しました。もう一度お試しください。');
                       }}
                       className="w-full flex items-center justify-between bg-sky-50 hover:bg-sky-100 border border-gray-200 hover:border-sky-300 rounded-xl px-4 py-3 transition-all text-left"

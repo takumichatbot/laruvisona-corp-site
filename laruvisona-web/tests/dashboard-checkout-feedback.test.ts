@@ -16,7 +16,8 @@ test('失敗したら、押した人に見える形で知らせる', () => {
 });
 
 test('成功のときだけ遷移する（res.ok を見る）', () => {
-  assert.match(fn, /if \(res\.ok && data\.url\) \{ window\.location\.href = data\.url; return; \}/);
+  // 決済画面へ移る直前に begin_checkout を送るが、条件（res.ok かつ URL あり）は変えない
+  assert.match(fn, /if \(res\.ok && data\.url\) \{ (trackBeginCheckout\([^)]*\); )?window\.location\.href = data\.url; return; \}/);
 });
 
 test('連打で決済セッションを増やさない', () => {

@@ -2,6 +2,7 @@ import './globals.css';
 import { jsonForScript } from '@/lib/safe-markup';
 import SmoothScroll from '@/components/SmoothScroll';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
+import FunnelTracking from '@/components/FunnelTracking';
 import LarubotWidget from '@/components/LarubotWidget';
 import { organizationLd, websiteLd } from '@/lib/organization-ld';
 
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: jsonForScript([organizationLd(), websiteLd()]) }}
         />
         <GoogleAnalytics />
+        <FunnelTracking />
         <SmoothScroll>
           {children}
         </SmoothScroll>

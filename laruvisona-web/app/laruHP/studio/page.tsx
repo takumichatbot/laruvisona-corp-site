@@ -50,6 +50,7 @@ import {arrangeDirection} from '@/lib/studio-direction';
 import SectionAssistant from '@/components/studio/SectionAssistant';
 import {applySectionProposal, type SectionProposal} from '@/lib/studio-ai';
 import {readComposition,clearComposition,buildComposition} from '@/lib/studio-composition';
+import { trackSiteCreate, trackPublishAttempt, trackPublish, trackPurchaseComplete } from '@/lib/funnel';
 import './studio-editor.css';
 import type { Block, Page, SEOSettings } from '@/types/laruHP';
 
@@ -883,6 +884,7 @@ function StudioInner() {
   */
   useEffect(() => {
     if (params.get('payment') !== 'success') return;
+    trackPurchaseComplete();
     let alive = true;
     let tries = 0;
     setPublishNote('お支払いを確認しています…');
@@ -959,6 +961,7 @@ function StudioInner() {
         id = created?.id ?? null;
         if (!id) throw new Error('保存先を確認できませんでした。サイト一覧を確認してください');
         createdHere.current = id;
+        trackSiteCreate(id, intake.industry || undefined);
         setSiteId(id);
         const url = new URL(window.location.href);
         url.searchParams.set('siteId', id);
@@ -1016,6 +1019,7 @@ function StudioInner() {
       const res = await fetch(`/api/sites/${siteId}/publish`, { method: 'POST' });
       const b = await res.json().catch(() => ({}));
       if (b.error === 'subscription_required') {
+        trackPublishAttempt('plan_required');
         setPlanNeeded(true);
         setPublishNote('公開にはプランが必要です。作ったサイトはこのまま残ります。');
         publishingRef.current = false;
@@ -1024,6 +1028,8 @@ function StudioInner() {
       }
       // message（人に見せる文）が先。error は機械向けの合図なので画面に出さない。
       if (!res.ok) throw new Error((b.message as string) || (b.error as string) || `公開できませんでした (${res.status})`);
+      trackPublishAttempt('published');
+      trackPublish();
       setPublishedAt(new Date().toISOString());
       publicSiteRef.current = {
         ...publicSiteRef.current,
@@ -1034,6 +1040,7 @@ function StudioInner() {
       setSavedSincePublish(editSeq.current !== seq);
       setPublishNote(publishCompletion(b).message);
     } catch (e) {
+      trackPublishAttempt('error');
       setPublishNote(e instanceof Error ? e.message : '公開できませんでした');
     }
     publishingRef.current = false;

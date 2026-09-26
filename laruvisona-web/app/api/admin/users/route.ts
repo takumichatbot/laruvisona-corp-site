@@ -50,6 +50,13 @@ export async function GET() {
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at,
     site_count: siteCountMap.get(u.id) ?? 0,
+    // 登録時に残した流入（2026-09-26 以降の登録者だけ。以前の人は空のまま＝不明）
+    acq_source: typeof u.user_metadata?.acq_source === 'string' ? u.user_metadata.acq_source : null,
+    acq_medium: typeof u.user_metadata?.acq_medium === 'string' ? u.user_metadata.acq_medium : null,
+    acq_campaign: typeof u.user_metadata?.acq_campaign === 'string' ? u.user_metadata.acq_campaign : null,
+    acq_landing: typeof u.user_metadata?.acq_landing === 'string' ? u.user_metadata.acq_landing : null,
+    // 登録画面で入れた事業名が auth 側に残っているか（値そのものは profiles 側で扱う）
+    signup_business_name_in_auth: typeof u.user_metadata?.business_name === 'string' && u.user_metadata.business_name.trim() !== '',
   }));
 
   return NextResponse.json({ users });
