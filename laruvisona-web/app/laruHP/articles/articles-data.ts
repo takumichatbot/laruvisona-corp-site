@@ -1,4 +1,5 @@
 import { ARTICLES_2026_09_19 } from './articles-2026-09-19';
+import { ARTICLES_2026_09_26 } from './articles-2026-09-26';
 
 export interface ArticleSource {
   title: string;
@@ -862,6 +863,8 @@ LARU HPの対応プランでは、LARUbot Liteをホームページへ組み合�
   },
   // 業種別の悩みに1本ずつ答える10本（2026-09-19）。本文は articles-2026-09-19.ts。
   ...ARTICLES_2026_09_19,
+  // 工務店・リフォームの3本（2026-09-26）。需要が見えた唯一の語に寄せる。
+  ...ARTICLES_2026_09_26,
 ];
 
 export function getArticle(slug: string): Article | undefined {

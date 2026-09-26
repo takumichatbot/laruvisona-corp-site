@@ -37,6 +37,10 @@ export const LARUHP_ARTICLE_SLUGS = [
   'hp-toiawase-konai-kakunin',
   'hp-yoyaku-uketsuke-tsukeru',
   'kaigyou-mae-ni-hp-wo-tsukuru',
+  // 工務店・リフォーム（2026-09-26）。「工務店 ホームページ 見積り」だけに表示が付いていた
+  'koumuten-hp-jisaku-dekiru-ka',
+  'reform-hp-toiawase-konai',
+  'koumuten-hp-mitsumori-mae-ni-kimeru',
 ] as const;
 
 const FIXED_PUBLIC_PATHS = ['/plans', '/simulator', '/demo', '/faq', '/domains', '/contact', '/privacy', '/terms', '/tokusho'] as const;
@@ -70,7 +74,7 @@ export function publicPathFromLegacy(pathname: string): string | null {
 }
 
 /** 更新した日。記事を書き直したら、ここも変える（sitemapのlastmodに出る）。 */
-export const LARUHP_SITEMAP_UPDATED = '2026-09-19';
+export const LARUHP_SITEMAP_UPDATED = '2026-09-26';
 
 export function laruHpSitemapXml(lastmod = LARUHP_SITEMAP_UPDATED): string {
   // lastmod が無いと、記事を直しても検索側に「見に来てよい」合図が出ない。

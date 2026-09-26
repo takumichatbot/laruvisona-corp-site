@@ -170,6 +170,7 @@ test('公開する文章に、日本語でない文字が紛れていない', ()
   for (const path of [
     'app/laruHP/articles/articles-data.ts',
     'app/laruHP/articles/articles-2026-09-19.ts',
+    'app/laruHP/articles/articles-2026-09-26.ts',
     'lib/laruhp-industry-detail.ts',
     'lib/trouble-data.ts',
     'lib/studio-start.ts',
