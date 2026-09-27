@@ -90,6 +90,44 @@ LARU HP のプランを下げても、LARUbot 側の権限が下がりません�
 7. **冪等。** 同じ本文を何度送っても結果は同じ
 8. **応答で現在の状態を返す。** 例: `{"applied": true, "plan": "lite", "bot": true, "seo": false, "state_at": "..."}`
 
+### HP経由の権利と直接契約の権利を分ける（最重要）
+
+この入口が動かすのは、**LARU HP 経由で付けた権利だけ**です。
+同じテナントに LARUbot / LARU SEO の直接契約がある場合、その権利は止めないでください。
+
+```
+実際に使える権利 = HP経由の権利 ∪ 直接契約の権利
+```
+
+| HP側 | 直接契約 | 実際 |
+|---|---|---|
+| Bot Lite | Professional | Professional のまま |
+| SEOなし | LARU SEO あり | SEO は有効のまま |
+| HP単体 | なし | Bot・SEO とも停止 |
+| Bot Standard → Bot Lite | なし | lite へ |
+
+**実装の前に、LARUbot 側で次を確認してください。**
+
+- HP経由の権利と直接契約の権利を、既存の情報で安全に区別できるか
+  - `is_hp_bundle`
+  - `seo_price_id = hp_bundle`
+  - LARUbot 側の Stripe subscription の有無と内容
+  - `customer_data.plan`
+  - その他の契約情報
+- 区別できない場合は、**権利を下げる処理を本番へ出さず、LARU HP 側へ報告してください**。下げる処理を誤ると、直接契約の顧客のサービスを止めることになります
+
+HP経由の SEO が無くなったときに止めるものは次のとおりです。直接契約の SEO があれば、どちらも有効のままです。
+
+- HP経由で付けた `seo_option_enabled`
+- HP経由で始めた自動運転（`seo_autopilot_active`）
+
+### state_at の扱い（まとめ）
+
+- 保存済みより古い `state_at` → 反映しない（`applied:false, reason:"stale"`）
+- 同じ `state_at` の再送 → 同じ結果を返す（冪等）
+- 新しい `state_at` → 反映する
+- どの場合も public_id は変えず、データは消さない
+
 ### 状態の置き場所
 
 新しい基盤は要りません。既存の `crm_settings` か、テナントの既存レコードに次の3つを足す程度を想定しています。

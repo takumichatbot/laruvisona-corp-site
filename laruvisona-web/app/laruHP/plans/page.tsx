@@ -109,7 +109,7 @@ function handoffQuery(): string {
   return Object.entries(p).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
 }
 
-async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promise<string | null> {
+async function startCheckout(plan: string, billing: 'monthly' | 'annual', confirmed = false): Promise<string | null> {
   // begin_checkout は Stripe へ移る直前にだけ送る。ここで送ると、laruhp.com から
   // アプリ側へ渡すときと、ログインから戻って再開するときで2〜3回数えていた。
   if (checkoutOnAppOrigin(plan, billing)) return null;
@@ -117,8 +117,17 @@ async function startCheckout(plan: string, billing: 'monthly' | 'annual'): Promi
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, billing, ...handoffParams() }),
+      body: JSON.stringify({ plan, billing, ...handoffParams(), ...(confirmed ? { confirmed: true } : {}) }),
     });
+    if (res.status === 409) {
+      // 契約中の人: 何が変わるかを見せ、了承されたときだけ差し替える
+      const pending = await res.json().catch(() => ({}));
+      const notes: string[] = Array.isArray(pending.notes) ? pending.notes : [];
+      if (!confirmed && pending.needsConfirm && window.confirm(notes.join('\n') || 'プランを変更します。よろしいですか？')) {
+        return startCheckout(plan, billing, true);
+      }
+      return null;
+    }
     if (res.status === 401) {
       // 料金ページから「始める」を押す人は、ほとんどが初めての人である。
       // これまではログイン画面へ送っていたので、持っていないアカウントの

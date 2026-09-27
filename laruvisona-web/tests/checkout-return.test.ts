@@ -36,7 +36,7 @@ test('料金ページが、サイトと戻り先を運ぶ', () => {
   const src = read('app/laruHP/plans/page.tsx');
   assert.match(src, /function handoffParams\(\)/, '受け取っていない');
   assert.match(src, /q\.get\('returnTo'\) === 'studio' \? 'studio' : ''/, '戻り先を素通ししている');
-  assert.match(src, /body: JSON\.stringify\(\{ plan, billing, \.\.\.handoffParams\(\) \}\)/,
+  assert.match(src, /body: JSON\.stringify\(\{ plan, billing, \.\.\.handoffParams\(\)/,
     '決済APIへ渡していない');
 });
 

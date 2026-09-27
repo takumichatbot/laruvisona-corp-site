@@ -8,10 +8,8 @@ import AppShell from '@/components/laruhp/AppShell';
 type LarubotPlan = 'lite' | 'starter' | 'pro' | 'laru-cloud';
 
 const LARUBOT_PLANS: { id: LarubotPlan; label: string; desc: string; color: string }[] = [
-  { id: 'lite',       label: 'Lite',       desc: '基本チャット・シンプルなFAQ対応',       color: 'text-gray-600 bg-gray-100 border-gray-300' },
-  { id: 'starter',    label: 'Starter',    desc: 'カスタム対応・基本分析・週次レポート',   color: 'text-sky-700 bg-sky-50 border-sky-200' },
-  { id: 'pro',        label: 'Pro',        desc: '高度な分析・優先サポート・多言語対応',   color: 'text-purple-600 bg-purple-50 border-purple-700' },
-  { id: 'laru-cloud', label: 'LARU Cloud', desc: '完全カスタム・専任担当・SLA保証',        color: 'text-amber-600 bg-amber-50 border-amber-700' },
+  { id: 'lite',       label: 'Lite + SEO', desc: 'LARUbot Lite と LARU SEO（エージェンシープランに含まれます）', color: 'text-gray-600 bg-gray-100 border-gray-300' },
+  // エージェンシー契約に含まれるのは Lite + LARU SEO だけ（lib/laru-entitlement.ts）。通常版の各プランは別契約。
 ];
 
 interface Site {

@@ -1,3 +1,4 @@
+import { planChangeNotes } from '@/lib/laru-entitlement';
 import { revalidateOwnerSites } from '@/lib/revalidate-owner-sites';
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
@@ -93,6 +94,25 @@ export async function POST(req: Request) {
     if (owned.error) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
     if (!owned.data) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     ownedSiteId = owned.data.id;
+  }
+
+  /*
+    すでに契約している人は、ここで契約が差し替わる（日割り）。以前は料金ページの
+    「始める」を押しただけで、上げる方向も下げる方向も確認なしで変わっていた。
+    何が変わるかを見せて、明示の確認（confirmed: true）があったときだけ進める。
+    確認待ちは外部に何もしない。回数制限も使わない（確認後にすぐ送り直せるように）。
+  */
+  if (input.confirmed !== true) {
+    const { data: current, error: currentError } = await supabase
+      .from('profiles').select('plan, stripe_subscription_id').eq('id', user.id).maybeSingle();
+    if (currentError) return NextResponse.json({ error: '現在の契約を確認できませんでした。時間をおいてお試しください。' }, { status: 503 });
+    if (current?.stripe_subscription_id) {
+      return NextResponse.json({
+        error: 'プランの変更内容をご確認ください。',
+        needsConfirm: true,
+        notes: planChangeNotes(current.plan ?? null, plan),
+      }, { status: 409 });
+    }
   }
 
   const rate = await claimPublicRate(createServiceClient(), 'plan-billing', user.id, 1, 60);

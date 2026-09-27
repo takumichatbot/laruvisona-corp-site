@@ -38,6 +38,15 @@ export async function POST(req: Request) {
   if (typeof plan !== 'string' || !VALID_PLANS.includes(plan as LarubotPlan)) {
     return NextResponse.json({ error: 'invalid plan' }, { status: 400 });
   }
+  /*
+    エージェンシー契約に含まれるのは「LARUbot Lite + LARU SEO」だけ（lib/laru-entitlement.ts）。
+    以前はここで starter / pro / laru-cloud も選べて、通常版（別料金）相当のテナントを
+    追加料金なしで作れた。運営以外は Lite のみ受け付け、LARUbot へは agency（Lite + SEO）で送る。
+  */
+  if (!isAdmin && plan !== 'lite') {
+    return NextResponse.json({ error: 'エージェンシープランで追加できるのは LARUbot Lite です' }, { status: 403 });
+  }
+  const registerPlan = isAdmin ? plan : 'agency';
   if (client_email != null && client_email !== '' && (typeof client_email !== 'string' || client_email.length > 254 || !EMAIL.test(client_email))) {
     return NextResponse.json({ error: 'invalid email' }, { status: 400 });
   }
@@ -70,7 +79,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         email: client_email || user.email,
-        plan,
+        plan: registerPlan,
         site_name: site.name,
         user_id: user.id,
         site_id,

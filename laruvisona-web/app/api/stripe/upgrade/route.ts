@@ -24,8 +24,12 @@ export async function POST(req: Request) {
   let body: Record<string, unknown>;
   try { body = await readContactBody(req, 10_000); }
   catch { return NextResponse.json({ error: '入力を確認してください' }, { status: 400 }); }
-  if (typeof body.plan !== 'string' || Object.keys(body).some(key => key !== 'plan')) {
+  if (typeof body.plan !== 'string' || Object.keys(body).some(key => key !== 'plan' && key !== 'confirmed')) {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+  }
+  // 何が変わるかを画面で見せてから（ダッシュボードの確認）でないと変えない
+  if (body.confirmed !== true) {
+    return NextResponse.json({ error: 'プランの変更内容をご確認ください。', needsConfirm: true }, { status: 409 });
   }
   const plan = body.plan;
   const priceId = PLAN_PRICE_MAP[plan];

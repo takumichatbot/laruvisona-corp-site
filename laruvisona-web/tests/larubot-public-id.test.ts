@@ -60,10 +60,12 @@ test('設置タグを出す側が、補い合う規則を通っている', () =>
   assert.match(exporter, /const laruSeoScript = '';/, '公開HTMLがまだ出している');
 });
 
-test('編集画面が、食い違いを黙って通さない', () => {
+test('編集画面で連携IDを入れさせない（食い違いも、他人のIDも作れない）', () => {
+  // 2026-09-27: 接続は契約時の自動連携だけが書く。編集画面は状態を見せるだけ。
   const src = code('app/laruHP/builder/page.tsx');
-  assert.match(src, /publicIdMismatch\(\{ larubotPublicId, laruseoPublicId \}\)/);
-  assert.match(src, /このままだと記事が1件も出ません/);
+  assert.ok(!/onChange=\{e => onLarubotPublicIdChange/.test(src), 'チャットの連携IDを入力できる');
+  assert.ok(!/onChange=\{e => onLaruseoPublicIdChange/.test(src), '記事の連携IDを入力できる');
+  assert.match(src, /LARUbot 接続済み。公開サイトへ自動で設置されています。/);
   // 「別のID」という案内に戻さない
   assert.ok(!src.includes('LARUSEOダッシュボード → 設定 で確認'),
     '別のIDであるかのような案内が残っている');

@@ -1,3 +1,4 @@
+import { keepServerOwnedSettings } from '@/lib/laru-entitlement';
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { readSitePatch, readSiteUpdate } from '@/lib/site-write-contract';
@@ -57,7 +58,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return mergeSettingsAndUpdate(supabase, id, user.id, update, settings_json_patch as Record<string, unknown>);
   }
 
-  if (settings_json !== undefined) update.settings_json = settings_json;
+  if (settings_json !== undefined) {
+    // 接続情報（LARUbot / LARU SEO の public_id）は保存済みの値を保つ（lib/laru-entitlement.ts）
+    if (settings_json === null || typeof settings_json !== 'object' || Array.isArray(settings_json)) {
+      return NextResponse.json({ error: 'settings_json はオブジェクトで送ってください' }, { status: 400 });
+    }
+    const { data: current, error: currentError } = await supabase
+      .from('sites').select('settings_json').eq('id', id).eq('user_id', user.id).maybeSingle();
+    if (currentError) return NextResponse.json({ error: 'サイトを読み込めませんでした' }, { status: 503 });
+    if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    update.settings_json = keepServerOwnedSettings(
+      current.settings_json as Record<string, unknown> | null, settings_json as Record<string, unknown>);
+  }
 
   const { data, error } = await supabase
     .from('sites')
@@ -97,7 +109,9 @@ async function mergeSettingsAndUpdate(
     if (readError) return NextResponse.json({ error: 'サイトを読み込めませんでした' }, { status: 503 });
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const merged = { ...(current.settings_json as Record<string, unknown> || {}), ...patch };
+    const saved = current.settings_json as Record<string, unknown> || {};
+    // 接続情報（LARUbot / LARU SEO の public_id）は保存済みの値を保つ（lib/laru-entitlement.ts）
+    const merged = keepServerOwnedSettings(saved, { ...saved, ...patch });
     const { data, error } = await supabase
       .from('sites')
       .update({ ...baseUpdate, settings_json: merged })

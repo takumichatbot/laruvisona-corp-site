@@ -113,7 +113,9 @@ test('受け口は、届かなかった項目を消さない', () => {
     assert.match(api, new RegExp(`if \\(${key.replace(/[[\]]/g, '')} !== undefined\\) update\\.${key} = ${key};`),
       `${key} が undefined のときに書きに行っている`);
   }
-  assert.match(api, /if \(settings_json !== undefined\) update\.settings_json = settings_json;/);
+  assert.match(api, /if \(settings_json !== undefined\) \{/);
+  // 送られた設定で置き換える。ただし接続情報（public_id）は保存済みの値を保つ
+  assert.match(api, /update\.settings_json = keepServerOwnedSettings\(/);
 });
 
 test('制作スタジオとビルダーは、重ねる形のまま', () => {

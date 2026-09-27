@@ -20,12 +20,8 @@ import { INDUSTRIES } from './laruhp-facts';
  *     `already_done` が返り、**枠を消費しない**（あちらで止めている）
  */
 
-const SEO_PLANS = new Set(['hp-bot-seo', 'agency']);
-
-/** そのプランに LARUSEO が付くか。lib/plan-limits.ts の PLAN_FEATURES と揃えること。 */
-export function isSeoPlan(plan: string | null | undefined): boolean {
-  return !!plan && SEO_PLANS.has(plan);
-}
+/** そのプランに LARUSEO が付くか。正は lib/laru-entitlement.ts の HP_PLAN_PRODUCTS。 */
+export { isSeoPlan } from './laru-entitlement';
 
 export type AutopilotOutcome =
   | { ok: true; generatedFirst: boolean; generateReason: string | null; keywordsUnused: number | null; nextRunAt: string | null }

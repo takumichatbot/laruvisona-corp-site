@@ -16,6 +16,7 @@ import { disablePushNotifications, requestPushPermission } from '@/components/Pw
 import { publishCompletion } from '@/lib/publish-result';
 import { ANNUAL, MONTHLY, TERMS } from '@/lib/laruhp-facts';
 import { chatPublicId } from '@/lib/larubot-public-id';
+import { hpProduct, planChangeNotes, HP_SEO_ARTICLES_PER_MONTH } from '@/lib/laru-entitlement';
 import { hasServiceAccess } from '@/lib/subscription-access';
 import { isValidSiteSlug, isAutoSiteSlug, cleanSiteSlugInput, SITE_SLUG_RULE } from '@/lib/site-slug';
 
@@ -730,12 +731,15 @@ export default function DashboardPage() {
   };
 
   const handleUpgrade = async (plan: string) => {
+    // 何が変わるかを見せてから変える（押しただけで契約が変わっていた）
+    const notes = planChangeNotes(isAdmin ? 'agency' : (profile?.plan || null), plan);
+    if (notes.length && !window.confirm(notes.join('\n'))) return;
     setUpgradeLoading(plan);
     setUpgradeError('');
     const res = await fetch('/api/stripe/upgrade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, confirmed: true }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -745,7 +749,7 @@ export default function DashboardPage() {
       const checkoutRes = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, confirmed: true }),
       });
       const checkoutData = await checkoutRes.json();
       if (checkoutData.url) { trackBeginCheckout(plan, 'monthly'); window.location.href = checkoutData.url; }
@@ -920,6 +924,8 @@ export default function DashboardPage() {
   // LARUbot / LARU SEO が付く契約か（lib/larubot-provision の BOT_PLANS と同じ。agency は上で hp-bot-seo に寄せてある）
   const hasBot = ['lite', 'hp-bot', 'hp-bot-seo'].includes(effectivePlan || '') && hasServiceAccess(effectiveStatus);
   const hasSeo = effectivePlan === 'hp-bot-seo' && hasServiceAccess(effectiveStatus);
+  // お客様に見せる契約内容（運営アカウントは確認用に全部付き）
+  const contracted = hasServiceAccess(effectiveStatus) ? hpProduct(isAdmin ? 'agency' : rawPlan) : null;
   const status = STATUS_MAP[effectiveStatus];
   const planSiteLimit = getSiteLimit(isAdmin ? 'agency' : rawPlan);
 
@@ -1413,7 +1419,7 @@ export default function DashboardPage() {
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">サイトに来た人の質問に、AIチャットが24時間答えます。公開中のサイトへ自動で設置されます。</p>
                 <button onClick={() => handleUpgrade('hp-bot')} disabled={upgradeLoading === 'hp-bot'}
                   className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {upgradeLoading === 'hp-bot' ? '処理中...' : 'HP + Bot プランへアップグレード →'}
+                  {upgradeLoading === 'hp-bot' ? '処理中...' : 'HP + Bot Standard へ変更する →'}
                 </button>
               </div>
             </div>
@@ -1424,7 +1430,7 @@ export default function DashboardPage() {
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">AIがSEO記事を作り、公開中のサイトの記事一覧へ自動で載せます。</p>
                 <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
                   className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
+                  {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO へ変更する →'}
                 </button>
               </div>
             </div>
@@ -1438,7 +1444,7 @@ export default function DashboardPage() {
               <p className="text-gray-500 text-xs leading-relaxed mb-2">AIがSEO記事を作り、公開中のサイトの記事一覧へ自動で載せます。</p>
               <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
                 className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
+                {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO へ変更する →'}
               </button>
             </div>
           </div>
@@ -1452,7 +1458,7 @@ export default function DashboardPage() {
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">AIがSEO記事を作り、公開中のサイトの記事一覧へ自動で載せます。</p>
                 <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
                   className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
+                  {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO へ変更する →'}
                 </button>
               </div>
             </div>
@@ -1463,7 +1469,7 @@ export default function DashboardPage() {
                 <p className="text-gray-500 text-xs leading-relaxed mb-2">複数クライアントのサイトを一元管理。サブアカウント・ホワイトラベル対応。</p>
                 <button onClick={() => handleUpgrade('agency')} disabled={upgradeLoading === 'agency'}
                   className="text-purple-600 hover:text-purple-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {upgradeLoading === 'agency' ? '処理中...' : 'エージェンシープランへアップグレード →'}
+                  {upgradeLoading === 'agency' ? '処理中...' : 'エージェンシーへ変更する →'}
                 </button>
               </div>
             </div>
@@ -1844,9 +1850,9 @@ export default function DashboardPage() {
                     {hasBot && site.settings_json?.larubot !== false && (
                       chatPublicId(site.settings_json ?? {}) ? (
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-[10px]">
-                          <span className="text-indigo-700 font-semibold">LARUbot 接続済み</span>
+                          <span className="text-indigo-700 font-semibold">{contracted?.bot ?? 'LARUbot'} 接続済み</span>
                           {hasSeo && site.settings_json?.laruseo !== false && <span className="text-emerald-700 font-semibold">LARU SEO 接続済み</span>}
-                          <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline ml-auto">通常版のLARUbotを見る</a>
+                          <span className="text-gray-500">公開サイトへ自動で設置されています</span>
                         </div>
                       ) : (
                         <Link href="/laruHP/contact" className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 hover:bg-indigo-100 transition-all">
@@ -2307,6 +2313,18 @@ export default function DashboardPage() {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status.color}`}>
                   {status.label}
                 </span>
+              </div>
+              {/* 何を契約していて、何が自動で付いているか（lib/laru-entitlement.ts が正。内部名は出さない） */}
+              <div className="text-xs text-gray-600 space-y-0.5 mb-1.5">
+                <div>プラン: <strong className="text-gray-900">{isAdmin ? '運営アカウント（確認用）' : (contracted?.name ?? '未契約')}</strong></div>
+                <div>AIチャット: {contracted?.bot ? `${contracted.bot}（公開サイトへ自動で設置）` : '未契約'}</div>
+                <div>LARU SEO: {contracted?.seo ? `あり（記事は月${HP_SEO_ARTICLES_PER_MONTH}本まで・公開サイトの「コラム」へ自動で表示）` : '未契約'}</div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+                  {!contracted?.bot && <Link href="/laruHP/plans" className="text-indigo-600 underline">AIチャットを追加する</Link>}
+                  {!contracted?.seo && <Link href="/laruHP/plans" className="text-emerald-600 underline">SEOも追加する</Link>}
+                  {contracted?.bot && <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="text-gray-500 underline">LARUbot通常版の機能を見る</a>}
+                  {(contracted?.bot || contracted?.seo) && <Link href="/laruHP/contact" className="text-gray-500 underline">通常版への切り替え・記事を増やしたい場合はご相談ください</Link>}
+                </div>
               </div>
               {effectiveStatus === 'active' && profile?.contract_ends_at && (
                 <p className="text-gray-500 text-xs">

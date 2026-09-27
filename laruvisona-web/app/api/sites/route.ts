@@ -1,3 +1,4 @@
+import { keepServerOwnedSettings } from '@/lib/laru-entitlement';
 import { NextResponse } from 'next/server';
 import { makeSiteSlug } from '@/lib/site-slug';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
@@ -65,7 +66,8 @@ export async function POST(req: Request) {
     p_industry: input.industry,
     p_blocks: input.blocks,
     p_seo: input.seo,
-    p_settings: input.settings,
+    // 接続情報（public_id）は作成時に受け取らない。契約時の自動連携だけが書く（lib/laru-entitlement.ts）
+    p_settings: input.settings && typeof input.settings === 'object' ? keepServerOwnedSettings(null, input.settings as Record<string, unknown>) : input.settings,
   });
   if (result.error || !result.data || typeof result.data !== 'object') {
     return NextResponse.json({ error: 'サイトを作成できませんでした' }, { status: 503 });
