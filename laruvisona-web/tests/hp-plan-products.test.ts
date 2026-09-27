@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { HP_PLAN_PRODUCTS, hpProduct, isBotPlan, isSeoPlan, planChangeNotes, keepServerOwnedSettings, HP_SEO_ARTICLES_PER_MONTH } from '../lib/laru-entitlement.ts';
 import { isSeoPlan as seoFromLarubot } from '../lib/larubot-seo.ts';
 import { hasFeature } from '../lib/plan-limits.ts';
-import { FAQ } from '../lib/laruhp-facts.ts';
+import { PLAN_FAQ } from '../lib/laruhp-facts.ts';
 
 /* 2026-09-27 プランの意味を1か所（HP_PLAN_PRODUCTS）に寄せ、各所が食い違わないことを結果で見る。 */
 
@@ -30,7 +30,9 @@ test('表示・出し分け・機能制限・LARUbot登録で、プランの意�
     assert.equal(seoFromLarubot(plan), isSeoPlan(plan), `${plan}: LARUbot登録側と違う`);
   }
   assert.equal(hpProduct('starter'), null, 'LARUbot の内部名をHPのプランとして扱っている');
-  const faq = JSON.stringify(FAQ);
+  const faq = JSON.stringify(PLAN_FAQ);
+  assert.equal(PLAN_FAQ.length, 5);
+  assert.match(readFileSync('app/laruHP/faq/page.tsx', 'utf8'), /PLAN_FAQ\.map/, '/faq に出していない');
   assert.match(faq, new RegExp(`月${HP_SEO_ARTICLES_PER_MONTH}本まで`));
 });
 

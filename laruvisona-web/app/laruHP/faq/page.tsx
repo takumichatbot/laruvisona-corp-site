@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { FAQ_PAGES } from '@/lib/laruhp-faq';
+import { PLAN_FAQ } from '@/lib/laruhp-facts';
 import { jsonForScript } from '@/lib/safe-markup';
 import { laruhpOgImage } from '@/lib/laruhp-seo';
 import PublicFooter from '@/components/laruhp/PublicFooter';
@@ -49,7 +50,12 @@ export default function FaqIndexPage() {
         name: page.question,
         acceptedAnswer: { '@type': 'Answer', text: page.short },
         url: `https://laruhp.com/faq/${page.slug}`,
-      })),
+      })).concat(PLAN_FAQ.map(item => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+        url: 'https://laruhp.com/faq',
+      }))),
     },
   ]);
 
@@ -95,6 +101,16 @@ export default function FaqIndexPage() {
               </li>
             ))}
           </ul>
+
+          <h2 className="mt-12 mb-4 text-lg font-bold text-gray-900">プランと、AIチャット・SEOについて</h2>
+          <dl className="space-y-3">
+            {PLAN_FAQ.map(item => (
+              <div key={item.q} className="rounded-2xl border border-gray-200 bg-white p-5">
+                <dt className="font-bold text-gray-900 leading-snug mb-2">{item.q}</dt>
+                <dd className="text-sm text-gray-500 leading-[1.9]">{item.a}</dd>
+              </div>
+            ))}
+          </dl>
 
           <div className="mt-10 rounded-2xl border border-sky-200 bg-sky-50 p-6">
             <p className="text-sm text-gray-600 leading-[1.95]">
