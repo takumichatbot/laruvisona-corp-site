@@ -7,6 +7,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { finalizeBooking } from '@/lib/booking-finalize';
 import { provisionLarubotOnPlan, LarubotRegisterError } from '@/lib/larubot-provision';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
+import { unpublishSitesOfUser } from '@/lib/unpublish-on-cancel';
 import { Resend } from 'resend';
 import type Stripe from 'stripe';
 import { readRequestText } from '@/lib/contact-contract';
@@ -493,10 +494,19 @@ export async function POST(req: Request) {
       // stripe_customer_id は変わらないので先に取得
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
       const canceledLookup = customerId
-        ? await supabase.from('profiles').select('id').eq('stripe_customer_id', customerId).maybeSingle()
+        ? await supabase.from('profiles').select('id, stripe_subscription_id').eq('stripe_customer_id', customerId).maybeSingle()
         : { data: null, error: null };
       if (canceledLookup.error) return NextResponse.json({ error: 'Subscription owner could not be read' }, { status: 500 });
       const canceledProfile = canceledLookup.data;
+
+      // 案内どおり、契約が終わったらサイトを非公開にする（lib/unpublish-on-cancel.ts）。
+      // 契約状態を書き換える前に行う。失敗したら 500 を返し、Stripe の再送で
+      // もう一度ここから通す（非公開は何度やっても同じ結果になる）。
+      // 別の契約へ乗り換え済みの人（今の契約が別ID）のサイトは止めない。
+      if (canceledProfile && canceledProfile.stripe_subscription_id === sub.id) {
+        const unpublished = await unpublishSitesOfUser(supabase, canceledProfile.id);
+        if (!unpublished.ok) return NextResponse.json({ error: 'Sites could not be unpublished' }, { status: 500 });
+      }
 
       const canceled = await supabase.from('profiles')
         .update({ subscription_status: 'canceled', stripe_subscription_id: null, plan: null })

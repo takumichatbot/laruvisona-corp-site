@@ -3,6 +3,7 @@ import { requireBearer } from '@/lib/scheduled-email';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { readContactBody } from '@/lib/contact-contract';
+import { unpublishSitesOfUser } from '@/lib/unpublish-on-cancel';
 import {
   reconcileSubscription,
   isPlanSubscription,
@@ -126,6 +127,11 @@ async function run(dryRun: boolean, force = false) {
     if (outcome.action === 'conflict') { conflicts.push({ subscriptionId: sub.id, reason: outcome.reason }); continue; }
 
     if (dryRun) { fixed.push({ profileId: profile.id, changed: outcome.changed }); continue; }
+    // 契約が終わった判定なら、案内どおりサイトも非公開にする（状態を書き換える前に）
+    if ((outcome.updates as { subscription_status?: string }).subscription_status === 'canceled') {
+      const unpublished = await unpublishSitesOfUser(db, profile.id);
+      if (!unpublished.ok) return NextResponse.json({ error: 'サイトを非公開にできませんでした', fixed, conflicts }, { status: 503 });
+    }
     const saved = await db.from('profiles').update(outcome.updates).eq('id', profile.id).select('id');
     if (saved.error || saved.data?.length !== 1) {
       return NextResponse.json({ error: '契約状態を保存できませんでした', fixed, conflicts }, { status: 503 });
@@ -155,6 +161,8 @@ async function run(dryRun: boolean, force = false) {
     for (const profile of (data || []) as ProfileBilling[]) {
       if (!isOrphanedActiveProfile(profile, liveIds)) continue;
       if (dryRun) { stopped.push(profile.id); continue; }
+      const unpublished = await unpublishSitesOfUser(db, profile.id);
+      if (!unpublished.ok) return NextResponse.json({ error: 'サイトを非公開にできませんでした', fixed, stopped }, { status: 503 });
       const saved = await db.from('profiles')
         .update({ subscription_status: 'canceled', stripe_subscription_id: null })
         .eq('id', profile.id).select('id');
