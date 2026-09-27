@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { LARUHP_APP_ORIGIN } from '@/lib/laruhp-host';
-import { PRIMARY_CTA, TERMS } from '@/lib/laruhp-facts';
+import { MONTHLY, PRIMARY_CTA, TERMS } from '@/lib/laruhp-facts';
 import PublicFooter from '@/components/laruhp/PublicFooter';
 
 const INDUSTRIES = [
@@ -163,7 +163,7 @@ export default function DemoClient() {
                   </div>
 
                   <div className="bg-sky-50 border border-sky-200 rounded-xl p-4">
-                    <div className="text-2xl font-black text-sky-600 mb-0.5">¥999<span className="text-base font-normal text-gray-500">/月〜</span></div>
+                    <div className="text-2xl font-black text-sky-600 mb-0.5">¥{MONTHLY.hp.toLocaleString('ja-JP')}<span className="text-base font-normal text-gray-500">/月〜</span></div>
                     <div className="text-xs text-gray-500">初月無料 · 最低6ヶ月 · 7ヶ月目から月単位で解約できます</div>
                   </div>
 

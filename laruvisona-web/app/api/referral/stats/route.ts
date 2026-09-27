@@ -1,3 +1,4 @@
+import { MONTHLY } from '@/lib/laruhp-facts';
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 
@@ -10,7 +11,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
 const COMMISSION_RATE = 0.20; // 20% of monthly fee
 
 const PLAN_PRICES: Record<string, number> = {
-  hp: 999, lite: 4980, 'hp-bot': 4980, 'hp-bot-seo': 9800, agency: 19800,
+  hp: MONTHLY.hp, lite: 4980, 'hp-bot': 4980, 'hp-bot-seo': 9800, agency: 19800,
 };
 
 export async function GET() {
@@ -34,8 +35,8 @@ export async function GET() {
     plan: r.plan,
     status: r.subscription_status,
     joinedAt: r.created_at,
-    monthlyFee: PLAN_PRICES[r.plan || 'hp'] || 999,
-    commission: Math.floor((PLAN_PRICES[r.plan || 'hp'] || 999) * COMMISSION_RATE),
+    monthlyFee: PLAN_PRICES[r.plan || 'hp'] || MONTHLY.hp,
+    commission: Math.floor((PLAN_PRICES[r.plan || 'hp'] || MONTHLY.hp) * COMMISSION_RATE),
   }));
 
   const activeReferrals = list.filter(r => r.status === 'active');

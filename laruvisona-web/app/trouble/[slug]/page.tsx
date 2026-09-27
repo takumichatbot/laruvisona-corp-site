@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { MONTHLY } from '@/lib/laruhp-facts';
 import CompanyFooter from '@/components/company/CompanyFooter';
 
 /**
@@ -175,7 +176,7 @@ export default async function TroublePage({ params }: { params: Promise<{ slug: 
               <p className="mb-7 text-sm leading-[1.95] text-slate-300">
                 同じ症状が何度も出るサイトは、一つずつ直しても切りがないことがあります。
                 作り直しが向いている場合のために、当社は月額のホームページ制作サービス
-                「LARU HP」を運営しています。月額999円（税別）から、常時SSL・スマートフォン表示・
+                「LARU HP」を運営しています。月額{MONTHLY.hp.toLocaleString('ja-JP')}円（税別）から、常時SSL・スマートフォン表示・
                 問い合わせフォーム・検索向けの基本設定まで含みます。
                 受託でお引き受けするより安く済む規模であれば、そちらをご案内します。
               </p>

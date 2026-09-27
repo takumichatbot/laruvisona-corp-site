@@ -1,3 +1,4 @@
+import { MONTHLY } from '@/lib/laruhp-facts';
 import { NextResponse } from 'next/server';
 import { configuredStripeMode, eventMatchesConfiguredMode } from '@/lib/stripe-mode';
 import { alertStripeSignatureFailure } from '@/lib/stripe-signature-alert';
@@ -16,7 +17,7 @@ import { syncShopRefund } from '@/lib/shop-refunds';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const PLAN_LABEL: Record<string, string> = {
-  hp: 'HP単体 (¥999/月)',
+  hp: `HP単体 (¥${MONTHLY.hp.toLocaleString('ja-JP')}/月)`,
   'hp-bot': 'HP + Bot Standard (¥4,980/月)',
   'hp-bot-seo': 'HP + Bot + SEO (¥9,800/月)',
   agency: 'エージェンシー (¥19,800/月)',

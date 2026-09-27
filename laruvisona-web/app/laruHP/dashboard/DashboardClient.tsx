@@ -14,7 +14,9 @@ import { getSiteLimit } from '@/lib/plan-limits';
 import { trackPublishAttempt, trackPublish, trackPurchaseComplete, trackBeginCheckout, trackSiteCreate } from '@/lib/funnel';
 import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
 import { publishCompletion } from '@/lib/publish-result';
-import { TERMS } from '@/lib/laruhp-facts';
+import { ANNUAL, MONTHLY, TERMS } from '@/lib/laruhp-facts';
+import { chatPublicId } from '@/lib/larubot-public-id';
+import { hasServiceAccess } from '@/lib/subscription-access';
 import { isValidSiteSlug, isAutoSiteSlug, cleanSiteSlugInput, SITE_SLUG_RULE } from '@/lib/site-slug';
 
 interface SiteSettings {
@@ -502,9 +504,11 @@ export default function DashboardPage() {
         const completion = publishCompletion(data);
         if (completion.warning) {
           setPublishToast({ message: completion.message, type: 'warn', slug: publishedSlug });
-        } else if (site?.settings_json?.larubot && !site.settings_json?.larubotPublicId) {
-          setPublishToast({ message: 'LARUbot の Public ID が未設定です。ビルダーで設定してください。', type: 'warn' });
-        } else if (site?.settings_json?.larubot && site.settings_json?.larubotPublicId) {
+        } else if (hasBot && site?.settings_json?.larubot !== false && !chatPublicId(site?.settings_json ?? {})) {
+          // HP単体の人にも出ていた（larubot は既定で true）。Bot付きの契約のときだけ。
+          // 識別子は契約時に自動で入る。ここで利用者に入力を求めない（入れる場所も無い）。
+          setPublishToast({ message: 'サイトを公開しました。LARUbot は連携の準備中です。しばらくたっても表示されない場合はお問い合わせください。', type: 'warn', slug: publishedSlug });
+        } else if (hasBot && site?.settings_json?.larubot !== false && chatPublicId(site?.settings_json ?? {})) {
           setPublishToast({ message: 'サイトを公開しました。LARUbot も有効です！', type: 'success', slug: publishedSlug });
         } else {
           setPublishToast({ message: 'サイトを公開しました', type: 'success', slug: publishedSlug });
@@ -913,6 +917,9 @@ export default function DashboardPage() {
   const effectiveStatus: string = isAdmin ? 'active' : (profile?.subscription_status || 'inactive');
   const rawPlan = profile?.plan || null;
   const effectivePlan = isAdmin ? 'hp-bot-seo' : (rawPlan === 'agency' ? 'hp-bot-seo' : rawPlan);
+  // LARUbot / LARU SEO が付く契約か（lib/larubot-provision の BOT_PLANS と同じ。agency は上で hp-bot-seo に寄せてある）
+  const hasBot = ['lite', 'hp-bot', 'hp-bot-seo'].includes(effectivePlan || '') && hasServiceAccess(effectiveStatus);
+  const hasSeo = effectivePlan === 'hp-bot-seo' && hasServiceAccess(effectiveStatus);
   const status = STATUS_MAP[effectiveStatus];
   const planSiteLimit = getSiteLimit(isAdmin ? 'agency' : rawPlan);
 
@@ -1114,10 +1121,11 @@ export default function DashboardPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-emerald-700 text-sm">お支払いが完了しました！</p>
                 <p className="text-gray-600 text-xs mt-0.5">
-                  {effectivePlan === 'lite' && 'HP + Bot プランが有効になりました。LARUbotをビルダーで有効にして公開してください。'}
-                  {effectivePlan === 'hp-bot-seo' && 'HP + Bot + SEO プランが有効になりました。AI ブログ・構造化データ・SEO分析が使えます。'}
+                  {effectivePlan === 'lite' && 'HP + LARUbot Lite プランが有効になりました。LARUbot は公開中のサイトへ自動で設置されます。'}
+                  {effectivePlan === 'hp-bot' && 'HP + Bot Standard プランが有効になりました。LARUbot は公開中のサイトへ自動で設置されます。'}
+                  {effectivePlan === 'hp-bot-seo' && 'HP + Bot + SEO プランが有効になりました。LARUbot と LARU SEO の記事一覧は、公開中のサイトへ自動で設置されます。'}
                   {effectivePlan === 'agency' && 'エージェンシープランが有効になりました。無制限のサイト・全機能をご利用ください。'}
-                  {!['lite','hp-bot-seo','agency'].includes(effectivePlan || '') && 'LARU HP へようこそ。サイトを作成してすぐに公開できます。'}
+                  {!['lite','hp-bot','hp-bot-seo','agency'].includes(effectivePlan || '') && 'LARU HP へようこそ。サイトを作成してすぐに公開できます。'}
                 </p>
               </div>
               <button onClick={() => setPaymentBanner(null)} className="text-gray-400 hover:text-gray-900 flex-shrink-0 text-lg leading-none">×</button>
@@ -1158,7 +1166,7 @@ export default function DashboardPage() {
                 <p className="font-semibold text-emerald-700 text-sm">プランを変更しました！</p>
                 <p className="text-gray-600 text-xs mt-0.5">
                   差額は日割りで計算され、次回請求に反映されます（新規契約にはなりません）。
-                  {['lite', 'hp-bot', 'hp-bot-seo', 'agency'].includes(effectivePlan || '') && ' LARUbot をビルダーで有効にしてご利用ください。'}
+                  {['lite', 'hp-bot', 'hp-bot-seo', 'agency'].includes(effectivePlan || '') && ' LARUbot は公開中のサイトへ自動で設置されます。'}
                 </p>
               </div>
               <button onClick={() => setPaymentBanner(null)} className="text-gray-400 hover:text-gray-900 flex-shrink-0 text-lg leading-none">×</button>
@@ -1402,7 +1410,7 @@ export default function DashboardPage() {
               <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-[11px] font-bold text-indigo-700 flex-shrink-0">LB</div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm text-gray-900 mb-0.5">LARUbot AI チャットボット</div>
-                <p className="text-gray-500 text-xs leading-relaxed mb-2">24時間対応のAIチャットが問い合わせ数を平均2.3倍に増加。</p>
+                <p className="text-gray-500 text-xs leading-relaxed mb-2">サイトに来た人の質問に、AIチャットが24時間答えます。公開中のサイトへ自動で設置されます。</p>
                 <button onClick={() => handleUpgrade('hp-bot')} disabled={upgradeLoading === 'hp-bot'}
                   className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {upgradeLoading === 'hp-bot' ? '処理中...' : 'HP + Bot プランへアップグレード →'}
@@ -1413,7 +1421,7 @@ export default function DashboardPage() {
               <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-[11px] font-bold text-emerald-700 flex-shrink-0">SEO</div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm text-gray-900 mb-0.5">LARU SEO AIブログ自動生成</div>
-                <p className="text-gray-500 text-xs leading-relaxed mb-2">毎週AIがSEO記事を自動公開。検索流入を継続的に獲得。</p>
+                <p className="text-gray-500 text-xs leading-relaxed mb-2">AIがSEO記事を作り、公開中のサイトの記事一覧へ自動で載せます。</p>
                 <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
                   className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
@@ -1427,7 +1435,7 @@ export default function DashboardPage() {
             <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-[11px] font-bold text-emerald-700 flex-shrink-0">SEO</div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm text-gray-900 mb-0.5">LARU SEO — AIブログで検索流入を自動化</div>
-              <p className="text-gray-500 text-xs leading-relaxed mb-2">毎週AIがSEO最適化記事を自動公開。放置するだけで検索順位が上がります。</p>
+              <p className="text-gray-500 text-xs leading-relaxed mb-2">AIがSEO記事を作り、公開中のサイトの記事一覧へ自動で載せます。</p>
               <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
                 className="text-emerald-600 hover:text-emerald-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
@@ -1441,7 +1449,7 @@ export default function DashboardPage() {
               <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-[11px] font-bold text-indigo-700 flex-shrink-0">SEO</div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm text-gray-900 mb-0.5">LARU SEO AIブログ自動生成</div>
-                <p className="text-gray-500 text-xs leading-relaxed mb-2">毎週AIがSEO記事を自動公開。検索流入を継続的に獲得。</p>
+                <p className="text-gray-500 text-xs leading-relaxed mb-2">AIがSEO記事を作り、公開中のサイトの記事一覧へ自動で載せます。</p>
                 <button onClick={() => handleUpgrade('hp-bot-seo')} disabled={upgradeLoading === 'hp-bot-seo'}
                   className="text-indigo-600 hover:text-indigo-500 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   {upgradeLoading === 'hp-bot-seo' ? '処理中...' : 'HP + Bot + SEO プランへアップグレード →'}
@@ -1829,32 +1837,25 @@ export default function DashboardPage() {
                       </Link>
                     )}
 
-                    {/* LARUbot未連携バナー */}
-                    {site.settings_json?.larubot && !site.settings_json?.larubotPublicId && (
-                      <Link
-                        href={`/laruHP/studio?siteId=${site.id}`}
-                        className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 hover:bg-indigo-100 transition-all"
-                      >
-                        <div className="w-5 h-5 rounded bg-indigo-100 flex items-center justify-center text-indigo-700 text-[9px] font-bold flex-shrink-0">LB</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-indigo-700 text-[10px] font-semibold">LARUbot未連携</div>
-                          <div className="text-indigo-500 text-[9px]">Public IDを設定してください</div>
+                    {/* LARUbot / LARU SEO の状態。
+                        以前は settings.larubot（既定で true）だけを見て「未連携・IDを入れてください」と
+                        出していたので、HP単体の人にも出ていた。しかも入れる場所は制作スタジオに無い。
+                        識別子は契約時に自動で入り、公開ページが自動で設置する（app/hp/[slug]）。 */}
+                    {hasBot && site.settings_json?.larubot !== false && (
+                      chatPublicId(site.settings_json ?? {}) ? (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-[10px]">
+                          <span className="text-indigo-700 font-semibold">LARUbot 接続済み</span>
+                          {hasSeo && site.settings_json?.laruseo !== false && <span className="text-emerald-700 font-semibold">LARU SEO 接続済み</span>}
+                          <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline ml-auto">通常版のLARUbotを見る</a>
                         </div>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-indigo-500 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
-                      </Link>
-                    )}
-                    {site.settings_json?.laruseo && !site.settings_json?.laruseoPublicId && (
-                      <Link
-                        href={`/laruHP/studio?siteId=${site.id}`}
-                        className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 hover:bg-emerald-100 transition-all"
-                      >
-                        <div className="w-5 h-5 rounded bg-emerald-100 flex items-center justify-center text-emerald-700 text-[9px] font-bold flex-shrink-0">SEO</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-emerald-700 text-[10px] font-semibold">LARUSEO未連携</div>
-                          <div className="text-emerald-600 text-[9px]">エディタで連携IDを設定してください</div>
-                        </div>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-500 flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
-                      </Link>
+                      ) : (
+                        <Link href="/laruHP/contact" className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 hover:bg-indigo-100 transition-all">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-indigo-700 text-[10px] font-semibold">LARUbot 連携の準備中</div>
+                            <div className="text-indigo-500 text-[9px]">自動で設置されます。しばらくたっても変わらない場合はお問い合わせください</div>
+                          </div>
+                        </Link>
+                      )
                     )}
 
                     {/* 独自ドメイン: 所有確認つきの設定画面に一本化した。
@@ -2491,7 +2492,7 @@ export default function DashboardPage() {
 
       {showPlanModal && (() => {
         const MODAL_PLANS = [
-          { id: 'hp',         label: 'LARU HP',          monthlyPrice: 999,   annualPrice: 833,   badge: null,           desc: 'ホームページ作成・公開' },
+          { id: 'hp',         label: 'LARU HP',          monthlyPrice: MONTHLY.hp, annualPrice: ANNUAL.hp,  badge: null,           desc: 'ホームページ作成・公開' },
           { id: 'lite',       label: 'HP + LARUbot Lite', monthlyPrice: 2980,  annualPrice: 2483,  badge: null,           desc: 'HP + AIチャットボット（Q&A15件・メニュー2件）' },
           { id: 'hp-bot',     label: 'HP + Bot Standard',      monthlyPrice: 4980,  annualPrice: 4150,  badge: 'おすすめ',     desc: 'HP + AIチャットボット（Q&A30件・メニュー3件）' },
           { id: 'hp-bot-seo', label: 'HP + Bot + SEO',    monthlyPrice: 9800,  annualPrice: 8166,  badge: '半年間限定',   desc: 'HP + チャットボット + AIブログSEO' },

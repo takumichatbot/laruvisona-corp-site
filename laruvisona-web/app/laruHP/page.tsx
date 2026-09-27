@@ -505,7 +505,7 @@ export default async function LaruHPLandingPage({ searchParams }: {
             <ArrowUpRight size={20} />
           </Link>
           <span className="lp-final-note">
-            試作はログイン前から。保存・公開にはご契約が必要です。
+            {TERMS.freeScope}。
           </span>
         </section>
       </main>

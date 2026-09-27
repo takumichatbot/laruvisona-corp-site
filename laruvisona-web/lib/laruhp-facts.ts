@@ -6,12 +6,16 @@
 // ここに無いもの（導入社数・満足度・第三者の推薦・効果の数値・他の顧客が
 // どれを選んだかという主張）は、裏が取れていないので載せない。
 
+import { FREE_SITE_LIMIT } from './site-creation-access';
+
+const yen = (n: number) => n.toLocaleString('ja-JP');
+
 export const PLANS = [
   {
     id: 'hp',
     name: 'HP単体',
-    monthly: 999,
-    annualPerMonth: 833,
+    monthly: 1980,
+    annualPerMonth: 1650,
     lead: 'ホームページを作って公開する',
     includes: [
       'ホームページの作成・公開',
@@ -106,6 +110,8 @@ export const TERMS = {
   cancelNote: '最低利用期間（6ヶ月）の途中では解約できません',
   annualNote: '年払いは実質2ヶ月分無料。一括請求で、途中解約時の返金はありません',
   taxNote: '表示はすべて税別です',
+  /** 無料でできる範囲。実装（lib/site-creation-access.ts）に合わせる。以前は「保存・公開にはご契約が必要」と書いていたが、保存は無料登録でできる */
+  freeScope: `試作はログイン前から無料。無料登録で${FREE_SITE_LIMIT}サイトまで保存でき、公開するときにご契約いただきます`,
   payment: 'クレジットカード決済',
   domainNote: '独自ドメインの取得・更新費はLARU HPの月額料金とは別です。料金と更新申込期間は登録事業者・ドメインごとに異なります',
 } as const;
@@ -145,8 +151,8 @@ export const SECONDARY_CTA = {
 
 export const FAQ = [
   {
-    q: '本当に月額999円だけですか？',
-    a: 'サーバー利用料・SSL証明書・laruvisona.jp のサブドメインは月額999円（税別）に含まれています。独自ドメインを使う場合は、取得・更新費を登録事業者へ別途支払います。料金は登録事業者とドメインの種類によって異なります。',
+    q: `本当に月額${yen(PLANS[0].monthly)}円だけですか？`,
+    a: `サーバー利用料・SSL証明書・laruvisona.jp のサブドメインは月額${yen(PLANS[0].monthly)}円（税別）に含まれています。独自ドメインを使う場合は、取得・更新費を登録事業者へ別途支払います。料金は登録事業者とドメインの種類によって異なります。`,
   },
   {
     q: '独自ドメインを持っていなくても始められますか？',
@@ -158,7 +164,7 @@ export const FAQ = [
   },
   {
     q: '初月無料と6ヶ月契約の関係は？',
-    a: '月払いは最初の1ヶ月が0円、2ヶ月目から月額999円（税別）です。最低利用期間は6ヶ月で、その間の解約はできません。7ヶ月目からは月単位でいつでも解約できます。年払いは約10ヶ月分を一括で支払う割引プランで、初月無料クーポンの対象外です。',
+    a: `月払いは最初の1ヶ月が0円、2ヶ月目から月額${yen(PLANS[0].monthly)}円（税別）です。最低利用期間は6ヶ月（初月の0円を含む）で、その間の解約はできません。7ヶ月目からは月単位でいつでも解約できます。年払いは月額の10ヶ月分を一括で支払う割引プランで、初月無料クーポンの対象外です。`,
   },
   {
     q: '解約はどうやってしますか？',
@@ -178,7 +184,7 @@ export const FAQ = [
   },
   {
     q: '年払いはありますか？',
-    a: 'あります。実質2ヶ月分が無料になり、HP単体プランなら月833円換算です。一括請求で、途中解約時の返金はありません。',
+    a: `あります。月払い12ヶ月分と比べて実質2ヶ月分が無料になり、HP単体プランなら年額${yen(PLANS[0].monthly * 10)}円（税別）です。一括請求で、途中解約時の返金はありません。`,
   },
   {
     q: '制作会社ですが、複数のクライアントをまとめて管理できますか？',
@@ -188,6 +194,6 @@ export const FAQ = [
 
 /* 料金ページが使う月額・年額。PLANS と同じ数字を1か所で持つ。
    以前は料金ページが自前の定数を持っていて、案内ページと食い違い得た。 */
-export const MONTHLY = { hp: 999, lite: 2980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 } as const;
-export const ANNUAL = { hp: 833, lite: 2483, hpBot: 4150, hpBotSeo: 8166, agency: 16500 } as const;
-export const ANNUAL_TOTAL = { hp: 9990, lite: 29800, hpBot: 49800, hpBotSeo: 98000, agency: 198000 } as const;
+export const MONTHLY = { hp: 1980, lite: 2980, hpBot: 4980, hpBotSeo: 9800, agency: 19800 } as const;
+export const ANNUAL = { hp: 1650, lite: 2483, hpBot: 4150, hpBotSeo: 8166, agency: 16500 } as const;
+export const ANNUAL_TOTAL = { hp: 19800, lite: 29800, hpBot: 49800, hpBotSeo: 98000, agency: 198000 } as const;

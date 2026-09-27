@@ -15,11 +15,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'LARU HP | 完成像を見ながら作るホームページ制作サービス',
-  description: '業種と目的から下書きを作り、写真・文章・配色を完成像で確認しながら編集。問い合わせ、独自ドメイン、ショップ・決済、SEO基本設定に対応します。月額999円から。',
+  description: `業種と目的から下書きを作り、写真・文章・配色を完成像で確認しながら編集。問い合わせ、独自ドメイン、ショップ・決済、SEO基本設定に対応します。月額${PLANS[0].monthly.toLocaleString('ja-JP')}円から。`,
   keywords: 'ホームページ作成,HP制作,AI,SEO,LARUbot,ホームページビルダー,独自ドメイン',
   openGraph: {
     title: 'LARU HP — 完成像を見ながら作るホームページ',
-    description: '写真と言葉を整え、問い合わせや独自ドメインまで。月額999円から始められます。',
+    description: `写真と言葉を整え、問い合わせや独自ドメインまで。月額${PLANS[0].monthly.toLocaleString('ja-JP')}円から始められます。`,
     type: 'website',
     url: 'https://laruhp.com/',
     siteName: 'LARU HP',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'LARU HP — 完成像を見ながら作るホームページ',
-    description: '写真と言葉を整え、問い合わせや独自ドメインまで。月額999円から始められます。',
+    description: `写真と言葉を整え、問い合わせや独自ドメインまで。月額${PLANS[0].monthly.toLocaleString('ja-JP')}円から始められます。`,
     images: ['https://laruhp.com/opengraph-image'],
   },
   alternates: {
@@ -67,7 +67,7 @@ const jsonLd = {
       description: `${plan.lead}。${TERMS.firstMonthFree}。`,
     })),
   },
-  description: '業種と目的からホームページの下書きを作り、完成像を見ながら写真・文章・配色を編集して公開できるサービス。月額999円から。',
+  description: `業種と目的からホームページの下書きを作り、完成像を見ながら写真・文章・配色を編集して公開できるサービス。月額${PLANS[0].monthly.toLocaleString('ja-JP')}円から。`,
   url: 'https://laruhp.com/',
   publisher: {
     '@type': 'Organization',

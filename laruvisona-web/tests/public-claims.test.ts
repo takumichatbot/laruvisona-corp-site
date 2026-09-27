@@ -62,8 +62,8 @@ test('エージェンシーは「全機能込み」で売っているので、�
 
 test('「初月無料」は、割引が足りないクーポンを弾く', () => {
   assert.ok(verifyFirstMonthCoupon('agency', { percent_off: 100, duration: 'once' }).ok);
-  // 固定額999円オフだと、HP単体は無料になるがエージェンシーは18,801円請求される
-  const fixed = { amount_off: 999, currency: 'jpy', duration: 'once' };
+  // 固定額（HP単体の月額ぶん）オフだと、HP単体は無料になるがエージェンシーは差額が請求される
+  const fixed = { amount_off: MONTHLY.hp, currency: 'jpy', duration: 'once' };
   assert.ok(verifyFirstMonthCoupon('hp', fixed).ok);
   assert.ok(!verifyFirstMonthCoupon('agency', fixed).ok);
   assert.ok(!verifyFirstMonthCoupon('hp', { percent_off: 50, duration: 'once' }).ok);
@@ -123,9 +123,10 @@ test('年払いの総額が、月額×10ヶ月ぶんになっている（実質2
 
 test('記事の金額が、初月無料を計算に入れている', () => {
   const src = code('app/laruHP/articles/articles-data.ts');
-  assert.doesNotMatch(src, /5,994円/, '999×6は初月無料を無視した額。実際に払うのは4,995円');
-  assert.doesNotMatch(src, /35,964円/, '999×36も同じ。実際は34,965円');
-  assert.match(src, /4,995円/);
+  // 月額×6・×36は初月無料を無視した額。実際に払うのは×5・×35
+  assert.match(src, /\$\{\(MONTHLY\.hp \* 5\)\.toLocaleString\('ja-JP'\)\}円/);
+  assert.match(src, /\$\{\(MONTHLY\.hp \* 35\)\.toLocaleString\('ja-JP'\)\}円/);
+  assert.doesNotMatch(src, /MONTHLY\.hp \* (6|36)\b/);
 });
 
 test('月額のサービスを、構造化データで単発の費用として出さない', async () => {

@@ -1,4 +1,5 @@
 'use client';
+import { MONTHLY } from '@/lib/laruhp-facts';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -295,7 +296,7 @@ export default function AdminPage() {
             {stats.planBreakdown && (
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
                 {[
-                  { label: 'HP (¥999)', value: stats.planBreakdown.hp || 0, color: 'text-gray-600' },
+                  { label: `HP (¥${MONTHLY.hp.toLocaleString('ja-JP')})`, value: stats.planBreakdown.hp || 0, color: 'text-gray-600' },
                   { label: 'Lite (¥2,980)', value: stats.planBreakdown['lite'] || 0, color: 'text-purple-600' },
                   { label: 'HP+Bot (¥4,980)', value: stats.planBreakdown['hp-bot'] || 0, color: 'text-indigo-600' },
                   { label: 'HP+Bot+SEO (¥9,800)', value: stats.planBreakdown['hp-bot-seo'] || 0, color: 'text-emerald-600' },
@@ -446,7 +447,7 @@ export default function AdminPage() {
                         onChange={e => setPlanSelects(p => ({ ...p, [user.id]: e.target.value }))}
                         className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-600 focus:outline-none focus:border-sky-500"
                       >
-                        <option value="hp">HP (¥999)</option>
+                        <option value="hp">HP (¥{MONTHLY.hp.toLocaleString('ja-JP')})</option>
                         <option value="lite">Lite (¥2,980)</option>
                         <option value="hp-bot">HP+Bot (¥4,980)</option>
                         <option value="hp-bot-seo">HP+Bot+SEO (¥9,800)</option>

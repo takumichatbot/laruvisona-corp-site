@@ -6,7 +6,7 @@ import { ARTICLES, getArticle } from '../articles-data';
 import { jsonForScript } from '@/lib/safe-markup';
 import { laruhpOgImage } from '@/lib/laruhp-seo';
 import PublicFooter from '@/components/laruhp/PublicFooter';
-import { INDUSTRIES } from '@/lib/laruhp-facts';
+import { INDUSTRIES, TERMS } from '@/lib/laruhp-facts';
 import { inlineMarkdown } from '@/lib/article-inline';
 
 export async function generateStaticParams() {
@@ -229,7 +229,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           {/* CTA */}
           <div className="bg-gradient-to-br from-sky-600 to-indigo-600 rounded-2xl p-8 text-center text-white mb-10">
             <div className="text-lg font-black mb-2">自分の事業で、完成像を試す</div>
-            <p className="text-sky-100 text-xs mb-6">制作の試作はログイン前から。保存・公開にはご契約が必要です。</p>
+            <p className="text-sky-100 text-xs mb-6">{TERMS.freeScope}。</p>
             {/* 読み終えた直後の人に「申し込む」だけを出すと、まだ決めていない人の行き先が無くなる。 */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link

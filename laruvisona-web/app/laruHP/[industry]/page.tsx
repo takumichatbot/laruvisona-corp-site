@@ -214,7 +214,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
               <Link href={`https://laruvisona.jp/laruHP/studio?industry=${industry}`} className="inline-flex items-center gap-3 rounded-full bg-white px-6 py-3.5 text-sm font-bold text-slate-950">完成像を作ってみる <ArrowUpRight size={17} /></Link>
               <Link href="https://laruhp.com/plans" className="inline-flex items-center rounded-full border border-white/30 px-6 py-3.5 text-sm font-bold text-white">料金を見る</Link>
             </div>
-            <p className="mt-5 text-xs text-slate-400">試作はログイン前から。保存・公開にはご契約が必要です。</p>
+            <p className="mt-5 text-xs text-slate-400">{TERMS.freeScope}。</p>
           </div>
         </section>
 

@@ -1,3 +1,4 @@
+import { MONTHLY } from '@/lib/laruhp-facts';
 import { NextResponse } from 'next/server';
 import { isAdminEmail } from '@/lib/adminAuth';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
@@ -10,7 +11,7 @@ import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
 
 const PLAN_LABEL: Record<string, string> = {
-  hp: 'HP単体 (¥999/月)',
+  hp: `HP単体 (¥${MONTHLY.hp.toLocaleString('ja-JP')}/月)`,
   lite: 'HP + LARUbot Lite (¥2,980/月)',  // 正は lib/laruhp-facts.ts MONTHLY.lite
   'hp-bot': 'HP + Bot Standard (¥4,980/月)',
   'hp-bot-seo': 'HP + Bot + SEO (¥9,800/月)',

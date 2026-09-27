@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { canonicalBase, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 import { buildJsonLd, type BusinessInfo } from '@/lib/site-jsonld';
-import { chatPublicId, blogPublicId } from '@/lib/larubot-public-id';
+import { chatPublicId, blogPublicId, withSeoArticleSlot, SEO_ARTICLE_TARGET } from '@/lib/larubot-public-id';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
 import { stripDuplicateHeadMeta, applyAbWinner } from '@/lib/published-html';
@@ -213,6 +213,9 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
 
   const eagerHtml = decided.replace(/<img\s/, '<img fetchpriority="high" loading="eager" ');
 
+  // 記事一覧の置き場（LARU SEO を読むときだけ）。blog.js には data-target で渡す。
+  const withSlot = blogId ? withSeoArticleSlot(eagerHtml) : eagerHtml;
+
   /*
     businessInfo が無くても出す。
 
@@ -224,7 +227,7 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
 
   return (
     <>
-      <PublishedSite html={eagerHtml} style={{ minHeight: '100vh' }} />
+      <PublishedSite html={withSlot} style={{ minHeight: '100vh' }} />
       {jsonLdStr && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdStr }} />
       )}
@@ -241,7 +244,7 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
         <script src="https://larubot.tokyo/static/embed.js" data-public-id={chatId} defer />
       )}
       {blogId && (
-        <script src="https://larubot.tokyo/embed/blog.js" data-id={blogId} data-limit="6" defer />
+        <script src="https://larubot.tokyo/embed/blog.js" data-id={blogId} data-limit="6" data-target={SEO_ARTICLE_TARGET} defer />
       )}
       {/* Signed first-party pageview and heatmap tracking.
           署名鍵が無い・短いときは analytics_unavailable を投げる作りなので、

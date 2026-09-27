@@ -8,19 +8,19 @@ const jpy = (amount: number, interval: string) =>
   ({ unit_amount: amount, currency: 'jpy', recurring: { interval } });
 
 test('額・通貨・請求間隔がそろって初めて通す', () => {
-  assert.equal(verifyPrice('hp', 'monthly', jpy(999, 'month')).ok, true);
-  assert.equal(verifyPrice('hp', 'monthly', jpy(1000, 'month')).ok, false);
-  assert.equal(verifyPrice('hp', 'monthly', { unit_amount: 999, currency: 'usd', recurring: { interval: 'month' } }).ok, false);
-  assert.equal(verifyPrice('hp', 'monthly', jpy(999, 'year')).ok, false);
+  assert.equal(verifyPrice('hp', 'monthly', jpy(MONTHLY.hp, 'month')).ok, true);
+  assert.equal(verifyPrice('hp', 'monthly', jpy(MONTHLY.hp + 1, 'month')).ok, false);
+  assert.equal(verifyPrice('hp', 'monthly', { unit_amount: MONTHLY.hp, currency: 'usd', recurring: { interval: 'month' } }).ok, false);
+  assert.equal(verifyPrice('hp', 'monthly', jpy(MONTHLY.hp, 'year')).ok, false);
 });
 
-test('本番で見つかった食い違い（年払い 9,990 と 9,999）を止める', () => {
-  assert.equal(verifyPrice('hp', 'annual', jpy(9990, 'year')).ok, true);
-  const bad = verifyPrice('hp', 'annual', jpy(9999, 'year'));
+test('本番で見つかった食い違い（2026-09-16 年払い 9,990 と 9,999）と同じ形を止める', () => {
+  assert.equal(verifyPrice('hp', 'annual', jpy(ANNUAL_TOTAL.hp, 'year')).ok, true);
+  const bad = verifyPrice('hp', 'annual', jpy(ANNUAL_TOTAL.hp + 9, 'year'));
   assert.equal(bad.ok, false);
   if (bad.ok) return;
-  assert.match(bad.reason, /9990/);
-  assert.match(bad.reason, /9999/);
+  assert.match(bad.reason, new RegExp(String(ANNUAL_TOTAL.hp)));
+  assert.match(bad.reason, new RegExp(String(ANNUAL_TOTAL.hp + 9)));
 });
 
 test('安いほうへの食い違いも止める（表示と違う額であることは同じ）', () => {
