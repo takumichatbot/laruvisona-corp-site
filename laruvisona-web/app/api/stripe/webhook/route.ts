@@ -1,3 +1,4 @@
+import { revalidateOwnerSites } from '@/lib/revalidate-owner-sites';
 import { MONTHLY } from '@/lib/laruhp-facts';
 import { NextResponse } from 'next/server';
 import { configuredStripeMode, eventMatchesConfiguredMode } from '@/lib/stripe-mode';
@@ -295,6 +296,7 @@ export async function POST(req: Request) {
       if (session.customer) profileUpdates['stripe_customer_id'] = session.customer as string;
 
       const profileSaved = await supabase.from('profiles').update(profileUpdates).eq('id', userId).select('id');
+      await revalidateOwnerSites(supabase, (profileSaved.data ?? []).map(r => r.id));
       if (profileSaved.error || profileSaved.data?.length !== 1) {
         return NextResponse.json({ error: 'Subscription could not be synchronized' }, { status: 500 });
       }
@@ -359,10 +361,9 @@ export async function POST(req: Request) {
       if (lines?.data?.[0]?.period?.end) {
         updates.contract_ends_at = new Date(lines.data[0].period.end! * 1000).toISOString();
       }
-      const renewed = outcome(
-        await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId).select('id'),
-        'invoice.payment_succeeded',
-      );
+      const renewedRaw = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId).select('id');
+      await revalidateOwnerSites(supabase, (renewedRaw.data ?? []).map(r => r.id));
+      const renewed = outcome(renewedRaw, 'invoice.payment_succeeded');
       if (!renewed.ok) {
         console.error('[Stripe webhook]', renewed.reason);
         if (renewed.retry) return NextResponse.json({ error: 'Subscription payment could not be synchronized' }, { status: 500 });
@@ -389,6 +390,7 @@ export async function POST(req: Request) {
       const failedRaw = await supabase.from('profiles')
         .update({ subscription_status: 'past_due' })
         .eq('stripe_subscription_id', subId).select('id');
+      await revalidateOwnerSites(supabase, (failedRaw.data ?? []).map(r => r.id));
       const failedUpdate = outcome(failedRaw, 'invoice.payment_failed');
       if (!failedUpdate.ok) {
         console.error('[Stripe webhook]', failedUpdate.reason);
@@ -442,6 +444,7 @@ export async function POST(req: Request) {
       };
       if (updatedPlan) updates['plan'] = updatedPlan;
       const subscriptionUpdated = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', sub.id).select('id');
+      await revalidateOwnerSites(supabase, (subscriptionUpdated.data ?? []).map(r => r.id));
       const updatedOutcome = outcome(subscriptionUpdated, 'customer.subscription.updated');
       if (!updatedOutcome.ok) {
         console.error('[Stripe webhook]', updatedOutcome.reason);
@@ -512,6 +515,7 @@ export async function POST(req: Request) {
       const canceled = await supabase.from('profiles')
         .update({ subscription_status: 'canceled', stripe_subscription_id: null, plan: null })
         .eq('stripe_subscription_id', sub.id).select('id');
+      await revalidateOwnerSites(supabase, (canceled.data ?? []).map(r => r.id));
       if (canceled.error || canceled.data?.length !== 1) {
         return NextResponse.json({ error: 'Subscription cancellation could not be synchronized' }, { status: 500 });
       }

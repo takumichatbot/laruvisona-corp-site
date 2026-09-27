@@ -1,3 +1,4 @@
+import { revalidateOwnerSites } from '@/lib/revalidate-owner-sites';
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
@@ -173,6 +174,7 @@ export async function POST(req: Request) {
           metadata: { ...(sub.metadata || {}), plan, billing },
         });
         const saved = await supabase.from('profiles').update({ plan }).eq('id', user.id).select('id');
+        await revalidateOwnerSites(supabase, [user.id]);
         if (saved.error || saved.data?.length !== 1) {
           return NextResponse.json({ error: 'プラン変更を保存できませんでした。決済状態を確認しています。' }, { status: 503 });
         }

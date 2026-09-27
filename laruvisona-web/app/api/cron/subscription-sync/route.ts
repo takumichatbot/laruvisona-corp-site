@@ -1,3 +1,4 @@
+import { revalidateOwnerSites } from '@/lib/revalidate-owner-sites';
 import { NextResponse } from 'next/server';
 import { requireBearer } from '@/lib/scheduled-email';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
@@ -133,6 +134,7 @@ async function run(dryRun: boolean, force = false) {
       if (!unpublished.ok) return NextResponse.json({ error: 'サイトを非公開にできませんでした', fixed, conflicts }, { status: 503 });
     }
     const saved = await db.from('profiles').update(outcome.updates).eq('id', profile.id).select('id');
+    await revalidateOwnerSites(db, [profile.id]);
     if (saved.error || saved.data?.length !== 1) {
       return NextResponse.json({ error: '契約状態を保存できませんでした', fixed, conflicts }, { status: 503 });
     }
@@ -166,6 +168,7 @@ async function run(dryRun: boolean, force = false) {
       const saved = await db.from('profiles')
         .update({ subscription_status: 'canceled', stripe_subscription_id: null })
         .eq('id', profile.id).select('id');
+      await revalidateOwnerSites(db, [profile.id]);
       if (saved.error || saved.data?.length !== 1) {
         return NextResponse.json({ error: '契約状態を保存できませんでした', fixed, stopped }, { status: 503 });
       }

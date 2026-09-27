@@ -1,3 +1,4 @@
+import { revalidateOwnerSites } from '@/lib/revalidate-owner-sites';
 import { MONTHLY } from '@/lib/laruhp-facts';
 import { NextResponse } from 'next/server';
 import { isAdminEmail } from '@/lib/adminAuth';
@@ -107,6 +108,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (saved.error || saved.data?.length !== 1) {
       return NextResponse.json({ error: '決済変更後の契約状態を保存できませんでした' }, { status: 503 });
     }
+    await revalidateOwnerSites(service, [id]);
 
     /*
       LARUbot にも伝える。
@@ -237,6 +239,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       contract_starts_at: null,
       contract_ends_at: null,
     }).eq('id', id).eq('stripe_subscription_id', subscriptionId).select('id');
+    await revalidateOwnerSites(service, [id]);
     if (canceled.error || canceled.data?.length !== 1) {
       return NextResponse.json({ error: '解約後の契約状態を保存できませんでした' }, { status: 503 });
     }
@@ -262,6 +265,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: '更新項目がありません' }, { status: 400 });
   }
   const saved = await service.from('profiles').update(updates).eq('id', id).select('id');
+  await revalidateOwnerSites(service, [id]);
   if (saved.error || saved.data?.length !== 1) {
     return NextResponse.json({ error: '利用者情報を更新できませんでした' }, { status: 503 });
   }

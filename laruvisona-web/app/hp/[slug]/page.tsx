@@ -6,6 +6,8 @@ import { headers } from 'next/headers';
 import { canonicalBase, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 import { buildJsonLd, type BusinessInfo } from '@/lib/site-jsonld';
 import { chatPublicId, blogPublicId, withSeoArticleSlot, SEO_ARTICLE_TARGET } from '@/lib/larubot-public-id';
+import { laruEntitlement, type LaruEntitlement } from '@/lib/laru-entitlement';
+import { isAdminEmail } from '@/lib/adminAuth';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
 import { stripDuplicateHeadMeta, applyAbWinner } from '@/lib/published-html';
@@ -117,7 +119,7 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
 
   const { data: site } = await supabase
     .from('sites')
-    .select('published_html, name, settings_json, seo_json, slug, custom_domain, industry')
+    .select('published_html, name, settings_json, seo_json, slug, custom_domain, industry, user_id')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -157,8 +159,16 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
       ・LARUSEOを「切」にしても、識別子があれば**出し続ける**
     同じ規則に揃える。
   */
-  const chatId = settings.larubot === false ? '' : chatPublicId(settings);
-  const blogId = settings.laruseo === false ? '' : blogPublicId(settings);
+  /*
+    さらに、持ち主の今の契約で絞る（lib/laru-entitlement.ts）。
+    識別子が残っていても、HP単体へ下げたらチャットを、SEOなしへ下げたら記事を出さない。
+    識別子は消さない（再契約で同じテナントに戻す）。
+  */
+  const laru = (chatPublicId(settings) || blogPublicId(settings))
+    ? await ownerLaruEntitlement(supabase, (site as { user_id?: string | null }).user_id ?? null)
+    : { bot: false, seo: false };
+  const chatId = !laru.bot || settings.larubot === false ? '' : chatPublicId(settings);
+  const blogId = !laru.seo || settings.laruseo === false ? '' : blogPublicId(settings);
   const hasActivePopup = (settings.popups || []).some(p => p.enabled);
 
   // 署名鍵が用意できないときは、計測だけ諦める（顧客の公開サイトは出す）。
@@ -263,3 +273,28 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
 
 // ISR: cache 1 hour, bust on publish via revalidateTag('site-${slug}')
 export const revalidate = 3600;
+
+/**
+ * 持ち主の契約を読む。読めなければ出さない（無料で出し続けるより、1時間だけ消えるほうを選ぶ）。
+ */
+async function ownerLaruEntitlement(
+  supabase: ReturnType<typeof getServiceClient>,
+  userId: string | null,
+): Promise<LaruEntitlement> {
+  if (!userId) return { bot: false, seo: false };
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles').select('plan, subscription_status').eq('id', userId).maybeSingle();
+    if (error) {
+      console.error('[hp] 持ち主の契約を読めないため、LARUbot / LARU SEO を出しません:', userId);
+      return { bot: false, seo: false };
+    }
+    const byPlan = laruEntitlement(profile?.plan ?? null, profile?.subscription_status ?? null);
+    if (byPlan.bot && byPlan.seo) return byPlan;
+    // 運営のアカウント（契約なしで公開を許している）は確認用に出す
+    const { data } = await supabase.auth.admin.getUserById(userId);
+    return isAdminEmail(data?.user?.email) ? laruEntitlement(null, null, true) : byPlan;
+  } catch {
+    return { bot: false, seo: false };
+  }
+}

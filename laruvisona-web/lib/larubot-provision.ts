@@ -3,12 +3,9 @@ import { isSeoPlan, initialSeoKeywords, startLarubotAutopilot } from '@/lib/laru
 import { alertLarubotFailure } from '@/lib/larubot-alert';
 
 // LARUbot（AIチャットボット）が付くプラン。ここに含まれるプランへ切り替わったときに
-// LARUbot 側のアカウントを自動登録する。
-const BOT_PLANS = new Set(['lite', 'hp-bot', 'hp-bot-seo', 'agency']);
-
-export function isBotPlan(plan: string | null | undefined): boolean {
-  return !!plan && BOT_PLANS.has(plan);
-}
+// LARUbot 側のアカウントを自動登録する。一覧は公開ページの表示判定と同じもの（lib/laru-entitlement.ts）。
+import { isBotPlan } from '@/lib/laru-entitlement';
+export { isBotPlan };
 
 /** public_id の形。LARUbot は uuid4（36文字・0-9a-f と -）で発行すると回答済み。 */
 const PUBLIC_ID = /^[A-Za-z0-9_-]{1,64}$/;
