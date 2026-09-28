@@ -308,8 +308,9 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
       subtext: "",
       buttonText: `電話する（${phone}）`,
       buttonLink: dial,
-      bgColor: preset.design.accent,
-      textColor: preset.design.onAccent || "#ffffff",
+      // ボタンは差し色で塗られる。帯まで差し色にすると、ボタンが帯に溶けて文字だけに見えた。
+      bgColor: preset.design.surface,
+      textColor: preset.design.ink,
     };
     const cta = blocks.find((b) => b.type === "cta");
     if (cta) cta.data = { ...cta.data, ...call };

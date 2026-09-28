@@ -72,6 +72,7 @@ test('電話番号：入れた人にだけ、電話するボタンと連絡欄�
   const cta = s.pages[0].blocks.find(b => b.type === 'cta')!;
   assert.equal(cta.data.buttonLink, 'tel:0312345678');
   assert.match(String(cta.data.buttonText), /03-1234-5678/);
+  assert.notEqual(cta.data.bgColor, s.settings.design.accent, 'ボタン（差し色）が帯に溶けない');
   const contact = s.pages[0].blocks.find(b => b.type === 'contact')!;
   assert.match(String(contact.data.subtext), /お電話（03-1234-5678）でも承ります/);
   const html = exportToHTML(s.pages, s.pages[0].seo!, s.settings, s.name);
