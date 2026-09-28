@@ -147,6 +147,12 @@ export const exampleFor = (industry: string) =>
     photo: "/company/concepts/architecture.webp",
     goal: "contact" as const,
   };
+/** 電話番号を tel: リンクにする。番号の形でなければ空（電話の導線は作らない）。 */
+export function phoneHref(value: string): string {
+  const digits = value.replace(/[\s\-‐－ー()（）]/g, "").replace(/^＋/, "+");
+  const half = digits.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  return /^\+?\d{10,13}$/.test(half) ? `tel:${half}` : "";
+}
 const EMPTY: SEOSettings = {
   title: "",
   description: "",
@@ -293,7 +299,26 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
         align: "center",
       },
     });
-  blocks = composeIndustry(orderForGoal(blocks, intake.goal), intake.industry);
+  // 電話番号を入れた人にだけ、電話へつなぐ。番号は本人が入れたものだけを使う。
+  const phone = (intake.phone || "").trim();
+  const dial = phoneHref(phone);
+  if (dial) {
+    const call = {
+      heading: "お電話でのご相談",
+      subtext: "",
+      buttonText: `電話する（${phone}）`,
+      buttonLink: dial,
+      bgColor: preset.design.accent,
+      textColor: preset.design.onAccent || "#ffffff",
+    };
+    const cta = blocks.find((b) => b.type === "cta");
+    if (cta) cta.data = { ...cta.data, ...call };
+    else blocks.push({ id: "start-call", type: "cta", data: call });
+    for (const b of blocks)
+      if (b.type === "contact" || b.type === "booking")
+        b.data = { ...b.data, subtext: `${String(b.data.subtext || "")}お電話（${phone}）でも承ります。` };
+  }
+  blocks = composeIndustry(orderForGoal(blocks, intake.goal), intake.industry, { area: intake.area });
   const seo = {
     ...EMPTY,
     title: [intake.name, intake.area].filter(Boolean).join(" | "),

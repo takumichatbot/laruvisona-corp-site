@@ -7,6 +7,7 @@
 // 内部の呼び名（hero, cta, slug…）を画面に出さない。
 
 import type { Block } from '@/types/laruHP';
+import { sortSections } from '@/lib/section-order';
 
 export type FieldType =
   | 'text' | 'multiline' | 'color' | 'image' | 'select' | 'toggle' | 'number' | 'list';
@@ -310,6 +311,8 @@ export interface IntakeAnswers {
   goal: 'booking' | 'contact' | 'visit' | 'buy';
   /** ひとこと */
   description: string;
+  /** 電話番号（載せたい人だけ。空なら電話の導線は作らない） */
+  phone?: string;
 }
 
 export const GOALS: Array<{ value: IntakeAnswers['goal']; label: string; note: string }> = [
@@ -356,5 +359,5 @@ export function orderForGoal(blocks: Block[], goal: IntakeAnswers['goal']): Bloc
     if (goal === 'buy' && (b.type === 'price-table' || b.type === 'services')) w = 3.5;
     return w;
   };
-  return [...blocks].sort((a, b) => weight(a) - weight(b));
+  return sortSections(blocks, weight);
 }

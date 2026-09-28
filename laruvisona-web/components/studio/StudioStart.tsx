@@ -305,6 +305,17 @@ export function StudioIntake({
                   onChange={(e) => field("description", e.target.value, 600)}
                 />
               </label>
+              <label className="ls-field">
+                電話番号（載せる場合だけ）
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={intake.phone || ""}
+                  placeholder="03-1234-5678"
+                  onChange={(e) => field("phone", e.target.value, 20)}
+                />
+              </label>
             </details>
             <button
               className="ls-continue"

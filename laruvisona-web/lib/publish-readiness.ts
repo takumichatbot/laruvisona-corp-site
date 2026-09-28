@@ -15,7 +15,8 @@
  * 判定はデータだけを見る。外部への問い合わせはしない（画面を止めないため）。
  */
 import type { Page } from '@/types/laruHP';
-import { hasPlaceholderText } from './placeholder-text';
+import { hasPlaceholderText, isPlaceholderText } from './placeholder-text';
+import { BLOCK_DEFS } from './studio-schema';
 
 export type ReadyLevel = 'must' | 'better';
 
@@ -67,12 +68,15 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
   // 一覧は lib/placeholder-text.ts にだけ置く。ここに書き写すと、
   // 説明文を作る側（lib/auto-description.ts）と食い違う。実際そうなっていた。
   const hasPlaceholder = hasPlaceholderText(blocks) || blocks.some(b => b.data?.starterExampleName && b.data.starterExampleName === input.name);
+  const where = placeholderPlaces(pages);
   items.push({
     id: 'placeholder',
     ok: !hasPlaceholder,
     level: 'must',
     label: '例文のままの場所が残っていない',
-    detail: hasPlaceholder ? '「【例】」「入力してください」などが残っています。実際の内容・料金に直すか、不要な節を削除してください。' : '大丈夫です',
+    detail: hasPlaceholder
+      ? `${where.length ? `残っている場所：${where.slice(0, 6).join('・')}${where.length > 6 ? ` ほか${where.length - 6}か所` : ''}。` : ''}「【例】」「入力してください」などを実際の内容・料金に直すか、不要な節を削除してください。`
+      : '大丈夫です',
   });
 
   const hasForm = blocks.some(b => b.type === 'contact' || b.type === 'booking');
@@ -161,12 +165,18 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
   });
 
   const hero = blocks.find(b => b.type === 'hero');
+  const heroPhoto = !!d(hero ?? {}).bgImage;
+  // 最初の下書きは見本の写真で始まる（説明文に「サンプル写真」と入っている）。
+  // それを「入っています ✓」と見せると、差し替えを忘れたまま公開してしまう。
+  const samplePhoto = heroPhoto && isPlaceholderText(d(hero ?? {}).bgImageAlt);
   items.push({
     id: 'hero-photo',
-    ok: !!d(hero ?? {}).bgImage,
+    ok: heroPhoto && !samplePhoto,
     level: 'better',
-    label: '最初の画面に写真が入っている',
-    detail: d(hero ?? {}).bgImage ? '入っています' : '写真があると、来た人がすぐ雰囲気を掴めます',
+    label: '最初の画面に自分の写真が入っている',
+    detail: samplePhoto
+      ? '見本の写真のままです。「最初の画面」で、ご自身の仕事・お店の写真に差し替えてください'
+      : heroPhoto ? '入っています' : '写真があると、来た人がすぐ雰囲気を掴めます',
   });
 
   items.push({
@@ -200,6 +210,38 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
   }
 
   return items;
+}
+
+/**
+ * 例文が残っている節を、画面に出ている名前で返す。
+ * 「例文が残っています」だけでは、7つの節のどこを開けばよいか分からなかった。
+ * 見出しの直下の節は、その見出しの言葉で呼ぶ（「私たちの強み」など）。
+ */
+export function placeholderPlaces(pages: Page[]): string[] {
+  const names: string[] = [];
+  const multi = pages.length > 1;
+  for (const page of pages) {
+    const list = page.blocks ?? [];
+    list.forEach((b, i) => {
+      if (b.type === 'heading') return; // 見出しは、直下の節と一緒に数える
+      const data = d(b);
+      const prev = list[i - 1];
+      const title = (v: unknown) => (typeof v === 'string' && v.trim() && !isPlaceholderText(v) ? v.trim() : '');
+      let name = title(data.heading)
+        || (prev?.type === 'heading' ? title(d(prev).text) : '')
+        || BLOCK_DEFS[b.type]?.label || '節';
+      let hit = hasPlaceholderText(data) || (prev?.type === 'heading' && hasPlaceholderText(d(prev)));
+      if (b.type === 'hero') {
+        const { bgImageAlt, ...rest } = data;
+        const photo = isPlaceholderText(bgImageAlt);
+        hit = hasPlaceholderText(rest);
+        name = BLOCK_DEFS.hero?.label || '最初の画面';
+        if (photo) names.push(`${name}の写真`);
+      }
+      if (hit) names.push(multi ? `${page.name}の${name}` : name);
+    });
+  }
+  return [...new Set(names)];
 }
 
 /** 公開を止めるべき項目だけ */
