@@ -85,7 +85,9 @@ function Cell({ value }: { value: Availability }) {
 function checkoutOnAppOrigin(plan: string, billing: 'monthly' | 'annual'): boolean {
   if (typeof window === 'undefined') return false;
   if (window.location.origin === LARUHP_APP_ORIGIN) return false;
-  const to = `${LARUHP_APP_ORIGIN}/laruHP/plans?checkout=${encodeURIComponent(plan)}&billing=${billing}${handoffQuery()}`;
+  // handoff=2: 以前このURLは laruhp.com へ308（恒久）で送り返されていた。308はブラウザに残るので、
+  // 一度押した人は直したあとも送り返され続ける。URLを変えて、残った転送に当たらないようにする。
+  const to = `${LARUHP_APP_ORIGIN}/laruHP/plans?checkout=${encodeURIComponent(plan)}&billing=${billing}&handoff=2${handoffQuery()}`;
   window.location.href = to;
   return true;
 }
