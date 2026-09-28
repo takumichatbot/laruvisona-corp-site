@@ -47,3 +47,7 @@ laruhp.com	/demo	200	-	-	-
 laruhp.com	/faq	200	-	-	-
 laruhp.com	/faq/kaiyaku	200	-	-	-
 laruhp.com	/simulator	200	-	-	-
+# ── 料金ページの決済受け渡し（2026-09-28） ──
+# 受け渡し（?checkout=）付きはアプリ側で開く。付いていなければ案内サイトへ送る
+laruvisona.jp	/laruHP/plans?checkout=hp&billing=monthly	200	-	-	-
+laruvisona.jp	/laruHP/plans	308	https://laruhp.com/plans	-	-

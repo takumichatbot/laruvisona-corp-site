@@ -193,7 +193,15 @@ export async function proxy(request: NextRequest) {
   const legacyPublicPath = publicPathFromLegacy(pathname);
   const isCompanyHost = ['laruvisona.jp', 'www.laruvisona.jp'].includes(hostname.toLowerCase());
   const companyPublicPath = pathname === '/plans' ? '/plans' : legacyPublicPath;
-  if (isCompanyHost && companyPublicPath && ['GET', 'HEAD'].includes(request.method)) {
+  /*
+    料金ページの「始める」は、決済をアプリ側（laruvisona.jp）で始めるために
+    /laruHP/plans?checkout=… へ渡す（app/laruHP/plans/page.tsx の checkoutOnAppOrigin）。
+    ここで laruhp.com へ送り返すと、laruhp.com 側が同じ受け渡しをもう一度して、
+    **決済画面へ一度もたどり着けなかった**（2026-09-28 本番で確認）。
+    決済の受け渡し（?checkout=）が付いた料金ページだけは送り返さない。
+  */
+  const isCheckoutHandoff = pathname === '/laruHP/plans' && request.nextUrl.searchParams.has('checkout');
+  if (isCompanyHost && companyPublicPath && !isCheckoutHandoff && ['GET', 'HEAD'].includes(request.method)) {
     const to = new URL(LARUHP_ORIGIN);
     to.pathname = companyPublicPath;
     to.search = request.nextUrl.search;
