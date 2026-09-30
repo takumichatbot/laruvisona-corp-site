@@ -4,6 +4,12 @@ import type { Block } from '@/types/laruHP';
  * 既存サイトや採用済みの作品データには適用しない。
  * 候補名は本文でも「例」と分かる形にし、公開前チェックでも入力待ちにする。
  */
+const FEATURE_EXAMPLES: Array<[string, string]> = [
+  ['【例】大切にしていること', '【例】仕事で大切にしている考え方を書きます'],
+  ['【例】選ばれている理由', '【例】お客様に喜ばれている点を、事実の範囲で書きます'],
+  ['【例】はじめての方へ', '【例】初めての方が安心できる案内（流れ・準備など）を書きます'],
+];
+
 export function starterTemplate(blocks: Block[], description: string): Block[] {
   return blocks.flatMap((block): Block[] => {
     const d = structuredClone(block.data);
@@ -11,11 +17,11 @@ export function starterTemplate(blocks: Block[], description: string): Block[] {
     switch (block.type) {
       case 'hero': break; // 呼び出し側が、回答と目的に基づく内容で上書きする。
       case 'heading': d.subtext = ''; break;
-      case 'paragraph': d.text = description || '紹介文を入力してください'; break;
+      case 'paragraph': d.text = description || '【例】お店を始めたきっかけや、大切にしていることを短く書きます'; break;
       case 'services':
         d.items = examples(d.items).map(item => ({
           icon: '', title: `【例】${String(item.title || 'サービス')}`,
-          description: '実際に提供する内容を入力してください', price: '',
+          description: '【例】どんな内容か、どんな方に向いているかを書きます', price: '',
         }));
         break;
       case 'price-table':
@@ -27,15 +33,16 @@ export function starterTemplate(blocks: Block[], description: string): Block[] {
         }));
         break;
       case 'three-col':
-        for (const n of [1, 2, 3]) {
-          d[`col${n}Icon`] = '';
-          d[`col${n}Title`] = '特徴を入力してください';
-          d[`col${n}Text`] = '実際の取り組みを入力してください';
-        }
+        // 3つとも同じ文だと記入欄に見えるので、書く観点を分けて見せる
+        FEATURE_EXAMPLES.forEach(([title, text], i) => {
+          d[`col${i + 1}Icon`] = '';
+          d[`col${i + 1}Title`] = title;
+          d[`col${i + 1}Text`] = text;
+        });
         break;
       case 'two-col':
-        d.col1Text = 'ご案内を入力してください';
-        d.col2Text = 'ご案内を入力してください';
+        d.col1Text = `【例】「${String(d.col1Title || 'ご案内')}」について、お客様に伝えたいことを書きます`;
+        d.col2Text = `【例】「${String(d.col2Title || 'ご案内')}」について、お客様に伝えたいことを書きます`;
         break;
       case 'hours':
         d.schedule = examples(d.schedule).map(row => ({ ...row, hours: '', closed: false }));
@@ -52,7 +59,7 @@ export function starterTemplate(blocks: Block[], description: string): Block[] {
         d.buttonText = 'お問い合わせ'; d.buttonLink = '#contact';
         break;
       case 'faq':
-        d.items = examples(d.items).map(row => ({ q: `【例】${String(row.q || 'よくある質問')}`, a: '回答を入力してください' }));
+        d.items = examples(d.items).map(row => ({ q: `【例】${String(row.q || 'よくある質問')}`, a: '【例】よくいただく質問への答えを、短く書きます' }));
         break;
       case 'gallery': d.images = []; break;
       case 'map': d.embedUrl = ''; break;

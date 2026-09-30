@@ -5,6 +5,11 @@ import type { Block, Page, SEOSettings } from "@/types/laruHP";
 import { composeIndustry } from '@/lib/studio-blueprints';
 import { starterTemplate } from '@/lib/starter-template';
 
+/*
+ * 見本写真は「こんな写真を入れる場所」と分かれば十分。
+ * 業種に合う自前の写真が無い業種は、自前で作った中立の見本画像（public/studio/placeholders/）を使う。
+ * 別業種の写真（工務店に海辺の別荘、写真館に工業用セラミック等）は、実績と誤解されるので使わない。
+ */
 export const STARTER_EXAMPLES: Record<
   string,
   {
@@ -45,7 +50,7 @@ export const STARTER_EXAMPLES: Record<
     area: "東京都世田谷区",
     audience: "自分らしい住まいを考えている方",
     description: "暮らしの話からはじめる、住まいづくり。",
-    photo: "/company/concepts/architecture.webp",
+    photo: "/studio/placeholders/construction.webp",
     goal: "contact",
   },
   retail: {
@@ -62,7 +67,7 @@ export const STARTER_EXAMPLES: Record<
     area: "埼玉県さいたま市",
     audience: "痛くなる前に通いたい方",
     description: "説明をしてから始める、歯の治療とお手入れ。",
-    photo: "/studio/references/clinic-v1.webp",
+    photo: "/studio/placeholders/dental.webp",
     goal: "booking",
   },
   legal: {
@@ -70,7 +75,7 @@ export const STARTER_EXAMPLES: Record<
     area: "東京都千代田区",
     audience: "はじめて専門家に相談する方",
     description: "むずかしい話を、わかる言葉で。",
-    photo: "/company/concepts/architecture.webp",
+    photo: "/studio/placeholders/office.webp",
     goal: "contact",
   },
   education: {
@@ -78,7 +83,7 @@ export const STARTER_EXAMPLES: Record<
     area: "神奈川県横浜市",
     audience: "勉強のしかたから見直したい方",
     description: "解き方より先に、つまずいた場所を見つけます。",
-    photo: "/company/concepts/retreat.webp",
+    photo: "/studio/placeholders/education.webp",
     goal: "contact",
   },
   fitness: {
@@ -86,7 +91,7 @@ export const STARTER_EXAMPLES: Record<
     area: "大阪府大阪市",
     audience: "運動を続けられなかった方",
     description: "続けられる量から、はじめる。",
-    photo: "/company/concepts/retreat.webp",
+    photo: "/studio/placeholders/fitness.webp",
     goal: "booking",
   },
   photo: {
@@ -94,7 +99,7 @@ export const STARTER_EXAMPLES: Record<
     area: "福岡県福岡市",
     audience: "かしこまらない写真を残したい方",
     description: "その日の空気ごと、写しておく。",
-    photo: "/company/concepts/ceramics.webp",
+    photo: "/studio/placeholders/photo.webp",
     goal: "contact",
   },
   pet: {
@@ -102,7 +107,7 @@ export const STARTER_EXAMPLES: Record<
     area: "愛知県名古屋市",
     audience: "はじめて預ける飼い主の方",
     description: "その子のペースに合わせて、整えます。",
-    photo: "/company/concepts/retreat.webp",
+    photo: "/studio/placeholders/pet.webp",
     goal: "booking",
   },
   realestate: {
@@ -110,7 +115,7 @@ export const STARTER_EXAMPLES: Record<
     area: "東京都板橋区",
     audience: "この街で暮らしを探している方",
     description: "物件より先に、この街の話から。",
-    photo: "/company/concepts/architecture.webp",
+    photo: "/studio/placeholders/realestate.webp",
     goal: "contact",
   },
   hotel: {
@@ -126,7 +131,7 @@ export const STARTER_EXAMPLES: Record<
     area: "神奈川県鎌倉市",
     audience: "小さな式を考えている方",
     description: "呼びたい人だけを呼ぶ、一日のかたち。",
-    photo: "/company/concepts/ceramics.webp",
+    photo: "/studio/placeholders/wedding.webp",
     goal: "contact",
   },
   accounting: {
@@ -134,7 +139,7 @@ export const STARTER_EXAMPLES: Record<
     area: "東京都足立区",
     audience: "はじめて顧問をつける事業者の方",
     description: "数字の話を、経営の言葉にして返します。",
-    photo: "/company/concepts/architecture.webp",
+    photo: "/studio/placeholders/office.webp",
     goal: "contact",
   },
 };
@@ -144,7 +149,7 @@ export const exampleFor = (industry: string) =>
     area: "活動している地域",
     audience: "サービスを届けたい方",
     description: "大切にしていることを、あなたの言葉で。",
-    photo: "/company/concepts/architecture.webp",
+    photo: "/studio/placeholders/general.webp",
     goal: "contact" as const,
   };
 /** 電話番号を tel: リンクにする。番号の形でなければ空（電話の導線は作らない）。 */
@@ -224,9 +229,11 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
       link: "#start-access",
       data: {
         col1Title: "アクセス",
-        col1Text: intake.area || "住所を入力してください",
+        col1Text: intake.area
+          ? `${intake.area}\n【例】○○駅から徒歩○分など、来店方法を書きます`
+          : "【例】住所と、○○駅から徒歩○分など、来店方法を書きます",
         col2Title: "営業時間",
-        col2Text: "営業時間を入力してください",
+        col2Text: "【例】営業時間と定休日を書きます",
       },
     },
     buy: {
@@ -235,12 +242,11 @@ export function makeStarterSite(intake: IntakeAnswers, presetId: string) {
       link: "#start-products",
       data: {
         heading: "商品について",
+        // 金額・在庫・通販の決済は作らない。何を載せる場所かだけを示す。
         items: [
-          {
-            title: "商品名を入力してください",
-            description: "商品の特徴を入力してください",
-            price: "",
-          },
+          { title: "【例】主な商品", description: "【例】主な商品やサービスを紹介します", price: "" },
+          { title: "【例】おすすめの品", description: "【例】季節のおすすめなど、いま紹介したい品を書きます", price: "" },
+          { title: "【例】選び方のご案内", description: "【例】用途や贈り先に合わせた選び方を書きます", price: "" },
         ],
       },
     },

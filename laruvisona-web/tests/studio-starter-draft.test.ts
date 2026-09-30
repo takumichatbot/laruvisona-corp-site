@@ -6,6 +6,8 @@ import { checkPublishReadiness, placeholderPlaces } from '../lib/publish-readine
 import { orderForGoal } from '../lib/studio-schema';
 import { exportToHTML } from '../lib/html-export';
 import type { Block } from '../types/laruHP';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { editStudioBlock, withoutSampleMarkOnReplace } from '../lib/studio-image';
 
 const base = { name: '足立ホーム', area: '東京都足立区', audience: '', description: '' };
@@ -61,6 +63,52 @@ test('工務店の下書き：記入欄ではなく書き方の見本。対応�
 test('工務店・美容室・整体の下書きに「入力してください」を残さない', () => {
   for (const industry of ['construction', 'beauty', 'clinic'])
     assert.doesNotMatch(JSON.stringify(make(industry).pages[0].blocks), /入力してください/, industry);
+});
+
+test('全15業種：初期ページに「入力してください」・空の見出し・架空の数字・電話番号を出さない', () => {
+  for (const industry of Object.keys(INDUSTRY_TEMPLATES)) {
+    const blocks = make(industry, { area: '' }).pages[0].blocks;
+    const text = JSON.stringify(blocks);
+    assert.doesNotMatch(text, /入力してください|ここに[^書]|lorem/i, industry);
+    blocks.forEach((b, i) => {
+      if (b.type === 'heading') assert.ok(blocks[i + 1] && blocks[i + 1].type !== 'heading', `${industry}: 空の見出し`);
+    });
+    const strings: string[] = [];
+    const walk = (v: unknown, k = ''): void => {
+      if (typeof v === 'string') { if (!/Color|Image|Link|anchor|layout|columns|Ratio|Width|Height/i.test(k)) strings.push(v); }
+      else if (Array.isArray(v)) v.forEach(x => walk(x, k));
+      else if (v && typeof v === 'object') for (const [kk, vv] of Object.entries(v)) walk(vv, kk);
+    };
+    blocks.forEach(b => walk(b.data));
+    for (const t of strings) assert.doesNotMatch(t.replace(/^\d\. /, ''), /\d|No\.?1|保証|満足度/, `${industry}: ${t}`);
+    assert.ok(!text.includes('tel:'), `${industry}: 入力していない電話番号`);
+  }
+});
+
+test('全15業種：見本写真には見本の印があり、業種と無関係な写真を使わない', () => {
+  const mismatched = ['/company/concepts/architecture.webp', '/company/concepts/ceramics.webp'];
+  for (const industry of Object.keys(INDUSTRY_TEMPLATES)) {
+    const s = make(industry);
+    const hero = s.pages[0].blocks.find(b => b.type === 'hero')!;
+    assert.match(String(hero.data.bgImageAlt), /^サンプル写真。/, industry);
+    assert.ok(!mismatched.includes(String(hero.data.bgImage)), `${industry}: ${hero.data.bgImage}`);
+    assert.ok(existsSync(join('public', String(hero.data.bgImage))), `${industry}: 画像ファイルが無い`);
+    if (industry !== 'hotel') assert.notEqual(hero.data.bgImage, '/company/concepts/retreat.webp', industry);
+    assert.equal(checkPublishReadiness(s).find(i => i.id === 'hero-photo')!.ok, false, industry);
+  }
+});
+
+test('物販：通販の決済・送料を見本に出さず、商品・お店の特徴・営業時間・問い合わせがそろう', () => {
+  const blocks = make('retail').pages[0].blocks;
+  const text = JSON.stringify(blocks);
+  assert.doesNotMatch(text, /送料|返品|カート|決済/);
+  for (const t of ['主な商品', 'お店について', '営業時間・定休日', '在庫・商品のご相談']) assert.ok(text.includes(t), t);
+  assert.ok(blocks.some(b => b.type === 'contact'));
+});
+
+test('飲食：料理・お店の特徴・営業時間・来店方法が【例】で分かる', () => {
+  const text = JSON.stringify(make('restaurant').pages[0].blocks);
+  for (const t of ['【例】季節の食材を使った○○料理', '【例】食材・調理法・店内づくり', '【例】営業時間と定休日を書きます', '【例】○○駅から徒歩○分']) assert.ok(text.includes(t), t);
 });
 
 test('書き方の見本は、本人が書いた文を上書きしない', () => {

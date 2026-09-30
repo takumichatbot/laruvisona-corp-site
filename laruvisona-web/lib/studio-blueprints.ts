@@ -21,6 +21,10 @@ export interface StarterGuide {
   flowText?: string[];
   /** 紹介文（ひとことが空のとき） */
   intro?: string;
+  /** 2つ並べる枠。[見出し, 本文] ×2（ひな形の案内を業種に合わせて置き換える） */
+  twoCol?: Array<[string, string]>;
+  /** 紹介文の節が無い業種に、見出しと紹介文を足す。[見出し, 本文] */
+  about?: [string, string];
 }
 
 export const INDUSTRY_BLUEPRINTS: Record<
@@ -90,6 +94,14 @@ export const INDUSTRY_BLUEPRINTS: Record<
       'contact',
       'cta',
     ],
+    guide: {
+      services: {
+        'ランチコース': '【例】季節の食材を使った○○料理など、昼にお出ししている料理を書きます',
+        'ディナーコース': '【例】夜のコースやおすすめの一品など、夜にお出ししている料理を書きます',
+        'カフェタイム': '【例】飲み物や甘いものなど、ゆっくり過ごせるメニューを書きます',
+      },
+      intro: '【例】食材・調理法・店内づくりなど、お店の特徴を書きます',
+    },
   },
   construction: {
     label: '仕事を知って、相談へ',
@@ -148,6 +160,14 @@ export const INDUSTRY_BLUEPRINTS: Record<
       'contact',
       'cta',
     ],
+    // 通販の決済・送料は機能として持っていないので、見本に出さない（店頭での案内にそろえる）
+    guide: {
+      twoCol: [
+        ['営業時間・定休日', '【例】営業時間・定休日を記載します'],
+        ['在庫・商品のご相談', '【例】在庫や商品についての相談方法を案内します'],
+      ],
+      about: ['お店について', '【例】品ぞろえ・素材・選び方など、お店の特徴を書きます'],
+    },
   },
   clinic: {
     label: '施術を知って、相談へ',
@@ -217,7 +237,8 @@ export function composeIndustry(blocks: Block[], industry: string, ctx: { area?:
     const area = (ctx.area || '').trim() || '○○市・△△市';
     const fill = (t: string) => t.replace(/\{area\}/g, area);
     // 置き換えるのは、ひな形のまま（入力待ちの文）の箇所だけ。書かれた文には触れない。
-    const waiting = (v: unknown) => typeof v === 'string' && (v === '' || /入力してください/.test(v));
+    // 入力待ち、または汎用の【例】のままの箇所だけを、業種の見本で置き換える
+    const waiting = (v: unknown) => typeof v === 'string' && (v === '' || /入力してください/.test(v) || /^【例】/.test(v));
     for (const b of next) {
       if (b.type === 'services' && guide.services)
         b.data.items = (b.data.items as Record<string, unknown>[] | undefined)?.map((item) => {
@@ -235,7 +256,17 @@ export function composeIndustry(blocks: Block[], industry: string, ctx: { area?:
           b.data[`col${i + 1}Text`] = fill(text);
         });
       if (b.type === 'paragraph' && guide.intro && waiting(b.data.text)) b.data.text = guide.intro;
+      if (b.type === 'two-col' && guide.twoCol && !b.data.anchorId && waiting(b.data.col1Text) && waiting(b.data.col2Text))
+        guide.twoCol.forEach(([title, text], i) => {
+          b.data[`col${i + 1}Title`] = title;
+          b.data[`col${i + 1}Text`] = text;
+        });
     }
+    if (guide.about && !next.some((b) => b.type === 'paragraph'))
+      next.push(
+        { id: 'start-about-heading', type: 'heading', data: { text: guide.about[0], subtext: '', align: 'center' } },
+        { id: 'start-about', type: 'paragraph', data: { text: guide.about[1], align: 'center' } },
+      );
   }
   if (
     ['construction', 'clinic', 'beauty'].includes(industry) &&
