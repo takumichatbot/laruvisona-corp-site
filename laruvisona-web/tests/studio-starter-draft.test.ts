@@ -6,6 +6,7 @@ import { checkPublishReadiness, placeholderPlaces } from '../lib/publish-readine
 import { orderForGoal } from '../lib/studio-schema';
 import { exportToHTML } from '../lib/html-export';
 import type { Block } from '../types/laruHP';
+import { editStudioBlock, withoutSampleMarkOnReplace } from '../lib/studio-image';
 
 const base = { name: '足立ホーム', area: '東京都足立区', audience: '', description: '' };
 const make = (industry: string, extra: Record<string, string> = {}) =>
@@ -54,7 +55,7 @@ test('工務店の下書き：記入欄ではなく書き方の見本。対応�
   assert.equal(checkPublishReadiness(s).find(i => i.id === 'placeholder')!.ok, false);
   // 地域が空でも、別の地域名を作らない
   const noArea = make('construction', { area: '' });
-  assert.match(String(noArea.pages[0].blocks.find(b => b.type === 'three-col')!.data.col1Text), /〇〇市/);
+  assert.match(String(noArea.pages[0].blocks.find(b => b.type === 'three-col')!.data.col1Text), /○○市/);
 });
 
 test('書き方の見本は、本人が書いた文を上書きしない', () => {
@@ -81,15 +82,57 @@ test('電話番号：入れた人にだけ、電話するボタンと連絡欄�
   assert.ok(!JSON.stringify(make('construction', { phone: 'abc' }).pages).includes('tel:'));
 });
 
-test('公開の準備：例文が残る節を名前で示し、見本の写真を「入っています」にしない', () => {
+test('公開の準備：例文が残る節を名前で示す。見本写真は「直したほうが良いこと」で案内する', () => {
   const s = make('construction');
   const places = placeholderPlaces(s.pages);
-  assert.ok(places.includes('最初の画面の写真'));
   assert.ok(places.includes('私たちの強み'));
   assert.ok(places.includes('住まいのご相談'));
-  const photo = checkPublishReadiness(s).find(i => i.id === 'hero-photo')!;
+  assert.ok(places.includes('ご相談からの流れ'));
+  assert.ok(!places.some(p => p.includes('写真')), '写真は必須側に出さない');
+  const ready = checkPublishReadiness(s);
+  assert.match(ready.find(i => i.id === 'placeholder')!.detail, /残っている場所：.*私たちの強み/);
+  const photo = ready.find(i => i.id === 'hero-photo')!;
+  assert.equal(photo.level, 'better');
   assert.equal(photo.ok, false);
-  for (const b of s.pages[0].blocks) if (b.type === 'hero') b.data.bgImageAlt = '施工した家の外観';
+  assert.match(photo.detail, /見本の写真のまま/);
+});
+
+test('見本写真の判定は、差し替え時に外れる見本の印で行う（URLでは判定しない）', () => {
+  const s = make('construction');
+  const hero = s.pages[0].blocks.find(b => b.type === 'hero')!;
+  const replaced = editStudioBlock(hero, 'bgImage', 'https://example.com/my-house.jpg');
+  assert.equal(replaced.data.bgImageAlt, '');
+  s.pages[0].blocks = s.pages[0].blocks.map(b => b.id === hero.id ? replaced : b);
   assert.equal(checkPublishReadiness(s).find(i => i.id === 'hero-photo')!.ok, true);
-  assert.ok(!placeholderPlaces(s.pages).includes('最初の画面の写真'));
+  // 同じ見本URLでも、本人が選び直して印が無ければ本人の写真として扱う
+  const own = make('construction');
+  for (const b of own.pages[0].blocks) if (b.type === 'hero') b.data.bgImageAlt = '施工した家の外観';
+  assert.equal(checkPublishReadiness(own).find(i => i.id === 'hero-photo')!.ok, true);
+  // 編集画面（ビルダー）で差し替えたときも同じ
+  assert.equal(withoutSampleMarkOnReplace(hero.data, { ...hero.data, bgImage: '/x.jpg' }).bgImageAlt, '');
+  assert.equal(withoutSampleMarkOnReplace(hero.data, { ...hero.data, heading: 'x' }).bgImageAlt, hero.data.bgImageAlt, '写真以外の編集では外さない');
+});
+
+test('文章を直し終えて見本写真だけ残るときは、公開を止めずに差し替えを勧める', () => {
+  const s = make('construction');
+  s.pages[0].blocks = s.pages[0].blocks.filter(b => b.type === 'hero' || b.type === 'contact');
+  const ready = checkPublishReadiness(s);
+  assert.equal(ready.find(i => i.id === 'placeholder')!.ok, true);
+  assert.equal(ready.find(i => i.id === 'hero-photo')!.ok, false);
+});
+
+test('書き方の見本に、架空の数字（金額・日数・許可番号）を入れない', () => {
+  for (const industry of ['construction', 'beauty', 'clinic']) {
+    const examples = JSON.stringify(make(industry).pages[0].blocks).match(/【例】[^"]*/g) || [];
+    assert.ok(examples.length > 0, industry);
+    for (const t of examples) assert.doesNotMatch(t, /\d|万円|第.*号/, `${industry}: ${t}`);
+  }
+});
+
+test('公開前の確認は、保存済みのサイトを書き換えない', () => {
+  const s = make('construction', { phone: '03-1234-5678' });
+  const before = JSON.stringify(s);
+  checkPublishReadiness(s);
+  placeholderPlaces(s.pages);
+  assert.equal(JSON.stringify(s), before);
 });

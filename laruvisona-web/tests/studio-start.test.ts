@@ -43,7 +43,7 @@ test("industry examples keep the same content when selecting another design", ()
 test("sample photography is flagged by publishing readiness", () => {
   const s = makeStarterSite(intake, "refined");
   assert.equal(
-    checkPublishReadiness(s).find((i) => i.id === "placeholder")!.ok,
+    checkPublishReadiness(s).find((i) => i.id === "hero-photo")!.ok,
     false,
   );
 });
