@@ -11,6 +11,7 @@ import { hasFeature } from '@/lib/plan-limits';
 import { hasServiceAccess } from '@/lib/subscription-access';
 import { checkPublishReadiness, blockingItems, adviceItems, type ReadyItem } from '@/lib/publish-readiness';
 import { withoutSampleMarkOnReplace } from '@/lib/studio-image';
+import { applyAiEditActions } from '@/lib/ai-edit-actions';
 import { publishCompletion } from '@/lib/publish-result';
 import { migrationBlockData } from '@/lib/migration-block';
 import Link from 'next/link';
@@ -6729,11 +6730,11 @@ function BuilderContent() {
         industry={String(onboardingData?.industry ?? '')}
         onApplyActions={actions => {
           pushHistory(siteRef.current);
-          actions.forEach(a => {
-            if (a.type === 'update_block') {
-              updateBlockData(a.blockId, a.data);
-            }
-          });
+          // 返ってきた欄だけを既存の節に重ねる（丸ごと置き換えると、返さなかった写真・リンク・項目が消える）
+          setSite(prev => ({
+            ...prev,
+            pages: prev.pages.map(p => ({ ...p, blocks: applyAiEditActions(p.blocks, actions) })),
+          }));
         }}
       />
 

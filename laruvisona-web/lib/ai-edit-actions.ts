@@ -1,4 +1,5 @@
 import type { Block } from '@/types/laruHP';
+import { withoutSampleMarkOnReplace } from '@/lib/studio-image';
 
 export type SafeAiEditAction={
   type:'update_block';
@@ -42,4 +43,35 @@ export function safeAiEditResult(raw:unknown,blocks:Block[]):{
     if(Object.keys(data).length)actions.push({type:'update_block',blockId:block.id,data});
   }
   return {reply,actions};
+}
+
+/**
+ * AIチャットの結果を、既存の節へ「差分として」重ねる。
+ *
+ * 以前は返ってきた data で節のデータを丸ごと置き換えていた。AIは変更する欄しか返さないので、
+ * 見出しだけ直すと写真・ボタンの行き先・繰り返し項目など、返さなかった欄がすべて消えていた。
+ * （AIへの指示文は「マージされます」と説明していた。）
+ *
+ * 変更できるのは、いま文字列である1段目の欄だけ（サーバ側 safeAiEditResult と同じ条件をここでも確かめる）。
+ * 配列・オブジェクトの欄は置き換えないので、中身の構造は壊れない。
+ * 入力の blocks は書き換えない（取り消し用に控えた状態をそのまま戻せるように）。
+ */
+export function applyAiEditActions(
+  blocks: Block[],
+  actions: ReadonlyArray<{ type: string; blockId: string; data: Record<string, unknown> }>,
+): Block[] {
+  return blocks.map(block => {
+    const patch: Record<string, string> = {};
+    for (const action of actions) {
+      if (action.type !== 'update_block' || action.blockId !== block.id) continue;
+      if (!action.data || typeof action.data !== 'object' || Array.isArray(action.data)) continue;
+      for (const [key, next] of Object.entries(action.data)) {
+        if (typeof next !== 'string' || next.length > 5000 || typeof block.data[key] !== 'string') continue;
+        patch[key] = next;
+      }
+    }
+    if (!Object.keys(patch).length) return block;
+    const merged = { ...block.data, ...patch };
+    return { ...block, data: block.type === 'hero' ? withoutSampleMarkOnReplace(block.data, merged) : merged };
+  });
 }
