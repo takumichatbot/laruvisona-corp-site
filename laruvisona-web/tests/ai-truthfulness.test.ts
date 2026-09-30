@@ -33,6 +33,6 @@ test('初回テンプレートは架空の体験談を除き、料金とサー�
   const safe = starterTemplate(blocks, '');
   assert.equal(safe.some(block => block.type === 'testimonials'), false);
   assert.match(JSON.stringify(safe), /【例】相談/);
-  assert.match(JSON.stringify(safe), /料金を入力してください/);
+  assert.match(JSON.stringify(safe), /【例】○○円/);
   assert.doesNotMatch(JSON.stringify(safe), /山田様|5,000円|10,000円/);
 });

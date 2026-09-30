@@ -58,6 +58,11 @@ test('工務店の下書き：記入欄ではなく書き方の見本。対応�
   assert.match(String(noArea.pages[0].blocks.find(b => b.type === 'three-col')!.data.col1Text), /○○市/);
 });
 
+test('工務店・美容室・整体の下書きに「入力してください」を残さない', () => {
+  for (const industry of ['construction', 'beauty', 'clinic'])
+    assert.doesNotMatch(JSON.stringify(make(industry).pages[0].blocks), /入力してください/, industry);
+});
+
 test('書き方の見本は、本人が書いた文を上書きしない', () => {
   const s = make('beauty', { description: '朝の髪を楽にするサロンです。' });
   assert.ok(JSON.stringify(s.pages).includes('朝の髪を楽にするサロンです。'));

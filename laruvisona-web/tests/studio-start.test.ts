@@ -60,7 +60,7 @@ test('every industry starts without invented testimonials, prices or achievement
         assert.match(String(item.title), /^【例】/, industry);
       }
       if (b.type === 'price-table') for (const plan of b.data.plans as Record<string, unknown>[]) {
-        assert.equal(plan.price, '料金を入力してください', industry);
+        assert.equal(plan.price, '【例】○○円', industry);
       }
     }
     // 写真の alt を直しただけでは、本文に残る候補名を確認済みにしない。

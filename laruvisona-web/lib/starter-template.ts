@@ -21,7 +21,7 @@ export function starterTemplate(blocks: Block[], description: string): Block[] {
       case 'price-table':
         d.subtext = '';
         d.plans = examples(d.plans).map(plan => ({
-          name: `【例】${String(plan.name || 'プラン')}`, price: '料金を入力してください',
+          name: `【例】${String(plan.name || 'プラン')}`, price: '【例】○○円', // 金額は作らない。料金の欄だと一目で分かる形にする
           period: '', description: '', features: [], highlighted: !!plan.highlighted,
           buttonText: 'ご予約の相談', buttonLink: '#booking',
         }));
@@ -39,7 +39,7 @@ export function starterTemplate(blocks: Block[], description: string): Block[] {
         break;
       case 'hours':
         d.schedule = examples(d.schedule).map(row => ({ ...row, hours: '', closed: false }));
-        d.note = '営業時間・定休日を入力してください';
+        d.note = '【例】定休日や、最終受付の時間を書きます';
         break;
       case 'booking':
         d.heading = 'ご予約のご相談';
