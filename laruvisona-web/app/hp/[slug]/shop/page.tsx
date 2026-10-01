@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { canonicalBase, siteUrl, isHostForSite, decodeSlug } from '@/lib/public-site-url';
 import type { Metadata } from 'next';
 import ShopClient from './ShopClient';
+import { loadPublishedPresentation } from '@/lib/published-presentation';
 
 function getServiceClient() {
   return createServiceClient(
@@ -24,14 +25,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const slug = decodeSlug(rawSlug);
   const supabase = getServiceClient();
   const { data } = await supabase.from('sites')
-    .select('name, slug, custom_domain').eq('slug', slug).eq('published', true).single();
+    .select('id, name, slug, custom_domain, industry, published_html, blocks_json, seo_json, settings_json').eq('slug', slug).eq('published', true).single();
   if (!data) return { title: 'Shop' };
+  // サイト名は親サイトを公開した時点の名前（下書きの名前は出さない）。商品は従来どおり
+  const siteName = (await loadPublishedPresentation(supabase, data)).siteName;
   // 正規URLはトップ・記事・sitemap と同じ基点から作る
   const canonical = siteUrl(canonicalBase(data as { slug?: string | null; custom_domain?: string | null }), 'shop');
   return {
-    title: `${data.name} — ショップ`,
+    title: `${siteName} — ショップ`,
     alternates: { canonical },
-    openGraph: { title: `${data.name} — ショップ`, url: canonical, type: 'website' },
+    openGraph: { title: `${siteName} — ショップ`, url: canonical, type: 'website' },
   };
 }
 
@@ -56,12 +59,14 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
 
   const { data: site } = await supabase
     .from('sites')
-    .select('id, name, settings_json, slug, custom_domain')
+    .select('id, name, settings_json, slug, custom_domain, industry, published_html, blocks_json, seo_json')
     .eq('slug', slug)
     .eq('published', true)
     .single();
 
   if (!site) notFound();
+  // 画面と構造化データに出すサイト名は、親サイトを公開した時点の名前
+  const siteName = (await loadPublishedPresentation(supabase, site)).siteName;
 
   const settings = (site.settings_json as Record<string, unknown>) || {};
   const allProducts = (settings.products as Product[]) || [];
@@ -79,7 +84,7 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
   const productJsonLd = products.length > 0 ? jsonForScript({
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: `${site.name} — ショップ`,
+    name: `${siteName} — ショップ`,
     url: shopUrl,
     numberOfItems: products.length,
     itemListElement: products.map((p, i) => ({
@@ -111,7 +116,7 @@ export default async function PublicShopPage({ params, searchParams }: Props) {
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '20px 24px', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0 }}>{site.name}</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0 }}>{siteName}</h1>
           <p style={{ fontSize: 12, color: '#64748b', margin: '2px 0 0' }}>オンラインショップ</p>
         </div>
       </header>

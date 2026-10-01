@@ -15,6 +15,8 @@ const POSTS = [
   { id: 'a-post', site_id: 'id-a', title: 'A_ONLY_ARTICLE', content: 'A_ONLY_CONTENT', category: null, image_url: null, published: true, published_at: '2026-09-01T00:00:00Z' },
   { id: 'b-post', site_id: 'id-b', title: 'B_ONLY_ARTICLE', content: 'B_ONLY_CONTENT', category: null, image_url: null, published: true, published_at: '2026-09-02T00:00:00Z' },
   { id: 'b-draft', site_id: 'id-b', title: 'B_DRAFT', content: 'x', category: null, image_url: null, published: false, published_at: '2026-09-03T00:00:00Z' },
+  // 「以前からある作品」（kyuu-site）のお知らせ記事。補助ページのサイト名が公開時点の名前になるかの確認用
+  { id: 'kyuu-post', site_id: 'd41d8cd9-8f00-4b20-a204-9800998ecf84', title: '記事の題名_POST', content: '記事の本文です。', category: null, image_url: null, published: true, published_at: '2026-09-04T00:00:00Z' },
 ];
 // site_domains: そのサイトの確認済みホスト（主な公開URL以外も含む）
 const SITE_DOMAINS = [

@@ -24,4 +24,5 @@ run 'Studio：自分の写真（実アップロード）での比較・採用・
 run '背景動画・2ページ目' $TS tests/browser/style-direction-v1-pages-video.ts
 run '保存API：保存→読み直し→描画→公開' $TS tests/http/style-direction-save-check.ts
 run '公開済みサイト：一括再生成で未公開の下書きを出さない' node tests/http/republish-draft-check.mjs
+run 'お知らせ記事・ショップ：サイト名は親サイトを公開した時点の名前' node tests/http/subpage-name-check.mjs
 exit $status

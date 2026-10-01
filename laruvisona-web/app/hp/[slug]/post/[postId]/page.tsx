@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
 import { renderMarkdown, plainExcerpt } from '@/lib/markdown';
 import { canonicalBase, siteLink, siteUrl, isHostForSite, decodeSlug } from '@/lib/public-site-url';
+import { loadPublishedPresentation } from '@/lib/published-presentation';
 
 // 顧客サイトの記事ページ。
 //
@@ -32,6 +33,11 @@ interface SiteRow {
   slug: string | null;
   custom_domain: string | null;
   published: boolean;
+  published_html: string | null;
+  blocks_json: unknown;
+  seo_json: unknown;
+  settings_json: unknown;
+  industry: string | null;
 }
 
 /** slug のサイトに属する、公開済みの記事だけを返す */
@@ -40,7 +46,7 @@ async function getSitePost(slug: string, postId: string) {
 
   const { data: site } = await supabase
     .from('sites')
-    .select('id, name, slug, custom_domain, published')
+    .select('id, name, slug, custom_domain, published, published_html, blocks_json, seo_json, settings_json, industry')
     .eq('slug', slug)
     .eq('published', true)
     .single<SiteRow>();
@@ -55,7 +61,10 @@ async function getSitePost(slug: string, postId: string) {
     .single<PostRow>();
   if (!post) return null;
 
-  return { post, site };
+  /* 記事ページに出すサイト名は、親サイトを公開した時点の名前（lib/published-presentation.ts）。
+     下書きで変えたサイト名は、親サイトを公開するまで出さない。記事の題名・本文は記事の公開に従う。 */
+  const siteName = (await loadPublishedPresentation(supabase, site)).siteName;
+  return { post, site, siteName };
 }
 
 export async function generateMetadata(
@@ -66,12 +75,12 @@ export async function generateMetadata(
   const data = await getSitePost(slug, postId);
   if (!data) return { title: '記事が見つかりません', robots: { index: false, follow: false } };
 
-  const { post, site } = data;
+  const { post, site, siteName } = data;
   const canonical = siteUrl(canonicalBase(site), `post/${post.id}`);
   const description = plainExcerpt(post.content, 120);
 
   return {
-    title: `${post.title}${site.name ? ` | ${site.name}` : ''}`,
+    title: `${post.title}${siteName ? ` | ${siteName}` : ''}`,
     description,
     alternates: { canonical },
     openGraph: {
@@ -93,7 +102,7 @@ export default async function SitePostPage(
   const data = await getSitePost(slug, postId);
   if (!data) notFound();
 
-  const { post, site } = data;
+  const { post, site, siteName } = data;
 
   // 受け取ったホストが、このサイトを配信してよいホストか。
   // /hp/<別サイトのslug>/post/<id> を顧客ホストで開かせない。
@@ -113,7 +122,7 @@ export default async function SitePostPage(
     datePublished: post.published_at,
     url: canonical,
     ...(post.image_url ? { image: post.image_url } : {}),
-    publisher: { '@type': 'Organization', name: site.name, url: base },
+    publisher: { '@type': 'Organization', name: siteName, url: base },
     mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
   };
 
@@ -125,7 +134,7 @@ export default async function SitePostPage(
           href={backHref}
           className="inline-flex items-center min-h-[44px] text-sm text-sky-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
         >
-          ← {site.name} のトップへ
+          ← {siteName} のトップへ
         </Link>
 
         {post.category && (
@@ -159,7 +168,7 @@ export default async function SitePostPage(
             href={backHref}
             className="inline-flex items-center min-h-[44px] text-sm text-sky-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
           >
-            ← {site.name} のトップへ
+            ← {siteName} のトップへ
           </Link>
         </div>
       </article>
