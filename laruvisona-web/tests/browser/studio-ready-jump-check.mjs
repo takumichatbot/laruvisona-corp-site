@@ -24,7 +24,7 @@ const newPage = async (viewport) => {
   await ctx.route((u) => !/^(127\.0\.0\.1|localhost)$/.test(u.hostname), (r) => r.abort());
   return ctx.newPage();
 };
-const shot = async (p, name) => { if (SHOTS) await p.screenshot({ path: `${SHOTS}/${name}.png` }); };
+const shot = async (p, name) => { if (SHOTS) { await p.waitForTimeout(800); await p.screenshot({ path: `${SHOTS}/${name}.png` }); } };
 /** 「例文の判定」と同じ言い回し（lib/placeholder-text.ts）で、保存済みの中身の例文の数を数える */
 const PH = [/入力してください/, /を入力(?![ぁ-んァ-ヶ一-龯])/, /ここに/, /【例】/, /サンプル/, /ドラッグで好きな位置に置けます/, /サブテキスト（任意）/];
 const countPlaceholders = (v, key = '') => typeof v === 'string' ? (key !== 'bgImageAlt' && PH.some((r) => r.test(v)) ? 1 : 0)
@@ -46,7 +46,8 @@ const active = (p) => p.evaluate(() => {
   const field = el?.querySelector('textarea, input:not([type=color]):not([type=checkbox]), button') || el;
   const r = field?.getBoundingClientRect(), pr = pane?.getBoundingClientRect();
   return { path: el?.getAttribute('data-field-path'), focusedInside: !!el && el.contains(document.activeElement),
-    focusTag: document.activeElement?.tagName, inView: !!r && !!pr && r.top >= pr.top - 1 && r.top < pr.bottom,
+    // 上に貼り付く「内容／見せ方／AIに相談」に隠れていないこと
+    focusTag: document.activeElement?.tagName, inView: !!r && !!pr && r.top >= Math.max(pr.top, document.querySelector('.sc-tabs')?.getBoundingClientRect().bottom ?? 0) - 1 && r.top < pr.bottom,
     guide: el?.parentElement?.querySelector('[data-jump-guide]')?.innerText || el?.querySelector('[data-jump-guide]')?.innerText || '' };
 });
 const saveNow = async (p) => {

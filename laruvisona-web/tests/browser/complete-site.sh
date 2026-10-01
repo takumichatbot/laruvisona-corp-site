@@ -11,6 +11,7 @@ run() { echo; echo "== $1"; shift; "$@" || status=1; }
 run 'Studio：本人が選んだ業種を保存・読み直しで保つ' node tests/browser/studio-industry-check.mjs
 run 'Studio：完成像と「公開の準備」に、保存済みの検索掲載の設定' node tests/browser/studio-noindex-check.mjs
 run 'Studio：公開の準備 → その欄（PC・390・320）' node tests/browser/studio-ready-jump-check.mjs
+run '工務店で一本通す：業種 → 下書き → 案 → 公開の準備 → 欄 → 文章・写真 → 保存 → 読み直し' env MODE=after node tests/browser/complete-site-flow-check.mjs
 if curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:54999/anthropic/v1/messages -d '{}' | grep -q 200 && [ "${AIMOCK:-0}" = 1 ]; then
   run 'Studio：本人の情報 → AI文案（保存済み応答）→ 見比べ → 採用 → 取り消し・契約前' node tests/browser/studio-ai-facts-check.mjs
 else

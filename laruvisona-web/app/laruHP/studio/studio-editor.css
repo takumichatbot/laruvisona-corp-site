@@ -538,3 +538,5 @@
 .sc-used-facts small{font-size:10px;color:#6f7e94}
 .se-jump-assist{display:inline-flex;align-items:center;margin-top:6px;min-height:36px;padding:4px 10px;font-size:12px;font-weight:700;color:#3557c7;border:1px solid #cdd8f5;border-radius:7px;background:#fff}
 @media (max-width:900px){.se-jump-assist{min-height:44px}}
+/* 指摘から開いた欄を、上に貼り付く「内容／見せ方／AIに相談」の下に見せる */
+.se-settings-body [data-field-path]{scroll-margin-top:84px}

@@ -101,7 +101,7 @@ try {
   const shown = await p.locator('[data-ai-proposal]').innerText();
   check('採用前に、元の文章・新しい文章・使った本人の情報が見える', shown.includes(example) && shown.includes(GOOD) && (await p.locator('[data-ai-used-facts]').innerText()).includes(FACTS) && /1件目の説明/.test(shown));
   check('提案しただけでは、文章は変わらない', (await canvas()) === beforeCanvas);
-  if (SHOTS) await p.screenshot({ path: `${SHOTS}/06-pc-ai-before-after.png` });
+  if (SHOTS) { await p.locator('[data-ai-proposal]').scrollIntoViewIfNeeded(); await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/06-pc-ai-before-after.png` }); }
   const remain0 = await remaining();
   await p.getByRole('button', { name: /か所を採用/ }).click();
   await p.waitForFunction((t) => document.querySelector('iframe[title="できあがりの見え方"]')?.getAttribute('srcdoc')?.includes(t), GOOD);
