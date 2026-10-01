@@ -172,6 +172,13 @@ http.createServer((req, res) => {
         }
         if ('failVersionInsert' in next) CONTROL.failVersionInsert = !!next.failVersionInsert;
         /* 行を直接書き換える（例：公開HTMLを古い版の印にする）。アプリの経路を通さない準備専用。 */
+        /* 利用者の契約を書き換える（契約前の画面・AIの断り方を確かめる） */
+        if (next.patchProfile && typeof next.patchProfile.id === 'string') {
+          const target = TABLES.profiles.find(x => x.id === next.patchProfile.id);
+          if (target) Object.assign(target, next.patchProfile.patch || {});
+        }
+        /* AI（Anthropic Messages API）の代わりに返す、保存済みの応答。実モデルは呼ばない */
+        if ('aiReply' in next) CONTROL.aiReply = typeof next.aiReply === 'string' ? next.aiReply : null;
         if (next.patchSite && typeof next.patchSite.id === 'string') {
           const target = SITES.find(x => x.id === next.patchSite.id);
           if (target) Object.assign(target, next.patchSite.patch || {}, { updated_at: touch() });
@@ -240,6 +247,18 @@ http.createServer((req, res) => {
     return;
   }
 
+  /* AIの代わり（ANTHROPIC_BASE_URL をここへ向けたときだけ使う）。受け取った依頼は覚えて、確認用に返せるようにする */
+  if (req.method === 'POST' && url.pathname === '/anthropic/v1/messages') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try { CONTROL.lastAi = JSON.parse(body); } catch { CONTROL.lastAi = null; }
+      CONTROL.aiCalls = (CONTROL.aiCalls || 0) + 1;
+      send(200, { id: 'msg_fixture', type: 'message', role: 'assistant', model: 'fixture', stop_reason: 'end_turn', stop_sequence: null,
+        usage: { input_tokens: 0, output_tokens: 0 }, content: [{ type: 'text', text: CONTROL.aiReply ?? '{"changes":{},"missing":[]}' }] });
+    });
+    return;
+  }
   /* 制作のAI・写真アップロードの利用回数（supabase の laruhp_ai_claim_usage）。
      これが無いと写真アップロードが常に「利用回数に達しました」(429) になり、
      自分の写真を入れる経路を一度も通せない。上限の判定はここでは持たず、常に許可する。 */

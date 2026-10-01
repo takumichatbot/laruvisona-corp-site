@@ -523,3 +523,18 @@
 }
 @media (prefers-reduced-motion: reduce) { [data-jump-active] { scroll-behavior:auto; } }
 
+/* ── AIに相談：本人の情報から文案（範囲・使った情報・足りない情報） ── */
+.sc-assistant textarea[data-ai-facts]{min-height:88px}
+.sc-scope{display:grid;gap:4px;margin:4px 0 10px;font-size:12px;color:#52637b}
+.sc-scope label{display:flex;align-items:center;gap:8px;min-height:36px}
+.sc-assistant .sc-blank-note{color:#8a5a00}
+.sc-missing{border:1px solid #f1d9a6;background:#fff9ec;border-radius:9px;padding:10px 12px;margin:12px 0;font-size:12px;line-height:1.7;color:#5b4520}
+.sc-missing strong{display:block;font-size:11px;margin-top:4px}
+.sc-missing ul{margin:4px 0 6px 1.1em;list-style:disc}
+.sc-missing p{font-size:11px;color:#7a6440;margin:4px 0 0}
+.sc-used-facts{border:1px solid #d7e3f3;background:#f5f9ff;border-radius:9px;padding:10px 12px;margin:0 0 10px}
+.sc-used-facts strong{display:block;font-size:11px;color:#284ca3}
+.sc-used-facts p{font-size:12px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0;color:#2b3548}
+.sc-used-facts small{font-size:10px;color:#6f7e94}
+.se-jump-assist{display:inline-flex;align-items:center;margin-top:6px;min-height:36px;padding:4px 10px;font-size:12px;font-weight:700;color:#3557c7;border:1px solid #cdd8f5;border-radius:7px;background:#fff}
+@media (max-width:900px){.se-jump-assist{min-height:44px}}

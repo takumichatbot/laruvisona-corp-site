@@ -51,7 +51,7 @@ import DirectionEditor from '@/components/studio/DirectionEditor';
 import { planStyleDirection } from '@/lib/style-direction-plan';
 import { colorRolesOf, ROLE_LABEL, type RoleKey } from '@/lib/theme-roles';
 import SectionAssistant from '@/components/studio/SectionAssistant';
-import {applySectionProposal, type SectionProposal} from '@/lib/studio-ai';
+import {aiFields, applySectionProposal, type SectionProposal} from '@/lib/studio-ai';
 import {readComposition,clearComposition,buildComposition} from '@/lib/studio-composition';
 import { trackSiteCreate, trackPublishAttempt, trackPublish, trackPurchaseComplete } from '@/lib/funnel';
 import './studio-editor.css';
@@ -274,11 +274,17 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/60';
 
 /** 「公開の準備」から開いた欄。その欄の近くに、書き方の案内を出す */
-const JumpContext = createContext<{ path: string; guide: string }>({ path: '', guide: '' });
+const JumpContext = createContext<{ path: string; guide: string; assist: (() => void) | null }>({ path: '', guide: '', assist: null });
 function JumpGuide({ path }: { path: string }) {
   const jump = useContext(JumpContext);
-  if (!jump.path || jump.path !== path || !jump.guide) return null;
-  return <div className="se-jump-guide" data-jump-guide><b>書き方</b>{jump.guide}</div>;
+  if (!jump.path || jump.path !== path || (!jump.guide && !jump.assist)) return null;
+  return (
+    <div className="se-jump-guide" data-jump-guide>
+      <b>書き方</b>{jump.guide}
+      {/* 本人の情報から、この欄の文案を作る（既存の「AIに相談」） */}
+      {jump.assist && <div><button type="button" className="se-jump-assist" data-jump-assist onClick={jump.assist}>使う情報を書いて、AIに文案を頼む</button></div>}
+    </div>
+  );
 }
 
 function Field({ def, value, onChange, path = def.key }: {
@@ -1315,6 +1321,7 @@ function StudioInner() {
           <JumpContext.Provider value={{
             path: panel === 'block' && jump?.blockId === selectedId ? jump.path : '',
             guide: jump?.guide ?? '',
+            assist: selected && jump?.blockId === selected.id && Object.hasOwn(aiFields(selected), jump.path) ? () => setCraftTab('assistant') : null,
           }}>
           <div ref={settingsPane} className="se-settings-body flex-1 overflow-y-auto p-4">
             {panel === 'block' && (
@@ -1331,7 +1338,7 @@ function StudioInner() {
                   </div>
                   <div className="sc-tabs" role="group" aria-label="選んだ節の編集方法">{([['content','内容'],['appearance','見せ方'],['assistant','AIに相談']] as const).map(([value,label])=><button type="button" key={value} aria-pressed={craftTab===value} onClick={()=>{setCraftTab(value);setFieldFocus('')}}>{label}</button>)}</div>
                   {craftTab==='appearance'&&<SectionCraft block={selected} globalMotion={site.settings.animLevel} globalLayout={site.settings.heroLayout} ink={site.settings.design?.ink||'#263248'} onChange={(key,value)=>updateBlockData(selected.id,key,value)}/>}
-                  {craftTab==='assistant'&&<SectionAssistant key={selected.id} block={selected} siteId={siteId} onApply={adoptProposal}/>}
+                  {craftTab==='assistant'&&<SectionAssistant key={`${selected.id}:${jump?.blockId===selected.id?jump.path:""}`} block={selected} siteId={siteId} focusPath={jump?.blockId===selected.id?jump.path:''} onApply={adoptProposal}/>}
                   {selected.type === 'booking' && <div className="se-booking-note"><p>{selected.data.mode === 'schedule' ? 'メニュー・担当者・営業時間は予約管理で設定します。表示するボタンは「空き時間を見て予約する」です。' : '空き枠・担当者・設備を管理する場合は、予約モードを「本格予約」に変更してください。'}</p>{siteId ? <Link href={`/laruHP/booking/schedule?siteId=${encodeURIComponent(siteId)}`} onClick={e => { if (saveState.kind !== 'clean') { e.preventDefault(); setHistoryNote('変更を保存してから予約管理へ戻ってください。'); } }}>このサイトの予約設定を開く</Link> : <p>一度サイトを保存すると、予約管理を開けます。</p>}</div>}
                   {craftTab==='content'&&def.fields.filter(f => selected.type !== 'booking' || selected.data.mode !== 'schedule' || !['serviceTypes','timeSlots','buttonText','subtext','stickyCta','stickyCtaText'].includes(f.key)).map(f => (
                     <div key={`${selected.id}:${f.key}`} data-field-key={f.key} data-field-path={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
