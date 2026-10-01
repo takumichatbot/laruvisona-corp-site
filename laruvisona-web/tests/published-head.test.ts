@@ -76,3 +76,15 @@ test('公開ページと OG カードは、下書きの name・seo_json・settin
   assert.match(og, /loadPublishedPresentation/);
   assert.doesNotMatch(og, /data\?\.name \|\| slug|seo\.description/);
 });
+
+test('lhpmeta に焼き込むのは公開用の項目だけ（設定全体・ほかの値・認証情報は入れない）', () => {
+  const st = { designStyle: 'modern', notifyEmail: 'owner@private.example', larubotPublicId: 'secret-id', previewToken: 'tok',
+    businessInfo: { name: '事業者', phone: '03-0000-0000', internalMemo: '社内メモ', token: 'x', ogImage: 'https://img.example/a.png', sameAs: ['https://a.example', 1] } } as unknown as SiteSettings;
+  const html = exportToHTML(pages('A'), seo('A'), st, 'サイトA', { siteId: 's1', slug: 'x' });
+  const meta = readPublishedMeta(html)!;
+  assert.deepEqual(Object.keys(meta).sort(), ['businessInfo', 'siteName']);
+  assert.deepEqual(meta.businessInfo, { name: '事業者', phone: '03-0000-0000', ogImage: 'https://img.example/a.png', sameAs: ['https://a.example'] });
+  const comment = html.match(/<!--lhpmeta:([^>]*)-->/)![1];
+  assert.match(comment, /^[A-Za-z0-9+/=]+$/);                    // base64 だけ。--> や < が出ない
+  assert.doesNotMatch(html, /private\.example|secret-id|社内メモ/);
+});

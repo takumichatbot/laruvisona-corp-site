@@ -76,6 +76,20 @@ export function httpUrl(v: unknown): string {
   try { const u = new URL(s); return u.protocol === 'http:' || u.protocol === 'https:' ? s : ''; } catch { return ''; }
 }
 
+/**
+ * 公開してよい事業者情報だけを取り出す（構造化データ・OG画像に使う項目）。
+ * settings_json の businessInfo に別の値が入っていても、公開HTMLへは焼き込まない。
+ */
+const BI_TEXT = ['type', 'name', 'description', 'address', 'city', 'postalCode', 'phone', 'priceRange', 'latitude', 'longitude', 'ogImage'] as const;
+const BI_LIST = ['openingHours', 'sameAs'] as const;
+export function pickPublicBusinessInfo(bi: unknown): Record<string, unknown> | undefined {
+  if (!bi || typeof bi !== 'object' || Array.isArray(bi)) return undefined;
+  const src = bi as Record<string, unknown>, out: Record<string, unknown> = {};
+  for (const k of BI_TEXT) if (typeof src[k] === 'string' && src[k]) out[k] = (src[k] as string).slice(0, 500);
+  for (const k of BI_LIST) if (Array.isArray(src[k])) out[k] = (src[k] as unknown[]).filter((v): v is string => typeof v === 'string').slice(0, 20).map((v) => v.slice(0, 500));
+  return Object.keys(out).length ? out : undefined;
+}
+
 /** 公開HTMLに焼き込まれた補足（<!--lhpmeta:base64-->）。壊れていれば null */
 export function readPublishedMeta(html: string): PublishedMeta | null {
   const m = String(html ?? '').match(/<!--lhpmeta:([A-Za-z0-9+/=]{1,40000})-->/);
@@ -85,7 +99,8 @@ export function readPublishedMeta(html: string): PublishedMeta | null {
     if (!raw || typeof raw !== 'object' || raw.v !== 1) return null;
     const out: PublishedMeta = {};
     if (typeof raw.siteName === 'string') out.siteName = raw.siteName.slice(0, 200);
-    if (raw.businessInfo && typeof raw.businessInfo === 'object' && !Array.isArray(raw.businessInfo)) out.businessInfo = raw.businessInfo as Record<string, unknown>;
+    const bi = pickPublicBusinessInfo(raw.businessInfo);
+    if (bi) out.businessInfo = bi;
     if (typeof raw.primaryColor === 'string' && /^#[0-9a-f]{3,8}$/i.test(raw.primaryColor)) out.primaryColor = raw.primaryColor;
     return out;
   } catch { return null; }

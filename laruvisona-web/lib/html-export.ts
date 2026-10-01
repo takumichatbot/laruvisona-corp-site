@@ -1,6 +1,6 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { autoDescription } from './auto-description';
-import { httpUrl, publishedMetaComment } from './published-head';
+import { httpUrl, pickPublicBusinessInfo, publishedMetaComment } from './published-head';
 import { designCss } from '@/lib/site-design';
 import { COMPOSITION_CSS } from '@/lib/composition-css';
 import { isDirection } from '@/lib/studio-direction';
@@ -2512,6 +2512,6 @@ function publishedPrimaryColor(settings: SiteSettings): string | undefined {
 
 /** 公開時点の事業者情報（構造化データ用）。SEO設定画面の値は「次の公開時に反映」 */
 function publishedBusinessInfo(settings: SiteSettings): Record<string, unknown> | undefined {
-  const bi = (settings as { businessInfo?: unknown }).businessInfo;
-  return bi && typeof bi === 'object' && !Array.isArray(bi) ? (bi as Record<string, unknown>) : undefined;
+  // 公開してよい項目だけ（settings 全体や、ほかの値は焼き込まない）
+  return pickPublicBusinessInfo((settings as { businessInfo?: unknown }).businessInfo);
 }
