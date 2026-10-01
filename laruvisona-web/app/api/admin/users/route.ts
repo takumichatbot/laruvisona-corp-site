@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdminEmail } from '@/lib/adminAuth';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { safeProfile } from '@/lib/admin-safe-profile';
 
 async function isAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -44,7 +45,8 @@ export async function GET() {
     auth 側を最後に置いて、上書きされないようにする。
   */
   const users = allAuthUsers.map(u => ({
-    ...profileMap.get(u.id),
+    // 秘密の値（token など）は返さない。持っているかだけ（lib/admin-safe-profile.ts）
+    ...safeProfile(profileMap.get(u.id)),
     id: u.id,
     email: u.email,
     created_at: u.created_at,
