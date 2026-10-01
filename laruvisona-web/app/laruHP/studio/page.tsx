@@ -635,6 +635,8 @@ function StudioInner() {
   const serverSavedAt = useRef(0);
   /** 保存されている業種（読み込んだ値）。控えや既定値で上書きしない */
   const serverIndustry = useRef('');
+  /** 保存されている「検索に出さない」設定（SEO設定画面で変える）。未保存のサイトは null */
+  const [savedNoIndex, setSavedNoIndex] = useState<boolean | null>(null);
   const serverHadContent = useRef(false);
   /** 控えを戻す処理を1回だけにする */
   const restoreDone = useRef(false);
@@ -791,6 +793,7 @@ function StudioInner() {
            （見た目や店名から推測して書き込まない。案内は共通のものになる） */
         const knownIndustry = INDUSTRY_CHOICES.some(c => c.value === s.industry) ? String(s.industry) : '';
         serverIndustry.current = knownIndustry;
+        setSavedNoIndex(st.noIndex === true);
         setIntake(prev => ({ ...prev, industry: knownIndustry }));
         setPublishedAt(s.published ? (s.updated_at as string) : null);
         publicSiteRef.current = {
@@ -862,7 +865,9 @@ function StudioInner() {
         setPreviewHtml(exportToHTML(
           site.pages,
           page.seo || EMPTY_SEO,
-          toExportSettings(site.settings) as never,
+          /* 検索エンジンへの指示（noindex）は SEO設定画面で変える値。制作画面では編集しないので
+             保存（settings_json_patch）には入れず、完成像の書き出しにだけ渡して公開と同じにする */
+          { ...toExportSettings(site.settings), noIndex: savedNoIndex === true } as never,
           site.name || '店名',
           { name: site.name, industry: intake.industry, siteId: siteId || 'studio-preview', slug: '' },
         ));
@@ -871,7 +876,7 @@ function StudioInner() {
       }
     }, 140);
     return () => clearTimeout(t);
-  }, [site, page, intake.industry, siteId]);
+  }, [site, page, intake.industry, siteId, savedNoIndex]);
 
   const keepComparison=()=>{
     if(uploads||!accountResolved)return;
@@ -1297,6 +1302,7 @@ function StudioInner() {
                 note={publishNote}
                 planNeeded={planNeeded}
                 publicUrl={publicUrl}
+                noIndex={savedNoIndex}
                 onPublish={publish}
               />
             )}
@@ -1559,7 +1565,7 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
 }
 
 /* ── 公開の準備 ── */
-function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, publicUrl, onPublish }: {
+function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, publicUrl, noIndex, onPublish }: {
   items: ReadyItem[];
   siteId: string | null;
   published: boolean;
@@ -1569,6 +1575,8 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
   note: string;
   planNeeded: boolean;
   publicUrl: string;
+  /** 保存されている「検索に出さない」設定。未保存のサイトは null（既定は検索に出す） */
+  noIndex: boolean | null;
   onPublish: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -1604,6 +1612,19 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
 
       <div className="text-[11px] font-bold text-slate-500 mb-1.5">直したほうが良いこと</div>
       <ul className="space-y-2 mb-5">{better.map(row)}</ul>
+
+      {/* 公開したときの検索結果への掲載。制作画面の完成像も同じ設定で描く（この画面自体は検索に出ない） */}
+      <div className="mb-4 rounded-lg border border-slate-200 p-3" data-ready-search>
+        <div className="text-[11px] font-bold text-slate-500">検索結果への掲載（公開したとき）</div>
+        <div className="text-[12px] text-slate-800 mt-0.5">
+          {noIndex ? '検索結果に出さない設定です' : '検索結果に出す設定です'}
+        </div>
+        {siteId && (
+          <Link href={`/laruHP/seo?siteId=${siteId}`} className="text-[11px] text-sky-700 underline">
+            SEO設定で変える
+          </Link>
+        )}
+      </div>
 
       <div className="border-t border-slate-200 pt-4">
         <div className="text-[12px] text-slate-600 mb-2 leading-relaxed">

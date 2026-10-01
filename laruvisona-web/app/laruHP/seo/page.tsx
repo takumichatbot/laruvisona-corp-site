@@ -148,8 +148,11 @@ export default function SeoPage() {
         const s: Site[] = d.sites || [];
         setSites(s);
         if (s.length > 0) {
-          setSelectedSite(s[0]);
-          loadFormFromSite(s[0]);
+          // 制作画面の「公開の準備」から来たときは、そのサイトを開く（?siteId=）
+          const want = new URLSearchParams(window.location.search).get('siteId');
+          const first = s.find(x => x.id === want) ?? s[0];
+          setSelectedSite(first);
+          loadFormFromSite(first);
         }
       } catch {
         setError('データの読み込みに失敗しました。ページを再読み込みしてください。');
