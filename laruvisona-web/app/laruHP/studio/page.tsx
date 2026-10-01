@@ -763,7 +763,9 @@ function StudioInner() {
         if (!alive || !s) return;
         const raw = s.blocks_json;
         const pages: Page[] = raw?.v === 2 && Array.isArray(raw.pages) && raw.pages.length
-          ? raw.pages
+          /* トップページの検索設定が無い以前のサイト（v2 でも page.seo が無いもの）は、サイトの検索設定を使う。
+             公開・書き出しも同じく seo_json を使う。空のまま保存すると seo_json を空で上書きしてしまう */
+          ? raw.pages.map((pg: Page, i: number) => (i === 0 && !pg.seo ? { ...pg, seo: { ...EMPTY_SEO, ...(s.seo_json || {}) } } : pg))
           : [{ id: 'page-main', name: 'トップページ', path: '/', blocks: Array.isArray(raw) ? raw : [], seo: { ...EMPTY_SEO, ...(s.seo_json || {}) } }];
         const st = (s.settings_json || {}) as Record<string, unknown>;
         resetSite({
