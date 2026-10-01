@@ -212,7 +212,8 @@ try {
         body: JSON.stringify({
           proposal: {
             changes: {
-              heading: '提案された見出し' + aiCalls,
+              // 本人の文章に無い数字は、提案から外す（lib/studio-ai.ts）。呼んだ回数は数字でなく文字で区別する
+              heading: '提案された見出し' + 'ーあいう'[aiCalls],
               subheading: '提案された紹介文',
             },
           },

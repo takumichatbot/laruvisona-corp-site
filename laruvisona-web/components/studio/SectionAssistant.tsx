@@ -16,7 +16,6 @@ type Availability = { available: boolean; reason?: 'login' | 'contract' | 'not-r
 const UNAVAILABLE: Record<string, string> = {
   login: 'AIの文案は、ログインすると使えます。',
   contract: 'AIの文案は、ご契約中のプランで使えます。いまは「内容」タブで手で書けます。「公開の準備」の案内もそのまま使えます。',
-  'not-ready': 'AIの文案は、いま準備中です。「内容」タブで手で書けます。',
 };
 
 export default function SectionAssistant({
@@ -56,7 +55,8 @@ export default function SectionAssistant({
   const scopeKeys = onlyFocus && focusable ? [focusPath] : Object.keys(fields);
   const blankInScope = scopeKeys.filter((k) => isPlaceholderText(fields[k]));
   const needFacts = scopeKeys.length > 0 && blankInScope.length === scopeKeys.length && !facts.trim();
-  const unavailable = access && !access.available ? UNAVAILABLE[access.reason || 'contract'] : '';
+  // 押す前に止めるのは、ログイン・契約の条件だけ。AIの準備（鍵）が無いときは、これまでどおり押したときに伝える
+  const unavailable = access && !access.available && access.reason !== 'not-ready' ? UNAVAILABLE[access.reason || 'contract'] : '';
   const request = async () => {
     if (busy || unavailable || (!prompt.trim() && !facts.trim()) || needFacts) return;
     setBusy(true);
