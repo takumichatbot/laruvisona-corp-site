@@ -116,6 +116,8 @@ function DirectionReview({
   const [device, setDevice] = useState<'sp' | 'pc'>('sp');
   const [size, setSize] = useState({ width: 320, height: 440 });
   const [options, setOptions] = useState<PlanOptions>(DEFAULT_PLAN_OPTIONS);
+  // 詳細の開閉は、案・配色を選び替えても保つ
+  const [detailsOpen, setDetailsOpen] = useState(false);
   useEffect(() => {
     const el = dialog.current!,
       focus = document.activeElement as HTMLElement | null;
@@ -147,6 +149,10 @@ function DirectionReview({
   const canvas = device === 'sp' ? 390 : 1440,
     scale = Math.max(0.01, size.width / canvas);
   const palette = STYLE_PLANS[chosen].palette;
+  const direction = DIRECTIONS.find((d) => d.id === chosen)!;
+  const mainChanges = plan.changes.filter((c) => !c.group);
+  const fineChanges = plan.changes.filter((c) => c.group === 'detail');
+  const scope = plan.changes.find((c) => c.group === 'scope');
   return (
     <dialog
       ref={dialog}
@@ -233,17 +239,35 @@ function DirectionReview({
             )}
             <section className="dr-changes" aria-label="採用すると変わること">
               <h3>採用すると変わること</h3>
-              <dl>
-                {plan.changes.map((c) => (
-                  <div key={c.label}>
-                    <dt>{c.label}</dt>
-                    <dd>{c.detail}</dd>
-                  </div>
-                ))}
-              </dl>
-              <ul className="de-quality">
-                {hero && compositionAdvice(hero).map((t) => <li key={t}>{t}</li>)}
-              </ul>
+              {/* 要約：同じ変更計画（plan.changes）の項目名を並べるだけ。判定を別に持たない */}
+              <p className="dr-summary">
+                <strong>{direction.name}</strong>：{direction.note}
+              </p>
+              <p className="dr-summary">
+                変わる主な項目：{mainChanges.map((c) => c.label).join('・')}
+                {fineChanges.length > 0 && `。ほかに${fineChanges.slice(0, 2).map((c) => c.label).join('・')}など、細かな調整が${fineChanges.length}項目`}
+              </p>
+              {scope && (
+                <p className="dr-scope">
+                  <strong>{scope.label}</strong>
+                  {scope.detail}
+                </p>
+              )}
+              <p className="dr-keep">文章・写真・リンク・問い合わせ先は、そのまま残ります。</p>
+              <details className="dr-more" open={detailsOpen} onToggle={(e) => setDetailsOpen(e.currentTarget.open)}>
+                <summary>変更の詳細を見る（{mainChanges.length + fineChanges.length}項目）</summary>
+                <dl>
+                  {[...mainChanges, ...fineChanges].map((c) => (
+                    <div key={c.label}>
+                      <dt>{c.label}</dt>
+                      <dd>{c.detail}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <ul className="de-quality">
+                  {hero && compositionAdvice(hero).map((t) => <li key={t}>{t}</li>)}
+                </ul>
+              </details>
             </section>
           </aside>
           <main className="dr-preview" data-device={device}>

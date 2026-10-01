@@ -469,3 +469,45 @@
     margin: 16px 12px 20px;
   }
 }
+
+/* 採用すると変わること：要約（常に見える）と、開いて見る詳細 */
+.dr-summary {
+  margin: 0 0 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #33415c;
+}
+.dr-scope {
+  margin: 8px 0 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f0f4ff;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #33415c;
+}
+.dr-scope strong {
+  display: block;
+  font-size: 11px;
+}
+.dr-keep {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #5b6b85;
+}
+.dr-more {
+  border-top: 1px solid #e1e6ef;
+  padding-top: 8px;
+}
+.dr-more summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  color: #2f4fbf;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+.dr-more dl {
+  margin-top: 8px;
+}

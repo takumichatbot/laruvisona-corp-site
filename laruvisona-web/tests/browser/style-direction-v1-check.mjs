@@ -90,8 +90,15 @@ try {
     const group = dialog.getByRole('radiogroup', { name: '比較する案' });
     const picked = () => group.getByRole('radio', { checked: true });
     check('選択はラジオ3つ・選択中が分かる', (await group.getByRole('radio').count()) === 3 && (await picked().innerText()).includes('写真で惹きつける'));
+    // 要約（常に見える）：主な項目の名前・効く範囲・残るもの。数値の細かな調整は「詳細」の中
+    const summaryB = await dialog.locator('.dr-changes').innerText();
+    check('B 要約：主な項目・効く範囲・残るものが見え、細かな数値は詳細へ', ['写真で惹きつける', '最初の画面', '写真が見本のまま', '表示の動き', '効く範囲', 'そのまま残ります', '細かな調整'].every((t) => summaryB.includes(t)) && !summaryB.includes('0.06 → 0.08') && await dialog.locator('details.dr-more').evaluate((d) => !d.open), summaryB.replace(/\n/g, ' / ').slice(0, 400));
+    await p.frameLocator('iframe[title="採用前の案"]').locator('h1').waitFor();
+    await dialog.locator('.dr-changes').scrollIntoViewIfNeeded();
+    await dialog.screenshot({ path: out + '/dialog-B-pc-summary.png' });
+    await dialog.locator('details.dr-more > summary').click();
     const changesB = await dialog.locator('.dr-changes').innerText();
-    check('B：採用前に変わる項目を表示（余白・最初の画面・写真が見本の間・動き）', ['節と節のあいだ', '最初の画面', '写真が見本のまま', '表示の動き'].every((t) => changesB.includes(t)), changesB.replace(/\n/g, ' / ').slice(0, 400));
+    check('B 詳細を開く：具体的な変更前後（余白・字間など）が見える', ['節と節のあいだ', '見出しの字間', '0.06 → 0.08', '最初の画面'].every((t) => changesB.includes(t)), changesB.replace(/\n/g, ' / ').slice(0, 400));
     check('配色は「今の配色のまま」が初期', await dialog.getByLabel('今の配色のまま').isChecked());
     const cand = p.frameLocator('iframe[title="採用前の案"]');
     await cand.locator('h1').waitFor();
@@ -107,7 +114,8 @@ try {
     check('選択中の案にフォーカスがある', await picked().evaluate((el) => el === document.activeElement));
     await p.waitForTimeout(800);
     const changesA = await dialog.locator('.dr-changes').innerText();
-    check('A：採用前に変わる項目を表示（書体・形・最初の画面・順番・寄せ・動き・範囲）', ['書体', '形の雰囲気', '最初の画面', '表示の動き', '効く範囲'].every((t) => changesA.includes(t)), changesA.replace(/\n/g, ' / ').slice(0, 500));
+    check('A：選び替えても詳細は開いたまま・変わる項目を表示（書体・形・最初の画面・順番・寄せ・動き・範囲）', await dialog.locator('details.dr-more').evaluate((d) => d.open) && ['書体', '形の雰囲気', '最初の画面', '表示の動き', '効く範囲'].every((t) => changesA.includes(t)), changesA.replace(/\n/g, ' / ').slice(0, 500));
+    await dialog.locator('details.dr-more > summary').scrollIntoViewIfNeeded();
     await dialog.screenshot({ path: out + '/dialog-A-pc.png' });
     // 配色を案の配色に → プレビューだけ変わる
     const bgBefore = await cand.locator('body').evaluate((b) => getComputedStyle(b).backgroundColor);

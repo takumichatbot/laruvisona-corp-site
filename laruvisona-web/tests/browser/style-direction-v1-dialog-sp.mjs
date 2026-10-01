@@ -72,17 +72,28 @@ try {
     check(`${width}：ダイアログが画面幅に収まり横スクロールなし`, L.dialog.left >= 0 && L.dialog.right <= L.vw + 1 && L.hScroll <= 0, JSON.stringify(L.dialog));
     check(`${width}：大きなプレビューに高さがある（200px以上）`, L.preview && L.preview.h >= 200, JSON.stringify(L.preview));
     check(`${width}：採用・やめるが画面内（44px以上）`, L.adopt && L.adopt.bottom <= L.vh && L.footer.bottom <= L.vh + 1, JSON.stringify({ adopt: L.adopt, footer: L.footer }));
-    // 変わる内容は画面より長いので、見出しと最後の項目それぞれに届くかを見る
-    for (const [sel, name] of [['[role=radio]:nth-child(3)', '候補（3つ目）'], ['.dr-palette', '配色の選択'], ['.dr-changes h3', '採用すると変わる内容（見出し）'], ['.dr-changes dl > div:last-child', '採用すると変わる内容（最後の項目）'], ['.dr-preview .de-frame', '大きなプレビュー']]) {
+    // 要約・効く範囲・詳細の入口に届くか。詳細を開いたら、その最後の項目まで届くか
+    for (const [sel, name] of [['[role=radio]:nth-child(3)', '候補（3つ目）'], ['.dr-palette', '配色の選択'], ['.dr-changes h3', '採用すると変わる内容（要約）'], ['.dr-scope', '効く範囲（要約の中）'], ['details.dr-more > summary', '詳細を開く入口'], ['.dr-preview .de-frame', '大きなプレビュー']]) {
       const R = await reachable(p, sel);
       check(`${width}：${name}までスクロールで届き、操作帯と重ならない`, R.ok, JSON.stringify(R));
     }
-    // 操作：候補の選択・配色・採用
+    // 配色を変えてから詳細を開閉しても、候補・配色の選択は保たれる（キーボードで開閉）
     await dialog.getByRole('radio', { name: /内容で選んでもらう/ }).click();
-    check(`${width}：候補を選べる`, (await dialog.getByRole('radiogroup', { name: '比較する案' }).getByRole('radio', { checked: true }).innerText()).includes('内容で選んでもらう'));
     await dialog.getByText(/この案の配色にする/).scrollIntoViewIfNeeded();
     await dialog.getByText(/この案の配色にする/).click();
-    check(`${width}：配色を選べる`, await dialog.getByLabel(/この案の配色にする/).isChecked());
+    await dialog.locator('details.dr-more > summary').focus();
+    await p.keyboard.press('Enter');
+    const opened = await dialog.locator('details.dr-more').evaluate((d) => d.open);
+    const keep = { radio: (await dialog.getByRole('radiogroup', { name: '比較する案' }).getByRole('radio', { checked: true }).innerText()).includes('内容で選んでもらう'), palette: await dialog.getByLabel(/この案の配色にする/).isChecked() };
+    check(`${width}：詳細をキーボードで開ける・候補と配色の選択は保たれる`, opened && keep.radio && keep.palette, JSON.stringify({ opened, ...keep }));
+    await dialog.locator('details.dr-more > summary').evaluate((el) => el.scrollIntoView({ block: 'start' }));
+    await p.screenshot({ path: `${out}/dialog-sp-${width}-details.png` });
+    for (const [sel, name] of [['details.dr-more dl > div:last-child', '詳細の最後の項目']]) {
+      const R = await reachable(p, sel);
+      check(`${width}：${name}までスクロールで届き、操作帯と重ならない`, R.ok, JSON.stringify(R));
+    }
+    await p.keyboard.press('Enter');   // 詳細を閉じる
+    check(`${width}：詳細を閉じても選択は保たれる`, !(await dialog.locator('details.dr-more').evaluate((d) => d.open)) && await dialog.getByLabel(/この案の配色にする/).isChecked());
     await dialog.locator('.dr-changes').scrollIntoViewIfNeeded();
     await p.screenshot({ path: `${out}/dialog-sp-${width}-changes.png` });
     await p.getByRole('button', { name: 'やめる' }).click();

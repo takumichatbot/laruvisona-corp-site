@@ -66,7 +66,13 @@ export interface PlanSettings {
   styleDirection?: string;
   motionProfile?: string;
 }
-export interface PlanChange { label: string; detail: string }
+/**
+ * 採用すると変わること。group は見せ方の区分だけ（判定は同じ計画から）：
+ *   無し … 主な項目（比較画面の要約に名前を並べる）
+ *   'detail' … 見出しの大きさ・字間・角の丸みなど、数値の細かな調整（「詳細」の中）
+ *   'scope' … 効く範囲（要約に常に出す）
+ */
+export interface PlanChange { label: string; detail: string; group?: 'detail' | 'scope' }
 export interface IndividualColor { blockId: string; part: string; key: RoleKey; value: string }
 export interface StylePlanResult<S> {
   pages: Page[];
@@ -148,7 +154,7 @@ export function planStyleDirection<S extends PlanSettings>(
   if (before.designStyle !== plan.designStyle)
     changes.push({ label: '形の雰囲気', detail: `${STYLE_LABEL[before.designStyle ?? ''] ?? '今の形'} → ${STYLE_LABEL[plan.designStyle]}` });
   for (const k of Object.keys(plan.design) as (keyof DesignPatch)[]) {
-    if (baseDesign[k] !== design[k]) changes.push({ label: DESIGN_LABEL[k], detail: `${fmt(k, baseDesign[k])} → ${fmt(k, design[k])}` });
+    if (baseDesign[k] !== design[k]) changes.push({ label: DESIGN_LABEL[k], detail: `${fmt(k, baseDesign[k])} → ${fmt(k, design[k])}`, group: 'detail' });
   }
   changes.push(options.usePalette
     ? { label: '配色', detail: `この案の配色「${plan.palette}」に変えます（文字・地・差し色・薄い面・罫線）` }
@@ -215,6 +221,7 @@ export function planStyleDirection<S extends PlanSettings>(
   const roleCount = blocks.filter(b => Object.keys(colorRolesOf(b.data)).length).length;
   if (roleCount) changes.push({ label: 'ボタン・帯の色', detail: 'テーマの色に合わせます。あとで配色を変えても追従します' });
   changes.push({
+    group: 'scope',
     label: '効く範囲',
     /* 言葉で伝える／内容で選んでもらうは、左寄せの本文・FAQ・営業時間・問い合わせ欄の
        読み始めを揃えるCSSがサイト全体に効く（lib/style-direction-css.ts）。説明もそれに合わせる */
