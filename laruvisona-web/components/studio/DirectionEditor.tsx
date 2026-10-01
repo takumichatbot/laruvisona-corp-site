@@ -1,43 +1,65 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
+import type { Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import {
-  arrangeDirection,
   compositionAdvice,
-  directionSequence,
   DIRECTIONS,
   type DirectionId,
   isDirection,
 } from '@/lib/studio-direction';
+import {
+  DEFAULT_PLAN_OPTIONS,
+  planStyleDirection,
+  STYLE_PLANS,
+  FONT_LABEL,
+  KEY_LABEL,
+  type PlanOptions,
+  type PlanSettings,
+} from '@/lib/style-direction-plan';
 import { exportToHTML } from '@/lib/html-export';
 import { withPreviewBridge } from '@/lib/preview-frame';
 import DirectionChoices from './DirectionChoices';
 import './direction-editor.css';
+
+type Site = { pages: Page[]; settings: PlanSettings };
 type Props = {
-  blocks: Block[];
-  settings: SiteSettings;
+  site: Site;
+  /** 制作画面の設定を、公開HTMLの書き出し設定へ */
+  toExport: (settings: PlanSettings) => SiteSettings;
   name: string;
   seo: SEOSettings;
-  onApply: (id: DirectionId) => void;
+  onApply: (id: DirectionId, options: PlanOptions) => void;
   disabled: boolean;
 };
+
+/* 比較の枠の中だけで使う。通信・送信・別の枠を止める（実問い合わせ・計測を起こさない） */
+const PREVIEW_CSP = `<head><meta http-equiv="Content-Security-Policy" content="connect-src 'none'; form-action 'none'; frame-src 'none';">`;
+
+/** 変更計画（採用と同じ関数）から、比較の枠に流す公開HTMLを作る */
+function previewHtml(site: Site, id: DirectionId, options: PlanOptions, toExport: Props['toExport'], seo: SEOSettings, name: string) {
+  const plan = planStyleDirection(site, id, options);
+  const top = plan.pages[0];
+  const page: Page = { id: top?.id || 'direction-preview', name: top?.name || 'トップページ', path: '/', blocks: top?.blocks || [], seo };
+  return {
+    plan,
+    html: withPreviewBridge(exportToHTML([page], seo, { ...toExport(plan.settings), animLevel: 'none' }, name)).replace('<head>', PREVIEW_CSP),
+  };
+}
+
 export default function DirectionEditor(props: Props) {
-  const current = props.blocks.find((b) => b.type === 'hero');
+  const current = props.site.pages[0]?.blocks.find((b) => b.type === 'hero');
   const [chosen, setChosen] = useState<DirectionId | null>(null);
+  const adopted = isDirection(props.site.settings.styleDirection) ? props.site.settings.styleDirection : '';
   return (
-    <section className="de-editor" aria-label="ページの構成を比較">
+    <section className="de-editor" aria-label="見た目の案を比較">
       <span className="de-eyebrow">あなたの写真と文章のままで</span>
       <h3>構成から、選び直す。</h3>
       <p>
-        配置と節の順番が違う3案です。大きな完成像で見比べてから採用できます。
+        配置と節の順番に加えて、書体・余白・見出しの強弱も変わる3案です。配色は今のままにできます。大きな完成像で見比べてから採用できます。
       </p>
       <DirectionChoices
-        value={
-          isDirection(current?.data.compositionStyle)
-            ? current.data.compositionStyle
-            : ''
-        }
+        value={adopted || (isDirection(current?.data.compositionStyle) ? current.data.compositionStyle : '')}
         photo={String(current?.data.bgImage || '')}
         onChange={setChosen}
       />
@@ -52,9 +74,31 @@ export default function DirectionEditor(props: Props) {
     </section>
   );
 }
+
+/** 選択肢のカード：最初の画面と次の節の一部が見える縮小表示 */
+function OptionThumb({ html }: { html: string }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const [w, setW] = useState(240);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width || 240));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // パソコン幅で、最初の画面と次の節の頭まで（高さ 1000px 分）を縮小して見せる
+  const canvas = 1440, view = 1000, scale = w / canvas;
+  return (
+    <span ref={box} className="dr-thumb" aria-hidden="true" style={{ height: Math.round(view * scale) }}>
+      <iframe title="" tabIndex={-1} srcDoc={html} sandbox="allow-scripts" loading="lazy"
+        style={{ width: canvas, height: view, transform: `scale(${scale})` }} />
+    </span>
+  );
+}
+
 function DirectionReview({
-  blocks,
-  settings,
+  site,
+  toExport,
   name,
   seo,
   onApply,
@@ -71,6 +115,7 @@ function DirectionReview({
     holder = useRef<HTMLDivElement>(null);
   const [device, setDevice] = useState<'sp' | 'pc'>('sp');
   const [size, setSize] = useState({ width: 320, height: 440 });
+  const [options, setOptions] = useState<PlanOptions>(DEFAULT_PLAN_OPTIONS);
   useEffect(() => {
     const el = dialog.current!,
       focus = document.activeElement as HTMLElement | null;
@@ -92,33 +137,16 @@ function DirectionReview({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const candidate = useMemo(
-    () =>
-      arrangeDirection(
-        blocks,
-        chosen,
-        String(settings.design?.ink || '#263248'),
-      ),
-    [blocks, chosen, settings.design],
+  // 3案とも、同じ元の状態から作る（選び替えても積み重ならない）
+  const previews = useMemo(
+    () => Object.fromEntries(DIRECTIONS.map((d) => [d.id, previewHtml(site, d.id, options, toExport, seo, name)])) as Record<DirectionId, ReturnType<typeof previewHtml>>,
+    [site, options, toExport, seo, name],
   );
-  const hero = candidate.find((b) => b.type === 'hero');
-  const html = useMemo(() => {
-    const page: Page = {
-      id: 'direction-preview',
-      name: 'トップページ',
-      path: '/',
-      blocks: candidate,
-      seo,
-    };
-    return withPreviewBridge(
-      exportToHTML([page], seo, { ...settings, animLevel: 'none' }, name),
-    ).replace(
-      '<head>',
-      `<head><meta http-equiv="Content-Security-Policy" content="connect-src 'none'; form-action 'none'; frame-src 'none';">`,
-    );
-  }, [candidate, seo, settings, name]);
-  const canvas = device === 'sp' ? 390 : 1100,
+  const { plan, html } = previews[chosen];
+  const hero = plan.pages[0]?.blocks.find((b) => b.type === 'hero');
+  const canvas = device === 'sp' ? 390 : 1440,
     scale = Math.max(0.01, size.width / canvas);
+  const palette = STYLE_PLANS[chosen].palette;
   return (
     <dialog
       ref={dialog}
@@ -131,11 +159,11 @@ function DirectionReview({
         <header className="dr-header">
           <div>
             <span>いまの写真・文章で比較</span>
-            <h2 id="dr-title">構成で、伝わり方が変わる。</h2>
+            <h2 id="dr-title">見せ方で、伝わり方が変わる。</h2>
           </div>
           <button
             type="button"
-            aria-label="構成の比較を閉じる"
+            aria-label="比較を閉じる（何も変わりません）"
             onClick={onClose}
           >
             <X size={22} />
@@ -143,62 +171,86 @@ function DirectionReview({
         </header>
         <div className="dr-workspace">
           <aside className="dr-options">
-            <div
-              role="group"
-              aria-label="比較する構成"
-              className="dr-options-list"
-            >
+            <div role="radiogroup" aria-label="比較する案" className="dr-options-list">
               {DIRECTIONS.map((d, i) => (
                 <button
                   type="button"
+                  role="radio"
                   key={d.id}
-                  aria-pressed={chosen === d.id}
+                  aria-checked={chosen === d.id}
+                  tabIndex={chosen === d.id ? 0 : -1}
                   onClick={() => onChoose(d.id)}
+                  onKeyDown={(e) => {
+                    const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+                    if (!step) return;
+                    e.preventDefault();
+                    const next = DIRECTIONS[(i + step + DIRECTIONS.length) % DIRECTIONS.length];
+                    onChoose(next.id);
+                    (e.currentTarget.parentElement?.children[DIRECTIONS.indexOf(next)] as HTMLElement | undefined)?.focus();
+                  }}
                 >
-                  <span>0{i + 1}</span>
+                  <OptionThumb html={previews[d.id].html} />
+                  <span>0{i + 1}{chosen === d.id ? '・確認中' : ''}</span>
                   <strong>{d.name}</strong>
-                  <small>{d.note}</small>
+                  <small>{d.note} 書体：{FONT_LABEL[STYLE_PLANS[d.id].fontFamily]}</small>
                 </button>
               ))}
             </div>
-            <div
-              className="de-devices"
-              role="group"
-              aria-label="構成案の画面幅"
-            >
-              <button
-                type="button"
-                aria-pressed={device === 'sp'}
-                onClick={() => setDevice('sp')}
-              >
-                スマホ
-              </button>
-              <button
-                type="button"
-                aria-pressed={device === 'pc'}
-                onClick={() => setDevice('pc')}
-              >
-                パソコン
-              </button>
+            <div className="de-devices" role="group" aria-label="案の画面幅">
+              <button type="button" aria-pressed={device === 'sp'} onClick={() => setDevice('sp')}>スマホ</button>
+              <button type="button" aria-pressed={device === 'pc'} onClick={() => setDevice('pc')}>パソコン</button>
             </div>
-            <details className="dr-details">
-              <summary>節の順番と、整えるところ</summary>
-              <ol className="de-sequence" aria-label="構成案の節の順番">
-                {directionSequence(candidate).map((b) => (
-                  <li key={b.id}>{b.label}</li>
+            <fieldset className="dr-palette">
+              <legend>配色</legend>
+              <label>
+                <input type="radio" name="dr-palette" checked={!options.usePalette}
+                  onChange={() => setOptions((o) => ({ ...o, usePalette: false }))} />
+                今の配色のまま
+              </label>
+              <label>
+                <input type="radio" name="dr-palette" checked={options.usePalette}
+                  onChange={() => setOptions((o) => ({ ...o, usePalette: true }))} />
+                この案の配色にする（{palette}）
+              </label>
+            </fieldset>
+            {plan.individualColors.length > 0 && (
+              <div className="dr-colors">
+                <p>次の部品は色が個別に入っています。そのままにすると、配色を変えても追従しません。</p>
+                <ul>
+                  {plan.individualColors.map((c) => (
+                    <li key={`${c.blockId}:${c.key}`}>
+                      <i style={{ background: c.value }} aria-hidden="true" />
+                      {c.part}の{KEY_LABEL[c.key]}（{c.value}）
+                    </li>
+                  ))}
+                </ul>
+                <label>
+                  <input type="checkbox" checked={options.themeColors}
+                    onChange={(e) => setOptions((o) => ({ ...o, themeColors: e.target.checked }))} />
+                  これらもテーマの色に合わせる（入っている色の値は消さずに残します）
+                </label>
+              </div>
+            )}
+            <section className="dr-changes" aria-label="採用すると変わること">
+              <h3>採用すると変わること</h3>
+              <dl>
+                {plan.changes.map((c) => (
+                  <div key={c.label}>
+                    <dt>{c.label}</dt>
+                    <dd>{c.detail}</dd>
+                  </div>
                 ))}
-              </ol>
+              </dl>
               <ul className="de-quality">
-                {hero &&
-                  compositionAdvice(hero).map((t) => <li key={t}>{t}</li>)}
+                {hero && compositionAdvice(hero).map((t) => <li key={t}>{t}</li>)}
               </ul>
-            </details>
+            </section>
           </aside>
           <main className="dr-preview" data-device={device}>
             <div ref={holder} className="de-frame">
               <iframe
                 key={html}
-                title="採用前の構成案"
+                title="採用前の案"
                 srcDoc={html}
                 sandbox="allow-scripts"
                 style={{
@@ -212,19 +264,19 @@ function DirectionReview({
         </div>
         <footer className="dr-footer">
           <p>
-            文章・写真・リンクは残します。採用後も取り消せます。
-            <span>自由配置などがあるページは順番を保ちます。</span>
+            文章・写真・リンク・問い合わせ先は残します。採用するまで、今のサイトは変わりません。
+            <span>採用後も「取り消す」1回で、採用前に戻せます。保存・公開は従来のボタンから行います。</span>
           </p>
           <div className="de-actions">
             <button
               type="button"
               disabled={disabled}
               onClick={() => {
-                onApply(chosen);
+                onApply(chosen, options);
                 onClose();
               }}
             >
-              この構成を採用する
+              この案を採用する
             </button>
             <button type="button" onClick={onClose}>
               やめる

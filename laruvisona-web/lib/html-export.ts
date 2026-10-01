@@ -3,12 +3,15 @@ import { autoDescription } from './auto-description';
 import { designCss } from '@/lib/site-design';
 import { COMPOSITION_CSS } from '@/lib/composition-css';
 import { isDirection } from '@/lib/studio-direction';
+import { resolveColorRoles } from '@/lib/theme-roles';
+import { STYLE_DIRECTION_CSS, CALM_MOTION_CSS } from '@/lib/style-direction-css';
+import { isStarterSamplePhoto } from '@/lib/studio-image';
 import { escapeHtml, safeUrl, safeCssValue, jsonForScript, safeStyleText, safeToken, safeCssColor } from '@/lib/safe-markup';
 
 // 公開HTMLの生成ロジック（ブロックHTML・埋め込みスクリプト・CSS）を変更したら必ず +1 すること。
 // 生成HTML末尾に <!--lhpv:N--> として埋め込む。既存の公開HTMLの再生成は別操作。
 // 起動時の再生成は REPUBLISH_ON_BOOT=1 を明示したときだけ。
-export const EXPORT_VERSION = 21;
+export const EXPORT_VERSION = 22;
 
 
 function renderEditorialMark(value: unknown, index: number): string {
@@ -21,7 +24,7 @@ function renderEditorialMark(value: unknown, index: number): string {
   return `<span class="lhp-editorial-mark lhp-editorial-mark-text">${escapeHtml(text)}</span>`;
 }
 
-function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean; abVariantFor?: (block: Block) => 'a' | 'b' | null }): string {
+function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean; abVariantFor?: (block: Block) => 'a' | 'b' | null; styleDirection?: string }): string {
   const d = block.data;
   const str = (key: string) => escapeHtml(String(d[key] ?? ''));
   /* 属性・style に入れる値。エスケープしてから出す。
@@ -130,6 +133,12 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       <div class="lhp-hero-media" data-lhp-hero-video${heroVideo ? ` data-src="${escapeHtml(heroVideo)}"` : ''}${heroVideoWebm ? ` data-src-webm="${escapeHtml(heroVideoWebm)}"` : ''}>
         <button type="button" class="lhp-hero-vbtn" data-lhp-vtoggle aria-label="背景の動きを止める" hidden>停止</button>
       </div>` : '';
+      /* 見た目の案を採用した作品で、写真に文字を重ねる組み方のとき、写真が見本のまま
+         （または写真が無い）なら、文字と写真の場所を上下に分ける。見本画像には
+         「写真を入れる場所」と文字が入っているので、重ねると見出し・ボタンとぶつかる。
+         保存されている組み方・写真・見本の印は変えない。描画のときだけ分ける。 */
+      const safeStage = !!ctx?.styleDirection && isDirection(d.compositionStyle) && layout !== 'split'
+        && (!raw('bgImage') || isStarterSamplePhoto(d));
       const imgCol = (layout === 'split' && raw('bgImage'))
         ? `<div class="lhp-hero-split-img">${heroPicture}${videoBox}</div>`
         : layout === 'split'
@@ -137,11 +146,11 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
           : '';
       const bgStyle = layout === 'split'
         ? `background-color:${raw('bgColor') || '#1e293b'}`
-        : `background-color:${raw('bgColor')};${raw('bgImage') ? `background-image:url(${raw('bgImage')});background-size:cover;background-position:center;` : ''}`;
+        : `background-color:${raw('bgColor')};${raw('bgImage') && !safeStage ? `background-image:url(${raw('bgImage')});background-size:cover;background-position:center;` : ''}`;
       // 写真の見せ場を、ブロックごとのCSS変数で渡す（PCとスマホで別）
       const posVars = (heroPos ? `--lhp-hero-pos:${heroPos};` : '') + (heroPosSp ? `--lhp-hero-pos-sp:${heroPosSp};` : '');
       return `
-<section data-lhp-anim class="lhp-hero lhp-hero-${layout}${d.heroLayout && layout !== 'split' ? ' lhp-hero-crafted' : ''}"${abAttr} style="${posVars}${bgStyle};color:${raw('textColor')}">
+<section data-lhp-anim class="lhp-hero lhp-hero-${layout}${d.heroLayout && layout !== 'split' ? ' lhp-hero-crafted' : ''}${safeStage ? ' lhp-hero-separated' : ''}"${abAttr} style="${posVars}${bgStyle};color:${raw('textColor')}">
   <div class="lhp-hero-inner" style="${heroInnerStyle}">
     <div class="lhp-hero-content">
       <h1>${headingHtml}</h1>
@@ -149,9 +158,10 @@ function renderBlockInner(block: Block, ctx?: { heroLayout: string; accentColor:
       <a href="${url('ctaLink')}" class="lhp-btn-primary">${str('ctaText')}</a>
     </div>
     ${imgCol}
-    ${isDirection(d.compositionStyle) && layout !== 'split' && d.mobilePhotoFit === 'contain' && raw('bgImage') ? `<img class="lhp-adaptive-mobile-photo" src="${url('bgImage', '')}" alt="${heroAlt}"${heroLoad}>` : ''}
+    ${isDirection(d.compositionStyle) && layout !== 'split' && d.mobilePhotoFit === 'contain' && raw('bgImage') && !safeStage ? `<img class="lhp-adaptive-mobile-photo" src="${url('bgImage', '')}" alt="${heroAlt}"${heroLoad}>` : ''}
+    ${safeStage && raw('bgImage') ? `<div class="lhp-hero-stage">${heroPicture}</div>` : ''}
   </div>
-  ${isDirection(d.compositionStyle) && layout !== 'split' ? videoBox : ''}
+  ${isDirection(d.compositionStyle) && layout !== 'split' && !safeStage ? videoBox : ''}
 </section>`;
     }
 
@@ -1366,8 +1376,9 @@ async function lhpBuy(btn, priceId) {
   }
 }
 
-function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean; abVariantFor?: (block: Block) => 'a' | 'b' | null }): string {
-  const html = renderBlockInner(block, ctx);
+function renderBlock(block: Block, ctx?: { heroLayout: string; accentColor: string; bookingUrl?: string; imagePriority?: boolean; abVariantFor?: (block: Block) => 'a' | 'b' | null; styleDirection?: string; themeTokens?: boolean }): string {
+  // 色の役割（lib/theme-roles.ts）は、テーマの CSS 変数がある作品でだけ使う
+  const html = renderBlockInner(ctx?.themeTokens ? resolveColorRoles(block) : block, ctx);
   if (!html) return '';
   const d = block.data;
 
@@ -1452,6 +1463,8 @@ const STYLE_EXTRAS: Record<string, string> = {
   minimal: `
 /* minimal: underline expand on title, left-accent card hover */
 .lhp-section-title{display:inline-block;position:relative}
+/* 問い合わせ・予約の見出しは中央寄せ指定。inline-block のままだと中央に寄らず左端に付く */
+.lhp-contact>.lhp-section-title{display:table;margin-left:auto;margin-right:auto}
 .lhp-section-title::after{content:'';position:absolute;bottom:-6px;left:0;width:0;height:2px;background:currentColor;transition:width .5s cubic-bezier(.4,0,.2,1)}
 .lhp-visible .lhp-section-title::after{width:56px}
 .lhp-card{position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s}
@@ -1917,6 +1930,10 @@ window.addEventListener('popstate',function(){
   const heroLayout  = settings.heroLayout  || 'center';
   const headerStyle = settings.headerStyle || 'transparent';
   const animLevel   = settings.animLevel   || 'full';
+  // 見た目の案（lib/style-direction-plan.ts）を採用した作品だけが持つ設定。無い作品は従来どおり
+  const styleDirection = isDirection(settings.styleDirection) ? settings.styleDirection : '';
+  const calmMotion = settings.motionProfile === 'calm';
+  const themeTokens = !!settings.design;
 
   // Page sections
   /* 画像の遅延読み込み・非同期デコード（loading未指定の <img> だけ）。
@@ -1983,7 +2000,7 @@ window.addEventListener('popstate',function(){
   const pagesHtml = pages.map((page, idx) => {
     const abVariantFor = abVariantResolver(page);
     const blocksHtml = decoratePage(
-      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor, abVariantFor, imagePriority: idx === 0, bookingUrl: businessInfo?.siteId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/hp/scheduling/link?siteId=${encodeURIComponent(businessInfo.siteId)}` : undefined })).filter(Boolean).join('\n'),
+      page.blocks.map(b => renderBlock(b, { heroLayout, accentColor, abVariantFor, styleDirection, themeTokens, imagePriority: idx === 0, bookingUrl: businessInfo?.siteId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp'}/api/hp/scheduling/link?siteId=${encodeURIComponent(businessInfo.siteId)}` : undefined })).filter(Boolean).join('\n'),
       idx === 0,
     );
     return multiPage
@@ -2168,10 +2185,13 @@ window.addEventListener('popstate',function(){
      見えると値段を読み違える。 */
   var reduceDevice=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var reduce=animLevel==='none'||reduceDevice;
+  /* 控えめな動き（見た目の案を採用した作品）：打ち込み・カウントアップをしない。
+     数字が途中の値で見えると、料金や件数を読み違える。 */
+  var calm=${calmMotion ? 'true' : 'false'};
 
   /* ── typewriter (bold / sharp styles) ── */
   var style='${designStyle}';
-  if(!reduce&&(style==='bold'||style==='sharp')){
+  if(!reduce&&!calm&&(style==='bold'||style==='sharp')){
     var h1=document.querySelector('.lhp-hero h1');
     /* 見出しに改行が入っているときは打ち込まない。
        打ち直すと、書き手が決めた折り返しが消えて1行に戻ってしまう。 */
@@ -2255,7 +2275,7 @@ window.addEventListener('popstate',function(){
     };
     requestAnimationFrame(tick);
   }
-  var cio=!reduce&&new IntersectionObserver(function(entries){
+  var cio=!reduce&&!calm&&new IntersectionObserver(function(entries){
     entries.forEach(function(e){
       if(!e.isIntersecting)return;
       var el=e.target;
@@ -2300,7 +2320,7 @@ ${clarityScript}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=${font.url}&display=swap" rel="stylesheet">
-<style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern}--lhp-accent:${safeCssColor(accentColor, '#f59e0b')};}${CSS}</style>
+<style>:root{${DESIGN_STYLES[designStyle] ?? DESIGN_STYLES.modern};--lhp-accent:${safeCssColor(accentColor, '#f59e0b')};}${CSS}</style>
 <style>${fontCss}
 ${animLevel === 'none' ? '[data-lhp-anim]{opacity:1!important;transform:none!important}' : `[data-lhp-anim]{opacity:0;transition-property:opacity,transform;transition-timing-function:ease;transition-duration:${animLevel === 'subtle' ? '.4s' : '.6s'};animation:lhp-auto-reveal .6s ease 1s forwards}
 html.lhp-js [data-lhp-anim]{animation:none}
@@ -2321,9 +2341,11 @@ ${STYLE_EXTRAS[designStyle] ?? ''}
 </style>
 ${settings.design ? `<style>${designCss(settings.design)}</style>` : ''}
 ${pages.some(p => p.blocks.some(b => isDirection(b.data.compositionStyle))) ? `<style>${COMPOSITION_CSS}</style>` : ''}
+${styleDirection ? `<style>${STYLE_DIRECTION_CSS}</style>` : ''}
+${calmMotion ? `<style>${CALM_MOTION_CSS}</style>` : ''}
 ${settings.customCss ? `<style>${safeStyleText(settings.customCss)}</style>` : ''}
 </head>
-<body class="lhp-style-${designStyle}">
+<body class="lhp-style-${designStyle}"${styleDirection ? ` data-style-direction="${styleDirection}"` : ''}${calmMotion ? ' data-motion="calm"' : ''}>
 ${pwScript}
 ${navBar}
 ${pagesHtml}

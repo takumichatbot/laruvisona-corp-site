@@ -46,7 +46,8 @@ import BlockList, { BlockIcon } from '@/components/studio/BlockList';
 import { Plus, Film, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import SectionCraft from '@/components/studio/SectionCraft';
 import DirectionEditor from '@/components/studio/DirectionEditor';
-import {arrangeDirection} from '@/lib/studio-direction';
+import { planStyleDirection } from '@/lib/style-direction-plan';
+import { colorRolesOf, ROLE_LABEL, type RoleKey } from '@/lib/theme-roles';
 import SectionAssistant from '@/components/studio/SectionAssistant';
 import {applySectionProposal, type SectionProposal} from '@/lib/studio-ai';
 import {readComposition,clearComposition,buildComposition} from '@/lib/studio-composition';
@@ -80,6 +81,9 @@ interface StudioSettings {
   design: SiteDesign | null;
   designPreset: string;
   globalFooter?: Record<string, unknown>;
+  /* 見た目の案（構成から、選び直す）を採用したときだけ入る。'' は未採用 */
+  styleDirection?: string;
+  motionProfile?: string;
 }
 
 interface StudioSite {
@@ -124,6 +128,10 @@ function toExportSettings(s: StudioSettings) {
     ...(s.design ? { design: s.design as unknown as Record<string, unknown> } : {}),
     designPreset: s.designPreset,
     globalFooter: s.globalFooter,
+    /* 取り消しで案を外したときも保存で外れるよう、未採用は空文字で送る
+       （settings_json_patch は差分の合成なので、送らない鍵は前の値が残る） */
+    styleDirection: s.styleDirection || '',
+    motionProfile: s.motionProfile || '',
   };
 }
 
@@ -770,6 +778,8 @@ function StudioInner() {
             design: st.design ? normalizeDesign(st.design) : null,
             designPreset: (st.designPreset as string) || '',
             globalFooter: st.globalFooter as Record<string, unknown> | undefined,
+            styleDirection: (st.styleDirection as string) || '',
+            motionProfile: (st.motionProfile as string) || '',
           },
         });
         setPublishedAt(s.published ? (s.updated_at as string) : null);
@@ -1233,7 +1243,7 @@ function StudioInner() {
                   {craftTab==='content'&&def.fields.filter(f => selected.type !== 'booking' || selected.data.mode !== 'schedule' || !['serviceTypes','timeSlots','buttonText','subtext','stickyCta','stickyCtaText'].includes(f.key)).map(f => (
                     <div key={`${selected.id}:${f.key}`} data-field-key={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
                       value={(selected.data as Record<string, unknown>)[f.key]}
-                      onChange={v => updateBlockData(selected.id, f.key, v)} /></div>
+                      onChange={v => updateBlockData(selected.id, f.key, v)} />{f.type==='color'&&colorRolesOf(selected.data)[f.key as RoleKey]&&<p className="text-[11px] text-slate-500 -mt-3 mb-4 leading-relaxed">いまはテーマの{ROLE_LABEL[colorRolesOf(selected.data)[f.key as RoleKey]!]}に合わせています。配色を変えると追従します。ここで色を選ぶと、この部品だけ個別の色になります。</p>}</div>
                   ))}
                 </>
               ) : selected ? (
@@ -1249,7 +1259,7 @@ function StudioInner() {
             )}
 
             {panel === 'design' && (<>
-              <DirectionEditor blocks={blocks} settings={toExportSettings(site.settings) as never} name={site.name} seo={page?.seo||EMPTY_SEO} disabled={uploads>0} onApply={id=>{if(uploads)return;setSite(prev=>({...prev,pages:prev.pages.map((p,i)=>i===0?{...p,blocks:arrangeDirection(p.blocks,id,prev.settings.design?.ink||'#263248')}:p)}));setHistoryNote('選んだ構成を採用しました。文章と写真は残っています。取り消しで元の並びに戻せます。');}}/>
+              <DirectionEditor site={site} toExport={toExportSettings as never} name={site.name} seo={page?.seo||EMPTY_SEO} disabled={uploads>0} onApply={(id,opts)=>{if(uploads)return;setSite(prev=>{const plan=planStyleDirection(prev,id,opts);return {...prev,pages:plan.pages,settings:plan.settings};});setHistoryNote('選んだ案を採用しました。文章と写真は残っています。「取り消す」で採用前に戻せます。');}}/>
               <DesignPanel
                 site={site}
                 setSite={setSite}

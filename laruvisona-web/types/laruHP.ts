@@ -72,6 +72,11 @@ export interface SiteSettings {
   animLevel?: 'none' | 'subtle' | 'full';
   /** サイト全体の見た目（色・余白・書体の大きさなど）。lib/site-design.ts が扱う */
   design?: Record<string, unknown>;
+  /** 見た目の案（言葉で伝える／写真で惹きつける／内容で選んでもらう）を採用した作品だけ持つ。
+   *  揃え方・見本写真の安全表示を有効にする。空文字は未採用 */
+  styleDirection?: string;
+  /** 'calm' のとき、表示の動きを短く控えめにし、見出しの打ち込み・数字のカウントアップをしない */
+  motionProfile?: string;
   /** 選んだ雰囲気の見本のid（あとで見分けるためだけに持つ） */
   designPreset?: string;
   /**

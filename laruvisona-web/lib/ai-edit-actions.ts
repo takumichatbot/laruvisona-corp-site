@@ -1,5 +1,6 @@
 import type { Block } from '@/types/laruHP';
 import { withoutSampleMarkOnReplace } from '@/lib/studio-image';
+import { releaseEditedColorRoles } from '@/lib/theme-roles';
 
 export type SafeAiEditAction={
   type:'update_block';
@@ -71,7 +72,7 @@ export function applyAiEditActions(
       }
     }
     if (!Object.keys(patch).length) return block;
-    const merged = { ...block.data, ...patch };
+    const merged = releaseEditedColorRoles(block.data, { ...block.data, ...patch });
     return { ...block, data: block.type === 'hero' ? withoutSampleMarkOnReplace(block.data, merged) : merged };
   });
 }

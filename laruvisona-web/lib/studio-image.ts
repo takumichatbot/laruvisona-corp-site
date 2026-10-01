@@ -1,4 +1,5 @@
 import type { Block } from "@/types/laruHP";
+import { releaseEditedColorRoles } from "@/lib/theme-roles";
 
 /**
  * 最初の下書きが入れる見本写真には、説明文にこの印を付けてある（lib/studio-start.ts）。
@@ -23,7 +24,8 @@ export function editStudioBlock(
   key: string,
   value: unknown,
 ): Block {
-  const data = { ...block.data, [key]: value };
+  // 色を選び直した欄は、テーマの色への追従（lib/theme-roles.ts）を外す
+  const data = releaseEditedColorRoles(block.data, { ...block.data, [key]: value });
   if (
     block.type === "hero" &&
     key === "bgImage" &&

@@ -450,7 +450,8 @@ test('動きなしを選んだら、料金の数字も動かさない', () => {
     seo, { ...settings, animLevel: 'none' as const }, 'テスト店',
   );
   assert.match(none, /var reduce=animLevel==='none'\|\|reduceDevice;/);
-  assert.match(none, /var cio=!reduce&&new IntersectionObserver/, 'カウントアップが常に動く');
+  assert.match(none, /var cio=!reduce&&!calm&&new IntersectionObserver/, 'カウントアップは「動きなし」・端末設定・控えめな動きで止まる');
+  assert.match(none, /var calm=false;/, '案を採用していない作品は従来どおり');
   assert.match(none, /if\(cio\)document\.querySelectorAll\('\.lhp-price-amount/);
 });
 
@@ -463,7 +464,7 @@ test('打ち込み演出は、見出しの改行を壊さない', () => {
   );
   // 打ち直すと <br> が消えて1行に戻るので、改行のある見出しでは打たない
   assert.match(bold, /if\(h1&&!h1\.querySelector\('br'\)\)\{/);
-  assert.match(bold, /if\(!reduce&&\(style==='bold'\|\|style==='sharp'\)\)\{/);
+  assert.match(bold, /if\(!reduce&&!calm&&\(style==='bold'\|\|style==='sharp'\)\)\{/);
 });
 
 test('動きなしを選んだら、写真・質問・料金表も隠された状態から始まらない', () => {
@@ -804,8 +805,8 @@ test('settings.design を持たない古いサイトは、スタッフ写真96px
 });
 
 test('生成HTMLの版数が21になっている', () => {
-  assert.equal(EXPORT_VERSION, 21);
-  assert.match(basic, /<!--lhpv:21-->$/);
+  assert.equal(EXPORT_VERSION, 22);
+  assert.match(basic, /<!--lhpv:22-->$/);
 });
 
 

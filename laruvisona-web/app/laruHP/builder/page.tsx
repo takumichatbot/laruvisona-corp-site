@@ -12,6 +12,7 @@ import { hasServiceAccess } from '@/lib/subscription-access';
 import { checkPublishReadiness, blockingItems, adviceItems, type ReadyItem } from '@/lib/publish-readiness';
 import { withoutSampleMarkOnReplace } from '@/lib/studio-image';
 import { applyAiEditActions } from '@/lib/ai-edit-actions';
+import { releaseEditedColorRoles } from '@/lib/theme-roles';
 import { publishCompletion } from '@/lib/publish-result';
 import { migrationBlockData } from '@/lib/migration-block';
 import Link from 'next/link';
@@ -5175,7 +5176,7 @@ function BuilderContent() {
       pages: prev.pages.map(p => ({
         ...p,
         // 見本写真を差し替えたら、見本の印を外す（スタジオと同じ。公開前の確認が「見本のまま」と言い続けないように）
-        blocks: p.blocks.map(b => b.id === id ? { ...b, data: b.type === 'hero' ? withoutSampleMarkOnReplace(b.data, data) : data } : b),
+        blocks: p.blocks.map(b => b.id === id ? { ...b, data: releaseEditedColorRoles(b.data, b.type === 'hero' ? withoutSampleMarkOnReplace(b.data, data) : data) } : b),
       })),
     }));
   }, []);
