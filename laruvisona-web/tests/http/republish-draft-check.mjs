@@ -52,8 +52,11 @@ const saveDraft = (k) => {
 };
 
 /** 公開ページを読む。head（Next が出すもの）と本文（公開HTML）を分けて返す。何も除かない */
+/* Next はふつうの閲覧ではメタデータを本文側へ流して後から head へ移すことがある（ストリーミング）。
+   OGカードを読む取得器（Twitterbot 等）には head に出すので、head はその UA で読む。
+   ふつうの閲覧の応答は、文書全体に下書きの印が無いかを別に確かめる（fullB）。 */
 async function view() {
-  const html = await (await fetch(`${base}/hp/${SLUG}`)).text();
+  const html = await (await fetch(`${base}/hp/${SLUG}`, { headers: { 'user-agent': 'Twitterbot/1.0' } })).text();
   const bodyAt = html.search(/<body\b/i);
   const head = bodyAt >= 0 ? html.slice(0, bodyAt) : '';
   const body = bodyAt >= 0 ? html.slice(bodyAt) : html;
@@ -99,6 +102,8 @@ try {
 
   // ── C：閲覧と dryRun では、本文・head ともAのまま ──
   const vB1 = await view(), vB2 = await view();
+  const plain = await (await fetch(`${base}/hp/${SLUG}`)).text();
+  check('C 閲覧（ふつうのUA・文書全体）：下書きBの文字・名前・SEO・OG・事業者情報が1つも出ない', !/B_(NAME|BODY|TITLE|DESC|OGT|OGD|BIZ)|og-B\.png/.test(plain) && plain.includes('A_TITLE'));
   check('C 閲覧 本文：Aのまま（Bは出ない）', [vB1, vB2].every((v) => v.body.includes('本文の見出しA_BODY') && !v.body.includes('本文の見出しB_BODY')));
   check('C 閲覧 head：title・description・og・twitter がAのまま（何も除かずに比較）', [vB1, vB2].every((v) => JSON.stringify(v.head) === JSON.stringify(vA.head)), vB1.head);
   check('C 閲覧 構造化データ：Aのまま', vB1.ld === vA.ld, vB1.ld.slice(0, 200));

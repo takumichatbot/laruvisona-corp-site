@@ -23,7 +23,7 @@ test('公開HTMLの head から、公開時点の title・description・og・twi
   assert.equal(h.ogTitle, 'OG題名A'); assert.equal(h.ogDescription, 'OG説明A');
   assert.equal(h.ogImage, 'https://img.example/A.png');           // SEO設定画面のOG画像も公開時点の値として焼き込む
   assert.equal(h.twitterTitle, 'OG題名A');
-  assert.deepEqual(h.meta, { siteName: 'サイトA', businessInfo: settings('A').businessInfo as unknown as Record<string, unknown> });
+  assert.deepEqual(h.meta, { siteName: 'サイトA', businessInfo: (settings('A') as unknown as { businessInfo: Record<string, unknown> }).businessInfo });
 });
 
 test('本文にある同じ形の文字列や、壊れた補足は拾わない。http(s) 以外の画像URLは捨てる', () => {
