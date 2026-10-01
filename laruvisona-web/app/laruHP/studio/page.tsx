@@ -492,7 +492,9 @@ function StudioInner() {
 
   const [intake, setIntake] = useState<IntakeAnswers>(() => {
     const requested = !siteIdParam ? params.get('industry') : null;
-    const industry = INDUSTRY_CHOICES.some(c => c.value === requested) ? requested! : 'beauty';
+    /* 保存済みのサイトを開くときは、業種は読み込んだ値で決める（それまでは不明）。
+       以前は既定の「美容」が入り、読み直すたびに業種が美容へ戻っていた */
+    const industry = siteIdParam ? '' : INDUSTRY_CHOICES.some(c => c.value === requested) ? requested! : 'beauty';
     return {industry, name: '', area: '', audience: '', goal: exampleFor(industry).goal, description: ''};
   });
 
@@ -631,6 +633,8 @@ function StudioInner() {
   const editSeq = useRef(0);
   /** サーバが最後に保存した時刻。これより後の控えだけを戻す */
   const serverSavedAt = useRef(0);
+  /** 保存されている業種（読み込んだ値）。控えや既定値で上書きしない */
+  const serverIndustry = useRef('');
   const serverHadContent = useRef(false);
   /** 控えを戻す処理を1回だけにする */
   const restoreDone = useRef(false);
@@ -701,7 +705,8 @@ function StudioInner() {
     const keptHasContent = kept.site?.pages?.some(pg => (pg.blocks ?? []).length > 0);
     if (!keptHasContent && serverHadContent.current) return;
     resetSite(kept.site);
-    setIntake(kept.intake);
+    // 業種は控えではなく保存済みの値（以前の控えには、既定の「美容」が入っていることがある）
+    setIntake({ ...kept.intake, industry: serverIndustry.current });
     setRestoredDraft(true);
     hydrating.current = false;                      // これは「未保存の編集」として扱う
   }, [accountResolved, loading, loadError, account, siteIdParam, creationParam, resetSite]);
@@ -782,6 +787,11 @@ function StudioInner() {
             motionProfile: (st.motionProfile as string) || '',
           },
         });
+        /* 業種は保存されている値だけを使う。無い・知らない値の以前のサイトは不明のまま
+           （見た目や店名から推測して書き込まない。案内は共通のものになる） */
+        const knownIndustry = INDUSTRY_CHOICES.some(c => c.value === s.industry) ? String(s.industry) : '';
+        serverIndustry.current = knownIndustry;
+        setIntake(prev => ({ ...prev, industry: knownIndustry }));
         setPublishedAt(s.published ? (s.updated_at as string) : null);
         publicSiteRef.current = {
           slug: (s.slug as string | null) ?? null,
@@ -937,6 +947,9 @@ function StudioInner() {
       blocks_json: { v: 2, pages: s.pages },
       seo_json: s.pages[0]?.seo || EMPTY_SEO,
       settings_json_patch: toExportSettings(s.settings),
+      // 本人が選んだ業種が保存済みと違うときだけ送る（不明・未選択のときは送らない）
+      ...(siteId && INDUSTRY_CHOICES.some(c => c.value === intake.industry) && intake.industry !== serverIndustry.current
+        ? { industry: intake.industry } : {}),
     };
     try {
       let id = siteId;
@@ -979,6 +992,8 @@ function StudioInner() {
         window.history.replaceState(null, '', url);
       }
       setBlocked(null);
+      // 保存できた業種を、保存済みの値として覚える（新規作成は作成時に送った業種）
+      if (INDUSTRY_CHOICES.some(c => c.value === intake.industry)) serverIndustry.current = intake.industry;
       setSavedSincePublish(true);
       setRestoredDraft(false);
       /* 送っているあいだに続きを編集していたら、保存済みにはしない。
@@ -1059,14 +1074,15 @@ function StudioInner() {
 
   /* ── ヒアリングから、はじめの形を作る ── */
   const buildFromIntake = useCallback((presetId: string) => {
-    if (site.pages.length && !confirm('入力したお店の情報と選んだ見せ方から作り直します。編集した内容を置き換えてもよろしいですか？')) return;
+    // 置き換える中身があるときだけ確かめる（一覧の「新しいサイト」は空のページを1枚持っている）
+    if (site.pages.some(pg => (pg.blocks ?? []).length > 0) && !confirm('入力したお店の情報と選んだ見せ方から作り直します。編集した内容を置き換えてもよろしいですか？')) return;
     // 使ったら持ち越さない
     clearDesignChoice();
     const made = makeStarterSite(intake, presetId);
     resetSite(made);
     setSelectedId(made.pages[0].blocks[0]?.id ?? null);
     setStep('edit');
-  }, [intake, resetSite, setStep, site.pages.length]);
+  }, [intake, resetSite, setStep, site.pages]);
 
   /* ── 公開準備の確認 ──
      判定は lib/publish-readiness.ts に寄せてある。編集画面（ビルダー）と

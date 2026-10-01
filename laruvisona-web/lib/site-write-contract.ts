@@ -1,7 +1,7 @@
 import { readContactBody } from './contact-contract';
 
 const CREATE_KEYS = new Set(['name', 'industry', 'blocks_json', 'seo_json', 'settings_json']);
-const UPDATE_KEYS = new Set(['name', 'blocks_json', 'seo_json', 'settings_json', 'settings_json_patch']);
+const UPDATE_KEYS = new Set(['name', 'industry', 'blocks_json', 'seo_json', 'settings_json', 'settings_json_patch']);
 const PATCH_KEYS = new Set(['slug', 'settings_patch']);
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
@@ -35,6 +35,13 @@ export async function readSiteUpdate(req: Request) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name || name.length > 120) throw Error('サイト名を確認してください');
     update.name = name;
+  }
+  /* 業種：本人が選び直したときだけ送られる。作成時と同じ決まり（空でない80字以内）。
+     空や null は送らせない（不明なまま保存済みの業種を消さない） */
+  if ('industry' in body) {
+    const industry = typeof body.industry === 'string' ? body.industry.trim() : '';
+    if (!industry || industry.length > 80) throw Error('業種を確認してください');
+    update.industry = industry;
   }
   if ('blocks_json' in body) {
     if (!blocksDocument(body.blocks_json)) throw Error('サイトの内容を確認してください');

@@ -44,10 +44,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   let body: Record<string, unknown>;
   try { body = await readSiteUpdate(req); }
   catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
-  const { name, blocks_json, seo_json, settings_json, settings_json_patch } = body;
+  const { name, industry, blocks_json, seo_json, settings_json, settings_json_patch } = body;
 
   const update: Record<string, unknown> = {};
   if (name !== undefined) update.name = name;
+  if (industry !== undefined) update.industry = industry;
   if (blocks_json !== undefined) update.blocks_json = blocks_json;
   if (seo_json !== undefined) update.seo_json = seo_json;
 

@@ -58,3 +58,12 @@ test('サイト作成はDBの原子的な上限処理だけを使う', () => {
   const domains = readFileSync(new URL('../supabase/site_domains.sql', import.meta.url), 'utf8');
   assert.match(domains, /nullif\(current_setting\('request\.jwt\.claims', true\), ''\)::jsonb/);
 });
+
+test('保存：業種は本人が選んだときだけ受け取る（空・長すぎは断る。無ければ触らない）', async () => {
+  const put = (body: unknown) => readSiteUpdate(new Request('http://x', { method: 'PUT', body: JSON.stringify(body) }));
+  assert.deepEqual(await put({ industry: ' construction ' }), { industry: 'construction' });
+  await assert.rejects(put({ industry: '' }), /業種/);
+  await assert.rejects(put({ industry: null }), /業種/);
+  await assert.rejects(put({ industry: 'x'.repeat(81) }), /業種/);
+  assert.equal('industry' in (await put({ name: 'a' })), false);
+});

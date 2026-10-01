@@ -235,6 +235,8 @@ export function StudioIntake({
                     }))
                   }
                 >
+                  {/* 保存済みのサイトで業種がまだ無いとき（以前のサイト）。推測して選んだ状態にしない */}
+                  {!intake.industry && <option value="" disabled>選んでください</option>}
                   {INDUSTRY_CHOICES.map((c) => (
                     <option key={c.value} value={c.value}>
                       {c.label}
