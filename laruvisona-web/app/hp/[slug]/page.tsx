@@ -11,6 +11,7 @@ import { isAdminEmail } from '@/lib/adminAuth';
 import type { Metadata } from 'next';
 import PublishedSite from '@/components/PublishedSite';
 import { stripDuplicateHeadMeta, applyAbWinner } from '@/lib/published-html';
+import { loadPublishedPresentation, type SiteRow } from '@/lib/published-presentation';
 import { applyTranslationToHtml, isTranslationLocale, translationFor, TRANSLATION_LOCALES } from '@/lib/translate-apply';
 
 // 注: 以前ここで revalidateTag を再エクスポートしていたが、
@@ -40,36 +41,38 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const supabase = getServiceClient();
   const { data } = await supabase
     .from('sites')
-    .select('name, seo_json, settings_json, slug, custom_domain')
+    .select('id, name, seo_json, settings_json, blocks_json, published_html, slug, custom_domain, industry')
     .eq('slug', slug)
     .eq('published', true)
     .single();
 
   if (!data) return { title: 'Not Found' };
 
-  const seo = (data.seo_json ?? {}) as { title?: string; description?: string; ogTitle?: string; ogDescription?: string; ogImage?: string };
+  /*
+    「保存」は下書き、「公開」は外部への反映。title・description・og:・twitter: は、
+    下書き（name / seo_json / settings_json）ではなく、公開HTMLに焼き込まれた公開時点の値を使う
+    （lib/published-presentation.ts）。下書きのSEO題名が公開せずに出ていた（2026-10 確認）。
+    noindex（検索エンジンへの指示）・正規URL・翻訳の一覧は、今の設定で決める（従来どおり）。
+  */
+  const pub = await loadPublishedPresentation(supabase, data);
   const settings = (data.settings_json ?? {}) as {
     noIndex?: boolean;
     translations?: Record<string, { map?: Record<string, string> }>;
-    businessInfo?: { ogImage?: string };
   };
   /*
     OGP画像は2か所で入力できる。ビルダー（seo_json.ogImage）と、SEO設定画面
-    （settings_json.businessInfo.ogImage）。2026-09-19まで、後者は**どこにも
-    使われていなかった。** 画面はX/LINEのカードを試写し「次の公開時に反映」と
-    言っていたのに、その画像は出なかった。
-    ビルダー側を優先し、空ならSEO設定画面の値を使う。どちらも無ければ自動生成。
-    ⚠️ http(s) の絶対URLだけ。相対パスや javascript: を og:image に出さない。
+    （settings_json.businessInfo.ogImage）。どちらも「次の公開時に反映」なので、
+    公開HTMLの og:image（公開時点の値）を使う。自動生成のカード（/api/og）は
+    指定とみなさず、opengraph-image.tsx に任せる。http(s) の絶対URLだけ。
   */
-  const bizOg = settings.businessInfo?.ogImage;
-  const ogImage = seo.ogImage || (typeof bizOg === 'string' && /^https?:\/\//.test(bizOg) ? bizOg : '');
+  const ogImage = pub.explicitOgImage;
   const translated = isTranslationLocale(lang) ? translationFor(settings as Record<string, unknown>, lang) : null;
   // 同じサイトがパス形式・サブドメイン形式・独自ドメイン形式で開ける。
   // 開かれたホストに合わせて、そのサイトの正規URLを1つに決める。
   // 正規URLは保存された公開先の方針から一意に決める（入口のホストで変えない）
   const canonical = canonicalBase(data as { slug?: string | null; custom_domain?: string | null });
-  const ogTitle = seo.ogTitle || seo.title || data.name;
-  const ogDesc = seo.ogDescription || seo.description || '';
+  const ogTitle = pub.ogTitle;
+  const ogDesc = pub.ogDescription;
 
   // 用意してある言語を検索側へ伝える。翻訳済みのページは、その言語のURLを正規とする。
   const locales = Object.keys((settings.translations ?? {})).filter(isTranslationLocale);
@@ -81,8 +84,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     : undefined;
 
   const metadata: Metadata = {
-    title: translated?.map?.[seo.title || data.name] || seo.title || data.name,
-    description: (seo.description && translated?.map?.[seo.description]) || seo.description || '',
+    title: translated?.map?.[pub.title] || pub.title,
+    description: (pub.description && translated?.map?.[pub.description]) || pub.description,
     alternates: {
       canonical: translated && isTranslationLocale(lang) ? `${canonical}?lang=${lang}` : canonical,
       ...(languages ? { languages } : {}),
@@ -119,7 +122,7 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
 
   const { data: site } = await supabase
     .from('sites')
-    .select('published_html, name, settings_json, seo_json, slug, custom_domain, industry, user_id')
+    .select('id, published_html, name, settings_json, seo_json, blocks_json, slug, custom_domain, industry, user_id')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -176,7 +179,6 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
   try { analyticsToken = signAnalyticsSite(slug); }
   catch { console.error('[hp] アクセス計測の署名鍵が使えないため、計測を止めて表示します'); }
 
-  const seo = (site.seo_json ?? {}) as { description?: string };
 
   // このホストでこのサイトを配信してよいか。
   // proxy がホストから slug を決めていても、内部パス /hp/<slug> を
@@ -233,7 +235,10 @@ export default async function PublishedSitePage({ params, searchParams }: Props)
     あったので、入れていない人にも最低限のものが出ていた。
     こちらへ寄せた以上、ここで出さないと**構造化データが丸ごと無くなる。**
   */
-  const jsonLdStr = buildJsonLd(site.name, base, seo, settings.businessInfo ?? ({} as BusinessInfo), site.industry);
+  /* 構造化データも公開時点の名前・説明・事業者情報で出す（下書きでは出さない）。
+     以前の公開HTMLで公開時点の事業者情報を確かめられないときは、事業者情報を付けない。 */
+  const pub = await loadPublishedPresentation(supabase, site as SiteRow);
+  const jsonLdStr = buildJsonLd(pub.siteName, base, { description: pub.description }, pub.businessInfo as BusinessInfo, site.industry);
 
   return (
     <>

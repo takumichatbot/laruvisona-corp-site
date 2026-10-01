@@ -27,7 +27,7 @@ export type VersionRow = { blocks_json: unknown; seo_json: unknown; settings_jso
 
 export type RepublishSource =
   | { ok: true; blocks: Block[] | { v: number; pages: Page[] }; seo: SEOSettings; settings: SiteSettings }
-  | { ok: false; reason: 'no_snapshot' | 'unpublished_changes' | 'snapshot_mismatch' };
+  | { ok: false; reason: 'no_snapshot' | 'unpublished_changes' | 'snapshot_mismatch'; detail?: string };
 
 /** キーの順番に左右されない比較用の文字列（jsonb は順番を保たない） */
 export function canonicalJson(v: unknown): string {
@@ -50,7 +50,12 @@ function blockIds(blocks: unknown): Set<string> {
   return ids;
 }
 
-export function republishSource(site: SiteSourceRow, latest: VersionRow): RepublishSource {
+/**
+ * verify：版が「今の公開HTMLの元」かを中身で確かめる関数（lib/published-presentation.ts の
+ * snapshotMatchesPublished）。部品IDが同じでも文字・リンク・写真が違えば一致しない。
+ * 渡されなければ部品IDの確認だけ（単体テスト用）。
+ */
+export function republishSource(site: SiteSourceRow, latest: VersionRow, verify?: () => { ok: boolean; reason?: string }): RepublishSource {
   if (!latest) return { ok: false, reason: 'no_snapshot' };
   const same = canonicalJson(site.blocks_json) === canonicalJson(latest.blocks_json)
     && canonicalJson(site.seo_json) === canonicalJson(latest.seo_json)
@@ -62,7 +67,11 @@ export function republishSource(site: SiteSourceRow, latest: VersionRow): Republ
   const ids = blockIds(latest.blocks_json);
   for (const m of html.matchAll(/data-lhp-block="([^"]+)"/g)) {
     const id = m[1].replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-    if (!ids.has(id)) return { ok: false, reason: 'snapshot_mismatch' };
+    if (!ids.has(id)) return { ok: false, reason: 'snapshot_mismatch', detail: 'block_ids' };
+  }
+  if (verify) {
+    const v = verify();
+    if (!v.ok) return { ok: false, reason: 'snapshot_mismatch', detail: v.reason };
   }
   return {
     ok: true,

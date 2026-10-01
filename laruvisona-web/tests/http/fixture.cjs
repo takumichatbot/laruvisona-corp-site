@@ -164,6 +164,11 @@ http.createServer((req, res) => {
         /* 保存をわざと遅くする。送っている最中に続きを打つ状況を作るため。 */
         if ('slowWriteMs' in next) CONTROL.slowWriteMs = Number(next.slowWriteMs) || 0;
         if ('beforeUpdate' in next) CONTROL.beforeUpdate = next.beforeUpdate;
+        /* 版を消す（版が残っていない以前のサイトを作る）・次の版の保存を1回だけ失敗させる */
+        if (typeof next.clearVersions === 'string') {
+          for (let i = SITE_VERSIONS.length - 1; i >= 0; i--) if (SITE_VERSIONS[i].site_id === next.clearVersions) SITE_VERSIONS.splice(i, 1);
+        }
+        if ('failVersionInsert' in next) CONTROL.failVersionInsert = !!next.failVersionInsert;
         /* 行を直接書き換える（例：公開HTMLを古い版の印にする）。アプリの経路を通さない準備専用。 */
         if (next.patchSite && typeof next.patchSite.id === 'string') {
           const target = SITES.find(x => x.id === next.patchSite.id);
@@ -319,6 +324,7 @@ http.createServer((req, res) => {
         return out(rows, 201);
       }
       if (t === 'site_versions' && req.method === 'POST') {
+        if (CONTROL.failVersionInsert) { CONTROL.failVersionInsert = false; return send(500, { message: 'fixture: 版の保存を失敗させています' }); }
         const rows = (Array.isArray(patch) ? patch : [patch]).map((r, i) => ({
           id: `version-${SITE_VERSIONS.length + i + 1}`, created_at: touch(), ...r,
         }));

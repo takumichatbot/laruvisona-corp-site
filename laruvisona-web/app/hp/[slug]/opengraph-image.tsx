@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
 import { decodeSlug } from '@/lib/public-site-url';
+import { loadPublishedPresentation } from '@/lib/published-presentation';
 
 export const alt = 'ホームページ';
 export const size = { width: 1200, height: 630 };
@@ -31,15 +32,17 @@ export default async function Image({ params }: { params: Promise<{ slug: string
 
   const { data } = await supabase
     .from('sites')
-    .select('name, seo_json, settings_json')
+    .select('id, name, seo_json, settings_json, blocks_json, published_html, industry, slug')
     .eq('slug', slug)
     .eq('published', true)
     .single();
 
-  const siteName = data?.name || slug;
-  const seo = (data?.seo_json ?? {}) as { title?: string; description?: string };
-  const description = seo.description || '';
-  const primaryColor = (data?.settings_json as { primaryColor?: string } | null)?.primaryColor;
+  /* カードの名前・説明・色も、公開した時点の値で描く（下書きでは描かない）。
+     公開ページの title・description と同じ元（lib/published-presentation.ts）。 */
+  const pub = data ? await loadPublishedPresentation(supabase, data) : null;
+  const siteName = pub?.siteName || slug;
+  const description = pub?.description || '';
+  const primaryColor = pub?.primaryColor;
 
   // Use site's primaryColor if available, otherwise fall back to deterministic gradient
   let topColor: string, bottomColor: string, accentColor: string;

@@ -48,7 +48,8 @@ test('公開ページが契約で絞っている・契約が変わったら作�
   const page = readFileSync('app/hp/[slug]/page.tsx', 'utf8');
   assert.match(page, /const chatId = !laru\.bot \|\| settings\.larubot === false \? '' : chatPublicId\(settings\);/);
   assert.match(page, /const blogId = !laru\.seo \|\| settings\.laruseo === false \? '' : blogPublicId\(settings\);/);
-  assert.match(page, /select\('published_html, name, settings_json, seo_json, slug, custom_domain, industry, user_id'\)/);
+  // 持ち主（user_id）を引いて今の契約で絞る。head・構造化データは公開時点の値（published_html 等）から
+  assert.match(page, /select\('id, published_html, name, settings_json, seo_json, blocks_json, slug, custom_domain, industry, user_id'\)/);
   for (const p of ['app/api/stripe/webhook/route.ts', 'app/api/stripe/upgrade/route.ts', 'app/api/stripe/checkout/route.ts',
     'app/api/cron/subscription-sync/route.ts', 'app/api/admin/users/[id]/route.ts']) {
     assert.match(readFileSync(p, 'utf8'), /await revalidateOwnerSites\(/, p);

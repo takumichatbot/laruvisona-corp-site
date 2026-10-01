@@ -1,5 +1,6 @@
 import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { autoDescription } from './auto-description';
+import { httpUrl, publishedMetaComment } from './published-head';
 import { designCss } from '@/lib/site-design';
 import { COMPOSITION_CSS } from '@/lib/composition-css';
 import { isDirection } from '@/lib/studio-direction';
@@ -2017,7 +2018,10 @@ window.addEventListener('popstate',function(){
   // Dynamic OGP image via /api/og, falling back to hero bgImage if available
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://laruvisona.jp';
   const heroBgImage = firstPage.blocks.find(b => b.type === 'hero')?.data?.bgImage as string | undefined;
-  const ogImageUrl = heroBgImage && heroBgImage.startsWith('http')
+  /* SEO設定画面のOG画像（settings.businessInfo.ogImage）も、公開した時点の値として焼き込む。
+     公開ページの head はこの公開HTMLから読む（lib/published-head.ts）。 */
+  const bizOgImage = httpUrl((settings as { businessInfo?: { ogImage?: unknown } }).businessInfo?.ogImage);
+  const ogImageUrl = bizOgImage ? bizOgImage : heroBgImage && heroBgImage.startsWith('http')
     ? heroBgImage
     : `${appUrl}/api/og?title=${encodeURIComponent(title.slice(0, 40))}&desc=${encodeURIComponent(desc.slice(0, 60))}${businessInfo?.industry ? `&industry=${businessInfo.industry}` : ''}`;
 
@@ -2496,5 +2500,18 @@ ${settings.globalFooter.links.map(l => `<a href="${escapeHtml(l.href)}" style="c
 </div>
 </footer>` : ''}
 </body>
+${publishedMetaComment({ siteName, businessInfo: publishedBusinessInfo(settings), primaryColor: publishedPrimaryColor(settings) })}
 </html><!--lhpv:${EXPORT_VERSION}-->`;
+}
+
+/** 公開時点のOGカードの色（設定にあるときだけ） */
+function publishedPrimaryColor(settings: SiteSettings): string | undefined {
+  const c = (settings as unknown as { primaryColor?: unknown }).primaryColor;
+  return typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c) ? c : undefined;
+}
+
+/** 公開時点の事業者情報（構造化データ用）。SEO設定画面の値は「次の公開時に反映」 */
+function publishedBusinessInfo(settings: SiteSettings): Record<string, unknown> | undefined {
+  const bi = (settings as { businessInfo?: unknown }).businessInfo;
+  return bi && typeof bi === 'object' && !Array.isArray(bi) ? (bi as Record<string, unknown>) : undefined;
 }

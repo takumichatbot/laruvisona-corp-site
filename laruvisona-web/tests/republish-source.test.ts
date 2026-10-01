@@ -40,7 +40,7 @@ test('公開HTMLに版に無い部品が出ている（版の保存に失敗し�
   const r = republishSource({ blocks_json: doc('A'), seo_json: seo, settings_json: settings,
     published_html: html.replace('</section><!--', '</section><section data-lhp-block="new-9"></section><!--') },
   { blocks_json: doc('A'), seo_json: seo, settings_json: settings });
-  assert.deepEqual(r, { ok: false, reason: 'snapshot_mismatch' });
+  assert.deepEqual(r, { ok: false, reason: 'snapshot_mismatch', detail: 'block_ids' });
 });
 
 test('キーの順番だけが違うJSONは同じとみなす（jsonb は順番を保たない）', () => {
@@ -51,7 +51,7 @@ test('キーの順番だけが違うJSONは同じとみなす（jsonb は順番�
 test('一括再生成の経路は下書きの列から書き出さない（版を読んで判定する）', () => {
   const src = fs.readFileSync(new URL('../app/api/admin/republish-all/route.ts', import.meta.url), 'utf8');
   assert.match(src, /from\('site_versions'\)/);
-  assert.match(src, /republishSource\(site, v\.row\)/);
+  assert.match(src, /republishSource\(site, v\.row, \(\) => snapshotMatchesPublished\(site, v\.row\)\)/);
   assert.doesNotMatch(src, /site\.settings_json as SiteSettings/);
   assert.doesNotMatch(src, /site\.blocks_json as Block/);
 });

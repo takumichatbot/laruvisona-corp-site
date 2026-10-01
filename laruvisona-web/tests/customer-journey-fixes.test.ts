@@ -9,12 +9,15 @@ import { applyAbWinner } from '../lib/published-html';
 
 const read = (p: string) => readFileSync(p, 'utf8');
 
-/* ③ SEO設定画面のOGP画像が使われていなかった */
-test('OGP画像は、ビルダー側が空ならSEO設定画面の値を使う', () => {
+/* ③ SEO設定画面のOGP画像が使われていなかった
+   → 2026-10：公開ページの head は公開時点の値に統一。SEO設定画面の値は「次の公開時に反映」なので、
+     公開のときに og:image へ焼き込み（lib/html-export.ts）、公開ページはそれを読む（lib/published-presentation.ts） */
+test('OGP画像は、ビルダー側が空ならSEO設定画面の値を使う（公開した時点の値で）', () => {
   const s = read('app/hp/[slug]/page.tsx');
-  assert.match(s, /const bizOg = settings\.businessInfo\?\.ogImage;/);
-  assert.match(s, /const ogImage = seo\.ogImage \|\| \(typeof bizOg === 'string' && \/\^https\?:\\\/\\\/\/\.test\(bizOg\) \? bizOg : ''\);/,
-    'SEO設定画面の値を受け皿にしていない、または絶対URLに限定していない');
+  const ex = read('lib/html-export.ts');
+  assert.match(ex, /const bizOgImage = httpUrl\(/, '書き出しがSEO設定画面のOG画像を受け皿にしていない');
+  assert.match(ex, /seo\.ogImage \|\| ogImageUrl/, 'ビルダー側の指定が優先されていない');
+  assert.match(s, /const ogImage = pub\.explicitOgImage;/, '公開時点のOG画像を使っていない');
   assert.match(s, /images: \[\{ url: ogImage,/, 'og:image が新しい値を使っていない');
   assert.match(s, /images: \[ogImage\]/, 'twitter:image が新しい値を使っていない');
   assert.ok(!/seo\.ogImage \?/.test(s), '古い分岐が残っている');

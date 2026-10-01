@@ -8,6 +8,7 @@ import { sha256 } from '@/lib/content-hash';
 import { verifySharedSecret } from '@/lib/shared-secret';
 import { readContactBody } from '@/lib/contact-contract';
 import { republishSource, type VersionRow } from '@/lib/republish-source';
+import { snapshotMatchesPublished } from '@/lib/published-presentation';
 
 // 公開サイトの published_html を、いまの html-export で作り直す。
 //
@@ -96,7 +97,8 @@ export async function POST(req: Request) {
   const sourceOf = async (site: NonNullable<typeof sites>[number]) => {
     const v = await latestVersion(site.id);
     if (v.error) return { ok: false as const, reason: 'snapshot_unreadable' as const };
-    return republishSource(site, v.row);
+    // 版が今の公開HTMLの元かは、部品IDではなく中身（head・本文の指紋）で確かめる
+    return republishSource(site, v.row, () => snapshotMatchesPublished(site, v.row));
   };
 
   // 書かずに、何が対象になるかだけ返す。
@@ -112,6 +114,7 @@ export async function POST(req: Request) {
         outdated: !String(s.published_html ?? '').includes(`<!--lhpv:${EXPORT_VERSION}-->`),
         // 実行したときに作り直すか。'regenerate' 以外は書かない（理由）
         plan: src.ok ? 'regenerate' : src.reason,
+        ...(!src.ok && 'detail' in src && src.detail ? { detail: src.detail } : {}),
       });
     }
     return NextResponse.json({
@@ -132,7 +135,7 @@ export async function POST(req: Request) {
       // 公開時点の中身で作り直す。未公開の変更があるサイトは書かない
       const src = await sourceOf(site);
       if (!src.ok) {
-        results.push({ id: site.id, slug: site.slug, ok: true, status: `skipped_${src.reason}` });
+        results.push({ id: site.id, slug: site.slug, ok: true, status: `skipped_${src.reason}`, ...('detail' in src && src.detail ? { error: src.detail } : {}) });
         continue;
       }
       const rawBlocks = src.blocks;
