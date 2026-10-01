@@ -116,7 +116,8 @@ test('版の復元とA/B勝者確定は、失敗したら画面に出る', () =>
 /* 管理画面 */
 test('利用者一覧の登録日は auth の値（profiles で上書きしない）', () => {
   const s = read('app/api/admin/users/route.ts');
-  const spread = s.indexOf('...profileMap.get(u.id),');
+  // 16d3471 で秘密の値を外す safeProfile を挟んだ。展開の位置（auth の項目より前）は同じ
+  const spread = s.indexOf('...safeProfile(profileMap.get(u.id)),');
   const created = s.indexOf('created_at: u.created_at,');
   assert.ok(spread > 0 && created > spread, 'profiles の展開が auth の項目より後にある');
 });
