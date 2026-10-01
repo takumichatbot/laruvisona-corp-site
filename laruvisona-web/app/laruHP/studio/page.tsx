@@ -13,7 +13,7 @@
  *  - 保存できなかったときに「保存済み」と出さない。
  *  - 既存のサイトをそのまま開ける。従来の編集画面にもいつでも戻れる。
  */
-import { useState, useContext, useEffect, useCallback, useMemo, useRef, useSyncExternalStore, Suspense } from 'react';
+import { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef, useSyncExternalStore, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { readDesignChoice, saveDesignChoice, clearDesignChoice } from '@/lib/design-handoff';
 import Link from 'next/link';
@@ -33,6 +33,8 @@ import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
 import { hasServiceAccess } from '@/lib/subscription-access';
 import { cleanIncomingText } from '@/lib/safe-markup';
 import { checkPublishReadiness, blockingItems, type ReadyItem } from '@/lib/publish-readiness';
+import { resolveTarget, targetPath, type FixTarget } from '@/lib/readiness-targets';
+import { guideFor } from '@/lib/field-guides';
 import { publishCompletion } from '@/lib/publish-result';
 import { canonicalBase } from '@/lib/public-site-url';
 import { withPreviewBridge } from '@/lib/preview-frame';
@@ -271,10 +273,20 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 
 const inputCls = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/60';
 
-function Field({ def, value, onChange }: {
+/** 「公開の準備」から開いた欄。その欄の近くに、書き方の案内を出す */
+const JumpContext = createContext<{ path: string; guide: string }>({ path: '', guide: '' });
+function JumpGuide({ path }: { path: string }) {
+  const jump = useContext(JumpContext);
+  if (!jump.path || jump.path !== path || !jump.guide) return null;
+  return <div className="se-jump-guide" data-jump-guide><b>書き方</b>{jump.guide}</div>;
+}
+
+function Field({ def, value, onChange, path = def.key }: {
   def: FieldDef;
   value: unknown;
   onChange: (next: unknown) => void;
+  /** 編集欄の位置（data-field-path）。繰り返し項目の中では "items.2.title" のようになる */
+  path?: string;
 }) {
   const uploadState=useContext(ImageUploadContext);
   if (def.type === 'toggle') {
@@ -293,11 +305,12 @@ function Field({ def, value, onChange }: {
           <legend className="text-[13px] font-bold text-slate-700 mb-1.5">{def.label}</legend>
           <div className="space-y-2">
             {arr.map((v, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="flex gap-2 flex-wrap" data-field-path={`${path}.${i}`}>
                 {def.key==='images' ? <div className="min-w-0 flex-1"><ImageField label={`写真 ${i+1}`} value={v} onChange={url=>onChange(arr.map((x,j)=>j===i?url:x))}/></div> : <input className={inputCls} aria-label={`${def.label} ${i+1}`} value={String(v ?? '')}
                   onChange={e => onChange(arr.map((x, j) => j === i ? e.target.value : x))} />}
                 <button type="button" disabled={uploadState.pending} className="px-2 text-slate-400 hover:text-red-600"
                   onClick={() => onChange(arr.filter((_, j) => j !== i))}>削除</button>
+                <div className="basis-full"><JumpGuide path={`${path}.${i}`} /></div>
               </div>
             ))}
             <button type="button" disabled={uploadState.pending} className="text-[12px] font-bold text-sky-700 hover:underline"
@@ -325,9 +338,12 @@ function Field({ def, value, onChange }: {
                 </div>
               </div>
               {(def.item || []).map(sub => (
-                <Field key={sub.key} def={sub}
-                  value={(item as Record<string, unknown>)?.[sub.key]}
-                  onChange={next => onChange(arr.map((x, j) => j === i ? { ...(x as object), [sub.key]: next } : x))} />
+                <div key={sub.key} data-field-path={`${path}.${i}.${sub.key}`}>
+                  <Field def={sub} path={`${path}.${i}.${sub.key}`}
+                    value={(item as Record<string, unknown>)?.[sub.key]}
+                    onChange={next => onChange(arr.map((x, j) => j === i ? { ...(x as object), [sub.key]: next } : x))} />
+                  <JumpGuide path={`${path}.${i}.${sub.key}`} />
+                </div>
               ))}
             </div>
           ))}
@@ -1103,6 +1119,51 @@ function StudioInner() {
     ownerEmail: account?.email ?? undefined,
   }), [site.name, site.pages, site.settings.notifyEmail, account?.email]);
 
+  /* ── 公開の準備 → 直す欄へ ──
+     指摘を押すと、その節を選び、「内容」の欄を開いて、その項目まで進める。
+     開くだけではデータも取り消しの履歴も変えない。開く直前に、指摘した場所がまだ同じ値かを照合し、
+     直っている・消えている・並べ替えで決められないときは開かない（古い指摘で別の欄を開かない）。 */
+  const [jump, setJump] = useState<{ blockId: string; path: string; guide: string; seq: number } | null>(null);
+  const [fromReady, setFromReady] = useState(false);
+  const [jumpNote, setJumpNote] = useState('');
+  const remainingTargets = useMemo(() => readiness.filter(i => !i.ok).reduce((n, i) => n + (i.targets?.length ?? 0), 0), [readiness]);
+  const openTarget = useCallback((t: FixTarget) => {
+    const r = resolveTarget(site.pages, t);
+    if (!r || !r.editable) {
+      setJumpNote(r ? 'この項目は、これまでの編集画面で直せます。' : 'この指摘は直っているか、場所が変わりました。いまの内容で数え直した一覧から選んでください。');
+      return;
+    }
+    setJumpNote('');
+    const block = site.pages[r.pageIndex]?.blocks.find(b => b.id === r.blockId);
+    setSelectedId(r.blockId);
+    setPanel('block');
+    setCraftTab('content');
+    setMobileTool('settings');
+    setSheetExpanded(true);   // スマホ：同じ編集シートを広げて、欄と案内が見えるようにする（重ねて開かない）
+    setFieldFocus(r.field);
+    setFromReady(true);
+    setJump({ blockId: r.blockId, path: targetPath(r), guide: guideFor(intake.industry, block?.type ?? '', r.field, r.sub), seq: Date.now() });
+  }, [site.pages, intake.industry]);
+  // 別の節を選んだら、開いた欄の印と案内は外す（戻ってきたときに勝手に動かさない）
+  useEffect(() => { if (jump && selectedId !== jump.blockId) setJump(null); }, [selectedId, jump]);
+  // 開いた欄まで進め、入力欄に移る（1回だけ。入力中に何度も動かさない）
+  useEffect(() => {
+    if (!jump || panel !== 'block' || selectedId !== jump.blockId) return;
+    const frame = requestAnimationFrame(() => {
+      const pane = settingsPane.current;
+      const el = pane?.querySelector<HTMLElement>(`[data-field-path="${jump.path}"]`);
+      if (!pane || !el) return;
+      pane.querySelectorAll('[data-jump-active]').forEach(x => x.removeAttribute('data-jump-active'));
+      el.setAttribute('data-jump-active', '');
+      // 欄が編集欄より高い（スマホの下の編集シートなど）ときは、欄の頭を見せる
+      el.scrollIntoView({ block: el.offsetHeight > pane.clientHeight * 0.7 ? 'start' : 'center' });
+      const input = el.querySelector<HTMLElement>('textarea, input:not([type=color]):not([type=checkbox]), button');
+      input?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jump?.seq, panel, selectedId]);
+
   /* ── 画面 ── */
 
   if (loading) {
@@ -1251,10 +1312,19 @@ function StudioInner() {
               </button>
             ))}
           </div>
+          <JumpContext.Provider value={{
+            path: panel === 'block' && jump?.blockId === selectedId ? jump.path : '',
+            guide: jump?.guide ?? '',
+          }}>
           <div ref={settingsPane} className="se-settings-body flex-1 overflow-y-auto p-4">
             {panel === 'block' && (
               selected && def ? (
                 <>
+                  {fromReady && (
+                    <button type="button" className="se-back-to-ready" data-back-to-ready onClick={() => { setPanel('ready'); setFromReady(false); setJump(null); }}>
+                      ← 公開の準備に戻る（残り {remainingTargets} か所）
+                    </button>
+                  )}
                   <div className="mb-4">
                     <div className="text-sm font-bold text-slate-900">{def.label}</div>
                     <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{def.purpose}</div>
@@ -1264,9 +1334,9 @@ function StudioInner() {
                   {craftTab==='assistant'&&<SectionAssistant key={selected.id} block={selected} siteId={siteId} onApply={adoptProposal}/>}
                   {selected.type === 'booking' && <div className="se-booking-note"><p>{selected.data.mode === 'schedule' ? 'メニュー・担当者・営業時間は予約管理で設定します。表示するボタンは「空き時間を見て予約する」です。' : '空き枠・担当者・設備を管理する場合は、予約モードを「本格予約」に変更してください。'}</p>{siteId ? <Link href={`/laruHP/booking/schedule?siteId=${encodeURIComponent(siteId)}`} onClick={e => { if (saveState.kind !== 'clean') { e.preventDefault(); setHistoryNote('変更を保存してから予約管理へ戻ってください。'); } }}>このサイトの予約設定を開く</Link> : <p>一度サイトを保存すると、予約管理を開けます。</p>}</div>}
                   {craftTab==='content'&&def.fields.filter(f => selected.type !== 'booking' || selected.data.mode !== 'schedule' || !['serviceTypes','timeSlots','buttonText','subtext','stickyCta','stickyCtaText'].includes(f.key)).map(f => (
-                    <div key={`${selected.id}:${f.key}`} data-field-key={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
+                    <div key={`${selected.id}:${f.key}`} data-field-key={f.key} data-field-path={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
                       value={(selected.data as Record<string, unknown>)[f.key]}
-                      onChange={v => updateBlockData(selected.id, f.key, v)} />{f.type==='color'&&colorRolesOf(selected.data)[f.key as RoleKey]&&<p className="text-[11px] text-slate-500 -mt-3 mb-4 leading-relaxed">いまはテーマの{ROLE_LABEL[colorRolesOf(selected.data)[f.key as RoleKey]!]}に合わせています。配色を変えると追従します。ここで色を選ぶと、この部品だけ個別の色になります。</p>}</div>
+                      onChange={v => updateBlockData(selected.id, f.key, v)} /><JumpGuide path={f.key} />{f.type==='color'&&colorRolesOf(selected.data)[f.key as RoleKey]&&<p className="text-[11px] text-slate-500 -mt-3 mb-4 leading-relaxed">いまはテーマの{ROLE_LABEL[colorRolesOf(selected.data)[f.key as RoleKey]!]}に合わせています。配色を変えると追従します。ここで色を選ぶと、この部品だけ個別の色になります。</p>}</div>
                   ))}
                 </>
               ) : selected ? (
@@ -1305,10 +1375,13 @@ function StudioInner() {
                 planNeeded={planNeeded}
                 publicUrl={publicUrl}
                 noIndex={savedNoIndex}
+                onOpenTarget={openTarget}
+                jumpNote={jumpNote}
                 onPublish={publish}
               />
             )}
           </div>
+          </JumpContext.Provider>
         </aside>
       </div>
       <nav className="se-mobile-tools" aria-label="編集の操作">
@@ -1567,7 +1640,7 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
 }
 
 /* ── 公開の準備 ── */
-function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, publicUrl, noIndex, onPublish }: {
+function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, publicUrl, noIndex, onOpenTarget, jumpNote, onPublish }: {
   items: ReadyItem[];
   siteId: string | null;
   published: boolean;
@@ -1579,6 +1652,9 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
   publicUrl: string;
   /** 保存されている「検索に出さない」設定。未保存のサイトは null（既定は検索に出す） */
   noIndex: boolean | null;
+  onOpenTarget: (t: FixTarget) => void;
+  /** 指摘を開けなかったときの説明（古い指摘・この画面に無い項目） */
+  jumpNote: string;
   onPublish: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -1592,9 +1668,28 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
       <span className={`mt-0.5 ${i.ok ? 'text-emerald-600' : i.level === 'must' ? 'text-rose-500' : 'text-amber-500'}`}>
         {i.ok ? '✓' : '!'}
       </span>
-      <div>
+      <div className="min-w-0 flex-1">
         <div className="text-[13px] font-bold text-slate-800">{i.label}</div>
         <div className="text-[11px] text-slate-500 leading-relaxed">{i.detail}</div>
+        {!i.ok && !!i.targets?.length && (
+          /* 直す場所：節 → 項目 → 問題 → 操作。押すと、その欄を開く */
+          <ul className="se-fix-list" aria-label={`${i.label}：直す場所 ${i.targets.length} か所`}>
+            {i.targets.map(t => (
+              <li key={t.id} data-target-id={t.id}>
+                <span className="se-fix-where"><b>{t.section}</b> → {t.fieldLabel}</span>
+                <span className="se-fix-problem">{t.problem}</span>
+                {t.editable ? (
+                  <button type="button" onClick={() => onOpenTarget(t)}>{t.action}</button>
+                ) : siteId ? (
+                  <Link href={`/laruHP/builder?siteId=${siteId}`}
+                    onClick={e => { if (saveState.kind !== 'clean' && !confirm('保存していない変更があります。保存せずに移動しますか？')) e.preventDefault(); }}>
+                    これまでの編集画面で直す
+                  </Link>
+                ) : <span className="se-fix-problem">一度保存すると、これまでの編集画面で直せます</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </li>
   );
@@ -1608,6 +1703,7 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
             : `このまま公開すると困ることが ${blocking.length} 件あります。`}
         </div>
       </div>
+      {jumpNote && <p className="se-jump-note" role="status" data-jump-note>{jumpNote}</p>}
 
       <div className="text-[11px] font-bold text-slate-500 mb-1.5">直さないと、来た人に影響が出ること</div>
       <ul className="space-y-2 mb-4">{must.map(row)}</ul>

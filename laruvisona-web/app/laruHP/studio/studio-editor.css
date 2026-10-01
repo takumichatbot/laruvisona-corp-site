@@ -500,3 +500,26 @@
 .se-booking-setup a,.se-booking-note a { color:#125d53; text-decoration:underline; min-height:44px; display:inline-flex; align-items:center; }
 .se-booking-note { background:#edf5f1; padding:12px; font-size:12px; line-height:1.7; border-radius:8px; margin-bottom:16px; }
 @media(max-width:600px) { .se-booking-setup { padding:10px 14px; gap:8px; max-height:220px; overflow:auto; } .se-booking-setup > div { flex-basis:100%; } }
+
+/* ── 公開の準備：直す場所の一覧と、開いた欄の案内 ── */
+.se-fix-list { margin:8px 0 0; padding:0; list-style:none; display:grid; gap:6px; }
+.se-fix-list li { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 10px; align-items:center; padding:8px 10px; border:1px solid #e3e8f0; border-radius:8px; background:#fbfcfe; }
+.se-fix-where { font-size:12px; color:#2b3548; overflow-wrap:anywhere; }
+.se-fix-where b { font-weight:700; }
+.se-fix-problem { grid-column:1; font-size:11px; color:#7a8496; }
+.se-fix-list li > button, .se-fix-list li > a { grid-column:2; grid-row:1 / span 2; font-size:12px; font-weight:700; color:#0b6aa8; border:1px solid #b9d4ea; border-radius:7px; padding:6px 10px; min-height:36px; background:#fff; white-space:nowrap; text-decoration:none; display:inline-flex; align-items:center; }
+.se-fix-list li > button:hover, .se-fix-list li > a:hover { background:#eef6fc; }
+.se-jump-note { font-size:12px; color:#8a5a00; background:#fff7e6; border:1px solid #f1d9a6; border-radius:8px; padding:8px 10px; margin:0 0 12px; }
+.se-back-to-ready { display:flex; align-items:center; width:100%; min-height:40px; margin:0 0 12px; padding:6px 10px; font-size:12px; font-weight:700; color:#0b6aa8; background:#eef6fc; border:1px solid #cfe2f2; border-radius:8px; text-align:left; }
+.se-jump-guide { margin:6px 0 10px; padding:8px 10px; font-size:12px; line-height:1.6; color:#3b4659; background:#f3f8fd; border-left:3px solid #4a9ad8; border-radius:4px; }
+.se-jump-guide b { display:block; font-size:11px; color:#0b6aa8; margin-bottom:2px; }
+[data-jump-active] { outline:2px solid #4a9ad8; outline-offset:4px; border-radius:6px; }
+@media (max-width:900px) {
+  .se-fix-list li > button, .se-fix-list li > a, .se-back-to-ready { min-height:44px; }
+}
+@media (max-width:359px) {
+  .se-fix-list li { grid-template-columns:1fr; }
+  .se-fix-list li > button, .se-fix-list li > a { grid-column:1; grid-row:auto; justify-self:start; }
+}
+@media (prefers-reduced-motion: reduce) { [data-jump-active] { scroll-behavior:auto; } }
+

@@ -18,6 +18,7 @@ import type { Page } from '@/types/laruHP';
 import { hasPlaceholderText, isPlaceholderText } from './placeholder-text';
 import { BLOCK_DEFS } from './studio-schema';
 import { isStarterSamplePhoto } from './studio-image';
+import { readinessTargets, type FixTarget } from './readiness-targets';
 
 export type ReadyLevel = 'must' | 'better';
 
@@ -29,6 +30,8 @@ export interface ReadyItem {
   label: string;
   /** いまの状態、または直し方 */
   detail: string;
+  /** 直す場所（節・項目）。分かるものだけ（lib/readiness-targets.ts） */
+  targets?: FixTarget[];
 }
 
 export interface ReadyInput {
@@ -72,8 +75,10 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
   const textOnly = blocks.map(b => b.type === 'hero' && isStarterSamplePhoto(d(b)) ? { ...b, data: { ...d(b), bgImageAlt: '' } } : b);
   const hasPlaceholder = hasPlaceholderText(textOnly) || blocks.some(b => b.data?.starterExampleName && b.data.starterExampleName === input.name);
   const where = placeholderPlaces(pages);
+  const targets = readinessTargets(pages);
   items.push({
     id: 'placeholder',
+    targets: hasPlaceholder ? targets.filter(t => t.kind === 'placeholder') : [],
     ok: !hasPlaceholder,
     level: 'must',
     label: '例文のままの場所が残っていない',
@@ -174,6 +179,7 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
   const samplePhoto = heroPhoto && isStarterSamplePhoto(d(hero ?? {}));
   items.push({
     id: 'hero-photo',
+    targets: samplePhoto ? targets.filter(t => t.kind === 'sample-photo' && t.blockId === hero?.id) : [],
     ok: heroPhoto && !samplePhoto,
     level: 'better',
     label: '最初の画面に自分の写真が入っている',
@@ -181,6 +187,19 @@ export function checkPublishReadiness(input: ReadyInput): ReadyItem[] {
       ? '見本の写真のままです。「最初の画面」で、ご自身の仕事・お店の写真に差し替えてください'
       : heroPhoto ? '入っています' : '写真があると、来た人がすぐ雰囲気を掴めます',
   });
+
+  // 最初の画面以外に残っている見本の写真（並べた写真・1枚の写真・担当する人など）。直したほうが良いことの1つ
+  const otherSamples = targets.filter(t => t.kind === 'sample-photo' && t.blockId !== hero?.id);
+  if (otherSamples.length > 0) {
+    items.push({
+      id: 'sample-photos',
+      targets: otherSamples,
+      ok: false,
+      level: 'better',
+      label: 'ほかの場所の写真も自分の写真になっている',
+      detail: `見本の写真が ${otherSamples.length} 枚残っています。ご自身の写真に差し替えるか、不要な写真は削除してください`,
+    });
+  }
 
   items.push({
     id: 'form',
