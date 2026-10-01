@@ -216,9 +216,12 @@ export function planStyleDirection<S extends PlanSettings>(
   if (roleCount) changes.push({ label: 'ボタン・帯の色', detail: 'テーマの色に合わせます。あとで配色を変えても追従します' });
   changes.push({
     label: '効く範囲',
-    detail: rest.length
-      ? '色・書体・余白・動きはサイト全体（すべてのページ）に効きます。並び替えと節ごとの設定はトップページだけです'
-      : '色・書体・余白・動きはサイト全体に効きます',
+    /* 言葉で伝える／内容で選んでもらうは、左寄せの本文・FAQ・営業時間・問い合わせ欄の
+       読み始めを揃えるCSSがサイト全体に効く（lib/style-direction-css.ts）。説明もそれに合わせる */
+    detail: (id === 'immersive' ? '色・書体・余白・動き' : '色・書体・余白・動き・左寄せの本文の読み始め・問い合わせ欄のまとまり')
+      + (rest.length
+        ? 'はサイト全体（すべてのページ）に効きます。最初の画面・節の並び替え・写真の並べ方・寄せの設定はトップページだけです'
+        : 'はサイト全体に効きます'),
   });
   return { pages: [{ ...top, blocks }, ...rest], settings, changes, individualColors };
 }

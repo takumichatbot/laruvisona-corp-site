@@ -73,7 +73,8 @@ try {
     const p = await ctx.newPage();
     p.on('console', (m) => { if (m.type() === 'error' && !/ERR_TUNNEL_CONNECTION_FAILED/.test(m.text())) consoleErrors.push(m.text()); });
     p.on('pageerror', (e) => consoleErrors.push('pageerror: ' + e.message));
-    p.on('requestfailed', (r) => { if (!/_rsc=/.test(r.url())) consoleErrors.push('requestfailed: ' + r.url().slice(0, 90)); });
+    // 失敗の理由（中断・接続拒否など）と、要求したフレームも残す（外部接続の制限と区別するため）
+    p.on('requestfailed', (r) => { if (!/_rsc=/.test(r.url())) consoleErrors.push(`requestfailed: ${r.url().slice(0, 90)} [${r.failure()?.errorText || '?'}] frame=${r.frame()?.url().slice(0, 40) || '?'}${r.frame()?.isDetached() ? '(detached)' : ''}`); });
     await startDraft(p, 1440);
     const s0 = await srcdoc(p);
     const editor = p.locator('.de-editor');
@@ -189,6 +190,8 @@ try {
     const exported = await (await p.request.get(base + `/api/sites/${siteId}/export-html`)).text();
     fs.writeFileSync(out + '/exported.html', strip(exported));
     check('通常の書き出しとプレビューのHTMLが一致', strip(exported) === strip(after), `${strip(exported).length} vs ${strip(after).length}`);
+    // 偽DBの利用者には作成上限（3件）がある。確認用に作ったサイトは利用者のAPIで片付ける
+    await p.request.delete(base + '/api/sites/' + siteId);
     await ctx.close();
     await fonts.close();
   }

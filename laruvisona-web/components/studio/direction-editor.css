@@ -430,3 +430,42 @@
   margin: 0;
   color: #5b6b85;
 }
+
+/* スマホ幅：全体を1本の縦スクロールにし、候補 → 画面幅 → 大きなプレビュー → 配色 → 変わる内容 の順に並べる。
+   （以前は候補の欄が伸びて、プレビューの高さが 0 になり、変わる内容が操作帯の下で切れていた） */
+@media (max-width: 700px) {
+  .dr-workspace {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .dr-options {
+    display: contents;
+  }
+  .dr-options-list {
+    order: 1;
+    margin: 10px 12px 0;
+  }
+  .dr-options .de-devices {
+    order: 2;
+    margin: 8px 12px 0;
+  }
+  .dr-preview {
+    order: 3;
+    flex: none;
+    height: min(64dvh, 520px);
+  }
+  .dr-palette {
+    order: 4;
+    margin: 4px 12px 0;
+  }
+  .dr-colors {
+    order: 5;
+    margin: 12px 12px 0;
+  }
+  .dr-changes {
+    order: 6;
+    margin: 16px 12px 20px;
+  }
+}

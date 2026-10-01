@@ -75,7 +75,10 @@ SITES.push(LEGACY);
 
 // 受信した問い合わせ・予約。/api/contact が insert する先。
 const CONTACTS = [];
-const TABLES = { sites: SITES, news_posts: POSTS, contacts: CONTACTS, profiles: [
+// 公開のたびに残る版（POST /api/sites/[id]/publish が insert する）。
+// 一括再生成（/api/admin/republish-all）が「公開時点の中身」を引く先なので、受け取るだけでなく残す。
+const SITE_VERSIONS = [];
+const TABLES = { sites: SITES, news_posts: POSTS, contacts: CONTACTS, site_versions: SITE_VERSIONS, profiles: [
   { id: '4f2a1b8c-3d5e-4a6f-8b1c-2e3d4f5a6b7c', plan: 'agency', subscription_status: 'active' },
   // 契約中の利用者。plan が無いとサイトを1件も作れない（/api/sites が no_plan で断る）ので、
   // 「はじめての利用者が実際に1件作る」確認のために入れてある。
@@ -89,7 +92,12 @@ const USERS = {
 
 function match(row, key, spec) {
   const raw = String(spec);
-  // not.like.* など。偽データを絞る意味がないので素通しする
+  // not.like.*（古い版の公開HTMLだけを選ぶ）は本物と同じく絞る。% と * は任意の文字列
+  if (raw.startsWith('not.like.')) {
+    const pat = raw.slice('not.like.'.length).split(/[*%]/).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\S]*');
+    return !new RegExp(`^${pat}$`).test(String(row[key] ?? ''));
+  }
+  // それ以外の not.* は、偽データを絞る意味がないので素通しする
   if (raw.startsWith('not.')) return true;
   const [op, ...rest] = raw.split('.');
   const v = rest.join('.');
@@ -156,6 +164,11 @@ http.createServer((req, res) => {
         /* 保存をわざと遅くする。送っている最中に続きを打つ状況を作るため。 */
         if ('slowWriteMs' in next) CONTROL.slowWriteMs = Number(next.slowWriteMs) || 0;
         if ('beforeUpdate' in next) CONTROL.beforeUpdate = next.beforeUpdate;
+        /* 行を直接書き換える（例：公開HTMLを古い版の印にする）。アプリの経路を通さない準備専用。 */
+        if (next.patchSite && typeof next.patchSite.id === 'string') {
+          const target = SITES.find(x => x.id === next.patchSite.id);
+          if (target) Object.assign(target, next.patchSite.patch || {}, { updated_at: touch() });
+        }
       }
       send(200, CONTROL);
     });
@@ -218,6 +231,22 @@ http.createServer((req, res) => {
       return send(200, { ok: true, site: row });
     });
     return;
+  }
+
+  /* 制作のAI・写真アップロードの利用回数（supabase の laruhp_ai_claim_usage）。
+     これが無いと写真アップロードが常に「利用回数に達しました」(429) になり、
+     自分の写真を入れる経路を一度も通せない。上限の判定はここでは持たず、常に許可する。 */
+  if (req.method === 'POST' && url.pathname === '/rest/v1/rpc/laruhp_ai_claim_usage') {
+    req.on('data', () => {}); req.on('end', () => send(200, true));
+    return;
+  }
+
+  /* 削除（DELETE /api/sites/[id] が使う）。条件に合う sites の行を消して返す。
+     確認で作ったサイトを片付けないと、利用者の作成上限に当たって次の確認が通らない。 */
+  if (req.method === 'DELETE' && url.pathname === '/rest/v1/sites') {
+    const hit = SITES.filter(r => [...url.searchParams].every(([k, v]) => ['select', 'limit', 'order', 'offset'].includes(k) || match(r, k, v)));
+    for (const r of hit) SITES.splice(SITES.indexOf(r), 1);
+    return send(200, hit);
   }
 
   // 書き込み。公開ルートが published_html を保存できるようにする。
@@ -289,7 +318,14 @@ http.createServer((req, res) => {
         CONTACTS.push(...rows);
         return out(rows, 201);
       }
-      // site_versions などは受け取るだけ
+      if (t === 'site_versions' && req.method === 'POST') {
+        const rows = (Array.isArray(patch) ? patch : [patch]).map((r, i) => ({
+          id: `version-${SITE_VERSIONS.length + i + 1}`, created_at: touch(), ...r,
+        }));
+        SITE_VERSIONS.push(...rows);
+        return out(rows, 201);
+      }
+      // そのほかは受け取るだけ
       return out(Array.isArray(patch) ? patch : [patch], 201);
     });
     return;

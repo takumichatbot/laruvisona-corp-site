@@ -94,6 +94,13 @@ curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" -H 'content-type: applicat
   -d '{"onlyOutdated":true,"dryRun":true}' \
   https://laruvisona.jp/api/admin/republish-all
 #    → 対象ごとに、いまの中身の指紋（current_sha256）と版の古さ（outdated）が返る
+#    → plan も返る（dev/style-direction-v1 以降）。作り直す元は「公開時点の中身」（site_versions の最新版）で、
+#      下書き（blocks_json 等）からは作らない。plan が regenerate 以外のサイトは、実行しても書かない：
+#        unpublished_changes … 下書きに未公開の変更がある（作り直すと未公開の文章・設定が公開側へ出るため）
+#        no_snapshot         … 公開時点の版が残っていない
+#        snapshot_mismatch   … 公開中のHTMLに、最新版に無い部品が出ている（版の保存に失敗した公開など）
+#        snapshot_unreadable … 版を読めなかった
+#      書かなかったサイトは実行の応答の skipped に並ぶ。公開HTMLは今のまま（利用者が次に公開したときに新しくなる）
 
 # 3. まず1件だけ。応答を必ず保存する
 curl -X POST -H "Authorization: Bearer $ADMIN_SECRET" -H 'content-type: application/json' \

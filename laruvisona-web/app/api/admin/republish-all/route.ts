@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { exportToHTML, EXPORT_VERSION } from '@/lib/html-export';
-import type { Block, Page, SEOSettings, SiteSettings } from '@/types/laruHP';
+import type { Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import { redact, logError, safeErrorMessage } from '@/lib/api-error';
 import { sha256 } from '@/lib/content-hash';
 import { verifySharedSecret } from '@/lib/shared-secret';
 import { readContactBody } from '@/lib/contact-contract';
+import { republishSource, type VersionRow } from '@/lib/republish-source';
 
 // 公開サイトの published_html を、いまの html-export で作り直す。
 //
@@ -34,6 +35,11 @@ import { readContactBody } from '@/lib/contact-contract';
 //     一致しない＝そのあと利用者が公開し直した行なので、競合として止まる
 // 全件の控え（GET）をそのまま流し込むやり方は、対象外のサイトが後から
 // 公開した内容まで巻き戻すので、標準の手順から外した。
+//
+// 作り直す元は「公開時点の中身」（site_versions のいちばん新しい版）。下書き（blocks_json 等）
+// からは作らない。下書きに未公開の変更があるサイトは書かずに skipped として返す
+// （判定は lib/republish-source.ts）。以前は下書きから作り直していたため、公開していない
+// 文章や設定が、利用者の操作なしに公開側へ出ていた。
 export async function POST(req: Request) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const secretOk = verifySharedSecret(bearer, process.env.ADMIN_SECRET);
@@ -77,19 +83,43 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: safeErrorMessage(error, '処理できませんでした') }, { status: 500 });
 
+  /** 公開時点の中身（いちばん新しい版）。読めなければ作り直さない */
+  const latestVersion = async (siteId: string): Promise<{ row: VersionRow; error: boolean }> => {
+    const { data, error: vError } = await service
+      .from('site_versions')
+      .select('blocks_json, seo_json, settings_json, created_at')
+      .eq('site_id', siteId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    return { row: vError ? null : (data?.[0] ?? null), error: !!vError };
+  };
+  const sourceOf = async (site: NonNullable<typeof sites>[number]) => {
+    const v = await latestVersion(site.id);
+    if (v.error) return { ok: false as const, reason: 'snapshot_unreadable' as const };
+    return republishSource(site, v.row);
+  };
+
   // 書かずに、何が対象になるかだけ返す。
   // いまの中身の指紋も返すので、あとで「変わったかどうか」を見比べられる。
   if (dryRun) {
-    return NextResponse.json({
-      version: EXPORT_VERSION,
-      dryRun: true,
-      total: (sites ?? []).length,
-      targets: (sites ?? []).map(s => ({
+    const targets = [];
+    for (const s of sites ?? []) {
+      const src = await sourceOf(s);
+      targets.push({
         id: s.id, slug: s.slug, name: s.name,
         current_sha256: sha256(String(s.published_html ?? '')),
         current_bytes: String(s.published_html ?? '').length,
         outdated: !String(s.published_html ?? '').includes(`<!--lhpv:${EXPORT_VERSION}-->`),
-      })),
+        // 実行したときに作り直すか。'regenerate' 以外は書かない（理由）
+        plan: src.ok ? 'regenerate' : src.reason,
+      });
+    }
+    return NextResponse.json({
+      version: EXPORT_VERSION,
+      dryRun: true,
+      total: targets.length,
+      regenerate: targets.filter(t => t.plan === 'regenerate').length,
+      targets,
     });
   }
 
@@ -99,8 +129,14 @@ export async function POST(req: Request) {
 
   for (const site of sites ?? []) {
     try {
-      const rawBlocks = site.blocks_json as Block[] | { v: number; pages: Page[] };
-      const seoSettings: SEOSettings = site.seo_json as SEOSettings;
+      // 公開時点の中身で作り直す。未公開の変更があるサイトは書かない
+      const src = await sourceOf(site);
+      if (!src.ok) {
+        results.push({ id: site.id, slug: site.slug, ok: true, status: `skipped_${src.reason}` });
+        continue;
+      }
+      const rawBlocks = src.blocks;
+      const seoSettings: SEOSettings = src.seo;
       let pages: Page[];
       if (Array.isArray(rawBlocks)) {
         pages = [{ id: 'page-main', name: 'トップページ', path: '/', blocks: rawBlocks, seo: seoSettings }];
@@ -113,7 +149,7 @@ export async function POST(req: Request) {
       const html = exportToHTML(
         pages,
         seoSettings,
-        site.settings_json as SiteSettings,
+        src.settings as SiteSettings,
         site.name,
         { name: site.name, industry: site.industry ?? undefined, siteId: site.id, slug: site.slug ?? undefined }
       );
@@ -163,6 +199,9 @@ export async function POST(req: Request) {
     total: results.length,
     updated: results.filter(r => r.status === 'updated').length,
     conflicts: results.filter(r => r.status === 'conflict').length,
+    /* 未公開の変更がある・公開時点の版が無い等で、書かなかったサイト。
+       公開HTMLは今のまま。利用者が次に公開したときに、今の書き出しで作られる。 */
+    skipped: results.filter(r => r.status.startsWith('skipped_')),
     failed,
     /* この応答をファイルに保存しておくと、
        POST /api/admin/published-html-backup へそのまま送り返すだけで、

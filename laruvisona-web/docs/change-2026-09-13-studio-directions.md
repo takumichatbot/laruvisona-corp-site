@@ -44,7 +44,7 @@ Playwrightの場所は `PLAYWRIGHT_FROM` で指定可能。検査は順番に実
 
 ```sh
 npm test
-node tests/browser/studio-direction-check.mjs
+bash tests/browser/style-direction.sh   # 見た目の3案の確認はここから（studio-direction-check.mjs もここで呼ぶ）
 node tests/browser/studio-craft-check.mjs
 node tests/browser/studio-craft-media-check.mjs
 node tests/browser/landing-polish-check.mjs

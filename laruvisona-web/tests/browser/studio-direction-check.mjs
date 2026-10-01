@@ -177,7 +177,7 @@ try {
     const editor = p.locator('.de-editor');
     const before = await source();
     await editor.getByRole('button', { name: /言葉で伝える/ }).click();
-    const candidate = p.frameLocator('iframe[title="採用前の構成案"]');
+    const candidate = p.frameLocator('iframe[title="採用前の案"]');
     await candidate.locator('h1').waitFor();
     check(
       width + ' preview does not mutate current',
@@ -206,13 +206,15 @@ try {
       ['内容で選んでもらう', 'catalog'],
     ]) {
       await p
-        .locator('.dr-options-list')
-        .getByRole('button', { name: new RegExp(label) })
+        .getByRole('radiogroup', { name: '比較する案' })
+        .getByRole('radio', { name: new RegExp(label) })
         .click();
+      // 案は body の data-style-direction で見分ける（内容で選んでもらうの最初の画面は、言葉で伝えると同じ左右分割）
       await candidate
-        .locator('.lhp-hero[data-composition=' + id + ']')
+        .locator('body[data-style-direction=' + id + ']')
         .waitFor();
-      const image = candidate.locator('.lhp-adaptive-mobile-photo');
+      // 内容で選んでもらう（C）は左右分割の最初の画面。スマホでは写真が文字の下に回る
+      const image = candidate.locator('.lhp-adaptive-mobile-photo, .lhp-hero-split-img img').first();
       await image.evaluate(async (img) => {
         await img.decode();
       });
@@ -232,15 +234,15 @@ try {
       );
     }
     await p
-      .locator('.dr-options-list')
-      .getByRole('button', { name: /言葉で伝える/ })
+      .getByRole('radiogroup', { name: '比較する案' })
+      .getByRole('radio', { name: /言葉で伝える/ })
       .click();
     await editor.getByRole('button', { name: 'パソコン', exact: true }).click();
     check(
       width + ' PC comparison canvas',
       await p
-        .locator('iframe[title="採用前の構成案"]')
-        .evaluate((el) => parseFloat(el.style.width) === 1100),
+        .locator('iframe[title="採用前の案"]')
+        .evaluate((el) => parseFloat(el.style.width) === 1440),
     );
     await editor.getByRole('button', { name: 'スマホ', exact: true }).click();
     await p
@@ -253,8 +255,9 @@ try {
     );
     check(width + ' cancel unchanged', (await source()) === before);
     await editor.getByRole('button', { name: /言葉で伝える/ }).click();
-    await editor
-      .getByRole('button', { name: 'この構成を採用する', exact: true })
+    await p.locator('.dr-dialog').waitFor();
+    await p
+      .getByRole('button', { name: 'この案を採用する', exact: true })
       .click();
     await frame.locator('.lhp-hero[data-composition=editorial]').waitFor();
     check(
@@ -268,8 +271,9 @@ try {
     await frame.locator('.lhp-hero[data-composition=catalog]').waitFor();
     check(width + ' undo restores direction', true);
     await editor.getByRole('button', { name: /言葉で伝える/ }).click();
-    await editor
-      .getByRole('button', { name: 'この構成を採用する', exact: true })
+    await p.locator('.dr-dialog').waitFor();
+    await p
+      .getByRole('button', { name: 'この案を採用する', exact: true })
       .click();
     await frame.locator('.lhp-hero[data-composition=editorial]').waitFor();
     if (width < 900)
@@ -297,9 +301,9 @@ try {
       .getByRole('button', { name: '保存', exact: true })
       .click();
     const res = await save;
-    const row = (await res.json()).site;
-    lastId = row.id;
-    check(width + ' saved through owner API', res.ok() && !!lastId);
+    const saved = await res.json();
+    lastId = saved.site?.id;
+    check(width + ' saved through owner API', res.ok() && !!lastId, { status: res.status(), error: saved.error });
     const record = (
       await (await p.request.get(base + '/api/sites/' + lastId)).json()
     ).site;
@@ -365,6 +369,8 @@ try {
       .locator('.lhp-hero')
       .screenshot({ path: `${out}/${width}-published.png` });
     check(width + ' no JS errors', errors.length === 0, errors);
+    // 偽DBの利用者は作成上限（3件）がある。幅ごとに作った確認用サイトは、利用者のAPIで片付ける
+    await p.request.delete(base + '/api/sites/' + lastId);
     await ctx.close();
     await fonts.close();
   }
