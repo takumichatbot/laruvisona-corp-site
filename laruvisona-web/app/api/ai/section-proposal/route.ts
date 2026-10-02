@@ -3,7 +3,7 @@ import { hasServiceAccess } from '@/lib/subscription-access';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { hasFeature } from '@/lib/plan-limits';
-import { readAiJson, requireAiAccess, requireBuilderAccess } from '@/lib/ai-access';
+import { readAiJson, requireAiAccess } from '@/lib/ai-access';
 import { aiFields, reviewSectionProposal, MAX_FACTS } from '@/lib/studio-ai';
 import { isPlaceholderText } from '@/lib/placeholder-text';
 import type { Block } from '@/types/laruHP';
@@ -16,8 +16,10 @@ export async function GET() {
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ available: false, reason: 'login' });
-  const denied = await requireBuilderAccess(sb, user.id);
-  if (denied) return NextResponse.json({ available: false, reason: 'contract' });
+  // POST と同じ判定にする（運営アカウントも、契約が無ければ使えない。押す前と押した後で答えを変えない）
+  const { data: profile, error } = await sb.from('profiles').select('plan, subscription_status').eq('id', user.id).single();
+  if (error || !profile || !hasFeature(profile.plan, 'builder') || !hasServiceAccess(profile.subscription_status))
+    return NextResponse.json({ available: false, reason: 'contract' });
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ available: false, reason: 'not-ready' });
   return NextResponse.json({ available: true });
 }
