@@ -74,17 +74,34 @@ const saveNow = async () => {
 };
 const readyTab = () => p.locator('.se-settings-tabs').getByRole('button', { name: '公開の準備', exact: true });
 const pane = () => p.locator('.se-settings-body');
-const metrics = { mode: MODE, base, fields: [], locateClicks: 0, locateScrolls: 0, roundTrips: 0, inputs: 0, locateMs: 0, typeMs: 0 };
+/**
+ * 数えるもの（自動操作の値。場所を知っている前提の最短の数で、初めて使う人の所要時間ではない）
+ *   arrive … 直す欄へ着くためのクリック（指摘の「編集する」、節の一覧の節、欄そのもの）
+ *   ready  … 公開の準備を開く・戻るクリック（「公開の準備」タブ、「公開の準備に戻る」）
+ *   other  … そのほかの画面の切り替え（今回の手順では使わない）
+ *   scroll … 編集欄のスクロール（ホイール1回 = 300px）
+ *   input  … 文字の入力（欄1つで1回）
+ *   upload … 写真ファイルを選ぶ
+ *   save   … 保存
+ * 以前の roundTrips は「公開の準備を開く・戻るクリックの回数」（最初に開く1回を含む）で、行って戻る往復の数ではなかった。
+ */
+const c = { arrive: 0, ready: 0, other: 0, scroll: 0, input: 0, upload: 0, save: 0 };
+const metrics = { mode: MODE, base, fields: [], counts: c, locateMs: 0, typeMs: 0 };
 
-/** 変更前：節の一覧から節を選び、欄が見えるまでスクロールして、欄を押す */
-async function locateBefore(f, sameValueOrdinal) {
-  const t0 = Date.now();
+async function openReady() { await readyTab().click(); c.ready++; }
+async function backToReady() {
+  if (MODE === 'after' && await p.locator('[data-back-to-ready]').count()) await p.locator('[data-back-to-ready]').click();
+  else await readyTab().click();
+  c.ready++;
+}
+/** 節の一覧から節を選ぶ（変更前の行き方。変更後でも使えるが、今回の変更後の経路では使わない） */
+async function selectBlock(bi) {
+  await p.locator('.se-block-select').nth(bi).click(); c.arrive++;
+  await p.waitForTimeout(150);
+}
+/** 開いている編集欄の中で、欄が見えるまでスクロールして押す（新旧とも同じ） */
+async function inPanel(f, sameValueOrdinal) {
   let clicks = 0, scrolls = 0;
-  const selected = await p.evaluate(() => [...document.querySelectorAll('.se-block-item')].findIndex((el) => el.getAttribute('data-selected') === 'true'));
-  if (selected !== f.bi || !(await pane().locator('textarea, input').count())) {
-    await p.locator('.se-block-select').nth(f.bi).click(); clicks++;
-    await p.waitForTimeout(150);
-  }
   // 欄：同じ値の欄のうち、その節の中で何番目か（人は目で探す。ここでは値で見つける）
   const handle = await p.evaluateHandle(({ value, ord }) => [...document.querySelectorAll('.se-settings-body textarea, .se-settings-body input')].filter((el) => el.value === value)[ord] || null, { value: f.value, ord: sameValueOrdinal });
   const el = handle.asElement();
@@ -92,22 +109,20 @@ async function locateBefore(f, sameValueOrdinal) {
   const box = await pane().boundingBox();
   for (let i = 0; i < 40; i++) {
     const r = await el.boundingBox();
-    if (r && r.y >= box.y && r.y + Math.min(r.height, 40) <= box.y + box.height) break;
+    if (r && r.y >= box.y + 60 && r.y + Math.min(r.height, 40) <= box.y + box.height) break;
     // ホイール1回ぶん（300px）。この環境の自動操作ではホイールで編集欄が動かないので、同じ量を直接動かす
-    await pane().evaluate((el, dy) => { el.scrollTop += dy; }, r && r.y < box.y ? -300 : 300); scrolls++;
+    await pane().evaluate((el, dy) => { el.scrollTop += dy; }, r && r.y < box.y + 60 ? -300 : 300); scrolls++;
     await p.waitForTimeout(60);
   }
   await el.click(); clicks++;
-  return { el, clicks, scrolls, ms: Date.now() - t0 };
+  c.arrive += clicks; c.scroll += scrolls;
+  return el;
 }
-
-/** 変更後：指摘の「編集する」「写真を選ぶ」から欄へ */
-async function locateAfter(targetId) {
-  const t0 = Date.now();
-  await p.locator(`li[data-target-id="${targetId}"] button`).click();
+/** 変更後：指摘の「編集する」から欄へ（欄に入力カーソルが入る） */
+async function jump(targetId) {
+  await p.locator(`li[data-target-id="${targetId}"] button`).click(); c.arrive++;
   await p.waitForSelector('[data-jump-active]');
-  const el = (await p.$('[data-jump-active] textarea, [data-jump-active] input:not([type=file])')) || (await p.$('[data-jump-active]'));
-  return { el, clicks: 1, scrolls: 0, ms: Date.now() - t0 };
+  return (await p.$('[data-jump-active] textarea, [data-jump-active] input:not([type=file])')) || (await p.$('[data-jump-active]'));
 }
 
 let created = '';
@@ -136,61 +151,67 @@ try {
   check('初期下書き：工事・施工で保存され、見た目の案が入る', start.industry === 'construction' && !!start.settings_json.styleDirection, `${start.industry} / ${start.settings_json.styleDirection}`);
   check('初期下書きの例文の欄は、本人情報の表と一致する（手元の確認データ）', fields.every((f) => OWNER[`${f.block.type}:${f.path}`]), fields.map((f) => `${f.block.type}:${f.path}`).join(' '));
 
-  // ── 公開の準備 → 欄 → 直す → 戻る（1回目：本人が決めていない欄は残す） ──
-  await readyTab().click(); metrics.roundTrips++;
-  // 最初に「公開の準備」で分かること（変更前は節の名前だけ、変更後は欄ごとの一覧）
+  // ── 公開の準備 → 欄 → 直す（1回目：本人が決めていない欄は残す） ──
+  // 新旧とも「その画面で使える自然な最短経路」で進める。同じ節の欄は続けて直す（どちらにも、毎回戻ることを強いない）。
+  //   変更後：節の最初の欄は指摘の「編集する」から。同じ節の残りは、開いている編集欄の中で続けて直す。
+  //           次の節へは「公開の準備に戻る」→ 次の指摘（公開の準備の一覧は、変更前には無い案内）
+  //   変更前：最初に公開の準備で節の名前を見る。そのあと節の一覧から節を選び、欄までスクロールして直す。
+  //           節の名前は分かっているので、節ごとに公開の準備へは戻らない
+  await openReady();
   metrics.readyStart = { detail: ((await pane().innerText()).match(/残っている場所：[^。]*。/) || [''])[0], listed: await p.locator('li[data-target-id]').count() };
   const t0 = Date.now();
   const firstPass = fields.filter((f) => `${f.block.type}:${f.path}` !== LATER);
-  let lastBlock = -1;
-  for (const f of firstPass) {
-    const ord = fields.filter((g) => g.bi === f.bi && g.value === f.value).indexOf(f);
-    if (MODE === 'before' && lastBlock !== -1 && lastBlock !== f.bi) { await readyTab().click(); metrics.roundTrips++; }   // 節ごとに確かめに戻る（変更前に有利な数え方）
-    const loc = MODE === 'after'
-      ? await locateAfter(tid(pageId, f))
-      : await locateBefore(f, ord);
-    if (MODE === 'after' && `${f.block.type}:${f.path}` === 'services:items.0.description') metrics.guide = await p.locator('[data-jump-guide]').innerText().catch(() => '');
-    const t1 = Date.now();
-    await loc.el.fill(OWNER[`${f.block.type}:${f.path}`]); metrics.inputs++;
-    metrics.typeMs += Date.now() - t1;
-    metrics.locateClicks += loc.clicks; metrics.locateScrolls += loc.scrolls; metrics.locateMs += loc.ms;
-    metrics.fields.push({ field: `${f.block.type}:${f.path}`, clicks: loc.clicks, scrolls: loc.scrolls });
-    if (MODE === 'after') { await p.locator('[data-back-to-ready]').click(); metrics.roundTrips++; }   // 1か所ごとに戻る（変更後に不利な数え方）
-    lastBlock = f.bi;
+  const sections = [...new Set(firstPass.map((f) => f.bi))];
+  for (const [si, bi] of sections.entries()) {
+    const group = firstPass.filter((f) => f.bi === bi);
+    for (const [gi, f] of group.entries()) {
+      const ord = fields.filter((g) => g.bi === f.bi && g.value === f.value).indexOf(f);
+      const t1 = Date.now(), a0 = c.arrive, s0 = c.scroll, r0 = c.ready;
+      let el;
+      if (MODE === 'after' && gi === 0) {
+        if (si > 0) await backToReady();
+        el = await jump(tid(pageId, f));
+        if (`${f.block.type}:${f.path}` === 'tabs:items.0.body') metrics.guide = await p.locator('[data-jump-guide]').innerText().catch(() => '');
+      } else {
+        if (MODE === 'before' && gi === 0) await selectBlock(f.bi);
+        el = await inPanel(f, ord);
+      }
+      metrics.locateMs += Date.now() - t1;
+      const t2 = Date.now();
+      await el.fill(OWNER[`${f.block.type}:${f.path}`]); c.input++;
+      metrics.typeMs += Date.now() - t2;
+      metrics.fields.push({ field: `${f.block.type}:${f.path}`, arrive: c.arrive - a0, scroll: c.scroll - s0, ready: c.ready - r0 });
+    }
   }
-  if (MODE === 'before') { await readyTab().click(); metrics.roundTrips++; }
 
   // ── 写真を差し替える（最初の画面の見本写真 → 自分の写真） ──
   const hero = blocks0.find((b) => b.type === 'hero');
-  const tp = Date.now();
-  let photoClicks = 0, photoScrolls = 0;
   if (MODE === 'after') {
-    await p.locator(`li[data-target-id="${pageId}/${hero.id}/bgImage//"] button`).click(); photoClicks++;
+    await backToReady();
+    await p.locator(`li[data-target-id="${pageId}/${hero.id}/bgImage//"] button`).click(); c.arrive++;
     await p.waitForSelector('[data-jump-active]');
   } else {
-    await p.locator('.se-block-select').nth(blocks0.indexOf(hero)).click(); photoClicks++;
+    await selectBlock(blocks0.indexOf(hero));
     const box = await pane().boundingBox();
     for (let i = 0; i < 30 && !(await p.locator('[data-field-key=bgImage]').isVisible() && (await p.locator('[data-field-key=bgImage]').boundingBox()).y < box.y + box.height - 40); i++) {
-      await pane().evaluate((el) => { el.scrollTop += 300; }); photoScrolls++; await p.waitForTimeout(60);
+      await pane().evaluate((el) => { el.scrollTop += 300; }); c.scroll++; await p.waitForTimeout(60);
     }
   }
   const upload = p.waitForResponse((r) => r.url().endsWith('/api/images/upload') && r.request().method() === 'POST');
-  await p.locator('[data-field-key=bgImage] input[type=file]').setInputFiles(PHOTO); metrics.inputs++;
+  await p.locator('[data-field-key=bgImage] input[type=file]').setInputFiles(PHOTO); c.upload++;
   const up = await upload;
   check('写真の差し替え：実際のアップロードで自分の写真が入る', up.ok(), `${up.status()}`);
   await p.waitForTimeout(300);
-  metrics.photo = { clicks: photoClicks, scrolls: photoScrolls, ms: Date.now() - tp };
-  metrics.locateClicks += photoClicks; metrics.locateScrolls += photoScrolls;
-  if (MODE === 'after') { await p.locator('[data-back-to-ready]').click(); } else { await readyTab().click(); }
-  metrics.roundTrips++;
+  // 残りを確かめる（新旧とも1回）
+  await backToReady();
   metrics.firstPassMs = Date.now() - t0;
   await p.screenshot({ path: `${OUT}/${MODE}-ready-after-first-pass.png` });
 
   // ── 情報が足りない欄を残したまま保存 → 読み直し：何が残っているか分かる ──
-  await saveNow();
+  await saveNow(); c.save++;
   await p.goto(base + '/laruHP/studio?siteId=' + created, { waitUntil: 'networkidle' });
   await p.frameLocator(CANVAS).locator('h1').waitFor();
-  await readyTab().click();
+  await openReady();
   const readyText = await pane().innerText();
   const mid = await api();
   const midBlocks = mid.blocks_json.pages[0].blocks;
@@ -206,20 +227,21 @@ try {
   await p.screenshot({ path: `${OUT}/${MODE}-ready-info-missing.png` });
 
   // ── 残りを直す → 保存 → 読み直し ──
-  const loc2 = MODE === 'after' ? await locateAfter(tid(pageId, later)) : await locateBefore(later, 0);
-  await loc2.el.fill(OWNER[LATER]); metrics.inputs++;
-  metrics.locateClicks += loc2.clicks; metrics.locateScrolls += loc2.scrolls;
-  metrics.fields.push({ field: LATER, clicks: loc2.clicks, scrolls: loc2.scrolls, pass: 2 });
-  if (MODE === 'after') await p.locator('[data-back-to-ready]').click(); else await readyTab().click();
-  metrics.roundTrips++;
-  await saveNow();
+  const a2 = c.arrive, s2 = c.scroll;
+  let el2;
+  if (MODE === 'after') el2 = await jump(tid(pageId, later));
+  else { await selectBlock(later.bi); el2 = await inPanel(later, 0); }
+  await el2.fill(OWNER[LATER]); c.input++;
+  metrics.fields.push({ field: LATER, arrive: c.arrive - a2, scroll: c.scroll - s2, pass: 2 });
+  await backToReady();
+  await saveNow(); c.save++;
   await p.goto(base + '/laruHP/studio?siteId=' + created, { waitUntil: 'networkidle' });
   await p.frameLocator(CANVAS).locator('h1').waitFor();
   const end = await api();
   const blocks1 = end.blocks_json.pages[0].blocks;
   metrics.industryAfterReload = end.industry;
   check('保存 → 読み直し：業種は工事・施工のまま（保存値）', end.industry === 'construction', end.industry);
-  if (MODE === 'after') check('保存 → 読み直し：書き方の案内も工事・施工向け（同じ業種を参照）', /工事の内容/.test(metrics.guide || ''), metrics.guide);
+  if (MODE === 'after') check('保存 → 読み直し：書き方の案内も工事・施工向け（同じ業種を参照）', /現地確認/.test(metrics.guide || ''), metrics.guide);
   check('保存 → 読み直し：見た目の案はそのまま', end.settings_json.styleDirection === start.settings_json.styleDirection && !!(await p.frameLocator(CANVAS).locator(`body[data-style-direction="${start.settings_json.styleDirection}"]`).count()));
   check('直した欄はすべて本人の文章で残る', fields.every((f) => getAt(blocks1[f.bi].data, f.path) === OWNER[`${f.block.type}:${f.path}`]));
   check('例文のままの欄は0（文字列置換ではなく、欄ごとに本人の文章）', placeholderFields(blocks1).length === 0);
@@ -244,6 +266,7 @@ try {
 } finally {
   if (created) await p.evaluate(async (id) => fetch('/api/sites/' + id, { method: 'DELETE' }), created).catch(() => {});
   await browser.close();
+  metrics.totalClicks = c.arrive + c.ready + c.other + c.save;
   writeFileSync(`${OUT}/${MODE}-metrics.json`, JSON.stringify(metrics, null, 2));
   console.log(JSON.stringify({ ...metrics, fields: undefined }, null, 0));
   const failed = results.filter((r) => !r.ok);
