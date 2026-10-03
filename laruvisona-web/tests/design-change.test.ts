@@ -211,3 +211,11 @@ test('最初の画面の配置を変えると、文字の色を配置に合わ�
   const sep = adopt(dir, makePlan(dir, { source: 'words', title: 't', reason: '', scope: { kind: 'site' }, ops: [{ t: 'block', blockId: hero0.id, key: 'heroLayout', value: 'center' }] }));
   assert.notEqual((sep.pages[0].blocks.find((b) => b.id === hero0.id)!.data as Record<string, unknown>).textColor, '#ffffff');
 });
+
+test('複数の指示のうち、すでにその設定のものは「変えません」と伝える（黙って落とさない）', () => {
+  let cur = site();
+  for (let i = 0; i < 4; i++) cur = adopt(cur, planFromWords(cur, '余白を増やす'));
+  const p = planFromWords(cur, '余白を増やして、見出しを少し強く');
+  assert.ok(p.ops.length > 0);
+  assert.match(p.reason, /「余白を増やす」は、すでにその方向の設定なので変えません/);
+});

@@ -200,6 +200,14 @@ export function planFromWords<S extends PlanSettingsLike>(
       ? 'この節の余白・現れ方・寄せだけを動かします。書体や色はサイト全体の設定なので、ここでは変えません。'
       : '今の設定から一段ずつ動かします。文章・写真・料金・連絡先は変えません。',
   });
+  // 複数の意図のうち、すでにその方向の端にあって変えるものが無かったものは、黙って落とさずに伝える
+  if (intents.length > 1 && plan.ops.length) {
+    const already = intents.filter((id) => {
+      const own = scope.kind === 'section' ? sectionOps(id, selected!) : siteOps(id, d, site.pages, site.settings);
+      return !makePlan(site, { source: 'words', title, reason: '', scope, ops: own }).ops.length;
+    });
+    if (already.length) plan.reason = `${plan.reason} 「${already.map((i) => INTENT_LABEL[i]).join('」「')}」は、すでにその方向の設定なので変えません。`;
+  }
   const heroBlock = scope.kind === 'section' ? (selected?.type === 'hero' ? selected : undefined) : top.find((b) => b.type === 'hero');
   if (intents.includes('bigger-photo') && heroBlock && !heroHasOwnPhoto(heroBlock)) {
     const hint = '最初の画面は見本の写真のままなので、写真の上に文字を重ねる組み方にはしていません。自分の写真に差し替えると、大きく見せられます。';
