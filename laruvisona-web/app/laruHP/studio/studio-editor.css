@@ -540,3 +540,31 @@
 @media (max-width:900px){.se-jump-assist{min-height:44px}}
 /* 指摘から開いた欄を、上に貼り付く「内容／見せ方／AIに相談」の下に見せる */
 .se-settings-body [data-field-path]{scroll-margin-top:84px}
+/* 会社の情報（文章づくりの控え）と、その欄への使い回し */
+.sc-saved-facts{display:block;width:100%;min-height:40px;margin:6px 0 2px;border:1px dashed #9fb0d3;border-radius:8px;background:#f6f8fe;color:#294bc9;font-size:11px;font-weight:650;padding:7px 10px;text-align:left}
+.bf-panel{border-top:1px solid #e2e8f0;margin-top:22px;padding-top:18px;min-width:0}
+.bf-lead{font-size:11px;line-height:1.8;color:#5d6b84;margin:4px 0 10px}
+.bf-source{margin:0 0 6px;font-size:12px}
+.bf-source>div{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #eef1f6;min-width:0}
+.bf-source dt{flex:none;width:5.5em;color:#6b7891;font-size:11px}
+.bf-source dd{margin:0;min-width:0;overflow-wrap:anywhere;color:#25314a}
+.bf-source dd small{display:block;font-size:10px;color:#93a0b4}
+.bf-link{display:inline-flex;align-items:center;min-height:36px;font-size:11px;color:#2563a8;text-decoration:underline}
+.bf-field{display:block;margin-top:10px}
+.bf-field span{display:block;font-size:12px;font-weight:700;color:#26324a;margin-bottom:4px}
+.bf-field textarea{display:block;width:100%;padding:8px 10px;border:1px solid #d5dcea;border-radius:8px;font-size:14px;line-height:1.6;resize:vertical}
+.bf-warn{display:block;font-size:10px;color:#a14a00;margin-top:3px}
+.bf-suggest{margin:-8px 0 14px;padding:8px 10px;border-radius:8px;background:#f4f7fd;border:1px solid #e0e7f5;min-width:0}
+.bf-suggest>span{display:block;font-size:10px;font-weight:700;color:#4a5f8c;margin-bottom:5px}
+.bf-suggest>div{display:flex;flex-wrap:wrap;gap:5px}
+.bf-suggest button{min-height:34px;font-size:11px;border:1px solid #cfd9ee;border-radius:16px;background:#fff;padding:5px 10px;color:#38507f}
+.bf-suggest button[aria-pressed=true]{background:#294bc9;color:#fff;border-color:#294bc9}
+.bf-preview{display:block!important;margin-top:8px}
+.bf-preview del,.bf-preview ins{display:block;font-size:12px;line-height:1.8;text-decoration:none;white-space:pre-wrap;overflow-wrap:anywhere}
+.bf-preview del{color:#8994a5}.bf-preview ins{color:#284ca3}
+.bf-preview>svg{color:#a5b1c5}
+.bf-actions{display:flex;gap:6px;margin-top:6px}
+.bf-actions button:first-child{background:#294bc9;color:#fff;border-color:#294bc9;flex:1;border-radius:7px;min-height:40px}
+.bf-actions button{border-radius:7px;min-height:40px}
+.bf-preview small{display:block;font-size:10px;color:#7a879c;margin-top:5px;line-height:1.6}
+.se-to-director{display:block;width:100%;min-height:42px;margin:0 0 16px;border:1px solid #c9d5ee;border-radius:8px;background:#f6f8fe;color:#294bc9;font-size:12px;font-weight:650;padding:8px 10px;text-align:left}

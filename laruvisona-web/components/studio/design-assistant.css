@@ -1,0 +1,242 @@
+.da-box {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  min-width: 0;
+}
+.da-box h3 {
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  margin: 6px 0 10px;
+}
+.da-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  position: static !important;
+  margin-bottom: 0 !important;
+}
+.da-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 11px !important;
+  line-height: 1.35;
+  white-space: normal !important;
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+  min-height: 40px;
+}
+.da-tabs button svg {
+  flex: none;
+}
+.da-tool {
+  margin-top: 12px;
+  min-width: 0;
+}
+.da-tool > p,
+.da-keep {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #5d6b84;
+  margin: 0 0 10px;
+}
+.da-keep {
+  color: #3d5a3d;
+  background: #f1f8ef;
+  padding: 7px 9px;
+  border-radius: 6px;
+}
+.da-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #26324a;
+}
+.da-label textarea {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: 1px solid #d5dcea;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  resize: vertical;
+}
+.da-scope {
+  border: 0;
+  padding: 0;
+  margin: 10px 0;
+  font-size: 12px;
+}
+.da-scope legend {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.da-scope label {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  min-height: 32px;
+  line-height: 1.6;
+}
+.da-off {
+  color: #95a0b3;
+}
+.da-note {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #8a4b00;
+  background: #fff7e8;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 10px 0 0;
+}
+.da-tool small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.7;
+  color: #7a879c;
+  margin-top: 8px;
+}
+.da-file {
+  display: block;
+  position: relative;
+}
+.da-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.da-file span {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 46px;
+  border: 1px dashed #9fb0d3;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #294bc9;
+  background: #f6f8fe;
+}
+.da-file input:focus-visible + span {
+  outline: 3px solid #6485ed;
+  outline-offset: 2px;
+}
+.da-ref {
+  margin-top: 12px;
+}
+.da-thumb {
+  display: block;
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 6px;
+  border: 1px solid #dfe5ef;
+  margin-bottom: 8px;
+}
+.da-ref ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.da-ref li {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr);
+  gap: 6px;
+  padding: 2px 0;
+}
+.da-check {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.da-group {
+  margin-top: 12px;
+}
+.da-group h4,
+.da-group summary {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+.da-now h4 {
+  color: #b42318;
+}
+.da-better h4 {
+  color: #8a5a00;
+}
+.da-ok summary {
+  color: #2f6b3a;
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+.da-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.da-ok li {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #46604a;
+}
+.da-finding {
+  border: 1px solid #e1e6ef;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.da-finding strong {
+  font-size: 12px;
+  display: block;
+}
+.da-finding p {
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 4px 0;
+  color: #33415c;
+}
+.da-finding small {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #6c7a92;
+  display: block;
+}
+.da-finding button,
+.da-ai-ask {
+  margin-top: 8px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid #b8c6ea;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #294bc9;
+  background: #fff;
+}
+.da-none {
+  font-size: 11px;
+  color: #7a879c;
+  margin: 0;
+}
+.da-box button:focus-visible {
+  outline: 3px solid #6485ed;
+  outline-offset: 2px;
+}

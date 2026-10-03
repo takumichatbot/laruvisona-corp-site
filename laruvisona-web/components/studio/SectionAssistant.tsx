@@ -23,12 +23,15 @@ export default function SectionAssistant({
   siteId,
   focusPath = '',
   onApply,
+  savedFacts = '',
 }: {
   block: Block;
   siteId: string | null;
   /** 「公開の準備」から開いた欄。あれば「この欄だけ」を既定にする */
   focusPath?: string;
   onApply: (proposal: SectionProposal, keys: string[]) => boolean;
+  /** 「会社の情報」のうち、この節に関係するもの（押したときだけ下の欄へ入れる。本人が見て直してから送る） */
+  savedFacts?: string;
 }) {
   const fields = aiFields(block);
   const focusable = !!focusPath && Object.hasOwn(fields, focusPath);
@@ -141,6 +144,11 @@ export default function SectionAssistant({
           placeholder="例：対応地域は足立区と葛飾区。水回りの修理とリフォームに対応。費用は現地確認のあと見積り。"
         />
       </label>
+      {savedFacts && !facts.includes(savedFacts) && (
+        <button type="button" className="sc-saved-facts" data-ai-saved-facts onClick={() => setFacts((facts.trim() ? `${facts.trim()}\n` : '') + savedFacts)}>
+          保存済みの会社の情報を入れる（この節に関係するものだけ）
+        </button>
+      )}
       <small>
         実績・年数・料金・許可・資格・保証・口コミ・営業時間・住所・電話・対応範囲は、ここに書いたことだけを使います。書いていないことは足しません。この情報は保存も公開もしません。
       </small>

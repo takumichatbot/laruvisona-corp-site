@@ -49,6 +49,10 @@ import BlockList, { BlockIcon } from '@/components/studio/BlockList';
 import { Plus, Film, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import SectionCraft from '@/components/studio/SectionCraft';
 import DirectionEditor from '@/components/studio/DirectionEditor';
+import DesignAssistant from '@/components/studio/DesignAssistant';
+import { BusinessFactsPanel, FactSuggest } from '@/components/studio/BusinessFacts';
+import { applyDesignPlan, type DesignChangePlan } from '@/lib/design-change';
+import { normalizeBusinessFacts, factsFromIntake, hasFacts, factsForSection, type BusinessFacts } from '@/lib/business-facts';
 import { planStyleDirection } from '@/lib/style-direction-plan';
 import { colorRolesOf, ROLE_LABEL, type RoleKey } from '@/lib/theme-roles';
 import SectionAssistant from '@/components/studio/SectionAssistant';
@@ -87,6 +91,9 @@ interface StudioSettings {
   /* 見た目の案（構成から、選び直す）を採用したときだけ入る。'' は未採用 */
   styleDirection?: string;
   motionProfile?: string;
+  /* 会社の情報（本人が書いた事実の控え。lib/business-facts.ts）。保存はするが、公開HTMLへは渡さない
+     （toExportSettings に入れない）。undefined は以前のサイト＝鍵ごと送らない */
+  businessFacts?: BusinessFacts;
 }
 
 interface StudioSite {
@@ -660,6 +667,8 @@ function StudioInner() {
   const serverIndustry = useRef('');
   /** 保存されている「検索に出さない」設定（SEO設定画面で変える）。未保存のサイトは null */
   const [savedNoIndex, setSavedNoIndex] = useState<boolean | null>(null);
+  const [businessInfo, setBusinessInfo] = useState<unknown>(null);
+  const [assistTool, setAssistTool] = useState<'words' | 'reference' | 'director' | undefined>(undefined);
   const serverHadContent = useRef(false);
   /** 控えを戻す処理を1回だけにする */
   const restoreDone = useRef(false);
@@ -812,8 +821,11 @@ function StudioInner() {
             globalFooter: st.globalFooter as Record<string, unknown> | undefined,
             styleDirection: (st.styleDirection as string) || '',
             motionProfile: (st.motionProfile as string) || '',
+            ...(st.businessFacts ? { businessFacts: normalizeBusinessFacts(st.businessFacts) } : {}),
           },
         });
+        // 電話・住所・営業時間は「検索・SEO」が出どころ。制作画面では見るだけ（保存し直さない）
+        setBusinessInfo(st.businessInfo ?? null);
         /* 業種は保存されている値だけを使う。無い・知らない値の以前のサイトは不明のまま
            （見た目や店名から推測して書き込まない。案内は共通のものになる） */
         const knownIndustry = INDUSTRY_CHOICES.some(c => c.value === s.industry) ? String(s.industry) : '';
@@ -979,7 +991,10 @@ function StudioInner() {
       name: s.name || '無題のサイト',
       blocks_json: { v: 2, pages: s.pages },
       seo_json: s.pages[0]?.seo || EMPTY_SEO,
-      settings_json_patch: toExportSettings(s.settings),
+      /* 会社の情報は保存だけ（公開HTMLの書き出し toExportSettings には入れない）。以前のサイトは鍵ごと送らない */
+      settings_json_patch: s.settings.businessFacts !== undefined
+        ? { ...toExportSettings(s.settings), businessFacts: normalizeBusinessFacts(s.settings.businessFacts) }
+        : toExportSettings(s.settings),
       // 本人が選んだ業種が保存済みと違うときだけ送る（不明・未選択のときは送らない）
       ...(siteId && INDUSTRY_CHOICES.some(c => c.value === intake.industry) && intake.industry !== serverIndustry.current
         ? { industry: intake.industry } : {}),
@@ -1112,7 +1127,9 @@ function StudioInner() {
     // 使ったら持ち越さない
     clearDesignChoice();
     const made = makeStarterSite(intake, presetId);
-    resetSite(made);
+    // 最初の質問で本人が打った答え（地域・来てほしい人・ひとこと）だけを、会社の情報として控える
+    const facts = factsFromIntake(intake);
+    resetSite(hasFacts(facts) ? { ...made, settings: { ...made.settings, businessFacts: facts } } : made);
     setSelectedId(made.pages[0].blocks[0]?.id ?? null);
     setStep('edit');
   }, [intake, resetSite, setStep, site.pages]);
@@ -1193,6 +1210,23 @@ function StudioInner() {
   if (step === 'intake') return <>{creationNote&&<p className="sc-creation-note" role="status">{creationNote}</p>}<StudioIntake intake={intake} setIntake={setIntake} onNext={() => setStep('mood')} /></>;
   if (step === 'mood') return <>{creationNote&&<p className="sc-creation-note" role="status">{creationNote}</p>}<StudioMood intake={intake} onBack={() => setStep('intake')} onPick={buildFromIntake} fromLp={handoff} /></>;
 
+  /* 見た目の変更計画（言葉で直す・参考画像から・公開前の見直し）の採用。1回の setSite＝1回の取り消し。
+     計画を作ったあとに同じ欄が変わっていたら当てない（古い案で新しい状態を上書きしない） */
+  const adoptDesignPlan=(plan:DesignChangePlan):boolean=>{
+    if(uploads)return false;
+    const current=siteRef.current;const r=applyDesignPlan(current,plan);
+    if(!r){setHistoryNote('案を作ったあとに設定が変わりました。何も変えていません。今の状態から作り直してください。');return false;}
+    breakGroup();
+    setSite({...current,pages:r.pages,settings:r.settings});
+    breakGroup();
+    setHistoryNote('見た目の変更を採用しました。文章と写真は残っています。「取り消す」で採用前に戻せます。');return true;
+  };
+  const openFromDirector=(blockId:string,field?:string)=>{
+    if(!site.pages[0]?.blocks.some(b=>b.id===blockId))return;
+    setSelectedId(blockId);setPanel('block');setCraftTab('content');setMobileTool('settings');setSheetExpanded(true);
+    setFieldFocus(field||'');setFromReady(false);
+    if(field)setJump({blockId,path:field,guide:'',seq:Date.now()});
+  };
   const adoptProposal=(proposal:SectionProposal,keys:string[]):boolean=>{
     const current=siteRef.current;const block=current.pages[0]?.blocks.find(b=>b.id===proposal.id);
     const changed=block?applySectionProposal(block,proposal,keys):null;
@@ -1316,7 +1350,7 @@ function StudioInner() {
           <div className="sc-sheet-handle"><button type="button" onClick={()=>setSheetExpanded(v=>!v)} aria-label={sheetExpanded?"編集欄を小さくする":"編集欄を広げる"}>{sheetExpanded?<ChevronDown size={17}/>:<ChevronUp size={17}/>}<span>{panel==='block'&&selected?blockLabel(selected):panel==='design'?'サイト全体':'編集'}</span></button><button type="button" onClick={()=>setMobileTool('preview')}><Check size={16}/>完了</button></div>
           <div className="se-settings-tabs flex border-b border-slate-200 flex-shrink-0">
             {([['block', '選んだ場所'], ['design', 'サイト全体'], ['ready', '公開の準備']] as const).map(([k, label]) => (
-              <button key={k} onClick={() => setPanel(k)}
+              <button key={k} onClick={() => { setPanel(k); setAssistTool(undefined); }}
                 className={`flex-1 py-2.5 text-[12px] font-bold ${panel === k ? 'text-sky-700 border-b-2 border-sky-600' : 'text-slate-400'}`}>
                 {label}
               </button>
@@ -1342,12 +1376,12 @@ function StudioInner() {
                   </div>
                   <div className="sc-tabs" role="group" aria-label="選んだ節の編集方法">{([['content','内容'],['appearance','見せ方'],['assistant','AIに相談']] as const).map(([value,label])=><button type="button" key={value} aria-pressed={craftTab===value} onClick={()=>{setCraftTab(value);setFieldFocus('')}}>{label}</button>)}</div>
                   {craftTab==='appearance'&&<SectionCraft block={selected} globalMotion={site.settings.animLevel} globalLayout={site.settings.heroLayout} ink={site.settings.design?.ink||'#263248'} onChange={(key,value)=>updateBlockData(selected.id,key,value)}/>}
-                  {craftTab==='assistant'&&<SectionAssistant key={`${selected.id}:${jump?.blockId===selected.id?jump.path:""}`} block={selected} siteId={siteId} focusPath={jump?.blockId===selected.id?jump.path:''} onApply={adoptProposal}/>}
+                  {craftTab==='assistant'&&<SectionAssistant key={`${selected.id}:${jump?.blockId===selected.id?jump.path:""}`} block={selected} siteId={siteId} focusPath={jump?.blockId===selected.id?jump.path:''} onApply={adoptProposal} savedFacts={factsForSection(normalizeBusinessFacts(site.settings.businessFacts),selected,site.name)}/>}
                   {selected.type === 'booking' && <div className="se-booking-note"><p>{selected.data.mode === 'schedule' ? 'メニュー・担当者・営業時間は予約管理で設定します。表示するボタンは「空き時間を見て予約する」です。' : '空き枠・担当者・設備を管理する場合は、予約モードを「本格予約」に変更してください。'}</p>{siteId ? <Link href={`/laruHP/booking/schedule?siteId=${encodeURIComponent(siteId)}`} onClick={e => { if (saveState.kind !== 'clean') { e.preventDefault(); setHistoryNote('変更を保存してから予約管理へ戻ってください。'); } }}>このサイトの予約設定を開く</Link> : <p>一度サイトを保存すると、予約管理を開けます。</p>}</div>}
                   {craftTab==='content'&&def.fields.filter(f => selected.type !== 'booking' || selected.data.mode !== 'schedule' || !['serviceTypes','timeSlots','buttonText','subtext','stickyCta','stickyCtaText'].includes(f.key)).map(f => (
                     <div key={`${selected.id}:${f.key}`} data-field-key={f.key} data-field-path={f.key} className={fieldFocus===f.key?'se-focused-field':''}>{f.key==='heroVideo'&&<div className="se-motion-heading"><Film size={18}/><div><strong>写真に、空気の動きを。</strong><p>背景動画を重ねられます。写真は代替表示として残ります。</p></div></div>}<Field def={f}
                       value={(selected.data as Record<string, unknown>)[f.key]}
-                      onChange={v => updateBlockData(selected.id, f.key, v)} /><JumpGuide path={f.key} />{f.type==='color'&&colorRolesOf(selected.data)[f.key as RoleKey]&&<p className="text-[11px] text-slate-500 -mt-3 mb-4 leading-relaxed">いまはテーマの{ROLE_LABEL[colorRolesOf(selected.data)[f.key as RoleKey]!]}に合わせています。配色を変えると追従します。ここで色を選ぶと、この部品だけ個別の色になります。</p>}</div>
+                      onChange={v => updateBlockData(selected.id, f.key, v)} /><JumpGuide path={f.key} />{(f.type==='text'||f.type==='multiline')&&<FactSuggest block={selected} field={f.key} value={(selected.data as Record<string, unknown>)[f.key]} facts={site.settings.businessFacts} onApply={text=>{breakGroup();updateBlockData(selected.id,f.key,text);breakGroup();setHistoryNote('会社の情報をこの欄に入れました。「取り消す」で戻せます。');}}/>}{f.type==='color'&&colorRolesOf(selected.data)[f.key as RoleKey]&&<p className="text-[11px] text-slate-500 -mt-3 mb-4 leading-relaxed">いまはテーマの{ROLE_LABEL[colorRolesOf(selected.data)[f.key as RoleKey]!]}に合わせています。配色を変えると追従します。ここで色を選ぶと、この部品だけ個別の色になります。</p>}</div>
                   ))}
                 </>
               ) : selected ? (
@@ -1363,6 +1397,20 @@ function StudioInner() {
             )}
 
             {panel === 'design' && (<>
+              <DesignAssistant
+                site={site}
+                toExport={toExportSettings as never}
+                name={site.name}
+                seo={page?.seo||EMPTY_SEO}
+                selectedId={selectedId}
+                readiness={readiness}
+                businessPhone={typeof (businessInfo as {phone?:unknown}|null)?.phone==='string'?(businessInfo as {phone:string}).phone:undefined}
+                disabled={uploads>0}
+                onAdopt={adoptDesignPlan}
+                onOpen={openFromDirector}
+                onReady={()=>setPanel('ready')}
+                initialTool={assistTool}
+              />
               <DirectionEditor site={site} toExport={toExportSettings as never} name={site.name} seo={page?.seo||EMPTY_SEO} disabled={uploads>0} onApply={(id,opts)=>{if(uploads)return;setSite(prev=>{const plan=planStyleDirection(prev,id,opts);return {...prev,pages:plan.pages,settings:plan.settings};});setHistoryNote('選んだ案を採用しました。文章と写真は残っています。「取り消す」で採用前に戻せます。');}}/>
               <DesignPanel
                 site={site}
@@ -1371,6 +1419,14 @@ function StudioInner() {
                 adoptDesign={adoptDesign}
                 seo={page?.seo || EMPTY_SEO}
                 onSeo={next => setSite(prev => ({ ...prev, pages: prev.pages.map((p, i) => i === 0 ? { ...p, seo: next } : p) }))}
+              />
+              <BusinessFactsPanel
+                facts={site.settings.businessFacts}
+                onChange={next => setSite(prev => ({ ...prev, settings: { ...prev.settings, businessFacts: next } }), 'business-facts')}
+                businessInfo={businessInfo}
+                siteId={siteId}
+                name={site.name}
+                onLeave={e => { if (saveState.kind !== 'clean' && !confirm('保存していない変更があります。保存せずに移動しますか？')) e.preventDefault(); }}
               />
             </>)}
 
@@ -1389,6 +1445,7 @@ function StudioInner() {
                 onOpenTarget={openTarget}
                 jumpNote={jumpNote}
                 onPublish={publish}
+                onDirector={() => { setAssistTool('director'); setPanel('design'); }}
               />
             )}
           </div>
@@ -1399,7 +1456,7 @@ function StudioInner() {
         <button type="button" aria-pressed={mobileTool==='preview'} onClick={()=>setMobileTool('preview')}>完成像</button>
         <button type="button" aria-pressed={mobileTool==='blocks'} onClick={()=>setMobileTool('blocks')}>ページの中身</button>
         <button type="button" aria-pressed={mobileTool==='settings'&&panel==='block'} onClick={()=>{setPanel('block');setMobileTool('settings')}}>選んだ場所</button>
-        <button type="button" aria-pressed={mobileTool==='settings'&&panel==='design'} onClick={()=>{setPanel('design');setMobileTool('settings')}}>色・書体</button>
+        <button type="button" aria-pressed={mobileTool==='settings'&&panel==='design'} onClick={()=>{setPanel('design');setAssistTool(undefined);setMobileTool('settings')}}>色・書体</button>
       </nav>
       {comparison&&comparisonBase&&<CompareStudio {...comparison} device={device} onClose={()=>setComparison(null)} onRestore={()=>{if(uploads)return;setSite(structuredClone(comparisonBase));setComparison(null);setSelectedId(comparisonBase.pages[0]?.blocks[0]?.id??null);setHistoryNote('残した案に戻しました。取り消しで、直前の編集にも戻れます。');}} onReplace={()=>{keepComparison();setComparison(null);}}/>}
     </div></ImageUploadContext.Provider>
@@ -1651,7 +1708,9 @@ function DesignPanel({ site, setSite, setDesign, adoptDesign, seo, onSeo }: {
 }
 
 /* ── 公開の準備 ── */
-function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, publicUrl, noIndex, onOpenTarget, jumpNote, onPublish }: {
+function Ready({ items, siteId, published, savedSincePublish, saveState, publishing, note, planNeeded, publicUrl, noIndex, onOpenTarget, jumpNote, onPublish, onDirector }: {
+  /** 見た目の見直し（公開前の見直し）を開く。判定は同じ一覧を使う */
+  onDirector?: () => void;
   items: ReadyItem[];
   siteId: string | null;
   published: boolean;
@@ -1721,6 +1780,11 @@ function Ready({ items, siteId, published, savedSincePublish, saveState, publish
 
       <div className="text-[11px] font-bold text-slate-500 mb-1.5">直したほうが良いこと</div>
       <ul className="space-y-2 mb-5">{better.map(row)}</ul>
+      {onDirector && (
+        <button type="button" className="se-to-director" data-open-director onClick={onDirector}>
+          見た目も見直す（文字の読みやすさ・はみ出し・動きなど）
+        </button>
+      )}
 
       {/* 公開したときの検索結果への掲載。制作画面の完成像も同じ設定で描く（この画面自体は検索に出ない） */}
       <div className="mb-4 rounded-lg border border-slate-200 p-3" data-ready-search>
