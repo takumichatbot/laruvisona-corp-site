@@ -50,3 +50,28 @@ test('短い休止を超えた入力は、同じ欄でも新しい1手として�
  h=reduceHistory(h,{type:'edit',value:'ab',group:'heading',at:1100});
  assert.equal(reduceHistory(h,{type:'undo'}).present,'a');
 });
+
+test('繰り返し項目の中の文字だけの変更は、その場所の名前でまとめる（件数・並び・文字以外は、まとめない）', async () => {
+  const { listTextEditKey } = await import('../lib/studio-history');
+  const items = [{ title: 'A', description: 'x', price: '' }, { title: 'B', description: 'y', price: '' }];
+  assert.equal(listTextEditKey(items, [items[0], { ...items[1], description: 'yz' }]), '1.description');
+  assert.equal(listTextEditKey(['a', 'b'], ['a', 'bc']), '1');
+  assert.equal(listTextEditKey(items, [items[1], items[0]]), null);                       // 並べ替え
+  assert.equal(listTextEditKey(items, [items[0]]), null);                                 // 削除
+  assert.equal(listTextEditKey(items, [...items, { title: '', description: '' }]), null);  // 追加
+  assert.equal(listTextEditKey(items, [{ ...items[0], title: 'A2', description: 'x2' }, items[1]]), null);   // 2つの欄
+  assert.equal(listTextEditKey([{ highlighted: false }], [{ highlighted: true }]), null);  // 文字以外
+  // まとめた結果：同じ場所に続けて打った文字は1回の取り消しで戻る。別の場所・境界のあとは混ぜない
+  let h = startHistory(items);
+  let cur = items;
+  for (const [at, text] of [[1, 'y1'], [100, 'y12'], [200, 'y123']] as const) {
+    const next = [cur[0], { ...cur[1], description: text }];
+    h = reduceHistory(h, { type: 'edit', value: next, group: 'b:items:' + listTextEditKey(cur, next), at });
+    cur = next;
+  }
+  assert.equal(h.past.length, 1);
+  assert.equal(reduceHistory(h, { type: 'undo' }).present, items);
+  const other = [{ ...cur[0], title: 'A!' }, cur[1]];
+  h = reduceHistory(h, { type: 'edit', value: other, group: 'b:items:' + listTextEditKey(cur, other), at: 300 });
+  assert.equal(h.past.length, 2);
+});

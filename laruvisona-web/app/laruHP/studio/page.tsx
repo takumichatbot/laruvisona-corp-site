@@ -44,6 +44,7 @@ import { STUDIO_PALETTES } from '@/lib/studio-palettes';
 import { CompareStudio, type ComparisonSection } from '@/components/studio/CompareStudio';
 import { studioChanges } from '@/lib/studio-comparison';
 import { useStudioHistory } from '@/components/studio/useStudioHistory';
+import { listTextEditKey } from '@/lib/studio-history';
 import BlockList, { BlockIcon } from '@/components/studio/BlockList';
 import { Plus, Film, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import SectionCraft from '@/components/studio/SectionCraft';
@@ -858,12 +859,15 @@ function StudioInner() {
   }, [setSite]);
 
   const updateBlockData = useCallback((id: string, key: string, value: unknown) => {
+    // 繰り返し項目の中の文字を続けて打ったときも、見出しと同じく1回の取り消しにまとめる（1文字ずつ・変換ごとに分けない）
+    const current = (siteRef.current.pages[0]?.blocks.find(b => b.id === id)?.data as Record<string, unknown> | undefined)?.[key];
+    const listKey = listTextEditKey(current, value);
     setSite(prev => ({
       ...prev,
       pages: prev.pages.map((p, i) => i === 0
         ? { ...p, blocks: p.blocks.map(b => b.id === id ? editStudioBlock(b, key, value) : b) }
         : p),
-    }), typeof value==='string'||typeof value==='number'?`${id}:${key}`:undefined);
+    }), typeof value==='string'||typeof value==='number'?`${id}:${key}`:listKey?`${id}:${key}:${listKey}`:undefined);
   }, [setSite]);
 
   const setDesign = useCallback((patch: Partial<SiteDesign>) => {

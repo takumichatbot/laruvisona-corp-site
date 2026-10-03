@@ -130,6 +130,22 @@ try {
   for (let i = 0; i < undos; i++) { await p.locator('.se-history-controls button').nth(1).click(); await p.waitForTimeout(150); }
   await p.waitForFunction((n) => document.querySelectorAll('.se-fix-list li[data-target-id]').length === n, rows.length - 1);
 
+  // 4b) 繰り返し項目（流れの1件目）にキーボードで1文字ずつ打つ → 取り消し1回で打つ前に戻る（1文字ずつ分かれない）
+  const flowB = top.find((b) => b.type === 'tabs');
+  await p.locator(`li[data-target-id="${saved.blocks_json.pages[0].id}/${flowB.id}/items/0/body"] button`).click();
+  await p.waitForSelector('[data-jump-active]');
+  const ta = p.locator('[data-jump-active] textarea').first();
+  const beforeTyping = await ta.inputValue();
+  await ta.evaluate((el) => el.setSelectionRange(el.value.length, el.value.length));
+  await p.keyboard.type('（運営で確認）', { delay: 30 });
+  check('繰り返し項目に1文字ずつ打てる', (await ta.inputValue()) === beforeTyping + '（運営で確認）', JSON.stringify([beforeTyping, await ta.inputValue()]));
+  await p.locator('.se-history-controls button').first().click();
+  check('取り消し1回で、打つ前の文章に戻る（1文字ずつに分かれない）', (await ta.inputValue()) === beforeTyping, await ta.inputValue());
+  await p.locator('.se-history-controls button').nth(1).click();
+  check('やり直し1回で、打った文章に戻る', (await ta.inputValue()) === beforeTyping + '（運営で確認）');
+  await p.locator('.se-history-controls button').first().click();
+  await readyTab(p).click();
+
   // 5) 写真の指摘：最初の画面の写真の欄（写真を選ぶボタン）まで
   const heroId = `${saved.blocks_json.pages[0].id}/${top.find((b) => b.type === 'hero').id}/bgImage//`;
   await p.locator(`li[data-target-id="${heroId}"] button`).click();
