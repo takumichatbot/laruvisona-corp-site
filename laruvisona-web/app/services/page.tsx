@@ -188,6 +188,14 @@ const BUILT: {
     link: { href: 'https://laruhp.com/', label: 'LARU HP を見る', external: true },
   },
   {
+    // LARU CALL（AI電話受付）。文言は販売ページ（larubot.tokyo）の事実だけ。詳細・申込は向こうの 1 か所に寄せる。
+    name: 'LARU CALL',
+    role: '自社プロダクト（企画・開発・運用）',
+    desc: 'AIが会社の電話に出て、ご用件・お名前・折り返し先を受け付け、担当者へ知らせる法人向けサービス。電話回線（SIP）と音声AIの接続、受付の記録、決済まで自社で開発・運用しています。月額5,980円（税別）から。',
+    tags: ['Python', 'Flask', 'PostgreSQL', 'Twilio / SIP', '音声AI連携', 'Stripe'],
+    link: { href: 'https://larubot.tokyo/laru-call', label: 'LARU CALL を見る', external: true },
+  },
+  {
     // iOSアプリはまだ出していない。出していないものを実績に書かない。
     name: 'FLASTAL',
     role: 'クライアントのサービス開発',

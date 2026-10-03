@@ -825,6 +825,8 @@ function Experience() {
         <nav aria-label="フッターナビゲーション">
           <Link href="/works">開発実績</Link>
           <Link href="/services">サービスと料金</Link>
+          {/* LARU CALL（AI電話受付）: LaruVisona の自社サービス。申込と詳細は larubot.tokyo 側の販売ページ 1 か所に寄せる（ここでは複製しない） */}
+          <a href="https://larubot.tokyo/laru-call" rel="noopener">LARU CALL（AI電話受付）</a>
           <Link href="/privacy">プライバシーポリシー</Link>
           <Link href="/contact">お問い合わせ</Link>
           <Link href="/brand">ロゴについて</Link>
