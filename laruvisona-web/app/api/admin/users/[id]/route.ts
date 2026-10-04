@@ -10,6 +10,7 @@ import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
+import { afterBillingChange, beforeBillingChange } from '@/lib/publication-target-sync';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: `HP単体 (¥${MONTHLY.hp.toLocaleString('ja-JP')}/月)`,
@@ -65,7 +66,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (rate !== 'allowed') return NextResponse.json({ error: rate === 'limited' ? '少し待ってからお試しください' : '決済受付を確認できません' }, { status: rate === 'limited' ? 429 : 503 });
 
     const profileResult = await service.from('profiles')
-      .select('stripe_subscription_id,stripe_customer_id,plan')
+      .select('stripe_subscription_id,stripe_customer_id,plan,subscription_status')
       .eq('id', id)
       .maybeSingle();
     if (profileResult.error) {
@@ -75,6 +76,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!profileResult.data) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     if (!subscriptionId) {
       return NextResponse.json({ error: 'Stripe契約がないためプランを変更できません' }, { status: 409 });
+    }
+
+    // LARU SEO が外れる変更なら、Stripe に触る前に公開先を止める（止められなければ保留）
+    const billingFrom = { plan: profileResult.data.plan, status: profileResult.data.subscription_status };
+    const billingTo = { plan: body.plan, status: profileResult.data.subscription_status };
+    if (!(await beforeBillingChange(service, id, billingFrom, billingTo, 'admin_plan_change'))) {
+      return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、プラン変更を保留しました' }, { status: 503 });
     }
 
     try {
@@ -138,6 +146,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         reason: err instanceof Error ? err.message : 'unknown',
       });
     }
+    await afterBillingChange(service, id, billingFrom, billingTo, 'admin_plan_change');
 
     // プラン変更メール
     if (process.env.RESEND_API_KEY) {

@@ -3,6 +3,7 @@ import { verifyDomain } from '@/lib/domain-service';
 import { statusLabel, dnsInstructions, DNS_SUPPORT_NOTES } from '@/lib/domain';
 import { buildDeps, requireUser, expectedTargets } from '../route';
 import { readContactBody } from '@/lib/contact-contract';
+import { afterDomainChange } from '@/lib/publication-target-sync';
 
 // POST /api/sites/[id]/domain/verify — 所有確認 → 外部登録 → 到達確認
 // 判定と副作用の順序は lib/domain-service.ts の verifyDomain にある。
@@ -30,6 +31,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 });
   }
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
+  // 主な公開URLに切り替わったら、新しい base で記事ページが 200 になってから LARU SEO の公開先を更新する
+  if (res.switched) await afterDomainChange(user.id, id, 'domain_primary_set');
 
   let row;
   try { row = await deps.store.getDomain(id, res.host); }

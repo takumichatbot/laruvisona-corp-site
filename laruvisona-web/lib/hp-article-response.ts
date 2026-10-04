@@ -7,7 +7,8 @@ import { createHash } from 'node:crypto';
 export function htmlResponse(req: Request, html: string, status = 200, extra: Record<string, string> = {}): Response {
   const headers: Record<string, string> = { 'Content-Type': 'text/html; charset=utf-8', ...extra };
   if (status !== 200) {
-    headers['Cache-Control'] = status === 503 ? 'no-store' : 'public, max-age=0, s-maxage=60';
+    // 404 は置かない（公開・再公開の直後に LARU SEO の公開先を登録したとき、古い 404 が残らないように）。410 は記事の削除なので 60 秒
+    headers['Cache-Control'] = status === 410 ? 'public, max-age=0, s-maxage=60' : 'no-store';
     if (status === 503) headers['Retry-After'] = '300';
     return new Response(req.method === 'HEAD' ? null : html, { status, headers });
   }

@@ -10,8 +10,41 @@ const send = (res, status, body, extra = {}) => {
   res.writeHead(status, { 'Content-Type': 'application/json', ...extra });
   res.end(body === null ? '' : JSON.stringify(body));
 };
-http.createServer((req, res) => {
+// Publication Target（lifecycle 仕様 e953113 の形）。呼ばれた瞬間に HP の記事一覧の状態も記録する（順番の証明）
+//   POST /__pt { mode: 'ok' | 'fail401' | 'fail409' | 'fail503' | 'flaky' , secret }
+//   GET  /__pt → { calls: [{ action, body, auth, articlesStatus, at }] }
+let PT = { mode: 'ok', secret: 'local-test-secret', calls: [], registered: {} , flaky: 0 };
+const HP = process.env.HP_ORIGIN || 'http://127.0.0.1:3319';
+async function articlesStatus(siteId) {
+  const slug = { 'id-a': 'site-a', 'id-b': 'site-b' }[siteId];
+  if (!slug) return null;
+  try { const r = await fetch(`${HP}/hp/${slug}/articles`, { redirect: 'manual' }); return r.status; } catch { return -1; }
+}
+function readBody(req) { return new Promise((r) => { let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => r(b)); }); }
+http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
+  if (url.pathname === '/__pt') {
+    if (req.method === 'POST') { const b = JSON.parse((await readBody(req)) || '{}'); PT = { ...PT, ...b, calls: b.reset ? [] : PT.calls, registered: b.reset ? {} : PT.registered, flaky: 0 }; return send(res, 200, { ok: true }); }
+    return send(res, 200, { calls: PT.calls, registered: PT.registered });
+  }
+  if (url.pathname === '/api/hp/seo/publication-target' && req.method === 'POST') {
+    const body = JSON.parse((await readBody(req)) || '{}');
+    const auth = req.headers['x-laru-secret'] === PT.secret;
+    const call = { action: body.action, body: { ...body }, auth, articlesStatus: await articlesStatus(body.site_id), at: Date.now() };
+    PT.calls.push(call);
+    if (!auth) return send(res, 401, { error: 'unauthorized' });
+    if (PT.mode === 'fail401') return send(res, 401, { error: 'unauthorized' });
+    if (PT.mode === 'fail409') return send(res, 409, { error: 'site_in_use' });
+    if (PT.mode === 'fail503') return send(res, 503, { error: 'unavailable' });
+    if (PT.mode === 'flaky' && PT.flaky++ < 1) return send(res, 503, { error: 'unavailable' });
+    const prev = PT.registered[body.public_id];
+    const state = body.action === 'register' ? 'active' : body.action === 'retire' ? 'retired' : 'inactive';
+    if (!prev && body.action !== 'register') return send(res, 200, { ok: true, public_id: body.public_id, action: body.action, changed: false, registration: { registered: false, redirects_to_hp: false } });
+    const next = body.action === 'register' ? { state, site_id: body.site_id, canonical_base: body.canonical_base, article_path: body.article_path } : { ...(prev || {}), state: prev?.state === 'retired' && body.action === 'deactivate' ? 'retired' : state };
+    const changed = JSON.stringify(prev) !== JSON.stringify(next);
+    PT.registered[body.public_id] = next;
+    return send(res, 200, { ok: true, public_id: body.public_id, action: body.action, changed, registration: { registered: true, ...next, redirects_to_hp: next.state === 'active' } });
+  }
   if (url.pathname === '/__state') {
     if (req.method === 'POST') {
       let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => { STATE = JSON.parse(b || '{}'); calls = 0; conditional = 0; send(res, 200, { ok: true }); });

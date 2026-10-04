@@ -16,6 +16,7 @@ import { readRequestText } from '@/lib/contact-contract';
 import { commitShopCheckout } from '@/lib/shop-webhook';
 import { syncShopRefund } from '@/lib/shop-refunds';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { afterBillingChange, beforeBillingChange, beforeCancel } from '@/lib/publication-target-sync';
 
 const PLAN_LABEL: Record<string, string> = {
   hp: `HP単体 (¥${MONTHLY.hp.toLocaleString('ja-JP')}/月)`,
@@ -361,7 +362,14 @@ export async function POST(req: Request) {
       if (lines?.data?.[0]?.period?.end) {
         updates.contract_ends_at = new Date(lines.data[0].period.end! * 1000).toISOString();
       }
+      const renewBefore = await supabase.from('profiles').select('id, plan, subscription_status').eq('stripe_subscription_id', subId);
       const renewedRaw = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', subId).select('id');
+      // 支払いが戻って LARU SEO が再び有効になったら、公開中のサイトの記事ページを確かめてから公開先を登録する
+      for (const p of renewBefore.data ?? []) {
+        await afterBillingChange(supabase, p.id as string,
+          { plan: p.plan as string | null, status: p.subscription_status as string | null },
+          { plan: p.plan as string | null, status: 'active' }, 'stripe_payment_succeeded');
+      }
       await revalidateOwnerSites(supabase, (renewedRaw.data ?? []).map(r => r.id));
       const renewed = outcome(renewedRaw, 'invoice.payment_succeeded');
       if (!renewed.ok) {
@@ -387,6 +395,16 @@ export async function POST(req: Request) {
       if (memberError) return NextResponse.json({ error: 'Member payment could not be synchronized' }, { status: 500 });
       if ((memberPastDue?.length || 0) > 0) break;
 
+      /* 支払いが止まると LARU SEO も止まる。書き込む前に公開先を止める（止められなければ 500＝Stripe の再送） */
+      const failBefore = await supabase.from('profiles').select('id, plan, subscription_status').eq('stripe_subscription_id', subId);
+      if (failBefore.error) return NextResponse.json({ error: 'Subscription owner could not be read' }, { status: 500 });
+      for (const p of failBefore.data ?? []) {
+        if (!(await beforeBillingChange(supabase, p.id as string,
+          { plan: p.plan as string | null, status: p.subscription_status as string | null },
+          { plan: p.plan as string | null, status: 'past_due' }, 'stripe_payment_failed'))) {
+          return NextResponse.json({ error: 'Publication target could not be deactivated' }, { status: 500 });
+        }
+      }
       const failedRaw = await supabase.from('profiles')
         .update({ subscription_status: 'past_due' })
         .eq('stripe_subscription_id', subId).select('id');
@@ -443,6 +461,17 @@ export async function POST(req: Request) {
         subscription_status: statusMap[sub.status] || sub.status,
       };
       if (updatedPlan) updates['plan'] = updatedPlan;
+      /* LARU SEO が外れる変更なら、書き込む前に LARU SEO の公開先を止める。止められなければ 500（Stripe の再送で、もう一度ここから） */
+      const updBefore = await supabase.from('profiles').select('id, plan, subscription_status').eq('stripe_subscription_id', sub.id);
+      if (updBefore.error) return NextResponse.json({ error: 'Subscription owner could not be read' }, { status: 500 });
+      const updTransitions = (updBefore.data ?? []).map(p => ({ id: p.id as string,
+        from: { plan: p.plan as string | null, status: p.subscription_status as string | null },
+        to: { plan: (updatedPlan || p.plan) as string | null, status: updates.subscription_status as string } }));
+      for (const t of updTransitions) {
+        if (!(await beforeBillingChange(supabase, t.id, t.from, t.to, 'stripe_subscription_updated'))) {
+          return NextResponse.json({ error: 'Publication target could not be deactivated' }, { status: 500 });
+        }
+      }
       const subscriptionUpdated = await supabase.from('profiles').update(updates).eq('stripe_subscription_id', sub.id).select('id');
       await revalidateOwnerSites(supabase, (subscriptionUpdated.data ?? []).map(r => r.id));
       const updatedOutcome = outcome(subscriptionUpdated, 'customer.subscription.updated');
@@ -451,6 +480,7 @@ export async function POST(req: Request) {
         if (updatedOutcome.retry) return NextResponse.json({ error: 'Subscription could not be synchronized' }, { status: 500 });
         break;   // うちに無い契約。再送しても当たらないので、ここで終える
       }
+      for (const t of updTransitions) await afterBillingChange(supabase, t.id, t.from, t.to, 'stripe_subscription_updated');
 
       // プラン変更確認メール (アクティブ時のみ)
       if (updatedPlan && (sub.status === 'active' || sub.status === 'trialing')) {
@@ -498,7 +528,7 @@ export async function POST(req: Request) {
       // stripe_customer_id は変わらないので先に取得
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
       const canceledLookup = customerId
-        ? await supabase.from('profiles').select('id, stripe_subscription_id').eq('stripe_customer_id', customerId).maybeSingle()
+        ? await supabase.from('profiles').select('id, stripe_subscription_id, plan').eq('stripe_customer_id', customerId).maybeSingle()
         : { data: null, error: null };
       if (canceledLookup.error) return NextResponse.json({ error: 'Subscription owner could not be read' }, { status: 500 });
       const canceledProfile = canceledLookup.data;
@@ -508,6 +538,10 @@ export async function POST(req: Request) {
       // もう一度ここから通す（非公開は何度やっても同じ結果になる）。
       // 別の契約へ乗り換え済みの人（今の契約が別ID）のサイトは止めない。
       if (canceledProfile && canceledProfile.stripe_subscription_id === sub.id) {
+        // 記事ページが消える前に、LARU SEO の公開先を退役させる（retire・plan_cancelled）。できなければ 500（再送で再試行）
+        if (!(await beforeCancel(supabase, canceledProfile.id, canceledProfile.plan as string | null, 'stripe_subscription_deleted'))) {
+          return NextResponse.json({ error: 'Publication target could not be retired' }, { status: 500 });
+        }
         const unpublished = await unpublishSitesOfUser(supabase, canceledProfile.id);
         if (!unpublished.ok) return NextResponse.json({ error: 'Sites could not be unpublished' }, { status: 500 });
       }

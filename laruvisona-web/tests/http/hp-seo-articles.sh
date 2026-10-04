@@ -10,4 +10,9 @@ status=0
 node --import ./tests/_resolve-ts.mjs --test tests/hp-seo-articles.test.ts || status=1
 node tests/http/hp-seo-articles-check.mjs || status=1
 node tests/browser/hp-articles-layout-check.mjs || status=1
+# Publication Target の自動同期（サーバーは LARU_HP_API_SECRET=local-test-secret HP_ARTICLES_READY_ORIGIN=http://127.0.0.1:3319 でも起動しておく）
+node --import ./tests/_resolve-ts.mjs --test tests/publication-target-sync.test.ts || status=1
+LARU_HP_API_SECRET=local-test-secret LARUBOT_API_URL=http://127.0.0.1:54997 HP_ARTICLES_READY_ORIGIN=http://127.0.0.1:3319 \
+  NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54999 NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-stub SUPABASE_SERVICE_ROLE_KEY=service-stub NEXT_PUBLIC_APP_URL=https://laruvisona.jp \
+  node --import ./tests/_resolve-ts.mjs tests/http/publication-target-lifecycle-check.ts || status=1
 exit $status

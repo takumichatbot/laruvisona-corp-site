@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { setPrimaryDomain } from '@/lib/domain-service';
 import { buildDeps, requireUser } from '../route';
 import { readContactBody } from '@/lib/contact-contract';
+import { afterDomainChange } from '@/lib/publication-target-sync';
 
 // POST /api/sites/[id]/domain/primary — 確認済みのドメインを「主な公開URL」にする。
 //
@@ -33,5 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 });
   }
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
+  // 新しい主な公開URLで記事ページが 200 になってから、LARU SEO の公開先を同じ hp_site_id のまま更新する
+  await afterDomainChange(user.id, id, 'domain_primary_changed');
   return NextResponse.json({ ok: true, host: res.host });
 }

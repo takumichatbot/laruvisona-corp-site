@@ -7,6 +7,7 @@ import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { readContactBody } from '@/lib/contact-contract';
+import { afterBillingChange, beforeBillingChange } from '@/lib/publication-target-sync';
 
 const PLAN_PRICE_MAP: Record<string, string | undefined> = {
   hp: process.env.STRIPE_PRICE_ID,
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('stripe_customer_id, stripe_subscription_id, plan')
+    .select('stripe_customer_id, stripe_subscription_id, plan, subscription_status')
     .eq('id', user.id)
     .single();
 
@@ -109,6 +110,16 @@ export async function POST(req: Request) {
     );
   }
 
+  /*
+    LARU SEO が外れるプラン変更なら、Stripe に触る前に LARU SEO の公開先を止める（deactivate・seo_disabled）。
+    止められなければプラン変更を保留する（記事ページが消えたあとも LARU 側の旧入口が 301 し続けないように）。
+  */
+  const billingFrom = { plan: profile.plan, status: profile.subscription_status };
+  const billingTo = { plan, status: profile.subscription_status };
+  if (!(await beforeBillingChange(createServiceClient(), user.id, billingFrom, billingTo, 'plan_change'))) {
+    return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、プラン変更を保留しました。少し時間をおいてお試しください', code: 'publication_target_pending' }, { status: 503 });
+  }
+
   // Update subscription item to new price (prorate immediately)
   try {
     await stripe.subscriptions.update(profile.stripe_subscription_id, {
@@ -136,6 +147,9 @@ export async function POST(req: Request) {
       kind: 'register', userId: user.id, plan, reason: (e as Error)?.message || 'unknown',
     });
   }
+
+  // LARU SEO が付くプラン変更なら、公開中のサイトの記事ページが 200 なのを確かめてから公開先を登録する（失敗しても変更は止めない）
+  await afterBillingChange(createServiceClient(), user.id, billingFrom, billingTo, 'plan_change');
 
   return NextResponse.json({ ok: true, plan });
 }

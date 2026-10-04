@@ -9,6 +9,8 @@ import { submitIndexNow } from '@/lib/indexnow';
 import { canonicalBase } from '@/lib/public-site-url';
 import { sitePublishedEmail } from '@/lib/site-published-email';
 import { Resend } from 'resend';
+import { ownerLaruEntitlement } from '@/lib/hp-owner-entitlement';
+import { registerWhenReady, syncPublicationTarget } from '@/lib/publication-target-sync';
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -145,8 +147,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     if (!sent.ok) console.error('[publish] IndexNow へ送れませんでした:', updated.slug, sent.reason, sent.status ?? '');
   }
 
+  /*
+    LARU SEO の記事の正規の公開先（Publication Target）。公開を終え、記事ページが 200 を返すのを確かめてから登録する
+    （lib/publication-target-sync.ts）。登録できなくても公開は止めない（登録前は LARU 側が正規のまま＝安全）。
+  */
+  const ownerSeo = (await ownerLaruEntitlement(service, user.id)).seo;
+  const seoTarget = await registerWhenReady(
+    { id: site.id, slug: updated.slug, custom_domain: site.custom_domain, settings_json: site.settings_json },
+    { event: 'site_published', ownerSeo },
+  );
+
   return NextResponse.json({
     success: true,
+    seoPublication: seoTarget.kind === 'skipped' ? `skipped:${seoTarget.reason}` : seoTarget.kind,
     versionSaved: !versionResult.error,
     ...versionResult.error ? { warning: '公開は完了しましたが、版履歴を保存できませんでした' } : {},
     slug: updated.slug,
@@ -162,9 +175,21 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
-  const { data: owned, error: ownedError } = await supabase.from('sites').select('id').eq('id', id).eq('user_id', user.id).maybeSingle();
+  const { data: owned, error: ownedError } = await supabase.from('sites').select('id, slug, custom_domain, published, settings_json').eq('id', id).eq('user_id', user.id).maybeSingle();
   if (ownedError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!owned) return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+
+  /*
+    記事ページが消える前に、LARU SEO の公開先を止める（deactivate・site_unpublished）。
+    止められなかったら非公開を保留する（LARU 側の旧入口が 404 の記事ページへ 301 し続ける時間を作らない）。
+  */
+  if (owned.published) {
+    const ownerSeo = (await ownerLaruEntitlement(createServiceClient(), user.id)).seo;
+    const stopped = await syncPublicationTarget(owned, 'deactivate', { event: 'site_unpublished', ownerSeo, reason: 'site_unpublished' });
+    if (!stopped.safeForRemoval) {
+      return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、非公開を保留しました。少し時間をおいてもう一度お試しください', code: 'publication_target_pending' }, { status: 503 });
+    }
+  }
 
   const { data: unpublished, error } = await createServiceClient()
     .from('sites')

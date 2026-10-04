@@ -7,6 +7,7 @@ import {
   dnsInstructions, statusLabel, forwardTargetFor, DNS_SUPPORT_NOTES, type DomainStatus,
 } from '@/lib/domain';
 import { readContactBody } from '@/lib/contact-contract';
+import { beforePrimaryDomainRelease } from '@/lib/publication-target-sync';
 
 // 独自ドメインの一覧・追加・解除。処理の本体は lib/domain-service.ts にある。
 // このファイルは認証と入出力の変換だけを行う。
@@ -152,6 +153,10 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const host = new URL(req.url).searchParams.get('host');
   const deps = await buildDeps();
 
+  // 主な公開URLを外すときは、外したあとの base へ LARU SEO の公開先を先に移す（移せなければ解除を保留）
+  if (!(await beforePrimaryDomainRelease(user.id, id, host))) {
+    return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、解除を保留しました。少し時間をおいてもう一度お試しください', code: 'publication_target_pending' }, { status: 503 });
+  }
   let res;
   try { res = await releaseDomain(deps, { siteId: id, userId: user.id, host }); }
   catch { return NextResponse.json({ error: '独自ドメイン設定を確認できません' }, { status: 503 }); }

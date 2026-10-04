@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { readSitePatch, readSiteUpdate } from '@/lib/site-write-contract';
 import { isValidSiteSlug, SITE_SLUG_RULE } from '@/lib/site-slug';
+import { ownerLaruEntitlement } from '@/lib/hp-owner-entitlement';
+import { syncPublicationTarget } from '@/lib/publication-target-sync';
 
 // GET /api/sites/[id]
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -197,6 +199,20 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id } = await params;
+  /*
+    削除の前に、LARU SEO の公開先を退役させる（retire・site_deleted。記事は消えない・再契約で戻せる）。
+    退役できなかったら削除を保留する（記事ページが消えたあとも LARU 側の旧入口が 301 し続けないように）。
+  */
+  const { data: target, error: targetError } = await supabase
+    .from('sites').select('id, slug, custom_domain, settings_json').eq('id', id).eq('user_id', user.id).maybeSingle();
+  if (targetError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
+  if (target) {
+    const ownerSeo = (await ownerLaruEntitlement(createServiceClient(), user.id)).seo;
+    const retired = await syncPublicationTarget(target, 'retire', { event: 'site_deleted', ownerSeo, reason: 'site_deleted' });
+    if (!retired.safeForRemoval) {
+      return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、削除を保留しました。少し時間をおいてもう一度お試しください', code: 'publication_target_pending' }, { status: 503 });
+    }
+  }
   const { data: deleted, error } = await supabase
     .from('sites')
     .delete()

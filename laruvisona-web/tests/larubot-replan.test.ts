@@ -88,7 +88,7 @@ test('管理画面からのプラン付与も、LARUbot に伝える', () => {
   assert.match(admin, /^\s*try \{$[\s\S]{0,200}^\s*await provisionLarubotOnPlan\(\{$/m,
     'try で囲っていない（失敗すると管理操作ごと落ちる）');
   assert.match(admin, /prevPlan: profileResult\.data\?\.plan \?\? null,/, '前のプランを渡していない');
-  assert.match(admin, /\.select\('stripe_subscription_id,stripe_customer_id,plan'\)/, '前のプランを読んでいない');
+  assert.match(admin, /\.select\('stripe_subscription_id,stripe_customer_id,plan(,subscription_status)?'\)/, '前のプランを読んでいない');
   /*
     失敗しても管理操作は止めない。ただし黙らない。
     2026-09-18: 届け先をログから運営宛てのメールに変えた
