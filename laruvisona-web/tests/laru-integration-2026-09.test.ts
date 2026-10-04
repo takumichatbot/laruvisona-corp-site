@@ -39,7 +39,8 @@ test('公開ページ: 設置タグはチャット1本・記事1本だけ。記�
   assert.equal((s.match(/larubot\.tokyo\/embed\/blog\.js" data-id/g) || []).length, 1);
   assert.match(s, /data-target=\{SEO_ARTICLE_TARGET\}/);
   assert.match(s, /<PublishedSite html=\{withSlot\}/, '置き場を入れたHTMLを出していない');
-  assert.match(s, /const withSlot = blogId \? withSeoArticleSlot\(eagerHtml\) : eagerHtml;/, '記事を読まない人にも置き場を出している');
+  // 置き場には記事一覧（/articles）への通常のリンクを渡す（M03・2026-10-04）
+  assert.match(s, /const withSlot = blogId \? withSeoArticleSlot\(eagerHtml, listUrl\(base\)\) : eagerHtml;/, '記事を読まない人にも置き場を出している');
 });
 
 test('ダッシュボード: HP単体の人に「LARUbot未連携・Public IDを設定」を出さない', () => {

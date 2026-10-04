@@ -72,17 +72,24 @@ const SEO_ARTICLE_SLOT =
   + '#laru-seo-articles:not(:has(.card)){display:none}</style>'
   + '<div><h2>コラム</h2><div id="laru-seo-list"></div></div></section>';
 
-/** 記事一覧の置き場を、フッターの直前（無ければ本文の最後）に1つだけ差し込む。 */
-export function withSeoArticleSlot(html: string): string {
+/**
+ * 記事一覧の置き場を、フッターの直前（無ければ本文の最後）に1つだけ差し込む。
+ * listHref（このサイトの記事一覧 /articles の正規 URL）があれば、サーバーの HTML に通常のリンクを1つ置く
+ * （blog.js が描く一覧は JavaScript 頼みなので、検索エンジンが記事ページへたどれる道を HTML に残す）。
+ */
+export function withSeoArticleSlot(html: string, listHref = ''): string {
   if (html.includes('id="laru-seo-articles"')) return html;
+  const slot = listHref && /^https:\/\/[^\s"'<>]+$/.test(listHref)
+    ? SEO_ARTICLE_SLOT.replace('</div></section>', `<p style="margin:16px 0 0"><a href="${listHref.replace(/&/g, '&amp;')}">コラムの一覧へ</a></p></div></section>`)
+    : SEO_ARTICLE_SLOT;
   const last = (re: RegExp): number => {
     let at = -1;
     for (const m of html.matchAll(re)) at = m.index ?? at;
     return at;
   };
   const footer = last(/<footer\b/gi);
-  if (footer >= 0) return html.slice(0, footer) + SEO_ARTICLE_SLOT + html.slice(footer);
+  if (footer >= 0) return html.slice(0, footer) + slot + html.slice(footer);
   const body = last(/<\/body>/gi);
-  if (body >= 0) return html.slice(0, body) + SEO_ARTICLE_SLOT + html.slice(body);
-  return html + SEO_ARTICLE_SLOT;
+  if (body >= 0) return html.slice(0, body) + slot + html.slice(body);
+  return html + slot;
 }

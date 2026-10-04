@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { canonicalBase, decodeSlug } from '@/lib/public-site-url';
+import { blogPublicId } from '@/lib/larubot-public-id';
+import { ownerLaruEntitlement } from '@/lib/hp-owner-entitlement';
+import { listUrl, sitemapArticles } from '@/lib/hp-seo-content';
 
 // 顧客サイトと記事をDBから読むため、ビルド時に仮のslugで事前生成しない。
 export const dynamic = 'force-dynamic';
@@ -22,7 +25,7 @@ export async function GET(
 
   const { data: site } = await supabase
     .from('sites')
-    .select('id, slug, custom_domain, updated_at, settings_json')
+    .select('id, slug, custom_domain, updated_at, settings_json, user_id')
     .eq('slug', slug)
     .eq('published', true)
     .single();
@@ -89,6 +92,32 @@ export async function GET(
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>`);
+  }
+
+  /*
+    LARU SEO の記事（/articles/<slug>）。このサイトが LARU SEO に登録された正規の公開先のときだけ、
+    正規 URL がこのサイトの記事 URL と一致するものを載せる（LARU 側のサイトマップと二重にしない）。
+    公開ページで記事を出す条件（持ち主の契約に LARU SEO・設定で切っていない・public_id）と同じ。
+  */
+  const seoId = blogPublicId(settings as { laruseoPublicId?: string; larubotPublicId?: string });
+  if (seoId && settings.laruseo !== false && (await ownerLaruEntitlement(supabase, (site.user_id as string | null) ?? null)).seo) {
+    const articles = await sitemapArticles(seoId, loc);
+    if (articles.length) {
+      urls.push(`  <url>
+    <loc>${listUrl(loc)}</loc>
+    <lastmod>${(articles.map(a => a.lastmod).filter(Boolean).sort().pop() || lastmod).split('T')[0]}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>`);
+      for (const a of articles) {
+        urls.push(`  <url>
+    <loc>${a.loc}</loc>
+    <lastmod>${(a.lastmod || lastmod).split('T')[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>`);
+      }
+    }
   }
 
   for (const locale of locales) {
