@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PLANS, TERMS, ANNUAL_TOTAL } from '@/lib/laruhp-facts';
 import PublicFooter from '@/components/laruhp/PublicFooter';
+import { COMPANY_PHONE_LABEL } from '@/lib/company-contact';
 
 export const metadata = { title: '特定商取引法に基づく表記 | LARU HP', robots: { index: true, follow: true }, alternates: { canonical: 'https://laruhp.com/tokusho' } };
 
@@ -11,7 +12,7 @@ export default function TokushoPage() {
     { label: '代表責任者', value: '齋藤 匠' },
     { label: '本店所在地', value: '〒174-0072 東京都板橋区南常盤台1丁目11-6-101号室' },
     { label: '事業所（サービス運営拠点）', value: '〒170-0005 東京都豊島区南大塚1丁目22-3 CASA南大塚101号室' },
-    { label: '電話番号', value: 'ご請求があれば遅滞なく開示いたします。お問い合わせは下記メールアドレスにて承っております。' },
+    { label: '電話番号', value: COMPANY_PHONE_LABEL },
     { label: 'メールアドレス', value: 'info@laruvisona.jp' },
     { label: 'サービス名', value: 'LARU HP（ホームページ作成SaaS）' },
     {

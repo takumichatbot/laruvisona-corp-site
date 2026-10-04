@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { MotionProvider, useMotion } from "@/components/company/motion";
 import WaterScene from "./WaterScene";
 import "./company.css";
+import { COMPANY_PHONE } from '@/lib/company-contact';
 
 function Arrow({ diagonal = false }: { diagonal?: boolean }) {
   return (
@@ -816,6 +817,12 @@ function Experience() {
             <div>
               <dt>本店</dt>
               <dd>東京都板橋区南常盤台1丁目11-6-101号室</dd>
+            </div>
+            <div>
+              <dt>電話</dt>
+              <dd>
+                <a href={COMPANY_PHONE.href}>{COMPANY_PHONE.display}</a>（{COMPANY_PHONE.note}）
+              </dd>
             </div>
           </dl>
         </section>

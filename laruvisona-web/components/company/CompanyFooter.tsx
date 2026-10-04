@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { COMPANY_PHONE } from '@/lib/company-contact';
 
 /**
  * 会社サイト（laruvisona.jp）の共通フッター。
@@ -53,6 +54,13 @@ export default function CompanyFooter() {
             <a href="mailto:info@laruvisona.jp" className="underline underline-offset-4 hover:text-slate-300">
               info@laruvisona.jp
             </a>
+          </p>
+          <p>
+            電話:{' '}
+            <a href={COMPANY_PHONE.href} className="underline underline-offset-4 hover:text-slate-300">
+              {COMPANY_PHONE.display}
+            </a>
+            （{COMPANY_PHONE.note}）
           </p>
           <p className="mt-2">© {new Date().getFullYear()} 株式会社LaruVisona</p>
         </div>

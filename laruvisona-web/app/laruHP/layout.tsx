@@ -4,6 +4,7 @@ import { jsonForScript } from '@/lib/safe-markup';
 import PwaInit from '@/components/PwaInit';
 import { PLANS, TERMS } from '@/lib/laruhp-facts';
 import { LARUHP_OG_IMAGE } from '@/lib/laruhp-seo';
+import { COMPANY_PHONE } from '@/lib/company-contact';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,7 @@ const jsonLd = {
     '@type': 'Organization',
     name: '株式会社LaruVisona',
     url: 'https://laruvisona.jp',
+    telephone: COMPANY_PHONE.e164,
   },
 };
 

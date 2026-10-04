@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowUpRight, Clock3, Mail, ShieldCheck } from 'lucide-react';
 import styles from './page.module.css';
 import PublicFooter from '@/components/laruhp/PublicFooter';
+import { COMPANY_PHONE } from '@/lib/company-contact';
 
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
@@ -46,7 +47,7 @@ export default function ContactPage() {
           </div>
           <div className={styles.fallback}>
             <Mail size={18} aria-hidden="true" />
-            <p>フォームが表示されない場合は、<a href={FORM_URL} target="_blank" rel="noopener noreferrer">別画面で開く</a>か、<a href="mailto:info@laruvisona.jp">info@laruvisona.jp</a>へご連絡ください。</p>
+            <p>フォームが表示されない場合は、<a href={FORM_URL} target="_blank" rel="noopener noreferrer">別画面で開く</a>か、<a href="mailto:info@laruvisona.jp">info@laruvisona.jp</a>へご連絡ください。お電話は<a href={COMPANY_PHONE.href}>{COMPANY_PHONE.display}</a>（{COMPANY_PHONE.note}）でも承ります。</p>
           </div>
         </section>
 

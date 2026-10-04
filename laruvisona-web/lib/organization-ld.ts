@@ -10,6 +10,8 @@
  * 正確に伝えることが、いちばん効く構造化データである。
  */
 
+import { COMPANY_PHONE } from '@/lib/company-contact';
+
 export const ORG_ID = 'https://laruvisona.jp/#organization';
 export const SITE_ID = 'https://laruvisona.jp/#website';
 
@@ -28,6 +30,7 @@ export const ORGANIZATION = {
     '自社サービスを企画・開発・運用しながら、受託開発も請ける会社。AIシステムの点検、サイトやシステムの修理、ホームページ制作、業務の仕組みづくり、Webサービス開発、保守まで。',
   foundingDate: '2026-04-06',
   email: 'info@laruvisona.jp',
+  telephone: COMPANY_PHONE.e164,
   address: {
     '@type': 'PostalAddress',
     postalCode: '174-0072',

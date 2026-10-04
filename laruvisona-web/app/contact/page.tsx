@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import LarubotContactForm from '@/components/LarubotContactForm';
+import { COMPANY_PHONE } from '@/lib/company-contact';
 
 export const metadata: Metadata = {
   title: 'お問い合わせ | LaruVisona',
@@ -40,6 +41,11 @@ export default function ContactPage() {
             フォームが表示されない場合は、
             <a href="mailto:info@laruvisona.jp" className="text-blue-300 underline underline-offset-4 mx-1">info@laruvisona.jp</a>
             へ直接お送りください。
+          </p>
+          <p className="mt-2 text-center text-sm text-slate-400">
+            お電話は
+            <a href={COMPANY_PHONE.href} className="text-blue-300 underline underline-offset-4 mx-1">{COMPANY_PHONE.display}</a>
+            （{COMPANY_PHONE.note}）でも承ります。
           </p>
 
           <div className="mt-8 text-center">

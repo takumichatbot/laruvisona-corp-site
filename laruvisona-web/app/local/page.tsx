@@ -3,6 +3,7 @@ import CompanyFooter from '@/components/company/CompanyFooter';
 import type { Metadata } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
 import { organizationWithAreaLd, AREAS_SERVED } from '@/lib/organization-ld';
+import { COMPANY_PHONE } from '@/lib/company-contact';
 
 export const dynamic = 'force-static';
 
@@ -152,6 +153,10 @@ export default function LocalPage() {
               <div className="flex gap-6">
                 <dt className="text-slate-500 w-24 flex-shrink-0">所在地</dt>
                 <dd className="text-slate-200">〒174-0072 東京都板橋区南常盤台1丁目11-6-101号室</dd>
+              </div>
+              <div className="flex gap-6">
+                <dt className="text-slate-500 w-24 flex-shrink-0">電話</dt>
+                <dd className="text-slate-200"><a href={COMPANY_PHONE.href} className="underline underline-offset-4">{COMPANY_PHONE.display}</a>（{COMPANY_PHONE.note}）</dd>
               </div>
               <div className="flex gap-6">
                 <dt className="text-slate-500 w-24 flex-shrink-0">代表</dt>

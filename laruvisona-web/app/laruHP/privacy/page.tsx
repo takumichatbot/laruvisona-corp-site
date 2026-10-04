@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import PublicFooter from '@/components/laruhp/PublicFooter';
+import { COMPANY_PHONE_LABEL } from '@/lib/company-contact';
 
 export const metadata = { title: 'プライバシーポリシー | LARU HP', robots: { index: true, follow: true }, alternates: { canonical: 'https://laruhp.com/privacy' } };
 
@@ -47,7 +48,7 @@ const SECTIONS = [
   },
   {
     title: 'お問い合わせ窓口',
-    content: `個人情報の取り扱いに関するお問い合わせは以下までご連絡ください。\n株式会社LaruVisona\nメール: info@laruvisona.jp`,
+    content: `個人情報の取り扱いに関するお問い合わせは以下までご連絡ください。\n株式会社LaruVisona\nメール: info@laruvisona.jp\n電話: ${COMPANY_PHONE_LABEL}`,
   },
 ];
 
