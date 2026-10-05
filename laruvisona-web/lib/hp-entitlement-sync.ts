@@ -24,7 +24,7 @@
  */
 import { HP_PLAN_PRODUCTS, isSeoPlan } from '@/lib/laru-entitlement';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
-import { reactivateWhenReady, type PtDeps, type PtSite } from '@/lib/publication-target-sync';
+import { reactivateWhenReady, PT_EXCLUDED_PUBLIC_IDS, PT_EXCLUDED_SITE_IDS, type PtDeps, type PtSite } from '@/lib/publication-target-sync';
 
 export type EntState = 'active' | 'cancelled' | 'site_deleted';
 export const ENT_KEY = 'larubotEntitlement';
@@ -50,7 +50,7 @@ export interface EntRecord {
 export type EntOutcome =
   | { kind: 'done'; result: string; entitlement: Record<string, unknown> | null; attempts: number }
   | { kind: 'failed'; status: number | null; code: string | null; retryable: boolean; attempts: number }
-  | { kind: 'skipped'; reason: 'no_public_id' | 'invalid_plan' | 'not_configured' | 'newer_recorded' | 'already_synced' | 'no_event_at' };
+  | { kind: 'skipped'; reason: 'no_public_id' | 'invalid_plan' | 'not_configured' | 'newer_recorded' | 'already_synced' | 'no_event_at' | 'excluded' };
 
 export interface EntDeps extends PtDeps { now?: () => Date }
 
@@ -78,6 +78,11 @@ export function companyPublicId(settings: unknown): string | null {
   return null;
 }
 
+/** 運営の一時テストサイト（M03 の除外の正本をそのまま使う）。どの出来事でも送らない・控えも書かない */
+export function isExcludedTestSite(siteId: string | null | undefined, publicId: string | null | undefined): boolean {
+  return (!!siteId && PT_EXCLUDED_SITE_IDS.has(siteId)) || (!!publicId && PT_EXCLUDED_PUBLIC_IDS.has(publicId));
+}
+
 /** HP の契約が続いている（past_due は Stripe が再請求中＝解約ではない。止めない） */
 const live = (status: string | null | undefined) => status === 'active' || status === 'trialing' || status === 'past_due';
 
@@ -103,6 +108,11 @@ export async function postEntitlement(
 ): Promise<EntOutcome> {
   const log = deps.log ?? defaultLog;
   const base = { event: input.event, site_id: input.siteId, public_id: input.publicId, plan: input.plan, state: input.state, event_at: input.eventAt };
+  // すべての送信がここを通る（契約の変化・解約・サイト削除・再送・運営の初回同期）。一時テストサイトはここで止める
+  if (isExcludedTestSite(input.siteId, input.publicId)) {
+    log('info', { ...base, final: 'skipped:excluded' });
+    return { kind: 'skipped', reason: 'excluded' };
+  }
   const secret = process.env.LARU_HP_API_SECRET;
   if (!secret) {
     log('error', { ...base, final: 'skipped:not_configured' });
@@ -214,6 +224,7 @@ export async function syncSiteEntitlement(
 ): Promise<EntOutcome> {
   const publicId = companyPublicId(site.settings_json);
   if (!publicId) return { kind: 'skipped', reason: 'no_public_id' };
+  if (isExcludedTestSite(site.id, publicId)) return { kind: 'skipped', reason: 'excluded' };
   const now = (deps.now ?? (() => new Date()))();
   const userId = input.userId ?? site.user_id;
   const prev = ((site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as EntRecord | undefined;

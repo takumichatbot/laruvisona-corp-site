@@ -5,7 +5,7 @@ import {
   postEntitlement, entitlementChange, entitlementPlan, nextRecord, syncSiteEntitlement, syncUserEntitlement,
   retryPendingEntitlements, entitlementBeforeSiteDelete, RETRY_DELAYS_MS, ENT_KEY, type EntRecord,
 } from '../lib/hp-entitlement-sync';
-import { afterBillingChange, beforeCancel, reactivateWhenReady } from '../lib/publication-target-sync';
+import { afterBillingChange, beforeCancel, reactivateWhenReady, PT_EXCLUDED_PUBLIC_IDS, PT_EXCLUDED_SITE_IDS } from '../lib/publication-target-sync';
 
 process.env.LARU_HP_API_SECRET = 'unit-test-secret';
 process.env.LARUBOT_API_URL = 'https://laru.test';
@@ -247,4 +247,43 @@ test('つなぎ込み（ソース）：event_at の出どころ・register に�
   assert.ok(!/stripe\.|price_|quota|generate/i.test(lib.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), '権利の同期は Stripe・料金・枠・記事に触らない');
   assert.match(read('lib/laru-entitlement.ts'), /'larubotEntitlement'\] as const/);
   assert.match(read('app/api/sites/[id]/versions/[versionId]/route.ts'), /keepServerOwnedSettings\(site\.settings_json/);
+});
+
+test('運営の一時テストサイト（M03 の除外の正本）：site_deleted を含むどの出来事でも送らない・控えも書かない。通常のサイトは従来どおり', async () => {
+  const TEST_SITE = [...PT_EXCLUDED_SITE_IDS][0], TEST_PID = [...PT_EXCLUDED_PUBLIC_IDS][0];
+  assert.deepEqual([TEST_SITE, TEST_PID], ['3a99d73a-e676-4b25-b6e6-6bb7e52706ba', 'f509753a-e62f-46e1-927e-d721dd934d1f']);
+  const testSite = { ...site(), id: TEST_SITE, settings_json: { larubotPublicId: TEST_PID, laruseoPublicId: TEST_PID, laruseo: true } };
+  const entCalls = (h: { calls: Call[] }) => h.calls.filter((x) => x.url.endsWith('/api/hp/entitlement')).length;
+  // サイト削除：テストサイトは送らずに削除へ進む（運用で止めない）。通常のサイトは送る
+  let h = harness([APPLIED]);
+  assert.equal(await entitlementBeforeSiteDelete(fakeDb([]), testSite as never, 'hp-bot-seo', h.deps), true);
+  assert.equal(entCalls(h), 0, '3a99d73a の site_deleted は送らない');
+  h = harness([APPLIED]);
+  assert.equal(await entitlementBeforeSiteDelete(fakeDb([]), site() as never, 'hp-bot-seo', h.deps), true);
+  assert.deepEqual([entCalls(h), h.calls[0].body?.state], [1, 'site_deleted'], '通常のサイトの site_deleted は送る');
+  // public_id だけ・site_id だけが一致しても止める
+  for (const s of [{ ...site(), id: TEST_SITE }, { ...site(), settings_json: { larubotPublicId: TEST_PID } }]) {
+    h = harness([APPLIED]);
+    assert.equal(await entitlementBeforeSiteDelete(fakeDb([]), s as never, 'hp-bot', h.deps), true);
+    assert.equal(entCalls(h), 0);
+  }
+  // 契約の変化・解約・SEO 再追加・再送・初回同期：テストサイトは送らない（同じ持ち主の通常サイトには送る）
+  const db = fakeDb([testSite, site()]);
+  h = harness([APPLIED]);
+  await afterBillingChange(db, USER, { plan: 'hp-bot', status: 'active' }, { plan: 'hp-bot-seo', status: 'active' }, 'up', { ...h.deps, eventAt: T1 });
+  await beforeCancel(db, USER, 'hp-bot-seo', 'cancel', { ...h.deps, eventAt: T2 });
+  const sent = h.calls.filter((x) => x.url.endsWith('/api/hp/entitlement'));
+  assert.deepEqual(sent.map((x) => [x.body?.site_id, x.body?.state]), [[SITE_ID, 'active'], [SITE_ID, 'cancelled']]);
+  assert.equal(record(db.sites[0]), undefined, 'テストサイトには控えも書かない');
+  h = harness([APPLIED]);
+  const direct = await syncSiteEntitlement(db, testSite as never, { plan: 'hp-bot-seo', state: 'active', eventAt: T1, event: 'admin_initial_sync' }, h.deps);
+  assert.deepEqual([direct.kind, (direct as { reason: string }).reason, entCalls(h)], ['skipped', 'excluded', 0]);
+  const pending: EntRecord = { plan: 'hp-bot', state: 'active', event_at: T1, user_id: USER, event: 'x', status: 'pending', attempts: 1, first_failed_at: T1, next_at: T1, last_http: 503, last_code: null, result: null };
+  h = harness([APPLIED]);
+  await retryPendingEntitlements(fakeDb([{ ...testSite, settings_json: { ...testSite.settings_json, [ENT_KEY]: pending } }]), { ...h.deps, now: () => new Date(T2) });
+  assert.equal(entCalls(h), 0, '再送でも送らない');
+  h = harness([APPLIED]);
+  const low = await postEntitlement({ publicId: TEST_PID, siteId: TEST_SITE, userId: USER, plan: 'hp', state: 'site_deleted', eventAt: T1, event: 'x' }, h.deps);
+  assert.deepEqual([low.kind, entCalls(h)], ['skipped', 0], 'すべての送信が通る口で止める');
+  assert.match(readFileSync('lib/hp-entitlement-sync.ts', 'utf8'), /import \{[^}]*PT_EXCLUDED_PUBLIC_IDS, PT_EXCLUDED_SITE_IDS[^}]*\} from '@\/lib\/publication-target-sync'/, '新しい除外リストを作らず M03 の正本を使う');
 });
