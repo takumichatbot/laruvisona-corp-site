@@ -6,13 +6,18 @@ import { jsonForScript } from '@/lib/safe-markup';
 import { serviceOffersLd, breadcrumbLd } from '@/lib/organization-ld';
 import { COMPANY_PHONE } from '@/lib/company-contact';
 
+/*
+  検索結果で「何を頼めるか」が題と説明で読めるようにする（2026-10-06）。
+  表示18・平均5位台でクリック0（Search Console 28日）。題が「受託開発」だけで、何の受託かが分からなかった。
+  AIチャットボット・AI電話受付・月額のホームページは自社サービスのページが主役（このページでは取り合わない）。
+*/
 export const metadata: Metadata = {
-  title: '受託開発サービスと料金 | 株式会社LaruVisona',
+  title: '受託開発サービスと料金｜ホームページ制作・システム修理・業務システム | 株式会社LaruVisona',
   description:
-    '自社サービスを作って、課金して、毎日運用している会社が受託も請けています。だから納品後に何が起きるかを知っています。安全点検・修理・ホームページ制作・業務の仕組みづくり・サービス開発・保守。料金の目安つき。',
+    '自社サービスを作って、課金して、毎日運用している会社の受託開発です。ホームページ制作・改修、フォームやメールが届かない等のサイト・システム修理、紙やエクセルの業務の仕組み化、社内AIツールの安全点検、Webサービス開発、保守。料金の目安つき。',
   alternates: { canonical: 'https://laruvisona.jp/services' },
   openGraph: {
-    title: '受託開発サービスと料金 | 株式会社LaruVisona',
+    title: '受託開発サービスと料金｜ホームページ制作・システム修理・業務システム | 株式会社LaruVisona',
     description: '自社サービスを作って、課金して、運用している会社の受託開発。納品して終わりにしません。',
     url: 'https://laruvisona.jp/services',
     siteName: '株式会社LaruVisona',
@@ -111,6 +116,14 @@ const SERVICES: {
     ],
   },
 ];
+
+// 用途ごとの専用ページ（自社サービス）。会社サイトでは説明を重ねず、ここから送る。
+const PRODUCT_ROUTES = [
+  { need: 'AIチャットボットで問い合わせに応対したい', name: 'LARUbot（larubot.tokyo）', href: 'https://larubot.tokyo' },
+  { need: '会社の電話をAIに受けてほしい', name: 'LARU CALL（AI電話受付）', href: 'https://larubot.tokyo/laru-call' },
+  { need: '月額でホームページを作って自分で更新したい', name: 'LARU HP（laruhp.com）', href: 'https://laruhp.com/' },
+  { need: 'SEO記事を継続して出したい', name: 'LARU SEO（LARUbotのオプション）', href: 'https://larubot.tokyo/laru-seo' },
+] as const;
 
 // 「困りごと」の言葉で並べた、実際に手を動かしている領域。
 const TROUBLES = [
@@ -421,6 +434,25 @@ export default function ServicesPage() {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* 受託でなく、月額の自社サービスで済む相談の行き先。専門のページを主役にして、ここでは同じ説明を繰り返さない */}
+            <div className="mt-10 rounded-2xl border border-white/10 p-6 md:p-8">
+              <h3 className="text-lg font-bold">月額の自社サービスで済むご相談</h3>
+              <p className="text-slate-400 text-sm leading-relaxed mt-2">
+                次の用途は、作り込まずに使える自社サービスがあります。内容と料金は、それぞれの専用ページにまとめています。
+              </p>
+              <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                {PRODUCT_ROUTES.map(r => (
+                  <li key={r.href}>
+                    <a href={r.href} target="_blank" rel="noopener noreferrer"
+                      className="flex min-h-[56px] items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3 text-sm hover:border-blue-400/40 transition-colors">
+                      <span><span className="font-bold text-white">{r.need}</span><span className="block text-xs text-slate-400 mt-0.5">{r.name}</span></span>
+                      <span aria-hidden="true" className="text-blue-300">→</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>

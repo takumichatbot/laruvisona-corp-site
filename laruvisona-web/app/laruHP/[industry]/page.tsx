@@ -7,7 +7,7 @@ import { PLANS, TERMS } from '@/lib/laruhp-facts';
 import { laruhpOgImage } from '@/lib/laruhp-seo';
 import { INDUSTRY_DETAIL } from '@/lib/laruhp-industry-detail';
 import PublicFooter from '@/components/laruhp/PublicFooter';
-import { ARTICLES } from '@/app/laruHP/articles/articles-data';
+import { relatedArticlesFor } from '@/app/laruHP/articles/articles-data';
 
 const INDUSTRY_DATA = {
   restaurant: {
@@ -161,7 +161,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
   const d = INDUSTRY_DATA[industry as IndustryId];
   if (!d) notFound();
   const canonical = `https://laruhp.com/${industry}`;
-  const relatedArticles = ARTICLES.filter(a => a.relatedIndustries?.includes(industry)).slice(0, 3);
+  const relatedArticles = relatedArticlesFor(industry);
   const detail = INDUSTRY_DETAIL[industry];
   const jsonLd = jsonForScript([
     {
@@ -341,7 +341,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ indus
         {relatedArticles.length > 0 && (
           <section className="mx-auto max-w-6xl px-5 pb-8">
             <h2 className="text-lg font-bold text-slate-900">先に読んでおくと迷わないもの</h2>
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className={`mt-5 grid gap-3 ${relatedArticles.length >= 4 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
               {relatedArticles.map(a => (
                 <Link key={a.slug} href={`https://laruhp.com/articles/${a.slug}`}
                   className="rounded-2xl border border-slate-200 bg-white p-5 transition-colors hover:border-sky-300">

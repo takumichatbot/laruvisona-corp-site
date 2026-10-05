@@ -71,7 +71,7 @@ export const WORKS: Work[] = [
       'SEO自動最適化（JSON-LD・メタタグ）',
       'エージェンシーモード（代理店向けマルチクライアント管理）',
     ],
-    link: { label: 'LARU HP サービスサイトへ', url: '/laruHP', external: false },
+    link: { label: 'LARU HP サービスサイトへ', url: 'https://laruhp.com/', external: true },
     shots: [
       { src: '/lp/studio-edit.jpg', alt: 'LARU HPの制作画面', w: 1200, h: 750, caption: '実際の制作画面' },
       { src: '/company/products/laruhp-sp.jpg', alt: 'LARU HPで作ったサイトのスマートフォン表示', w: 390, h: 844, caption: '作ったサイトのスマートフォン表示' },

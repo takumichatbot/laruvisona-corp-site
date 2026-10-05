@@ -26,9 +26,10 @@ import './landing.css';
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
   alternates: { canonical: 'https://laruhp.com/' },
-  title: 'LARU HP｜その仕事に、ふさわしいホームページを。',
+  // 検索結果で何のサービスかが読めるよう、ブランドの一文の前に「ホームページ作成」を置く（2026-10-06）。一文そのものは変えない
+  title: 'ホームページ作成 LARU HP｜その仕事に、ふさわしいホームページを。',
   description:
-    '写真と言葉から、お店や会社にふさわしいホームページへ。実際の完成像を見ながら構成・書体・写真・動きを選んで作る、LARU HP。',
+    `写真と言葉から、お店や会社にふさわしいホームページへ。実際の完成像を見ながら構成・書体・写真・動きを選んで作る、LARU HP。${INDUSTRIES.length}業種の見本つき。HP単体は月額${PLANS[0].monthly.toLocaleString('ja-JP')}円（税別）から、${TERMS.firstMonthFree}。`,
   openGraph: {
     siteName: 'LARU HP',
     type: 'website',
@@ -406,7 +407,7 @@ export default async function LaruHPLandingPage({ searchParams }: {
               やりたいことから、うちの場合を見積る
               <ArrowUpRight size={14} />
             </Link>
-            <Link href="https://laruvisona.jp/laruHP/plans">
+            <Link href="https://laruhp.com/plans">
               プランの詳しい内容を見る
               <ArrowUpRight size={14} />
             </Link>

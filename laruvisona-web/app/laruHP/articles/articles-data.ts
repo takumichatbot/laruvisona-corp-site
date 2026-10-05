@@ -90,10 +90,10 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'hp-mitsumori-mikata',
-    title: '工務店・士業のホームページ見積りの見方｜同じ50万円が同じ金額ではない理由',
-    description: '工務店やリフォーム会社、士業がホームページの相見積りを取ると、同じ金額でも中身が違います。見積書のどこを見れば公開後まで含めた総額が読めるかを整理します。',
+    title: '工務店・士業のホームページ見積りの見方｜見積書で確かめる6項目と、同じ50万円が違う理由',
+    description: '工務店やリフォーム会社、士業がホームページ制作の相見積りを取ると、同じ金額でも中身が違います。見積書のどこを見れば公開後まで含めた総額が読めるか、確かめる6項目と確認表で整理します。',
     category: 'HP作成ガイド',
-    publishedAt: '2026-09-17', updatedAt: REVIEW_DATE, author: AUTHOR, readingTime: 7,
+    publishedAt: '2026-09-17', updatedAt: '2026-10-06', author: AUTHOR, readingTime: 7,
     tags: ['見積もり', '費用', '制作会社', '比較'], relatedIndustries: ['construction', 'realestate', 'legal'], sources: [],
     body: `
 ## 金額が同じでも、買っているものが違う
@@ -151,9 +151,13 @@ export const ARTICLES: Article[] = [
 
 **最低利用期間と、その後の解約条件が、月額の実質的な金額です。**
 
+## 見積りを取る前に
+
+見積書が比べられないのは、頼む側の条件が決まっていないことも原因です。工務店・リフォーム会社なら[見積りを取る前に決めておく5つ](/articles/koumuten-hp-mitsumori-mae-ni-kimeru)を先に決めておくと、返ってくる金額が揃います。費用がそもそも何にかかるかは[ホームページ作成の費用の内訳](/articles/hp-sakusei-cost)にまとめています。
+
 ## 参考
 
-LARU HPの料金と契約条件は料金ページに書いてあります。月払いは初月無料で、最低利用期間は6ヶ月、7ヶ月目からは月単位で解約できます。独自ドメインの取得費は別です。条件は変わることがあるので、申込みの前にご確認ください。
+LARU HPの料金と契約条件は[料金プラン](https://laruhp.com/plans)に書いてあります。月払いは初月無料で、最低利用期間は6ヶ月、7ヶ月目からは月単位で解約できます。独自ドメインの取得費は別です。やりたいことを選ぶと1年目の合計が出る[料金の見積り](https://laruhp.com/simulator)もあります。条件は変わることがあるので、申込みの前にご確認ください。
     `,
   },
   {
@@ -869,6 +873,20 @@ LARU HPの対応プランでは、LARUbot Liteをホームページへ組み合�
   // 工務店・リフォームの3本（2026-09-26）。需要が見えた唯一の語に寄せる。
   ...ARTICLES_2026_09_26,
 ];
+
+/**
+ * 業種ページの「先に読んでおくと迷わないもの」に出す記事（2026-10-06）。
+ * 以前は記事の並び順の先頭3件で、業種を問わない記事（費用・見積り・月額）が先に埋まり、
+ * 工務店ページに工務店向けの記事が1本も出ていなかった。
+ * 業種別ガイド → その業種が最初に挙がっている記事 → それ以外、の順。業種別ガイドが4本あれば4本まで出す。
+ */
+export function relatedArticlesFor(industry: string, articles: Article[] = ARTICLES): Article[] {
+  const hits = articles.filter(a => a.relatedIndustries?.includes(industry));
+  const score = (a: Article) => (a.category === '業種別ガイド' ? 2 : 0) + (a.relatedIndustries?.[0] === industry ? 1 : 0);
+  const ranked = hits.map((a, i) => ({ a, i })).sort((x, y) => score(y.a) - score(x.a) || x.i - y.i).map(x => x.a);
+  const specific = ranked.filter(a => a.category === '業種別ガイド').length;
+  return ranked.slice(0, specific >= 4 ? 4 : 3);
+}
 
 export function getArticle(slug: string): Article | undefined {
   return ARTICLES.find(article => article.slug === slug);
