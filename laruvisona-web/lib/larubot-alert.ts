@@ -20,13 +20,15 @@ export type LarubotFailure =
   | 'register'          // 契約時の登録が失敗した
   | 'autopilot'         // 自動運転を始められなかった
   | 'link'              // public_id を保存できなかった
-  | 'held';             // サイトが無いあいだの預かりに失敗した
+  | 'held'              // サイトが無いあいだの預かりに失敗した
+  | 'entitlement';      // HP バンドルの権利の同期（/api/hp/entitlement）が届かない・拒否された
 
 const LABEL: Record<LarubotFailure, string> = {
   register: 'LARUbotへの登録',
   autopilot: 'SEO自動運転の開始',
   link: 'public_id の保存',
   held: 'public_id の預かり',
+  entitlement: 'LARUbotへの権利の同期',
 };
 
 const esc = (v: string) => v.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));

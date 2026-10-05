@@ -296,6 +296,9 @@ export async function POST(req: Request) {
       // Save customer ID if session has one (e.g. guest checkout)
       if (session.customer) profileUpdates['stripe_customer_id'] = session.customer as string;
 
+      // 権利の同期（新規・再契約）に使う、書き換える前の契約と、その状態になった時刻（Stripe のイベント時刻。再送でも同じ）
+      const prevBilling = await supabase.from('profiles').select('plan, subscription_status').eq('id', userId).maybeSingle();
+      const checkoutEventAt = new Date(event.created * 1000).toISOString();
       const profileSaved = await supabase.from('profiles').update(profileUpdates).eq('id', userId).select('id');
       await revalidateOwnerSites(supabase, (profileSaved.data ?? []).map(r => r.id));
       if (profileSaved.error || profileSaved.data?.length !== 1) {
@@ -329,7 +332,7 @@ export async function POST(req: Request) {
 
       // Auto-create LARUbot account for bundle/lite plans（新規契約なので prevPlan なし＝必ず登録）
       try {
-        await provisionLarubotOnPlan({ userId, email: adminCheck?.email, plan: plan || 'hp', siteId });
+        await provisionLarubotOnPlan({ userId, email: adminCheck?.email, plan: plan || 'hp', siteId, eventAt: checkoutEventAt });
       } catch (err) {
         /*
           決済は止めない（既存のとおり）。ただしログだけで終わらせない。
@@ -342,6 +345,10 @@ export async function POST(req: Request) {
           status: err instanceof LarubotRegisterError ? err.httpStatus : null,
         });
       }
+      // register → entitlement（いまの権利を丸ごと）。SEO が付いたら同期のあとで公開先を reactivate。失敗しても決済は止めない
+      await afterBillingChange(supabase, userId,
+        { plan: (prevBilling.data?.plan as string | null) ?? null, status: (prevBilling.data?.subscription_status as string | null) ?? null },
+        { plan: plan || 'hp', status: 'active' }, 'stripe_checkout_completed', { eventAt: checkoutEventAt });
       break;
     }
 
@@ -368,7 +375,7 @@ export async function POST(req: Request) {
       for (const p of renewBefore.data ?? []) {
         await afterBillingChange(supabase, p.id as string,
           { plan: p.plan as string | null, status: p.subscription_status as string | null },
-          { plan: p.plan as string | null, status: 'active' }, 'stripe_payment_succeeded');
+          { plan: p.plan as string | null, status: 'active' }, 'stripe_payment_succeeded', { eventAt: new Date(event.created * 1000).toISOString() });
       }
       await revalidateOwnerSites(supabase, (renewedRaw.data ?? []).map(r => r.id));
       const renewed = outcome(renewedRaw, 'invoice.payment_succeeded');
@@ -480,7 +487,7 @@ export async function POST(req: Request) {
         if (updatedOutcome.retry) return NextResponse.json({ error: 'Subscription could not be synchronized' }, { status: 500 });
         break;   // うちに無い契約。再送しても当たらないので、ここで終える
       }
-      for (const t of updTransitions) await afterBillingChange(supabase, t.id, t.from, t.to, 'stripe_subscription_updated');
+      for (const t of updTransitions) await afterBillingChange(supabase, t.id, t.from, t.to, 'stripe_subscription_updated', { eventAt: new Date(event.created * 1000).toISOString() });
 
       // プラン変更確認メール (アクティブ時のみ)
       if (updatedPlan && (sub.status === 'active' || sub.status === 'trialing')) {
@@ -539,7 +546,9 @@ export async function POST(req: Request) {
       // 別の契約へ乗り換え済みの人（今の契約が別ID）のサイトは止めない。
       if (canceledProfile && canceledProfile.stripe_subscription_id === sub.id) {
         // 記事ページが消える前に、LARU SEO の公開先を退役させる（retire・plan_cancelled）。できなければ 500（再送で再試行）
-        if (!(await beforeCancel(supabase, canceledProfile.id, canceledProfile.plan as string | null, 'stripe_subscription_deleted'))) {
+        // 権利を落とす時刻は「契約が実際に終わった時刻」（解約予約の時点ではない）
+        const endedAt = new Date(((sub as unknown as { ended_at?: number | null }).ended_at ?? event.created) * 1000).toISOString();
+        if (!(await beforeCancel(supabase, canceledProfile.id, canceledProfile.plan as string | null, 'stripe_subscription_deleted', { eventAt: endedAt }))) {
           return NextResponse.json({ error: 'Publication target could not be retired' }, { status: 500 });
         }
         const unpublished = await unpublishSitesOfUser(supabase, canceledProfile.id);

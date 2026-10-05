@@ -131,10 +131,14 @@ async function run(dryRun: boolean, force = false) {
     if (dryRun) { fixed.push({ profileId: profile.id, changed: outcome.changed }); continue; }
     // 契約が終わった判定なら、案内どおりサイトも非公開にする（状態を書き換える前に）
     const syncFrom = { plan: profile.plan, status: profile.subscription_status };
+    // HP の記録をこの状態に直した時刻（権利の同期の event_at）。解約は Stripe 上で実際に終わった時刻を優先する
+    const fixedAt = new Date().toISOString();
+    const subEnded = (sub as unknown as { ended_at?: number | null; canceled_at?: number | null });
+    const endedAt = subEnded.ended_at ?? subEnded.canceled_at;
     const syncTo = { plan: ((outcome.updates as { plan?: string | null }).plan ?? profile.plan), status: ((outcome.updates as { subscription_status?: string }).subscription_status ?? profile.subscription_status) };
     if ((outcome.updates as { subscription_status?: string }).subscription_status === 'canceled') {
       // 記事ページが消える前に、LARU SEO の公開先を退役させる
-      if (!(await beforeCancel(db, profile.id, profile.plan, 'subscription_sync_canceled'))) {
+      if (!(await beforeCancel(db, profile.id, profile.plan, 'subscription_sync_canceled', { eventAt: endedAt ? new Date(endedAt * 1000).toISOString() : fixedAt }))) {
         return NextResponse.json({ error: '記事の公開先を切り替えられませんでした', fixed, conflicts }, { status: 503 });
       }
       const unpublished = await unpublishSitesOfUser(db, profile.id);
@@ -148,7 +152,7 @@ async function run(dryRun: boolean, force = false) {
     if (saved.error || saved.data?.length !== 1) {
       return NextResponse.json({ error: '契約状態を保存できませんでした', fixed, conflicts }, { status: 503 });
     }
-    await afterBillingChange(db, profile.id, syncFrom, syncTo, 'subscription_sync');
+    await afterBillingChange(db, profile.id, syncFrom, syncTo, 'subscription_sync', { eventAt: fixedAt });
     fixed.push({ profileId: profile.id, changed: outcome.changed });
   }
 
@@ -174,7 +178,7 @@ async function run(dryRun: boolean, force = false) {
     for (const profile of (data || []) as ProfileBilling[]) {
       if (!isOrphanedActiveProfile(profile, liveIds)) continue;
       if (dryRun) { stopped.push(profile.id); continue; }
-      if (!(await beforeCancel(db, profile.id, profile.plan, 'subscription_sync_orphan'))) {
+      if (!(await beforeCancel(db, profile.id, profile.plan, 'subscription_sync_orphan', { eventAt: new Date().toISOString() }))) {
         return NextResponse.json({ error: '記事の公開先を切り替えられませんでした', fixed, stopped }, { status: 503 });
       }
       const unpublished = await unpublishSitesOfUser(db, profile.id);

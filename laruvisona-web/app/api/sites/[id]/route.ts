@@ -5,6 +5,7 @@ import { readSitePatch, readSiteUpdate } from '@/lib/site-write-contract';
 import { isValidSiteSlug, SITE_SLUG_RULE } from '@/lib/site-slug';
 import { ownerLaruEntitlement } from '@/lib/hp-owner-entitlement';
 import { syncPublicationTarget } from '@/lib/publication-target-sync';
+import { companyPublicId, entitlementBeforeSiteDelete } from '@/lib/hp-entitlement-sync';
 
 // GET /api/sites/[id]
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -204,13 +205,27 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     退役できなかったら削除を保留する（記事ページが消えたあとも LARU 側の旧入口が 301 し続けないように）。
   */
   const { data: target, error: targetError } = await supabase
-    .from('sites').select('id, slug, custom_domain, settings_json').eq('id', id).eq('user_id', user.id).maybeSingle();
+    .from('sites').select('id, user_id, slug, custom_domain, settings_json').eq('id', id).eq('user_id', user.id).maybeSingle();
   if (targetError) return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (target) {
     const ownerSeo = (await ownerLaruEntitlement(createServiceClient(), user.id)).seo;
     const retired = await syncPublicationTarget(target, 'retire', { event: 'site_deleted', ownerSeo, reason: 'site_deleted' });
     if (!retired.safeForRemoval) {
       return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、削除を保留しました。少し時間をおいてもう一度お試しください', code: 'publication_target_pending' }, { status: 503 });
+    }
+    /*
+      LARUbot へ site_deleted（HP 由来の Bot・SEO をゼロに。データ・public_id は残る）。削除後は控えを置けないので、その場で送る。
+      届かなかった（5xx・通信エラー）ときだけ削除を保留。同じ会社を使う別のサイトが残るなら送らない（会社ごと止めない）。
+    */
+    const service = createServiceClient();
+    const pid = companyPublicId(target.settings_json);
+    const others = pid ? await service.from('sites').select('id, settings_json').eq('user_id', user.id) : { data: [] as { id: string; settings_json: unknown }[] };
+    const shared = (others.data ?? []).some((s) => s.id !== target.id && companyPublicId(s.settings_json) === pid);
+    if (pid && !shared) {
+      const { data: owner } = await service.from('profiles').select('plan').eq('id', user.id).maybeSingle();
+      if (!(await entitlementBeforeSiteDelete(service, target, (owner?.plan as string | null) ?? null))) {
+        return NextResponse.json({ error: 'AIチャットの契約情報を切り替えられなかったため、削除を保留しました。少し時間をおいてもう一度お試しください', code: 'entitlement_pending' }, { status: 503 });
+      }
     }
   }
   const { data: deleted, error } = await supabase

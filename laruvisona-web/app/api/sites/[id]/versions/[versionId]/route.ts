@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { keepServerOwnedSettings } from '@/lib/laru-entitlement';
 
 // POST /api/sites/[id]/versions/[versionId] → restore
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string; versionId: string }> }) {
@@ -10,7 +11,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id, versionId } = await params;
 
   // Verify site ownership
-  const { data: site, error: siteError } = await supabase.from('sites').select('id').eq('id', id).eq('user_id', user.id).single();
+  const { data: site, error: siteError } = await supabase.from('sites').select('id, settings_json').eq('id', id).eq('user_id', user.id).single();
   if (siteError && siteError.code !== 'PGRST116') return NextResponse.json({ error: 'サイトを確認できませんでした' }, { status: 503 });
   if (!site) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -31,7 +32,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .update({
       blocks_json: version.blocks_json,
       seo_json: version.seo_json,
-      settings_json: version.settings_json,
+      // 連携情報（public_id・権利の同期の控え）は履歴の値へ戻さない。いまの値を保つ
+      settings_json: version.settings_json && typeof version.settings_json === 'object'
+        ? keepServerOwnedSettings(site.settings_json as Record<string, unknown> | null, version.settings_json as Record<string, unknown>)
+        : version.settings_json,
     })
     .eq('id', id)
     .eq('user_id', user.id)

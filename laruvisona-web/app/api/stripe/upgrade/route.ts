@@ -131,6 +131,8 @@ export async function POST(req: Request) {
     console.error('[stripe/upgrade] subscription update failed', error instanceof Error ? error.name : 'unknown');
     return NextResponse.json({ error: 'Stripeのプラン変更を確定できませんでした' }, { status: 502 });
   }
+  // 新しいプランになった時刻（Stripe の変更が確定した時点）。LARUbot への register・権利の同期で同じ値を使う
+  const planEventAt = new Date().toISOString();
 
   // Update profile plan immediately
   const saved = await supabase.from('profiles').update({ plan }).eq('id', user.id).select('id');
@@ -141,7 +143,7 @@ export async function POST(req: Request) {
 
   // LARUbot なし → あり への切替時のみ LARUbot を自動登録（アップグレード処理は止めない）
   try {
-    await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, prevPlan: profile.plan });
+    await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, prevPlan: profile.plan, eventAt: planEventAt });
   } catch (e) {
     await alertLarubotFailure({
       kind: 'register', userId: user.id, plan, reason: (e as Error)?.message || 'unknown',
@@ -149,7 +151,7 @@ export async function POST(req: Request) {
   }
 
   // LARU SEO が付くプラン変更なら、公開中のサイトの記事ページが 200 なのを確かめてから公開先を登録する（失敗しても変更は止めない）
-  await afterBillingChange(createServiceClient(), user.id, billingFrom, billingTo, 'plan_change');
+  await afterBillingChange(createServiceClient(), user.id, billingFrom, billingTo, 'plan_change', { eventAt: planEventAt });
 
   return NextResponse.json({ ok: true, plan });
 }

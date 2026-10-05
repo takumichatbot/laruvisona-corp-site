@@ -103,7 +103,10 @@ function match(row, key, spec) {
   if (raw.startsWith('not.')) return true;
   const [op, ...rest] = raw.split('.');
   const v = rest.join('.');
-  const rv = row[key];
+  // settings_json->key->>status のような JSON の中の値（本物の PostgREST と同じ意味）
+  const rv = key.includes('->')
+    ? key.split(/->>?/).slice(1).reduce((x, k) => (x && typeof x === 'object' ? x[k] : undefined), row[key.split(/->>?/)[0]])
+    : row[key];
   if (op === 'eq') return String(rv) === v || (v === 'true' && rv === true) || (v === 'false' && rv === false);
   if (op === 'is') return v === 'true' ? rv === true : v === 'false' ? rv === false : rv === null;
   if (op === 'neq') return String(rv) !== v;

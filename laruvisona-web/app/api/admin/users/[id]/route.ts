@@ -81,6 +81,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // LARU SEO が外れる変更なら、Stripe に触る前に公開先を止める（止められなければ保留）
     const billingFrom = { plan: profileResult.data.plan, status: profileResult.data.subscription_status };
     const billingTo = { plan: body.plan, status: profileResult.data.subscription_status };
+    let planEventAt = '';   // Stripe の変更が確定した時刻（LARUbot への register・権利の同期で同じ値）
     if (!(await beforeBillingChange(service, id, billingFrom, billingTo, 'admin_plan_change'))) {
       return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、プラン変更を保留しました' }, { status: 503 });
     }
@@ -103,6 +104,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         proration_behavior: 'create_prorations',
         metadata: { ...(sub.metadata || {}), plan: body.plan },
       }, { idempotencyKey: `laruhp-admin-upgrade-${subscriptionId}-${currentPrice}-${priceId}` });
+      planEventAt = new Date().toISOString();
     } catch (err) {
       console.error('[admin/plan] stripe error:', err instanceof Error ? err.message : 'unknown');
       return NextResponse.json({ error: 'Stripeのプラン変更を確定できませんでした' }, { status: 502 });
@@ -139,6 +141,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         email: planUser?.email,
         plan: body.plan,
         prevPlan: profileResult.data?.plan ?? null,
+        eventAt: planEventAt,
       });
     } catch (err) {
       await alertLarubotFailure({
@@ -146,7 +149,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         reason: err instanceof Error ? err.message : 'unknown',
       });
     }
-    await afterBillingChange(service, id, billingFrom, billingTo, 'admin_plan_change');
+    await afterBillingChange(service, id, billingFrom, billingTo, 'admin_plan_change', { eventAt: planEventAt });
 
     // プラン変更メール
     if (process.env.RESEND_API_KEY) {

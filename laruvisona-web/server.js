@@ -234,6 +234,20 @@ app.prepare().then(() => {
   setTimeout(retryShopNotifications,90000).unref();
   setInterval(retryShopNotifications,5*60000).unref();
 
+  // LARU HP バンドルの権利同期（/api/hp/entitlement）の再送。届かなかった分だけ、控えた event_at のまま送り直す
+  let hpEntitlementRunning = false;
+  async function retryHpEntitlements() {
+    if (dev || !process.env.ADMIN_SECRET || !process.env.LARU_HP_API_SECRET || hpEntitlementRunning) return;
+    hpEntitlementRunning = true;
+    try {
+      const r=await fetch(`http://127.0.0.1:${port}/api/cron/hp-entitlement-retry`,{method:'POST',headers:{Authorization:`Bearer ${process.env.ADMIN_SECRET}`},signal:AbortSignal.timeout(55000)});
+      if(!r.ok)console.warn('[hp-entitlement] retry incomplete:',r.status);
+    } catch {console.warn('[hp-entitlement] retry unavailable');}
+    finally {hpEntitlementRunning=false;}
+  }
+  setTimeout(retryHpEntitlements,105000).unref();
+  setInterval(retryHpEntitlements,5*60000).unref();
+
   // 30秒ごとに全接続へ ping。前回 pong が無ければ切断（死んだ接続を掃除）。
   // 猶予は最大60秒なので Cloudflare 経由の pong 遅延では誤切断しない。
   const hbInterval = setInterval(() => {

@@ -15,4 +15,12 @@ node --import ./tests/_resolve-ts.mjs --test tests/publication-target-sync.test.
 LARU_HP_API_SECRET=local-test-secret LARUBOT_API_URL=http://127.0.0.1:54997 HP_ARTICLES_READY_ORIGIN=http://127.0.0.1:3319 \
   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54999 NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-stub SUPABASE_SERVICE_ROLE_KEY=service-stub NEXT_PUBLIC_APP_URL=https://laruvisona.jp \
   node --import ./tests/_resolve-ts.mjs tests/http/publication-target-lifecycle-check.ts || status=1
+# HP バンドルの権利同期（/api/hp/entitlement）
+# 直前の確認がサイトを削除するので、偽DB を起動し直してから
+pkill -f "node tests/http/[f]ixture.cjs"; sleep 0.5
+(FIXTURE_PORT=54999 setsid nohup node tests/http/fixture.cjs >/dev/null 2>&1 &); sleep 1.2
+node --import ./tests/_resolve-ts.mjs --test tests/hp-entitlement-sync.test.ts || status=1
+LARU_HP_API_SECRET=local-test-secret LARUBOT_API_URL=http://127.0.0.1:54997 HP_ARTICLES_READY_ORIGIN=http://127.0.0.1:3319 \
+  NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54999 NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-stub SUPABASE_SERVICE_ROLE_KEY=service-stub NEXT_PUBLIC_APP_URL=https://laruvisona.jp \
+  node --import ./tests/_resolve-ts.mjs tests/http/hp-entitlement-lifecycle-check.ts || status=1
 exit $status

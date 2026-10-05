@@ -76,7 +76,7 @@ export function planChangeNotes(from: string | null | undefined, to: string): st
  * 編集画面からの保存では変えさせない（他の人の public_id を入れて、
  * 別のテナントのチャットや記事を自分のサイトに出せてしまうため）。
  */
-export const SERVER_OWNED_SETTING_KEYS = ['larubotPublicId', 'laruseoPublicId', 'larubotRegisteredPlan'] as const;
+export const SERVER_OWNED_SETTING_KEYS = ['larubotPublicId', 'laruseoPublicId', 'larubotRegisteredPlan', 'larubotEntitlement'] as const;
 
 /** 送られてきた設定のうち、接続情報だけは保存済みの値に戻す。 */
 export function keepServerOwnedSettings(

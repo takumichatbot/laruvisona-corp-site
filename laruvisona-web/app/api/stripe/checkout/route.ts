@@ -5,6 +5,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe';
 import { provisionLarubotOnPlan } from '@/lib/larubot-provision';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
+import { afterBillingChange, beforeBillingChange } from '@/lib/publication-target-sync';
 import { billingAppOrigin } from '@/lib/billing-url';
 import { claimPublicRate } from '@/lib/public-rate-limit';
 import { readContactBody } from '@/lib/contact-contract';
@@ -188,11 +189,18 @@ export async function POST(req: Request) {
         if (item.price.id === resolvedPriceId) {
           return NextResponse.json({ error: '既にこのプランをご利用中です。' }, { status: 400 });
         }
+        // 差し替えもプラン変更。upgrade と同じく、SEO が外れるなら先に公開先を止め、変わったら LARUbot へ権利を送る
+        const billingFrom = { plan: profile.plan, status: profile.subscription_status };
+        const billingTo = { plan, status: profile.subscription_status };
+        if (!(await beforeBillingChange(createServiceClient(), user.id, billingFrom, billingTo, 'checkout_plan_switch'))) {
+          return NextResponse.json({ error: '記事の公開先の切り替えができなかったため、プラン変更を保留しました。少し時間をおいてお試しください', code: 'publication_target_pending' }, { status: 503 });
+        }
         await stripe.subscriptions.update(profile.stripe_subscription_id, {
           items: [{ id: item.id, price: resolvedPriceId }],
           proration_behavior: 'create_prorations',
           metadata: { ...(sub.metadata || {}), plan, billing },
         });
+        const planEventAt = new Date().toISOString();   // 新しいプランになった時刻（register・権利の同期で同じ値）
         const saved = await supabase.from('profiles').update({ plan }).eq('id', user.id).select('id');
         await revalidateOwnerSites(supabase, [user.id]);
         if (saved.error || saved.data?.length !== 1) {
@@ -201,7 +209,7 @@ export async function POST(req: Request) {
 
         // LARUbot なし → あり への切替時のみ LARUbot を自動登録（決済処理は止めない）
         try {
-          await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, siteId: ownedSiteId || undefined, prevPlan: profile.plan });
+          await provisionLarubotOnPlan({ userId: user.id, email: user.email, plan, siteId: ownedSiteId || undefined, prevPlan: profile.plan, eventAt: planEventAt });
         } catch (e) {
           // 決済は止めない。ただし運営には届ける（ログだけでは誰も見ない）。
           await alertLarubotFailure({
@@ -209,6 +217,7 @@ export async function POST(req: Request) {
             reason: (e as Error)?.message || 'unknown',
           });
         }
+        await afterBillingChange(createServiceClient(), user.id, billingFrom, billingTo, 'checkout_plan_switch', { eventAt: planEventAt });
 
         return NextResponse.json({ upgraded: true, plan });
       }

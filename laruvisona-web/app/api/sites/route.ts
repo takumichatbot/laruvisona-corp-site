@@ -5,6 +5,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { siteCreationAccess } from '@/lib/site-creation-access';
 import { isSeoPlan, initialSeoKeywords, startLarubotAutopilot } from '@/lib/larubot-seo';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
+import { entitlementChange, syncSiteEntitlement } from '@/lib/hp-entitlement-sync';
 import { readSiteCreate } from '@/lib/site-write-contract';
 
 // GET /api/sites — list user's sites
@@ -143,6 +144,17 @@ export async function POST(req: Request) {
           await svc.from('profiles')
             .update({ pending_larubot_public_id: null, pending_laruseo_public_id: null })
             .eq('id', user.id);
+          /*
+            サイトが無いまま契約した人は、契約時に site_id 付きの権利を送れていない（register も site_id なし）。
+            紐付けたこの時点を「この会社の HP バンドルが有効になった時刻」として、いまの権利を送る（失敗は再送待ち）。
+          */
+          const change = entitlementChange({ plan: null, status: null }, { plan, status: subStatus });
+          if (change) {
+            await syncSiteEntitlement(svc, {
+              id: created.id, user_id: user.id, slug: null, custom_domain: null,
+              settings_json: { ...(input.settings as Record<string, unknown>), ...(bot ? { larubotPublicId: bot } : {}), ...(seoId ? { laruseoPublicId: seoId } : {}) },
+            }, { ...change, eventAt: new Date().toISOString(), event: 'site_linked' });
+          }
         }
 
         /*

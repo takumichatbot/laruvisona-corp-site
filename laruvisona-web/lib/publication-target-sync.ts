@@ -21,7 +21,7 @@ import { canonicalBase } from '@/lib/public-site-url';
 import { HP_ARTICLE_PATH, listUrl } from '@/lib/hp-seo-content';
 import { isSeoPlan, laruEntitlement } from '@/lib/laru-entitlement';
 
-export type PtAction = 'register' | 'deactivate' | 'retire';
+export type PtAction = 'register' | 'deactivate' | 'retire' | 'reactivate';
 export type PtReason = 'site_unpublished' | 'seo_disabled' | 'domain_unavailable' | 'other' | 'plan_cancelled' | 'site_deleted';
 export interface PtSite { id: string; slug: string | null; custom_domain: string | null; settings_json?: unknown }
 
@@ -95,6 +95,9 @@ export async function syncPublicationTarget(
   if (action === 'register') {
     body.canonical_base = (opts.canonicalBase ?? canonicalBase(site)).replace(/\/+$/, '');
     body.article_path = HP_ARTICLE_PATH;
+  } else if (action === 'reactivate') {
+    // 控えた値ではなく、いまの公開 URL で戻す（止めている間に独自ドメインが変わっていても古い base へ 301 しない）
+    body.canonical_base = (opts.canonicalBase ?? canonicalBase(site)).replace(/\/+$/, '');
   } else if (opts.reason) body.reason = opts.reason;
 
   const doFetch = deps.fetch ?? fetch;
@@ -125,7 +128,7 @@ export async function syncPublicationTarget(
         log('info', { ...base, ...(opts.reason ? { reason: opts.reason } : {}), status: res.status, attempts, changed: out.changed, state: out.state, redirects_to_hp: out.redirectsToHp, final: 'done' });
         return out;
       }
-      last = { status: res.status, code: typeof json?.error === 'string' ? json.error : typeof json?.code === 'string' ? json.code : null };
+      last = { status: res.status, code: typeof json?.code === 'string' ? json.code : typeof json?.error === 'string' ? json.error : null };
       if (res.status < 500) break;   // 4xx は再試行しない
     } catch {
       last = { status: null, code: 'unreachable' };
@@ -168,6 +171,29 @@ export async function registerWhenReady(
   return syncPublicationTarget(site, 'register', { ...opts, canonicalBase: base }, deps);
 }
 
+/**
+ * SEO の再追加・再契約のあと：記事ページが 200 なのを確かめてから reactivate（いまの canonical_base で戻す）。
+ * 一度も登録していない公開先（409 not_registered）は register で作る。LARUbot 側は公開先を自動では戻さない。
+ */
+export async function reactivateWhenReady(
+  site: PtSite,
+  opts: { event: string; ownerSeo: boolean },
+  deps: PtDeps = {},
+): Promise<SyncOutcome> {
+  const skip = ptEligibility(site, opts.ownerSeo);
+  if (skip) return syncPublicationTarget(site, 'reactivate', opts, deps);
+  const base = canonicalBase(site).replace(/\/+$/, '');
+  if (!(await articlesReady(site, base, deps))) {
+    (deps.log ?? defaultLog)('error', { event: opts.event, site_id: site.id, public_id: seoPublicIdOf(site), action: 'reactivate', final: 'skipped:not_ready', retryable: true });
+    return { kind: 'skipped', reason: 'not_ready', safeForRemoval: true };
+  }
+  const r = await syncPublicationTarget(site, 'reactivate', { ...opts, canonicalBase: base }, deps);
+  if (r.kind === 'failed' && r.status === 409 && r.code === 'not_registered') {
+    return syncPublicationTarget(site, 'register', { ...opts, canonicalBase: base }, deps);
+  }
+  return r;
+}
+
 /** 持ち主のサイト（公開ライフサイクルの判定に要る列だけ） */
 export async function ownerSites(db: unknown, userId: string): Promise<(PtSite & { published: boolean })[] | null> {
   type Q = { from(t: 'sites'): { select(c: string): { eq(k: 'user_id', v: string): PromiseLike<{ data: unknown[] | null; error: unknown }> } } };
@@ -198,7 +224,7 @@ export async function beforeOwnerSeoLoss(db: unknown, userId: string, mode: 'dow
 export async function afterOwnerSeoGain(db: unknown, userId: string, event: string, deps: PtDeps = {}): Promise<void> {
   const sites = await ownerSites(db, userId);
   for (const site of sites ?? []) {
-    if (site.published) await registerWhenReady(site, { event, ownerSeo: true }, deps);
+    if (site.published) await reactivateWhenReady(site, { event, ownerSeo: true }, deps);
   }
 }
 
@@ -214,14 +240,36 @@ export async function beforeBillingChange(db: unknown, userId: string, from: Bil
   if (!(seoActive(from) && !seoActive(to))) return true;
   return beforeOwnerSeoLoss(db, userId, 'downgrade', event, deps);
 }
-/** プラン・契約状態が変わった「後」に呼ぶ。LARU SEO が付いたなら、公開中のサイトを確かめてから register */
-export async function afterBillingChange(db: unknown, userId: string, from: Billing, to: Billing, event: string, deps: PtDeps = {}): Promise<void> {
-  if (!seoActive(from) && seoActive(to)) await afterOwnerSeoGain(db, userId, event, deps);
+/**
+ * プラン・契約状態が変わった「後」に呼ぶ。
+ *   1. HP バンドルの権利が変わったなら、LARUbot へ「いまの権利」を送る（lib/hp-entitlement-sync.ts。eventAt＝HP 側でその状態になった時刻）
+ *   2. LARU SEO が付いたなら、1 が成功してから、公開中のサイトの記事ページを確かめて公開先を reactivate
+ *      （1 が再送待ちになったら、再送が成功したときに reactivate する）
+ * eventAt が無い呼び出しでは権利を送らない（時刻を作らない）。
+ */
+export async function afterBillingChange(db: unknown, userId: string, from: Billing, to: Billing, event: string, deps: PtDeps & { eventAt?: string } = {}): Promise<void> {
+  const seoGain = !seoActive(from) && seoActive(to);
+  let deferred = false;
+  const { entitlementChange, syncUserEntitlement } = await import('@/lib/hp-entitlement-sync');
+  const change = entitlementChange(from, to);
+  if (change && deps.eventAt) {
+    const sent = await syncUserEntitlement(db, userId, { ...change, eventAt: deps.eventAt, event, reactivatePt: seoGain }, deps);
+    deferred = sent.some((r) => r.outcome.kind === 'failed');
+  }
+  if (seoGain && !deferred) await afterOwnerSeoGain(db, userId, event, deps);
 }
-/** 解約の前に呼ぶ。LARU SEO を含むプランだった人だけ retire（plan_cancelled）。false は保留 */
-export async function beforeCancel(db: unknown, userId: string, plan: string | null | undefined, event: string, deps: PtDeps = {}): Promise<boolean> {
-  if (!isSeoPlan(plan)) return true;
-  return beforeOwnerSeoLoss(db, userId, 'cancel', event, deps);
+/**
+ * 解約の前に呼ぶ。LARU SEO を含むプランだった人だけ retire（plan_cancelled）。false は保留。
+ * 公開先を止められたら、LARUbot へ cancelled（HP 由来の Bot・SEO をゼロに）を送る。送れなくても解約は止めない（再送待ち）。
+ * eventAt＝契約が実際に終わった時刻。解約予約（期間末で終わる設定）だけではここへ来ない。
+ */
+export async function beforeCancel(db: unknown, userId: string, plan: string | null | undefined, event: string, deps: PtDeps & { eventAt?: string } = {}): Promise<boolean> {
+  const ok = isSeoPlan(plan) ? await beforeOwnerSeoLoss(db, userId, 'cancel', event, deps) : true;
+  if (ok && deps.eventAt) {
+    const { entitlementPlan, syncUserEntitlement } = await import('@/lib/hp-entitlement-sync');
+    await syncUserEntitlement(db, userId, { plan: entitlementPlan(plan) ?? 'hp', state: 'cancelled', eventAt: deps.eventAt, event }, deps);
+  }
+  return ok;
 }
 
 /* ── 独自ドメイン（同じ hp_site_id のまま canonical base を更新） ── */

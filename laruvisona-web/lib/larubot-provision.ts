@@ -59,8 +59,10 @@ export async function provisionLarubotOnPlan(params: {
   plan: string;
   siteId?: string;
   prevPlan?: string | null;
+  /** HP 側でこのプランになった時刻（ISO8601）。LARUbot は同期済みの会社では、これより新しい register だけで権利を動かす */
+  eventAt?: string;
 }): Promise<LarubotRegistration | null> {
-  const { userId, email, plan, siteId, prevPlan } = params;
+  const { userId, email, plan, siteId, prevPlan, eventAt } = params;
 
   if (!isBotPlan(plan)) return null;
   /*
@@ -164,6 +166,7 @@ export async function provisionLarubotOnPlan(params: {
       // 値が無いときはキーごと省く。空文字を送ると、向こうがそれを
       // こちらの webhook へ転送し、こちらが 400 で弾いてしまう。
       ...(siteId ? { site_id: siteId } : {}),
+      ...(eventAt ? { event_at: eventAt } : {}),
     }),
     signal: AbortSignal.timeout(12_000),
   });

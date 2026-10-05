@@ -129,7 +129,7 @@ try {
   n = (await pt()).calls.length;
   await afterBillingChange(db, OWNER, to, from, 'test_upgrade');
   c = await since(n);
-  check('LARU SEO ありへ戻した後：register（記事一覧 200 の後）', c.length >= 1 && c.every((x) => x.action === 'register' && x.articlesStatus === 200) && (await pt()).registered.pidA.state === 'active', c.map((x) => [x.body.site_id, x.action, x.articlesStatus]));
+  check('LARU SEO ありへ戻した後：reactivate（記事一覧 200 の後。未登録なら register）', c.length >= 1 && c.every((x) => (x.action === 'reactivate' || x.action === 'register') && x.articlesStatus === 200) && (await pt()).registered.pidA.state === 'active', c.map((x) => [x.body.site_id, x.action, x.articlesStatus]));
   await ptMode('fail503');
   check('ダウングレード前に止められない（5xx）→ 保留（false）', (await beforeBillingChange(db, OWNER, from, to, 'test_downgrade_fail')) === false);
   await ptMode('ok');
