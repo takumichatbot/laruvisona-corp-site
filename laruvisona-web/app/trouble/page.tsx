@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { companyShareMeta } from '@/lib/company-og';
 import CompanyFooter from '@/components/company/CompanyFooter';
 import type { Metadata } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
   description:
     'サイトやシステムのよくある困りごとと、自分で確認できる手順。問い合わせフォームが届かない、社内で作ったAIツールが危なくないか、制作会社と連絡が取れない。',
   alternates: { canonical: 'https://laruvisona.jp/trouble' },
+  ...companyShareMeta('/trouble', 'よくある困りごと｜株式会社LaruVisona', 'サイトやシステムのよくある困りごとと、自分で確認できる手順。問い合わせフォームが届かない、社内で作ったAIツールが危なくないか、制作会社と連絡が取れない。'),
 };
 
 export default function TroubleIndexPage() {

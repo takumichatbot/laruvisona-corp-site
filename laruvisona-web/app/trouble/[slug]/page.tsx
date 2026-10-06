@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { COMPANY_OG_IMAGE } from '@/lib/company-og';
 import { MONTHLY } from '@/lib/laruhp-facts';
 import CompanyFooter from '@/components/company/CompanyFooter';
 
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: t.title,
     description: t.description,
     alternates: { canonical: url },
-    openGraph: { title: t.title, description: t.description, url, type: 'article' },
+    openGraph: { title: t.title, description: t.description, url, type: 'article', images: [COMPANY_OG_IMAGE] },
   };
 }
 

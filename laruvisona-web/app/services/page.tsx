@@ -23,6 +23,13 @@ export const metadata: Metadata = {
     siteName: '株式会社LaruVisona',
     type: 'website',
     locale: 'ja_JP',
+    images: [{ url: 'https://laruvisona.jp/opengraph-image', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '受託開発サービスと料金｜ホームページ制作・システム修理・業務システム | 株式会社LaruVisona',
+    description: '自社サービスを作って、課金して、運用している会社の受託開発。納品して終わりにしません。',
+    images: ['https://laruvisona.jp/opengraph-image'],
   },
 };
 
@@ -335,11 +342,17 @@ export default function ServicesPage() {
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.15] mb-6">
               つくって、売って、<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">運用している。</span>
             </h1>
-            <p className="text-slate-300 text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-10">
+            <p className="text-slate-300 text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-6">
               受託開発の会社の多くは、自社のサービスを持っていません。納品して終わりだからです。<br className="hidden md:block" />
               私たちは自分で作ったサービスに自分で課金し、毎日動かしています。<br className="hidden md:block" />
               だから、公開したあとに何が起きるかを知っています。
             </p>
+            {/* 最初の画面で「何を頼めるか」が分かるように。中身と料金は下の一覧（#services）にある */}
+            <ul aria-label="お受けしている仕事" className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto mb-10 text-xs md:text-sm text-slate-300">
+              {SERVICES.map(s => (
+                <li key={s.no} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">{s.title}</li>
+              ))}
+            </ul>
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               <a href="#contact" className="w-full sm:w-auto bg-white text-black px-8 py-4 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all">
                 まずは無料で相談する →
@@ -511,6 +524,7 @@ export default function ServicesPage() {
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight">開発してきたもの</h2>
               <p className="text-slate-400 text-sm mt-4">
                 自社サービスの企画・開発・運用を通じて、設計から公開後の運用までを一貫して手がけています。
+                担当した範囲と実際の画面は<Link href="/works" className="text-blue-300 underline underline-offset-4 mx-1">開発実績</Link>にまとめています。
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-5">
@@ -623,6 +637,10 @@ export default function ServicesPage() {
               お電話は
               <a href={COMPANY_PHONE.href} className="text-blue-300 underline underline-offset-4 mx-1">{COMPANY_PHONE.display}</a>
               （{COMPANY_PHONE.note}）でも承ります。
+            </p>
+            <p className="mt-2 text-center text-sm text-slate-400">
+              板橋区・足立区など近隣の会社には、ご相談の段階から
+              <Link href="/local" className="text-blue-300 underline underline-offset-4 mx-1">直接お伺いします</Link>。
             </p>
           </div>
         </section>

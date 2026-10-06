@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { COMPANY_OG_IMAGE } from '@/lib/company-og';
 import Image from 'next/image';
 import Link from 'next/link';
 import BrandFonts from '@/components/BrandFonts';
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
     title: 'ロゴについて | 株式会社LaruVisona',
     description: '株式会社LaruVisonaのロゴの意味と、かたち・配色・使い方。',
     url: 'https://laruvisona.jp/brand',
+    images: [COMPANY_OG_IMAGE],
     siteName: 'LaruVisona',
     locale: 'ja_JP',
     type: 'article',

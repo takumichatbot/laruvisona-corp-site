@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { companyShareMeta } from '@/lib/company-og';
 import CompanyFooter from '@/components/company/CompanyFooter';
 import Image from 'next/image';
 import type { Metadata } from 'next';
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
   description:
     '株式会社LaruVisonaが企画・設計・開発・運用まで手がけたサービスの記録。LARUbot、LARU HP、FLASTAL の3件を、使った技術と実際の画面つきで掲載しています。',
   alternates: { canonical: 'https://laruvisona.jp/works' },
+  ...companyShareMeta('/works', '開発実績 | 株式会社LaruVisona', '株式会社LaruVisonaが企画・設計・開発・運用まで手がけたサービスの記録。LARUbot、LARU HP、FLASTAL の3件を、使った技術と実際の画面つきで掲載しています。'),
 };
 
 export default function WorksIndexPage() {

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { companyShareMeta } from '@/lib/company-og';
 import Link from 'next/link';
 import LarubotContactForm from '@/components/LarubotContactForm';
 import { COMPANY_PHONE } from '@/lib/company-contact';
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
   title: 'お問い合わせ | LaruVisona',
   description: 'LaruVisona（AI・モダンWeb開発／LARU HP）へのご相談・ご質問はこちらのフォームからお気軽にお問い合わせください。',
   alternates: { canonical: 'https://laruvisona.jp/contact' },
+  ...companyShareMeta('/contact', 'お問い合わせ | LaruVisona', 'LaruVisona（AI・モダンWeb開発／LARU HP）へのご相談・ご質問はこちらのフォームからお気軽にお問い合わせください。'),
 };
 
 export default function ContactPage() {

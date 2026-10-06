@@ -20,7 +20,7 @@ export const metadata = {
   openGraph: {
     title: 'LaruVisona | 「想像」を「実装」する',
     description: 'AIとモダンWeb技術を駆使するテクノロジーパートナー',
-    url: 'https://laruvisona.jp',
+    // url は持たせない。openGraph を書き忘れたページが、トップの URL を名乗ってしまう（2026-10-06）
     siteName: 'LaruVisona',
     images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'LaruVisona | 「想像」を「実装」する' }],
     locale: 'ja_JP',

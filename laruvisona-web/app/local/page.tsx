@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { companyShareMeta } from '@/lib/company-og';
 import CompanyFooter from '@/components/company/CompanyFooter';
 import type { Metadata } from 'next';
 import { TROUBLES } from '@/lib/trouble-data';
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
   description:
     '東京都板橋区の株式会社LaruVisona。ホームページ制作・改修、サイトやシステムの修理、業務の仕組みづくりを、代表が直接お受けします。板橋区・足立区・豊島区・北区・練馬区は、直接お伺いできます。',
   alternates: { canonical: 'https://laruvisona.jp/local' },
+  ...companyShareMeta('/local', '板橋・足立の中小企業のみなさまへ｜株式会社LaruVisona', '東京都板橋区の株式会社LaruVisona。ホームページ制作・改修、サイトやシステムの修理、業務の仕組みづくりを、代表が直接お受けします。板橋区・足立区・豊島区・北区・練馬区は、直接お伺いできます。'),
 };
 
 // 対応地域は lib/organization-ld.ts と共有する（画面と構造化データを食い違わせない）

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { companyShareMeta } from '@/lib/company-og';
 import type { Metadata } from 'next';
 import { COMPANY_PHONE_LABEL } from '@/lib/company-contact';
 
@@ -6,6 +7,7 @@ export const metadata: Metadata = {
   title: 'プライバシーポリシー | LaruVisona',
   description: '株式会社LaruVisonaの個人情報の取り扱い（収集する情報・利用目的・第三者提供・お問い合わせ窓口）を定めたプライバシーポリシーです。',
   alternates: { canonical: 'https://laruvisona.jp/privacy' },
+  ...companyShareMeta('/privacy', 'プライバシーポリシー | LaruVisona', '株式会社LaruVisonaの個人情報の取り扱い（収集する情報・利用目的・第三者提供・お問い合わせ窓口）を定めたプライバシーポリシーです。'),
 };
 
 const SECTIONS = [

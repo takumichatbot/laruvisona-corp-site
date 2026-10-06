@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import { companyShareMeta } from '@/lib/company-og';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: '利用規約 | LaruVisona',
   description: '株式会社LaruVisonaが提供するWebサービス・SaaS・その他デジタルサービスの利用条件を定める利用規約です。',
   alternates: { canonical: 'https://laruvisona.jp/terms' },
+  ...companyShareMeta('/terms', '利用規約 | LaruVisona', '株式会社LaruVisonaが提供するWebサービス・SaaS・その他デジタルサービスの利用条件を定める利用規約です。'),
 };
 
 const SECTIONS = [

@@ -51,6 +51,17 @@ for (const host of HOSTS) {
     check(`${p}: H1 は 1 つ`, h1 === 1, String(h1));
     check(`${p}: canonical が自分`, canonical.replace(/\/$/, '') === url.replace(/\/$/, ''), canonical);
     check(`${p}: noindex でない`, !/noindex/.test(robots), robots);
+    // 共有したときの表示：og:url はそのページ、og:title は題と同じ（ルートの既定を引き継がない）
+    const ogUrl = (s.match(/<meta property="og:url" content="([^"]+)"/) || [])[1] || '';
+    const ogTitle = (s.match(/<meta property="og:title" content="([^"]+)"/) || [])[1] || '';
+    if (host === 'laruvisona.jp') {
+      check(`${p}: og:url がこのページ`, ogUrl.replace(/\/$/, '') === canonical.replace(/\/$/, ''), ogUrl);
+      check(`${p}: og:title がルートの既定のままでない`, !!ogTitle && !ogTitle.includes('「想像」を「実装」する'), ogTitle);
+      check(`${p}: og:image がある`, /<meta property="og:image" content="https:\/\/laruvisona\.jp\//.test(s));
+    }
+    // 画像には alt を必ず付ける（飾りは空の alt）
+    const noAlt = [...s.matchAll(/<img\b[^>]*>/g)].filter((m) => !/\balt="/.test(m[0])).length;
+    check(`${p}: 画像に alt がある`, noAlt === 0, String(noAlt));
     if (titles.has(title)) check(`${p}: 題が重複しない`, false, `${titles.get(title)} と同じ`);
     titles.set(title, p);
     check(`${p}: Organization の構造化データ`, /"@type":"Organization"/.test(s));
