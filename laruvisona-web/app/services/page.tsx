@@ -127,7 +127,7 @@ const SERVICES: {
 // 用途ごとの専用ページ（自社サービス）。会社サイトでは説明を重ねず、ここから送る。
 const PRODUCT_ROUTES = [
   { need: 'AIチャットボットで問い合わせに応対したい', name: 'LARUbot（larubot.tokyo）', href: 'https://larubot.tokyo' },
-  { need: '会社の電話をAIに受けてほしい', name: 'LARU CALL（AI電話受付）', href: 'https://larubot.tokyo/laru-call' },
+  { need: '会社の電話をAIに受けてほしい', name: 'LARU CALL（ラルコール）・AI電話受付・LARUbotとは別サービス', href: 'https://larubot.tokyo/laru-call' },
   { need: '月額でホームページを作って自分で更新したい', name: 'LARU HP（laruhp.com）', href: 'https://laruhp.com/' },
   { need: 'SEO記事を継続して出したい', name: 'LARU SEO（LARUbotのオプション）', href: 'https://larubot.tokyo/laru-seo' },
 ] as const;

@@ -68,6 +68,25 @@ const products = [
     link: "LARUbotを見る",
   },
   {
+    // 2026-10-09: 自社サービス LARU CALL（AI電話受付）。詳細・料金・申込の正本は larubot.tokyo/laru-call（ここでは複製しない）。
+    // 書くのは確かめた実態だけ（電話にAIが出て、用件・名前・折り返し先を受け付け、担当者へ知らせる）。LARUbot のプランには含まれない。
+    id: "call",
+    name: "LARU CALL",
+    label: "電話に、AIが出る",
+    role: "自社プロダクト",
+    title: (
+      <>
+        出られない電話に、
+        <br />
+        AIが出て受け付ける。
+      </>
+    ),
+    text: "LARU CALL（ラルコール）は、会社の電話にAIが出て、ご用件・お名前・折り返し先をうかがい、担当者へ知らせるAI電話受付です。LARUbotとは別のサービスです。",
+    tags: ["AI電話受付", "折り返しの受付"],
+    href: "https://larubot.tokyo/laru-call",
+    link: "LARU CALLを見る",
+  },
+  {
     id: "seo",
     name: "LARUSEO",
     label: "見つけてもらう",
@@ -125,6 +144,17 @@ const shots = {
     spAlt: "LARUbotのサイトをスマホで開いたところ",
     word: "こたえる。",
     note: "実際の画面・チャットは画面右下から試せます",
+  },
+  call: {
+    src: "/company/products/larucall.jpg",
+    w: 1200,
+    h: 750,
+    alt: "LARU CALLのサービス紹介ページ",
+    bar: "larubot.tokyo ／ LARU CALL",
+    sp: "/company/products/larucall-sp.jpg",
+    spAlt: "LARU CALLの紹介ページをスマホで開いたところ",
+    word: "うけとる。",
+    note: "実際のページ・LARUbotとは別のサービスです",
   },
   seo: {
     src: "/company/products/laruseo.jpg",
@@ -237,10 +267,11 @@ function Products({
             onClick={() => setIndex(i)}
             onKeyDown={(e) => {
               let n = i;
-              if (e.key === "ArrowRight") n = (i + 1) % 4;
-              else if (e.key === "ArrowLeft") n = (i + 3) % 4;
+              const last = products.length - 1;
+              if (e.key === "ArrowRight") n = (i + 1) % products.length;
+              else if (e.key === "ArrowLeft") n = (i + last) % products.length;
               else if (e.key === "Home") n = 0;
-              else if (e.key === "End") n = 3;
+              else if (e.key === "End") n = last;
               else return;
               e.preventDefault();
               setIndex(n);
@@ -749,7 +780,7 @@ function Experience() {
           <p>
             私たちが開発する
             <br />
-            <strong>4つのプロダクト</strong>
+            <strong>{products.length}つのプロダクト</strong>
           </p>
           {products.map((p, i) => (
             <a key={p.id} href="#products" onClick={() => setProduct(i)}>

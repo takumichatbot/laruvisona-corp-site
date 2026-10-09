@@ -435,7 +435,7 @@
 }
 .lv-product-tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   border-top: 1px solid #94a3a766;
   border-bottom: 1px solid #94a3a766;
   margin-bottom: 25px;
@@ -671,6 +671,9 @@
 .lv-bot-art {
   background: #dce3ef;
 }
+.lv-call-art {
+  background: #dde6e9;
+}
 .lv-seo-art {
   background: #e0e7dc;
 }
@@ -681,6 +684,9 @@
    tint of the background, never a second thing to read. */
 .lv-bot-art .lv-art-word {
   color: #5d7bb824;
+}
+.lv-call-art .lv-art-word {
+  color: #4f7d8c24;
 }
 .lv-seo-art .lv-art-word {
   color: #6d8a6026;
@@ -1412,6 +1418,12 @@
     border-top: 1px solid #94a3a744;
   }
   .lv-product-tabs button:nth-child(4) {
+    border-top: 1px solid #94a3a744;
+  }
+  /* 5 つ目（2 列の最後の 1 つ）は横いっぱい */
+  .lv-product-tabs button:nth-child(5) {
+    grid-column: 1 / -1;
+    border-left: 0;
     border-top: 1px solid #94a3a744;
   }
   .lv-product-tabs strong {
