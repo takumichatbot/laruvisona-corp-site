@@ -222,9 +222,13 @@ export async function beforeOwnerSeoLoss(db: unknown, userId: string, mode: 'dow
 }
 
 export async function afterOwnerSeoGain(db: unknown, userId: string, event: string, deps: PtDeps = {}): Promise<void> {
+  // 決め打ちで true にしない。書き込んだあとの持ち主の契約を読み直して、その時点で SEO があるときだけ戻す
+  const { ownerLaruEntitlement } = await import('@/lib/hp-owner-entitlement');
+  const ownerSeo = (await ownerLaruEntitlement(db as Parameters<typeof ownerLaruEntitlement>[0], userId)).seo;
+  if (!ownerSeo) return;
   const sites = await ownerSites(db, userId);
   for (const site of sites ?? []) {
-    if (site.published) await reactivateWhenReady(site, { event, ownerSeo: true }, deps);
+    if (site.published) await reactivateWhenReady(site, { event, ownerSeo }, deps);
   }
 }
 
@@ -250,11 +254,15 @@ export async function beforeBillingChange(db: unknown, userId: string, from: Bil
 export async function afterBillingChange(db: unknown, userId: string, from: Billing, to: Billing, event: string, deps: PtDeps & { eventAt?: string } = {}): Promise<void> {
   const seoGain = !seoActive(from) && seoActive(to);
   let deferred = false;
-  const { entitlementChange, syncUserEntitlement } = await import('@/lib/hp-entitlement-sync');
+  const { entitlementChange, syncUserEntitlement, seoConfirmed } = await import('@/lib/hp-entitlement-sync');
   const change = entitlementChange(from, to);
   if (change && deps.eventAt) {
     const sent = await syncUserEntitlement(db, userId, { ...change, eventAt: deps.eventAt, event, reactivatePt: seoGain }, deps);
-    deferred = sent.some((r) => r.outcome.kind === 'failed');
+    // 公開先を戻すのは、LARUbot が今回の SEO を確かめた（applied/duplicate かつ最終状態で SEO あり）ときだけ。
+    // 届かなかった・stale・SEO なし・手元にもっと新しい状態がある（newer_recorded）・会社を読めなかった（0件）→ 戻さない。
+    // public_id の無いサイト・運営の一時テストサイトは数えない
+    const counted = sent.filter((r) => !(r.outcome.kind === 'skipped' && (r.outcome.reason === 'no_public_id' || r.outcome.reason === 'excluded')));
+    deferred = !(counted.length > 0 && counted.every((r) => seoConfirmed(r.outcome)));
   }
   if (seoGain && !deferred) await afterOwnerSeoGain(db, userId, event, deps);
 }

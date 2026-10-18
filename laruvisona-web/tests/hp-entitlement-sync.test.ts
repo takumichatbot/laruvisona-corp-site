@@ -36,6 +36,8 @@ const APPLIED = { status: 200, body: { ok: true, applied: true, reason: 'applied
 
 /** 偽の DB（sites・profiles）。settings_json->key->>status の絞り込みも本物と同じ意味で */
 function fakeDb(sites: Array<Record<string, unknown>>, profile = { plan: 'hp-bot-seo', subscription_status: 'active' }) {
+  let clock = 0;
+  const hooks: { beforeUpdate?: (rows: Array<Record<string, unknown>>) => void } = {};
   const pick = (row: Record<string, unknown>, k: string) => {
     if (!k.includes('->')) return row[k];
     const [col, ...path] = k.split(/->>?/);
@@ -43,6 +45,7 @@ function fakeDb(sites: Array<Record<string, unknown>>, profile = { plan: 'hp-bot
   };
   return {
     sites,
+    hooks,
     from(t: string) {
       const rows = t === 'sites' ? sites : [{ id: USER, ...profile }];
       return {
@@ -58,7 +61,18 @@ function fakeDb(sites: Array<Record<string, unknown>>, profile = { plan: 'hp-bot
           return q;
         },
         update(v: Record<string, unknown>) {
-          return { eq(k: string, id: string) { return { select() { const hit = rows.filter((r) => r[k] === id); hit.forEach((r) => Object.assign(r, JSON.parse(JSON.stringify(v)))); return Promise.resolve({ data: hit.map((r) => ({ id: r.id })), error: null }); } }; } };
+          // 本物と同じく、条件に合う行だけ書き換え、updated_at を進める（読んだときのままかの確かめに使う）
+          const conds: Array<[string, string]> = [];
+          const q = {
+            eq(k: string, val: string) { conds.push([k, val]); return q; },
+            select() {
+              if (hooks.beforeUpdate) hooks.beforeUpdate(rows);
+              const hit = rows.filter((r) => conds.every(([k, val]) => String(r[k]) === String(val)));
+              hit.forEach((r) => { Object.assign(r, JSON.parse(JSON.stringify(v))); r.updated_at = `t${++clock}`; });
+              return Promise.resolve({ data: hit.map((r) => ({ id: r.id })), error: null });
+            },
+          };
+          return q;
         },
       };
     },
@@ -286,4 +300,51 @@ test('運営の一時テストサイト（M03 の除外の正本）：site_delet
   const low = await postEntitlement({ publicId: TEST_PID, siteId: TEST_SITE, userId: USER, plan: 'hp', state: 'site_deleted', eventAt: T1, event: 'x' }, h.deps);
   assert.deepEqual([low.kind, entCalls(h)], ['skipped', 0], 'すべての送信が通る口で止める');
   assert.match(readFileSync('lib/hp-entitlement-sync.ts', 'utf8'), /import \{[^}]*PT_EXCLUDED_PUBLIC_IDS, PT_EXCLUDED_SITE_IDS[^}]*\} from '@\/lib\/publication-target-sync'/, '新しい除外リストを作らず M03 の正本を使う');
+});
+
+test('stale・最終状態で SEO なし：公開先を戻さない（古い再送の成功で、止めた公開先を復帰させない）', async () => {
+  for (const reply of [
+    { status: 200, body: { ok: true, applied: false, reason: 'stale', entitlement: { plan: 'starter', bot: true, seo: false } } },
+    { status: 200, body: { ok: true, applied: false, reason: 'stale' } },
+    { status: 200, body: { ok: true, applied: true, reason: 'applied', entitlement: { plan: 'starter', bot: true, seo: false } } },
+  ]) {
+    const h = harness([reply]);
+    await afterBillingChange(fakeDb([site()]), USER, { plan: 'hp-bot', status: 'active' }, { plan: 'hp-bot-seo', status: 'active' }, 'late_upgrade', { ...h.deps, eventAt: T1 });
+    assert.ok(!h.calls.some((x) => x.body?.action === 'reactivate' || x.body?.action === 'register'), JSON.stringify(reply.body));
+  }
+  // 再送で stale と返っても、控えの reactivate_pt で公開先を戻さない
+  const pending: EntRecord = { plan: 'hp-bot-seo', state: 'active', event_at: T1, user_id: USER, event: 'readd', status: 'pending', attempts: 1, first_failed_at: T1, next_at: T1, last_http: 503, last_code: null, result: null, reactivate_pt: true };
+  const db = fakeDb([site({ [ENT_KEY]: pending })]);
+  const h = harness([{ status: 200, body: { ok: true, applied: false, reason: 'stale' } }]);
+  await retryPendingEntitlements(db, { ...h.deps, now: () => new Date(T2) });
+  assert.ok(!h.calls.some((x) => x.body?.action === 'reactivate'));
+  assert.deepEqual([record(db.sites[0]).status, record(db.sites[0]).result, record(db.sites[0]).reactivate_pt], ['synced', 'stale', false]);
+});
+
+test('控えの保存：間に編集画面の保存が入ったら読み直して書く（編集中の設定を巻き戻さない）', async () => {
+  const db = fakeDb([{ ...site(), updated_at: 't0' }]);
+  let once = true;
+  db.hooks.beforeUpdate = (rows) => {
+    if (!once) return; once = false;
+    // 控えを書く直前に、利用者が設定を保存した
+    rows[0].settings_json = { ...(rows[0].settings_json as Record<string, unknown>), heroTitle: '利用者が今書いた見出し' };
+    rows[0].updated_at = 't-user';
+  };
+  const h = harness([APPLIED]);
+  await syncSiteEntitlement(db, db.sites[0] as never, { plan: 'hp-bot', state: 'active', eventAt: T1, event: 'x' }, h.deps);
+  const st = db.sites[0].settings_json as Record<string, unknown>;
+  assert.equal(st.heroTitle, '利用者が今書いた見出し', '利用者の保存を古い読み取りで消した');
+  assert.equal((st[ENT_KEY] as EntRecord).status, 'synced');
+  assert.equal(st.larubotPublicId, 'pid-1');
+});
+
+test('手元にもっと新しい状態がある（newer_recorded）・会社を読めない：公開先を戻さない（独立レビューの指摘）', async () => {
+  const newer: EntRecord = { plan: 'hp-bot', state: 'active', event_at: T2, user_id: USER, event: 'down', status: 'synced', attempts: 0, first_failed_at: null, next_at: null, last_http: 200, last_code: null, result: 'applied' };
+  let h = harness([APPLIED]);
+  await afterBillingChange(fakeDb([site({ [ENT_KEY]: newer })]), USER, { plan: 'hp-bot', status: 'active' }, { plan: 'hp-bot-seo', status: 'active' }, 'late', { ...h.deps, eventAt: T1 });
+  assert.deepEqual(h.calls.map((x) => x.body?.action ?? x.url.split('/').pop()), [], '古いイベントで送信・公開先の復帰をした');
+  // 持ち主の契約に SEO が無ければ、支払いの回復（権利は送らない経路）でも戻さない
+  h = harness([APPLIED]);
+  await afterBillingChange(fakeDb([site()], { plan: 'hp-bot', subscription_status: 'active' }), USER, { plan: 'hp-bot-seo', status: 'past_due' }, { plan: 'hp-bot-seo', status: 'active' }, 'recover', { ...h.deps, eventAt: T1 });
+  assert.ok(!h.calls.some((x) => x.body?.action === 'reactivate'));
 });

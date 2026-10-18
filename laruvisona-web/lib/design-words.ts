@@ -49,10 +49,35 @@ const INTENTS: { id: IntentId; re: RegExp }[] = [
 ];
 const SECTION_WORDS = /この(セクション|節|部分|ブロック|場所|欄)|ここ(だけ|の)|選んだ(節|ところ|場所)/;
 
-/** 決まった言い回しから意図を読む（重なりは文中の順） */
-export function readIntents(text: string): IntentId[] {
+/*
+  否定と「元に戻す」（2026-10-18）。
+  「写真は大きくしないで、余白だけ少し広く」で写真を大きくし、「余白を広げたけど、やっぱり元に戻す」で余白を広げていた。
+  読み取った言い回しのすぐ後ろに「〜しないで／しなくていい／せず／やめて」が続けば、その意図はしないと読む。
+  「動きはいらない」「飾りをなくす」のように言い回し自体が否定の意図は、後ろに否定が続かないので、そのまま読む（「シンプルにしないで」は否定）。
+  元に戻したいときは、言葉で推し量らず、画面の「取り消す」を案内する（元の状態は言葉からは決められない）。
+*/
+// 否定と読むのは、はっきり「〜しないで／しなくていい／せず／やめて」と言ったときだけ（すぐ後ろ・4字以内）。
+// 「大きくしてくれない？」「広げてもらえないでしょうか」（頼み方）、「目立たない」「落ち着かない」（いまの状態への不満）は否定にしない。
+// 「いらない／不要」は、読み取った言い回しに直接つくときだけ（「写真を大きくして色はいらない」の「いらない」は色のこと）。
+const NEGATED_AFTER = /^[^、。,.!?！？\n]{0,4}?(ないで(?!しょう)|ないように|なくて(いい|よい|大丈夫|結構)|ずに|せず|やめて|やめる)|^(するの|する|にするの|にする|に|の)?(は|も)?(いらない|不要)/;
+const REVERT_WORDS = /(元|もと)に戻|やっぱり(やめ|なし|戻)|取り消|なかったことに/;
+
+export interface ReadInstruction { intents: IntentId[]; negated: IntentId[]; revert: boolean }
+
+/** 指示文を読む：する意図・しないと言われた意図・元に戻したいか */
+export function readInstruction(text: string): ReadInstruction {
   const t = text.normalize('NFKC');
-  return INTENTS.map((x) => ({ id: x.id, at: t.search(x.re) })).filter((x) => x.at >= 0).sort((a, b) => a.at - b.at).map((x) => x.id);
+  const hits = INTENTS.map((x) => {
+    const m = x.re.exec(t);
+    return m ? { id: x.id, at: m.index, after: t.slice(m.index + m[0].length) } : null;
+  }).filter((x): x is { id: IntentId; at: number; after: string } => !!x).sort((a, b) => a.at - b.at);
+  const negated = hits.filter((h) => NEGATED_AFTER.test(h.after)).map((h) => h.id);
+  return { intents: hits.map((h) => h.id).filter((id) => !negated.includes(id)), negated, revert: REVERT_WORDS.test(t) };
+}
+
+/** 決まった言い回しから意図を読む（重なりは文中の順。「しないで」と言われたものは除く） */
+export function readIntents(text: string): IntentId[] {
+  return readInstruction(text).intents;
 }
 export const wantsSection = (text: string) => SECTION_WORDS.test(text.normalize('NFKC'));
 
@@ -176,7 +201,9 @@ export function planFromWords<S extends PlanSettingsLike>(
   text: string,
   opts: { selectedId?: string | null; scope?: 'site' | 'section'; intents?: IntentId[] } = {},
 ): DesignChangePlan {
-  const intents = (opts.intents ?? readIntents(text)).filter((x): x is IntentId => (INTENT_IDS as readonly string[]).includes(x));
+  const read = readInstruction(text);
+  // AI が選んだ意図でも、「しないで」と言われたものは使わない
+  const intents = (opts.intents ?? read.intents).filter((x): x is IntentId => (INTENT_IDS as readonly string[]).includes(x) && !read.negated.includes(x));
   const home = site.pages.find((p) => p.blocks?.some((b) => b.id === opts.selectedId));
   const top = home?.blocks ?? site.pages[0]?.blocks ?? [];
   const selected = opts.selectedId ? top.find((b) => b.id === opts.selectedId) : undefined;
@@ -185,6 +212,14 @@ export function planFromWords<S extends PlanSettingsLike>(
     ? { kind: 'section' as const, blockId: selected.id, label: blockName(top, selected) }
     : { kind: 'site' as const };
   const title = intents.length ? intents.slice(0, 3).map((i) => INTENT_LABEL[i]).join('・') : '読み取れませんでした';
+  const keep = read.negated.length ? `「${read.negated.map((i) => INTENT_LABEL[i]).join('」「')}」は、指示どおり変えません。` : '';
+  if (read.revert) {
+    return { source: 'words', title: '元に戻す', reason: '', scope, ops: [], base: '[]',
+      note: '元に戻すときは、画面の「取り消す」を使ってください。採用した案は1回の「取り消す」で採用前に戻ります。言葉からは元の状態を決められないため、ここでは案を作りません。' };
+  }
+  if (!intents.length && read.negated.length) {
+    return { source: 'words', title, reason: '', scope, ops: [], base: '[]', note: `${keep}ほかに変えたいことがあれば、「余白を増やす」のように書いてください。` };
+  }
   if (!intents.length) {
     return { source: 'words', title, reason: '', scope, ops: [], base: '[]',
       note: '変えたいことを、たとえば「もう少し落ち着いた印象に」「余白を増やす」「写真を大きく」「見出しを少し強く」のように書いてください。文章・料金・連絡先は、ここでは変えません。' };
@@ -200,6 +235,7 @@ export function planFromWords<S extends PlanSettingsLike>(
       ? 'この節の余白・現れ方・寄せだけを動かします。書体や色はサイト全体の設定なので、ここでは変えません。'
       : '今の設定から一段ずつ動かします。文章・写真・料金・連絡先は変えません。',
   });
+  if (keep) plan.reason = `${plan.reason} ${keep}`;
   // 複数の意図のうち、すでにその方向の端にあって変えるものが無かったものは、黙って落とさずに伝える
   if (intents.length > 1 && plan.ops.length) {
     const already = intents.filter((id) => {
@@ -215,9 +251,9 @@ export function planFromWords<S extends PlanSettingsLike>(
     if (!plan.ops.length) { plan.note = hint; return plan; }
   }
   if (!plan.ops.length) {
-    plan.note = scope.kind === 'section'
+    plan.note = (keep ? keep : '') + (scope.kind === 'section'
       ? 'この節では変えられる見せ方が見つかりませんでした（書体・色・見出しの大きさはサイト全体の設定です）。「サイト全体」で試してください。'
-      : 'すでにその方向の設定になっています。変えるものはありません。';
+      : 'すでにその方向の設定になっています。変えるものはありません。');
   }
   return plan;
 }

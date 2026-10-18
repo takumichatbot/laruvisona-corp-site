@@ -4,7 +4,7 @@ import { makeStarterSite } from '../lib/studio-start';
 import { exportToHTML } from '../lib/html-export';
 import { editStudioBlock } from '../lib/studio-image';
 import { applyDesignPlan, makePlan, validOp, scopeText, type DesignChangePlan } from '../lib/design-change';
-import { planFromWords, readIntents, INTENT_IDS } from '../lib/design-words';
+import { planFromWords, readIntents, readInstruction, INTENT_IDS } from '../lib/design-words';
 import { planFromReference, referenceStats, statsKey } from '../lib/reference-style';
 import { directorChecks, findingsFromReview, reviewSummary, contrast } from '../lib/design-director';
 import type { Page } from '../types/laruHP';
@@ -218,4 +218,58 @@ test('複数の指示のうち、すでにその設定のものは「変えま�
   const p = planFromWords(cur, '余白を増やして、見出しを少し強く');
   assert.ok(p.ops.length > 0);
   assert.match(p.reason, /「余白を増やす」は、すでにその方向の設定なので変えません/);
+});
+
+test('否定・元に戻す：「しないで」と言われた操作はしない。元に戻すは「取り消す」へ案内し、案を作らない（2026-10-18）', () => {
+  const s = site();
+  const a = readInstruction('写真は大きくしないで、余白だけ少し広く');
+  assert.deepEqual([a.intents, a.negated], [['more-space'], ['bigger-photo']]);
+  const pa = planFromWords(s, '写真は大きくしないで、余白だけ少し広く');
+  assert.ok(pa.ops.length > 0 && pa.ops.every((o) => !/heroLayout|columns|photo/i.test(JSON.stringify(o))), '写真を大きくする操作が入っている');
+  assert.match(pa.reason, /「写真を大きく見せる」は、指示どおり変えません/);
+  const pb = planFromWords(s, '余白を広げたけど、やっぱり元に戻す');
+  assert.equal(pb.ops.length, 0);
+  assert.match(pb.note || '', /「取り消す」/);
+  const c = readInstruction('写真を大きくして、文字は小さくしない');
+  assert.deepEqual([c.intents, c.negated], [['bigger-photo'], []]);
+  // AI が否定された意図を選んでも使わない
+  const pd = planFromWords(s, '写真は大きくしないで', { intents: ['bigger-photo'] });
+  assert.equal(pd.ops.length, 0);
+  assert.match(pd.note || '', /指示どおり変えません/);
+  // いまの状態への不満（「大きくない」「読みやすくない」）は否定ではない
+  assert.deepEqual(readInstruction('写真が大きくない').intents, ['bigger-photo']);
+  assert.deepEqual(readInstruction('文字が読みやすくない').intents, ['larger-text']);
+  // 言い回し自体が否定の意図は裏返さない
+  assert.deepEqual(readInstruction('動きはいらない').intents, ['less-motion']);
+  // 既存の読み取りは変わらない
+  assert.deepEqual(readIntents('もう少し落ち着いた感じにして'), ['calm']);
+  assert.deepEqual(readIntents('余白を増やす'), ['more-space']);
+});
+
+test('否定した操作は、変えるものが無いときの案内にも出す', () => {
+  const s = site();
+  const plan = planFromWords(s, '写真は大きくしないで、見出しを少し強く', { intents: undefined });
+  const keep = /「写真を大きく見せる」は、指示どおり変えません/;
+  assert.ok(keep.test(plan.reason) || keep.test(plan.note || ''));
+});
+
+test('頼み方・不満は否定にしない（独立レビューの指摘）。はっきり「しないで」と言ったときだけ', () => {
+  const pos: Array<[string, string]> = [
+    ['写真、もう少し大きくしてくれない？', 'bigger-photo'], ['余白を広げてもらえないでしょうか', 'more-space'],
+    ['写真をもっと大きくできない？', 'bigger-photo'], ['写真が目立たない', 'bigger-photo'], ['見出しが目立たない', 'bold-heading'],
+    ['なんだか落ち着かない', 'calm'], ['高級感がない', 'luxury'], ['親しみがない', 'friendly'], ['写真を大きくして色はいらない', 'bigger-photo'],
+  ];
+  for (const [text, id] of pos) {
+    const r = readInstruction(text);
+    assert.ok(r.intents.includes(id as never) && !r.negated.includes(id as never), `${text} → ${JSON.stringify(r)}`);
+  }
+  for (const [text, id] of [['写真は大きくしないで', 'bigger-photo'], ['余白は増やさないでください', 'more-space'], ['動きは付けなくていい', 'more-motion'], ['見出しを強くするのはやめて', 'bold-heading'], ['写真を大きくするのは不要', 'bigger-photo']] as const) {
+    assert.ok(readInstruction(text).negated.includes(id), text);
+  }
+  assert.equal(readInstruction('やっぱりいい感じに落ち着いた印象に').revert, false);
+  assert.ok(readInstruction('シンプルにしないで').negated.includes('simple'));
+  assert.ok(readInstruction('動きを止めないで').negated.includes('less-motion'));
+  assert.ok(readInstruction('写真が大きくならないように').negated.includes('bigger-photo') || !readInstruction('写真が大きくならないように').intents.includes('bigger-photo'));
+  assert.deepEqual(readInstruction('飾りを減らして').intents, ['simple']);
+  assert.equal(readInstruction('やっぱりやめて、元に戻したい').revert, true);
 });

@@ -4,7 +4,7 @@ import { Wand2, ImageIcon, ClipboardCheck, LoaderCircle } from 'lucide-react';
 import type { Page, SEOSettings, SiteSettings } from '@/types/laruHP';
 import type { ReadyItem } from '@/lib/publish-readiness';
 import { blockName, type DesignChangePlan, type PlanSettingsLike } from '@/lib/design-change';
-import { planFromWords, readIntents, wantsSection, type IntentId } from '@/lib/design-words';
+import { planFromWords, readInstruction, wantsSection, type IntentId } from '@/lib/design-words';
 import { planFromReference, referenceStats, statsKey, type ReferenceStats } from '@/lib/reference-style';
 import { directorChecks, findingsFromReview, reviewSummary, type Finding } from '@/lib/design-director';
 import PlanReview from './PlanReview';
@@ -132,8 +132,10 @@ function WordsTool({ site, selectedId, selectedLabel, hasSelected, access, onPla
     if (!t || busy) return;
     setNote('');
     let p = planFromWords(site, t, { selectedId, scope: effective });
-    // 決まった言い回しで読めないときだけ、AIに「どの意図か」を選んでもらう（1回の操作で1回まで）
-    if (!readIntents(t).length && access?.available) {
+    // 決まった言い回しで読めないときだけ、AIに「どの意図か」を選んでもらう（1回の操作で1回まで）。
+    // 「しないで」「元に戻す」と読めた指示は、AIに推し量らせない（否定した操作を AI が選び直さないように）
+    const read = readInstruction(t);
+    if (!read.intents.length && !read.negated.length && !read.revert && access?.available) {
       let intents = intentCache.get(t);
       if (!intents) {
         setBusy(true);

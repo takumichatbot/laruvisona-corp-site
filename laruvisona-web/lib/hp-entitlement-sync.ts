@@ -184,21 +184,41 @@ type Db = {
     select(c: string): {
       eq(k: string, v: string): PromiseLike<{ data: unknown[] | null; error: unknown }> & { limit(n: number): PromiseLike<{ data: unknown[] | null; error: unknown }> };
     };
-    update(v: Record<string, unknown>): { eq(k: string, v: string): { select(c: string): PromiseLike<{ data: unknown[] | null; error: unknown }> } };
+    update(v: Record<string, unknown>): { eq(k: string, v: string): Filtered };
   };
 };
+type Filtered = { eq(k: string, v: string): Filtered; select(c: string): PromiseLike<{ data: unknown[] | null; error: unknown }> };
 type SiteRow = PtSite & { user_id: string; published?: boolean };
 const SITE_COLUMNS = 'id, user_id, slug, custom_domain, published, settings_json';
 
+/**
+ * 控えを書く。設定（settings_json）は編集画面と同じ列なので、読んだときのままの行にだけ書く（updated_at で確かめる。
+ * 編集画面の settings_json_patch と同じ方式）。間に保存が入ったら読み直してやり直す。編集中の設定を古い読み取りで巻き戻さない。
+ */
 async function saveRecord(db: unknown, siteId: string, record: EntRecord): Promise<boolean> {
-  const fresh = await (db as Db).from('sites').select('settings_json').eq('id', siteId);
-  const row = (fresh.data ?? [])[0] as { settings_json?: Record<string, unknown> } | undefined;
-  if (fresh.error || !row) return false;
-  const current = (row.settings_json?.[ENT_KEY] ?? null) as EntRecord | null;
-  // もっと新しい状態が先に控えてあれば、古いほうで上書きしない（順序の逆転）
-  if (current && Date.parse(current.event_at) > Date.parse(record.event_at)) return true;
-  const saved = await (db as Db).from('sites').update({ settings_json: { ...(row.settings_json ?? {}), [ENT_KEY]: record } }).eq('id', siteId).select('id');
-  return !saved.error && (saved.data ?? []).length === 1;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const fresh = await (db as Db).from('sites').select('settings_json, updated_at').eq('id', siteId);
+    const row = (fresh.data ?? [])[0] as { settings_json?: Record<string, unknown>; updated_at?: string } | undefined;
+    if (fresh.error || !row) return false;
+    const current = (row.settings_json?.[ENT_KEY] ?? null) as EntRecord | null;
+    // もっと新しい状態が先に控えてあれば、古いほうで上書きしない（順序の逆転）
+    if (current && Date.parse(current.event_at) > Date.parse(record.event_at)) return true;
+    let q = (db as Db).from('sites').update({ settings_json: { ...(row.settings_json ?? {}), [ENT_KEY]: record } }).eq('id', siteId);
+    if (row.updated_at) q = q.eq('updated_at', row.updated_at);
+    const saved = await q.select('id');
+    if (saved.error) return false;
+    if ((saved.data ?? []).length === 1) return true;
+  }
+  return false;
+}
+
+/**
+ * SEO を戻してよいと LARUbot が確かめたか（2026-10-18）。
+ * stale は「古いイベントを受け付けなかった」という返事で、その古いイベントの SEO が今も有効という証拠ではない。
+ * 返ってきた最終状態（entitlement.seo）が false のときも戻さない。
+ */
+export function seoConfirmed(outcome: EntOutcome): boolean {
+  return outcome.kind === 'done' && outcome.result !== 'stale' && outcome.entitlement?.seo !== false;
 }
 
 async function alertEntitlement(record: EntRecord, siteId: string, outcome: EntOutcome) {
@@ -245,7 +265,11 @@ export async function syncSiteEntitlement(
   const record = nextRecord(prev ?? null, rec, outcome, now);
   if (outcome.kind === 'skipped' && outcome.reason === 'not_configured') return outcome;   // 鍵の無い環境（手元）では控えない
   const saved = await saveRecord(db, site.id, record);
-  if (!saved) console.error('[hp-entitlement] 控えを保存できませんでした', JSON.stringify({ site_id: site.id, state: input.state, event_at: input.eventAt }));
+  if (!saved) {
+    // 控えが無いと再送も照合もできない。同期済みと見せず、運営へ知らせる
+    console.error('[hp-entitlement] 控えを保存できませんでした', JSON.stringify({ site_id: site.id, state: input.state, event_at: input.eventAt, status: record.status }));
+    await alertLarubotFailure({ kind: 'entitlement', userId, plan: record.plan, siteId: site.id, reason: `${record.state} event_at=${record.event_at} 控えを保存できず（結果=${record.status}・再送されません）` });
+  }
   if (record.status === 'failed') await alertEntitlement(record, site.id, outcome);
   return outcome;
 }
@@ -317,7 +341,7 @@ export async function retryPendingEntitlements(db: unknown, deps: EntDeps = {}):
     const outcome = await syncSiteEntitlement(db, site, { plan: r.plan, state: r.state, eventAt: r.event_at, event: r.event, userId: r.user_id, reactivatePt: r.reactivate_pt }, deps);
     if (outcome.kind === 'done') {
       counts.done++;
-      if (r.reactivate_pt && r.state === 'active' && isSeoPlan(r.plan) && site.published) {
+      if (r.reactivate_pt && r.state === 'active' && isSeoPlan(r.plan) && site.published && seoConfirmed(outcome)) {
         const { ownerLaruEntitlement } = await import('@/lib/hp-owner-entitlement');
         const ownerSeo = (await ownerLaruEntitlement(db as Parameters<typeof ownerLaruEntitlement>[0], r.user_id)).seo;
         await reactivateWhenReady(site, { event: `${r.event}:retry`, ownerSeo }, deps);

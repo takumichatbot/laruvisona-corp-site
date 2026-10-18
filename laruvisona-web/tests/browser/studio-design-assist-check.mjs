@@ -138,6 +138,25 @@ try {
       await p.locator('[data-da-make]').click();
       await dlg.waitFor(); await dlg.locator('[data-plan-cancel]').click();
       check('同じ指示でもう一度押しても、AIを呼び直さない', ((await control()).aiCalls || 0) === calls1);
+      // 否定・元に戻す（2026-10-18）：AI が「写真を大きく」を選ぶ設定にしておき、呼ばれないこと・使われないことを確かめる
+      await control({ aiReply: JSON.stringify({ intents: ['bigger-photo'] }) });
+      await p.locator('[data-da-text]').fill('写真は大きくしないで、余白だけ少し詰めて');
+      await p.locator('[data-da-make]').click();
+      await dlg.waitFor();
+      const negText = await dlg.innerText();
+      await shot(p, 'pc-words-negation');
+      check('「写真は大きくしないで、余白だけ少し詰めて」：余白だけの案。写真は変えないと明示・AIは呼ばない',
+        /節と節のあいだ/.test(await dlg.locator('[data-plan-details]').innerText()) && !/写真|画像|列/.test(await dlg.locator('[data-plan-details]').innerText()) && /写真を大きく見せる」は、指示どおり変えません/.test(negText) && ((await control()).aiCalls || 0) === calls1,
+        (await dlg.locator('[data-plan-details]').innerText()).slice(0, 160));
+      await dlg.locator('[data-plan-cancel]').click();
+      await p.locator('[data-da-text]').fill('余白を広げたけど、やっぱり元に戻す');
+      await p.locator('[data-da-make]').click();
+      await p.locator('[data-da-note]').waitFor();
+      check('「やっぱり元に戻す」：案を作らず「取り消す」を案内・AIは呼ばない', (await p.locator('[data-da-note]').innerText()).includes('取り消す') && !(await dlg.isVisible()) && ((await control()).aiCalls || 0) === calls1);
+      await p.locator('[data-da-text]').fill('写真は大きくしないで');
+      await p.locator('[data-da-make]').click();
+      await p.locator('[data-da-note]').waitFor();
+      check('否定だけの指示：何も変えず、変えないことを伝える（AI が選び直さない）', (await p.locator('[data-da-note]').innerText()).includes('指示どおり変えません') && ((await control()).aiCalls || 0) === calls1);
     } else {
       await p.locator('[data-da-text]').fill('全体的に呼吸感を');
       await p.locator('[data-da-make]').click();

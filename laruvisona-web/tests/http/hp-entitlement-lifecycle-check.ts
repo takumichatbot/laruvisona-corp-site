@@ -2,7 +2,6 @@
 // LARUbot の代わりは apply_event と同じ判定（applied / duplicate / stale・site_mismatch）で、呼ばれた瞬間の公開先の状態も記録する。
 // 前提: publication-target-lifecycle-check.ts と同じ環境変数で起動したビルド。この確認も同じ環境変数で動かす。
 //   node --import ./tests/_resolve-ts.mjs tests/http/hp-entitlement-lifecycle-check.ts
-import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { afterBillingChange, beforeBillingChange, beforeCancel } from '../../lib/publication-target-sync';
 import { postEntitlement, ENT_KEY } from '../../lib/hp-entitlement-sync';
@@ -29,7 +28,9 @@ const profile = (plan: string | null, status: string) => control({ patchProfile:
 const T = (n: number) => `2026-10-05T0${n}:00:00.000Z`;
 const PUB = { target_type: 'internal_blog', canonical_base: 'https://larubot.tokyo', article_path: '/blog/{slug}', canonical_policy: 'single_primary' };
 const item = { id: 1, slug: 'a-1', title: '記事1', meta_description: '説明', target_keyword: '', thumbnail_url: null, published_at: '2026-10-01T00:00:00', updated_at: '2026-10-01T00:00:00', canonical_url: 'https://larubot.tokyo/blog/a-1' };
-const adminSecret = readFileSync('/tmp/claude-0/admin-stub', 'utf8').trim();
+// 手元のサーバーと同じ ADMIN_SECRET（手元だけの値）を環境変数で渡す。ファイルの場所に依存しない
+const adminSecret = process.env.ADMIN_SECRET || '';
+if (!adminSecret) { console.error('ADMIN_SECRET が要ります（手元のサーバーと同じ値）'); process.exit(2); }
 
 try {
   await profile('hp-bot', 'active');
