@@ -215,7 +215,9 @@ test('連携の失敗を、運営に届ける', () => {
   assert.match(alert, /process\.env\.ADMIN_EMAIL/, '運営宛てに送っていない');
   assert.match(alert, /console\.error\('\[larubot\] 連携に失敗:'/, 'メールが出せないときに記録が残らない');
   assert.doesNotMatch(alert, /throw /, '通知で例外を投げている（契約処理を巻き込む）');
-  assert.match(alert, /idempotencyKey: `larubot-fail-/, '同じ失敗で何通も送りうる');
+  // 同じ失敗は同じ冪等キーで送る（2026-10-18：キーの組み立ては alertIdempotencyKey へ。登録などの種類は従来のキーのまま）
+  assert.match(alert, /`larubot-fail-\$\{params\.kind\}-\$\{params\.userId\}-\$\{params\.reason\}`\.slice\(0, 200\)/, '同じ失敗で何通も送りうる');
+  assert.match(alert, /send\(\{ from: [^}]+\}, \{ idempotencyKey \}\)/, '冪等キーを付けずに送っている');
 
   // 4つの入口すべてから届くこと
   const callers: Array<[string, string]> = [
