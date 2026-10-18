@@ -131,6 +131,28 @@ try {
   e = await ent(); p = await pt();
   check('再契約：同じ public_id で active・SEO 再開 → reactivate で公開先 active', e.companies.pidA.state === 'active' && e.companies.pidA.seo === true && p.calls.slice(ptN).some((c) => c.action === 'reactivate') && p.registered.pidA.state === 'active');
 
+  /* 10b. 公開先の自動復帰：権利は同期済み・記事一覧が一時的に 503 → 復帰待ち → 一覧が戻る → 5 分ごとの口だけで公開先が戻る（本人の操作なし） */
+  await control({ patchProfile: { id: OWNER, patch: { plan: 'hp-bot', subscription_status: 'active' } } });
+  await beforeBillingChange(db, OWNER, { plan: 'hp-bot-seo', status: 'active' }, { plan: 'hp-bot', status: 'active' }, 'down_for_recovery');
+  await afterBillingChange(db, OWNER, { plan: 'hp-bot-seo', status: 'active' }, { plan: 'hp-bot', status: 'active' }, 'down_for_recovery', { eventAt: '2026-10-05T10:30:00.000Z' });
+  await post(mock + '/__state', { tenants: { pidA: { publication: PUB, items: [item], listStatus: 503 }, pidB: { publication: PUB, items: [item], listStatus: 503 } } });
+  await profile('hp-bot-seo', 'active');
+  const entN = (await ent()).calls.length, ptN2 = (await pt()).calls.length;
+  await afterBillingChange(db, OWNER, { plan: 'hp-bot', status: 'active' }, { plan: 'hp-bot-seo', status: 'active' }, 'readd_503', { eventAt: '2026-10-05T11:00:00.000Z' });
+  const recA = (await siteRow('id-a')).settings_json.larubotPublicationRecovery;
+  check('一覧が 503：権利は送って同期済み・公開先は呼ばず「復帰待ち」（event_at は元の時刻）', (await ent()).calls.length === entN + 2 && (await rec('id-a'))?.status === 'synced' && recA?.state === 'pending' && recA?.event_at === '2026-10-05T11:00:00.000Z' && !(await pt()).calls.slice(ptN2).some((c) => c.action === 'reactivate'), recA);
+  await post(mock + '/__state', { tenants: { pidA: { publication: PUB, items: [item] }, pidB: { publication: PUB, items: [item] } } });
+  for (const id of ['id-a', 'id-b']) {
+    const row = await siteRow(id);
+    await control({ patchSite: { id, patch: { settings_json: { ...row.settings_json, larubotPublicationRecovery: { ...row.settings_json.larubotPublicationRecovery, next_at: '2026-01-01T00:00:00.000Z' } } } } });
+  }
+  const entM = (await ent()).calls.length;
+  const run = await fetch(base + '/api/cron/hp-entitlement-retry', { method: 'POST', headers: { Authorization: `Bearer ${adminSecret}` } }).then((r) => r.json());
+  const reN = (await pt()).calls.slice(ptN2).filter((c) => c.action === 'reactivate').length;
+  check('一覧が戻る → 5 分ごとの口だけで公開先が戻る・権利 API は呼び直さない', run.recovery?.done === 2 && reN === 2 && (await ent()).calls.length === entM && (await siteRow('id-a')).settings_json.larubotPublicationRecovery?.state === 'done' && (await pt()).registered.pidA?.state === 'active', run);
+  const again2 = await fetch(base + '/api/cron/hp-entitlement-retry', { method: 'POST', headers: { Authorization: `Bearer ${adminSecret}` } }).then((r) => r.json());
+  check('もう一度回しても、重ねて戻さない', again2.recovery?.due === 0 && (await pt()).calls.slice(ptN2).filter((c) => c.action === 'reactivate').length === 2, again2);
+
   /* 11. サイト削除：届かなければ保留、届けば site_deleted → 削除 */
   await post(mock + '/__ent', { mode: 'fail503' });
   let r = await asOwner('/api/sites/id-b', 'DELETE');

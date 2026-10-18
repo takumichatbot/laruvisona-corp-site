@@ -22,9 +22,9 @@
  * server.js の 5 分ごとの再送（/api/cron/hp-entitlement-retry）が送り直す。
  * 鍵・認証ヘッダ・個人情報（メール等）はログに出さない。
  */
-import { HP_PLAN_PRODUCTS, isSeoPlan } from '@/lib/laru-entitlement';
+import { HP_PLAN_PRODUCTS, isSeoPlan, laruEntitlement } from '@/lib/laru-entitlement';
 import { alertLarubotFailure } from '@/lib/larubot-alert';
-import { reactivateWhenReady, PT_EXCLUDED_PUBLIC_IDS, PT_EXCLUDED_SITE_IDS, type PtDeps, type PtSite } from '@/lib/publication-target-sync';
+import { reactivateWhenReady, syncPublicationTarget, seoPublicIdOf, PT_EXCLUDED_PUBLIC_IDS, PT_EXCLUDED_SITE_IDS, type PtDeps, type PtSite } from '@/lib/publication-target-sync';
 
 export type EntState = 'active' | 'cancelled' | 'site_deleted';
 export const ENT_KEY = 'larubotEntitlement';
@@ -134,7 +134,8 @@ export async function postEntitlement(
       });
       const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
       if (res.ok && json?.ok !== false) {
-        const result = typeof json?.reason === 'string' ? json.reason : 'applied';
+        // reason が無い・壊れた本文は applied と見なさない（届いたが、何が起きたかは確かめられていない）
+        const result = json && typeof json.reason === 'string' ? json.reason : 'unknown';
         const ent = (json?.entitlement ?? null) as Record<string, unknown> | null;
         log('info', { ...base, status: res.status, attempts, result, bot: ent?.bot ?? null, seo: ent?.seo ?? null, final: 'done' });
         return { kind: 'done', result, entitlement: ent, attempts };
@@ -196,14 +197,20 @@ const SITE_COLUMNS = 'id, user_id, slug, custom_domain, published, settings_json
  * 編集画面の settings_json_patch と同じ方式）。間に保存が入ったら読み直してやり直す。編集中の設定を古い読み取りで巻き戻さない。
  */
 async function saveRecord(db: unknown, siteId: string, record: EntRecord): Promise<boolean> {
+  return saveSettingKey(db, siteId, ENT_KEY, record, (current) => !!current && Date.parse((current as EntRecord).event_at) > Date.parse(record.event_at));
+}
+
+/**
+ * サーバーだけが持つ項目を 1 つ書く（updated_at が読んだときのままの行にだけ。間に保存が入れば読み直す）。
+ * skip(current) が true なら書かずに成功とする（もっと新しい状態が先にある、など）。
+ */
+async function saveSettingKey(db: unknown, siteId: string, key: string, value: unknown, skip?: (current: unknown) => boolean): Promise<boolean> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const fresh = await (db as Db).from('sites').select('settings_json, updated_at').eq('id', siteId);
     const row = (fresh.data ?? [])[0] as { settings_json?: Record<string, unknown>; updated_at?: string } | undefined;
     if (fresh.error || !row) return false;
-    const current = (row.settings_json?.[ENT_KEY] ?? null) as EntRecord | null;
-    // もっと新しい状態が先に控えてあれば、古いほうで上書きしない（順序の逆転）
-    if (current && Date.parse(current.event_at) > Date.parse(record.event_at)) return true;
-    let q = (db as Db).from('sites').update({ settings_json: { ...(row.settings_json ?? {}), [ENT_KEY]: record } }).eq('id', siteId);
+    if (skip && skip(row.settings_json?.[key] ?? null)) return true;
+    let q = (db as Db).from('sites').update({ settings_json: { ...(row.settings_json ?? {}), [key]: value } }).eq('id', siteId);
     if (row.updated_at) q = q.eq('updated_at', row.updated_at);
     const saved = await q.select('id');
     if (saved.error) return false;
@@ -218,15 +225,252 @@ async function saveRecord(db: unknown, siteId: string, record: EntRecord): Promi
  * 返ってきた最終状態（entitlement.seo）が false のときも戻さない。
  */
 export function seoConfirmed(outcome: EntOutcome): boolean {
-  return outcome.kind === 'done' && outcome.result !== 'stale' && outcome.entitlement?.seo !== false;
+  // 成功と定義された reason（applied / duplicate）で、最終状態の seo が true と明示されているときだけ。
+  // 欠落・null・文字列・未知の reason・200 だけ・空や壊れた本文は「確かめられなかった」（2026-10-18）
+  return outcome.kind === 'done' && (outcome.result === 'applied' || outcome.result === 'duplicate')
+    && !!outcome.entitlement && typeof outcome.entitlement === 'object' && outcome.entitlement.seo === true;
+}
+
+/** 届いたが SEO の有効を確かめられなかった（stale・seo:false＝無効の確認、とは分ける） */
+export function seoUnknown(outcome: EntOutcome): boolean {
+  if (outcome.kind !== 'done' || seoConfirmed(outcome) || outcome.result === 'stale') return false;
+  return !(outcome.entitlement && typeof outcome.entitlement === 'object' && outcome.entitlement.seo === false);
+}
+
+/** 確認済みの権利のあとで、公開先を戻す（持ち主のいまの SEO を読み直す）。結果は復帰待ちとして残す */
+export async function reactivateConfirmed(db: unknown, site: SiteRow, ctx: { userId: string; event: string; eventAt: string | null }, deps: EntDeps = {}): Promise<RecoveryRecord | null> {
+  if (!site.published) return null;
+  const { ownerLaruEntitlement } = await import('@/lib/hp-owner-entitlement');
+  const ownerSeo = (await ownerLaruEntitlement(db as Parameters<typeof ownerLaruEntitlement>[0], ctx.userId)).seo;
+  if (!ownerSeo) return null;
+  const outcome = await reactivateWhenReady(site, { event: ctx.event, ownerSeo }, deps);
+  const prior = (((site.settings_json ?? {}) as Record<string, unknown>)[RECOVERY_KEY] as RecoveryRecord | undefined) ?? null;
+  const prev = prior && prior.state === 'pending' && prior.event_at === ctx.eventAt ? prior : null;
+  return noteReactivation(db, site, { ...ctx, prev, prior }, outcome, deps);
+}
+
+/** 控えから、その会社の HP 由来の SEO が確認済みか（同じプランのままの支払い回復など、今回は送らない経路で使う） */
+export function recordConfirmsSeo(record: EntRecord | null | undefined): boolean {
+  return !!record && record.status === 'synced' && record.state === 'active' && isSeoPlan(record.plan)
+    && (record.result === 'applied' || record.result === 'duplicate');
+}
+
+/* ── 公開先の復帰待ち（2026-10-18）────────────────────────────────────────────
+  権利の同期が済んでも、記事一覧がまだ 200 でない（反映待ち・一時的な 503）と、公開先の reactivate は見送られる。
+  以前はそこで終わり、本人が再公開するまで戻らなかった。権利の控え（synced）とは別の項目に「復帰待ち」を残し、
+  同じ 5 分ごとの再送が拾う。権利 API は呼び直さない。event_at は元の時刻のまま、試行・次の時刻・起点は別に持つ。
+  再開の前に、いまの状態（公開中・同じ紐付け・持ち主の SEO・新しい控え）を読み直し、変わっていれば中止する。 */
+export const RECOVERY_KEY = 'larubotPublicationRecovery';
+export interface RecoveryRecord {
+  public_id: string;
+  /** 公開先（publication-target）が使う ID。会社の ID と別に控え、どちらかが変われば中止する */
+  pt_public_id?: string;
+  user_id: string;
+  event: string;
+  event_at: string | null;
+  state: 'pending' | 'done' | 'needs_attention' | 'cancelled';
+  attempts: number;
+  first_at: string;
+  next_at: string | null;
+  last_reason: string | null;
+  last_http: number | null;
+}
+type ReactivateOutcome = Awaited<ReturnType<typeof reactivateWhenReady>>;
+/** 公開先ではなく、こちら側の読み取りが一時的に失敗したもの（復帰待ちの記録の理由名） */
+const READ_FAILURES = new Set(['owner_unreadable', 'state_unknown', 'status_unreachable']);
+
+/** reactivate の結果を、復帰待ちとして残す（done／再試行待ち／要対応／中止）。成功したのに記録できなくても、再実行は冪等 */
+export async function noteReactivation(
+  db: unknown,
+  site: SiteRow,
+  ctx: { userId: string; event: string; eventAt: string | null; prev?: RecoveryRecord | null; prior?: RecoveryRecord | null },
+  outcome: ReactivateOutcome | { kind: 'unconfirmed' },
+  deps: EntDeps = {},
+): Promise<RecoveryRecord | null> {
+  const now = (deps.now ?? (() => new Date()))();
+  const publicId = companyPublicId(site.settings_json) ?? '';
+  const prev = ctx.prev ?? null;          // 同じイベントの復帰待ち（続き）
+  const prior = ctx.prior ?? prev;        // いま残っている復帰待ち（別のイベントのものも含む）
+  const base = { public_id: publicId, pt_public_id: seoPublicIdOf(site), user_id: ctx.userId, event: ctx.event, event_at: ctx.eventAt, first_at: prev?.first_at ?? now.toISOString() };
+  let next: RecoveryRecord | null = null;
+  if (outcome.kind === 'done') {
+    // 一度で戻り、残っている復帰待ちも無いものは記録しない。古い復帰待ち・要対応が残っていれば、戻ったと書き換える
+    if (!prior || prior.state === 'done') return null;
+    next = { ...base, state: 'done', attempts: prev?.attempts ?? 0, next_at: null, last_reason: null, last_http: 200 };
+  } else if (outcome.kind === 'unconfirmed') {
+    next = { ...base, state: 'needs_attention', attempts: 0, next_at: null, last_reason: 'entitlement_unconfirmed', last_http: null };
+  } else if (outcome.kind === 'skipped' && outcome.reason !== 'not_ready') {
+    if (!prior || prior.state !== 'pending') return null;   // 対象外（除外・紐付けなし・契約に SEO なし・鍵なし）：待たない
+    next = { ...base, state: 'cancelled', attempts: prev?.attempts ?? 0, next_at: null, last_reason: outcome.reason, last_http: null };
+  } else {
+    const retryable = outcome.kind === 'skipped' || outcome.retryable;
+    const attempts = (prev?.attempts ?? 0) + 1;
+    const expired = now.getTime() - Date.parse(base.first_at) >= GIVE_UP_MS;
+    const reason = outcome.kind === 'skipped' ? 'articles_not_ready' : READ_FAILURES.has(outcome.code ?? '') ? String(outcome.code) : `publication_target_${outcome.code ?? outcome.status ?? 'unreachable'}`;
+    const pending = retryable && !expired;
+    next = {
+      ...base, state: pending ? 'pending' : 'needs_attention', attempts,
+      next_at: pending ? new Date(now.getTime() + RETRY_DELAYS_MS[Math.min(attempts - 1, RETRY_DELAYS_MS.length - 1)]).toISOString() : null,
+      last_reason: reason, last_http: outcome.kind === 'failed' ? outcome.status : null,
+    };
+  }
+  const saved = await saveRecovery(db, site.id, next, prev);
+  console.info(`[publication-recovery] ${JSON.stringify({ site_id: site.id, public_id: publicId, event: ctx.event, event_at: ctx.eventAt, state: next.state, attempts: next.attempts, reason: next.last_reason, http: next.last_http, saved })}`);
+  if (next.state === 'needs_attention' && saved) {
+    await alertLarubotFailure({
+      kind: 'publication_recovery', userId: ctx.userId, plan: null, siteId: site.id,
+      reason: next.last_reason === 'entitlement_unconfirmed' ? 'LARUbot の応答で SEO の有効を確かめられなかったため、公開先を戻していません' : `公開先を戻せていません（${next.last_reason}）`,
+      dedupe: `${ctx.eventAt ?? '-'}|${next.last_reason}`,
+    });
+  }
+  return next;
+}
+
+/**
+ * 復帰待ちを書く。続き（prev）を書くときは、いま残っているものが同じイベントの pending のときだけ
+ * （間に新しいイベントの復帰待ちが書かれた・別の処理が先に終えた、なら上書きしない）。
+ * 新しく書くときは、もっと新しいイベントの復帰待ちを古いもので上書きしない。
+ */
+async function saveRecovery(db: unknown, siteId: string, next: RecoveryRecord, prev: RecoveryRecord | null): Promise<boolean> {
+  const t = (v: string | null | undefined) => (v ? Date.parse(v) : -Infinity);
+  return saveSettingKey(db, siteId, RECOVERY_KEY, next, (current) => {
+    const c = current as RecoveryRecord | null;
+    if (!c) return false;
+    if (prev) return !(c.state === 'pending' && c.event_at === prev.event_at && c.first_at === prev.first_at);
+    return t(c.event_at) > t(next.event_at);
+  });
+}
+
+/** 同じ会社（public_id）の控えのうち、いちばん新しいもの（控えは会社ごとに 1 サイトにしか無いことがある） */
+async function latestRecordFor(db: unknown, userId: string, publicId: string): Promise<EntRecord | null | undefined> {
+  const { data, error } = await (db as Db).from('sites').select(SITE_COLUMNS).eq('user_id', userId);
+  if (error) return undefined;   // 読めない＝分からない
+  let latest: EntRecord | null = null;
+  for (const row of (data ?? []) as SiteRow[]) {
+    if (companyPublicId(row.settings_json) !== publicId) continue;
+    const r = ((row.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as EntRecord | undefined;
+    if (r && (!latest || Date.parse(r.event_at) > Date.parse(latest.event_at))) latest = r;
+  }
+  return latest;
+}
+
+/**
+ * いま、そのサイトの公開先を戻してよいか。
+ * stop＝はっきり変わった（非公開・紐付けの変更・SEO 解除・新しい控え）→ 中止。
+ * unknown＝読めなかった（DB・LARUbot の一時的な失敗）→ 変わったとは扱わない（待ちのまま再試行。戻したあとなら取り消さない）。
+ */
+type StopCheck = { stop: string } | { unknown: string } | null;
+async function recoveryStopReason(db: unknown, site: SiteRow, r: RecoveryRecord, deps: EntDeps): Promise<StopCheck> {
+  const settings = (site.settings_json ?? {}) as Record<string, unknown>;
+  if (!site.published) return { stop: 'unpublished' };
+  if (site.user_id !== r.user_id || companyPublicId(settings) !== r.public_id || (r.pt_public_id && seoPublicIdOf(site) !== r.pt_public_id)) return { stop: 'link_changed' };
+  // 持ち主の契約。読めないときに「SEO なし」と決めない（ownerLaruEntitlement は読めないと false を返すため、先に自分で読む）
+  const prof = await (db as Db).from('profiles').select('plan, subscription_status').eq('id', r.user_id);
+  if (prof.error) return { unknown: 'owner_unreadable' };
+  const p = (((prof.data ?? []) as unknown[])[0] ?? {}) as { plan?: string | null; subscription_status?: string | null };
+  if (!laruEntitlement(p.plan ?? null, p.subscription_status ?? null).seo) {
+    const { ownerLaruEntitlement } = await import('@/lib/hp-owner-entitlement');
+    if (!(await ownerLaruEntitlement(db as Parameters<typeof ownerLaruEntitlement>[0], r.user_id)).seo) return { stop: 'seo_off' };
+  }
+  const latest = await latestRecordFor(db, r.user_id, r.public_id);
+  if (latest === undefined) return { unknown: 'state_unknown' };
+  if (latest && !recordConfirmsSeo(latest)) return { stop: 'entitlement_changed' };
+  if (!latest) {
+    const st = await statusHpSeo(r.public_id, deps);
+    if (st === null) return { unknown: 'status_unreachable' };
+    if (!st) return { stop: 'entitlement_unconfirmed' };
+  }
+  return null;
+}
+
+/**
+ * 控えが無い会社だけ、LARUbot の status（読むだけ）で HP 由来の SEO が有効かを確かめる（直接契約の SEO とは分ける）。
+ * true＝hp.state active かつ hp.seo true。false＝そうでないと読めた（4xx を含む）。null＝読めなかった（通信・5xx・壊れた応答）
+ */
+export async function statusHpSeo(publicId: string, deps: EntDeps = {}): Promise<boolean | null> {
+  const secret = process.env.LARU_HP_API_SECRET;
+  if (!secret || !publicId) return false;
+  try {
+    const res = await (deps.fetch ?? fetch)(`${apiBase()}/api/hp/status?public_id=${encodeURIComponent(publicId)}`, { headers: { 'x-laru-secret': secret }, cache: 'no-store', signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (res.status >= 500) return null;
+    if (!res.ok) return false;
+    const json = (await res.json().catch(() => undefined)) as { entitlement?: { hp?: { state?: unknown; seo?: unknown } | null } } | null | undefined;
+    if (json === undefined || json === null || typeof json !== 'object') return null;
+    const hp = json.entitlement?.hp;
+    return !!hp && hp.state === 'active' && hp.seo === true;
+  } catch {
+    return null;
+  }
+}
+export async function statusConfirmsHpSeo(publicId: string, deps: EntDeps = {}): Promise<boolean> {
+  return (await statusHpSeo(publicId, deps)) === true;
+}
+
+/** 復帰待ちの再開（server.js から 5 分ごと。権利の再送と同じ口）。いまの状態を読み直し、変わっていれば中止する */
+export async function retryPendingRecoveries(db: unknown, deps: EntDeps = {}): Promise<{ due: number; done: number; pending: number; cancelled: number; attention: number }> {
+  const now = (deps.now ?? (() => new Date()))();
+  // 件数が増えても待ちが埋もれないよう広めに読む（いまは対象が数件。数百を超える規模なら next_at の並べ替えへ）
+  const { data, error } = await (db as Db).from('sites').select(SITE_COLUMNS).eq(`settings_json->${RECOVERY_KEY}->>state`, 'pending').limit(200);
+  if (error) throw new Error('pending recoveries could not be read');
+  const due = ((data ?? []) as SiteRow[]).filter((s) => {
+    const r = ((s.settings_json ?? {}) as Record<string, unknown>)[RECOVERY_KEY] as RecoveryRecord | undefined;
+    return r && r.state === 'pending' && (!r.next_at || Date.parse(r.next_at) <= now.getTime());
+  });
+  const counts = { due: due.length, done: 0, pending: 0, cancelled: 0, attention: 0 };
+  const log = (o: Record<string, unknown>) => console.info(`[publication-recovery] ${JSON.stringify(o)}`);
+  for (const site of due.slice(0, 20)) {
+    const r = ((site.settings_json ?? {}) as Record<string, unknown>)[RECOVERY_KEY] as RecoveryRecord;
+    const ctx = { userId: r.user_id, event: r.event, eventAt: r.event_at, prev: r };
+    const check = await recoveryStopReason(db, site, r, deps);
+    let note: RecoveryRecord | null;
+    if (check && 'stop' in check) {
+      note = { ...r, state: 'cancelled', next_at: null, last_reason: check.stop };
+      const saved = await saveRecovery(db, site.id, note, r);
+      log({ site_id: site.id, event_at: r.event_at, state: 'cancelled', reason: check.stop, saved });
+    } else if (check) {
+      // 読めなかった：待ちのまま（有限。24 時間で要対応・通知）
+      note = await noteReactivation(db, site, ctx, { kind: 'failed', retryable: true, status: null, code: check.unknown, attempts: 0, safeForRemoval: false }, deps);
+    } else {
+      const outcome = await reactivateWhenReady(site, { event: `${r.event}:recovery`, ownerSeo: true }, deps);
+      if (outcome.kind === 'done') {
+        // 戻したあとで、もう一度確かめる。待っている間に SEO 解除・非公開・削除が重なっていたら、戻した相手（site＝戻したときの紐付け）をすぐ止め直す
+        const read = await (db as Db).from('sites').select(SITE_COLUMNS).eq('id', site.id);
+        const fresh = read.error ? undefined : (((read.data ?? []) as SiteRow[])[0] ?? null);
+        const after: StopCheck = fresh === undefined ? { unknown: 'site_unreadable' } : fresh === null ? { stop: 'deleted' } : await recoveryStopReason(db, fresh, r, deps);
+        if (after && 'stop' in after) {
+          const reason = after.stop === 'unpublished' ? 'site_unpublished' : after.stop === 'deleted' ? 'site_deleted' : after.stop === 'link_changed' ? 'other' : 'seo_disabled';
+          const undo = await syncPublicationTarget(site, 'deactivate', { event: `${r.event}:recovery_undo`, ownerSeo: true, reason }, deps);
+          const undone = undo.kind !== 'failed';
+          note = { ...r, state: undone ? 'cancelled' : 'needs_attention', next_at: null, last_reason: `${after.stop}_after_reactivate${undone ? '' : '_undo_failed'}`, last_http: undo.kind === 'failed' ? undo.status : r.last_http };
+          const saved = fresh ? await saveRecovery(db, site.id, note, r) : false;
+          log({ site_id: site.id, event_at: r.event_at, state: note.state, reason: note.last_reason, saved });
+          if (!undone) {
+            await alertLarubotFailure({
+              kind: 'publication_recovery', userId: r.user_id, plan: null, siteId: site.id,
+              reason: `公開先を戻した直後に${after.stop === 'unpublished' ? '非公開' : after.stop === 'deleted' ? '削除' : after.stop === 'link_changed' ? '紐付けの変更' : 'SEO の解除'}が分かりましたが、止め直せていません`,
+              dedupe: `${r.event_at ?? '-'}|${note.last_reason}`,
+            });
+          }
+        } else {
+          // 読めなかった（after が unknown）ときは、取り消さない：直前の確認では戻してよかったため
+          if (after) log({ site_id: site.id, event_at: r.event_at, post_check: after.unknown });
+          note = await noteReactivation(db, site, ctx, outcome, deps);
+        }
+      } else note = await noteReactivation(db, site, ctx, outcome, deps);
+    }
+    const st = note?.state;
+    if (st === 'done') counts.done++; else if (st === 'pending') counts.pending++; else if (st === 'cancelled') counts.cancelled++; else counts.attention++;
+  }
+  return counts;
 }
 
 async function alertEntitlement(record: EntRecord, siteId: string, outcome: EntOutcome) {
   if (outcome.kind === 'done') return;
   await alertLarubotFailure({
     kind: 'entitlement', userId: record.user_id, plan: record.plan, siteId,
+    dedupe: `${record.state}|${record.event_at}|send|${outcome.kind === 'failed' ? (outcome.retryable ? 'gave_up' : `code_${outcome.code ?? '-'}`) : outcome.reason}`,
     reason: outcome.kind === 'failed'
-      ? `${record.state} event_at=${record.event_at} code=${outcome.code ?? '-'}${outcome.retryable ? '（24時間再送しても届かず）' : '（再送しても変わらないため停止）'}`
+      ? (outcome.retryable ? `${record.state} event_at=${record.event_at}（24時間再送しても届かず）` : `${record.state} event_at=${record.event_at} code=${outcome.code ?? '-'}（再送しても変わらないため停止）`)
       : `${record.state} ${outcome.reason}`,
     status: outcome.kind === 'failed' ? outcome.status : null,
   });
@@ -268,7 +512,7 @@ export async function syncSiteEntitlement(
   if (!saved) {
     // 控えが無いと再送も照合もできない。同期済みと見せず、運営へ知らせる
     console.error('[hp-entitlement] 控えを保存できませんでした', JSON.stringify({ site_id: site.id, state: input.state, event_at: input.eventAt, status: record.status }));
-    await alertLarubotFailure({ kind: 'entitlement', userId, plan: record.plan, siteId: site.id, reason: `${record.state} event_at=${record.event_at} 控えを保存できず（結果=${record.status}・再送されません）` });
+    await alertLarubotFailure({ kind: 'entitlement_record', userId, plan: record.plan, siteId: site.id, dedupe: `${record.state}|${record.event_at}|record`, reason: `${record.state} event_at=${record.event_at} の控えを保存できません` });
   }
   if (record.status === 'failed') await alertEntitlement(record, site.id, outcome);
   return outcome;
@@ -297,7 +541,7 @@ export async function syncUserEntitlement(
 ): Promise<{ site: SiteRow; outcome: EntOutcome }[]> {
   const sites = await companySites(db, userId);
   if (!sites) {
-    await alertLarubotFailure({ kind: 'entitlement', userId, plan: input.plan, siteId: null, reason: `${input.state} event_at=${input.eventAt} サイトを読めず送れませんでした` });
+    await alertLarubotFailure({ kind: 'entitlement', userId, plan: input.plan, siteId: null, dedupe: `${input.state}|${input.eventAt}|sites`, reason: `${input.state} event_at=${input.eventAt} サイトを読めず送れませんでした` });
     return [];
   }
   const out: { site: SiteRow; outcome: EntOutcome }[] = [];
@@ -317,7 +561,7 @@ export async function entitlementBeforeSiteDelete(db: unknown, site: SiteRow, pl
   const outcome = await postEntitlement(input, deps);
   if (outcome.kind === 'failed') {
     if (outcome.retryable) return false;
-    await alertLarubotFailure({ kind: 'entitlement', userId: site.user_id, plan: input.plan, siteId: site.id, reason: `site_deleted code=${outcome.code ?? '-'}`, status: outcome.status });
+    await alertLarubotFailure({ kind: 'entitlement', userId: site.user_id, plan: input.plan, siteId: site.id, dedupe: `site_deleted|code_${outcome.code ?? '-'}`, reason: `site_deleted code=${outcome.code ?? '-'}`, status: outcome.status });
   }
   return true;
 }
@@ -341,10 +585,9 @@ export async function retryPendingEntitlements(db: unknown, deps: EntDeps = {}):
     const outcome = await syncSiteEntitlement(db, site, { plan: r.plan, state: r.state, eventAt: r.event_at, event: r.event, userId: r.user_id, reactivatePt: r.reactivate_pt }, deps);
     if (outcome.kind === 'done') {
       counts.done++;
-      if (r.reactivate_pt && r.state === 'active' && isSeoPlan(r.plan) && site.published && seoConfirmed(outcome)) {
-        const { ownerLaruEntitlement } = await import('@/lib/hp-owner-entitlement');
-        const ownerSeo = (await ownerLaruEntitlement(db as Parameters<typeof ownerLaruEntitlement>[0], r.user_id)).seo;
-        await reactivateWhenReady(site, { event: `${r.event}:retry`, ownerSeo }, deps);
+      if (r.reactivate_pt && r.state === 'active' && isSeoPlan(r.plan) && site.published) {
+        if (seoConfirmed(outcome)) await reactivateConfirmed(db, site, { userId: r.user_id, event: `${r.event}:retry`, eventAt: r.event_at }, deps);
+        else if (seoUnknown(outcome)) await noteReactivation(db, site, { userId: r.user_id, event: r.event, eventAt: r.event_at }, { kind: 'unconfirmed' }, deps);
       }
     } else if (outcome.kind === 'failed' && outcome.retryable) counts.pending++;
     else counts.failed++;

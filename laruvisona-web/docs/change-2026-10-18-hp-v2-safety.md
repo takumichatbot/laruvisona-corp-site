@@ -35,7 +35,7 @@
 ## 独立レビュー
 
 実装とは別のレビュー工程（別エージェント）で差分を確認。指摘 2 件（否定の誤読・newer_recorded から公開先が戻る経路）を直し、再レビューで閉じた。
-残りの小さい指摘：reactivate が記事一覧の not_ready で見送られた場合、同じイベントの再配信では戻らない（以前から。次の公開・独自ドメインの操作で M03 の register が走る）。
+残りの小さい指摘：reactivate が記事一覧の not_ready で見送られた場合、同じイベントの再配信では戻らない（以前から）。→ 下の「追加：公開先の自動復帰・通知の重複」で閉じた。
 
 ## 確認（ローカル・fixture＋保存済み応答。実モデル・実決済・外部送信なし）
 
@@ -53,3 +53,45 @@
 ## 本番の副作用
 
 公開 0 回・公開先登録 0・権利同期の送信 0・通知 0・外部送信 0。運営テストサイトは非公開のまま。
+
+## 追加：公開先の自動復帰・通知の重複（同日・追加指示）
+
+指示：「LARU HP｜公開先の自動復帰・通知の重複を閉じる追加指示」。基準：開始 HEAD = main = 本番 `a3ddaca`。LARUbot / LARU SEO のコードは変更なし。
+
+### 復帰待ちを失っていた原因
+権利の同期が成功すると控え（larubotEntitlement）は synced・reactivate_pt=false になり、5 分ごとの再送の口から外れる。
+その直後の reactivate が記事一覧の非 200（not_ready）で見送られても、どこにも残らなかった。
+
+### 変えたこと
+- 公開先の復帰待ちを、権利の控えとは別のサーバー所有の記録 `larubotPublicationRecovery` に残す（SERVER_OWNED_SETTING_KEYS。Studio の保存では書き換えられず、公開 HTML・lhpmeta に出ない）。
+  - 項目：public_id・pt_public_id・user_id・event・event_at（固定）・state（pending / done / needs_attention / cancelled）・attempts・first_at（固定）・next_at・last_reason・last_http。
+  - 既存の 5 分周期（/api/cron/hp-entitlement-retry）で再開。権利の再送とは別の try で、片方の失敗がもう片方を止めない。権利 API は呼び直さない。
+  - 再試行は有限（既存の RETRY_DELAYS_MS、起点から 24 時間で needs_attention・運営へ通知）。not_ready・5xx・通信失敗は再試行、401 など恒久 4xx・除外サイトは再試行しない。
+  - 毎回、サイト・持ち主・会社 ID・公開先 ID・公開状態・持ち主の SEO・最新の控え（同じ会社の全サイト）・base を読み直す。非公開・紐付けの変更・SEO 解除・新しい控え（解約・削除など）が分かれば中止（新しい状態が勝つ）。
+  - 読めなかった（DB・LARUbot status の一時的な失敗）は「変わった」と扱わない：待ちのまま。
+  - 戻した直後にもう一度確かめ、間に非公開・SEO 解除・削除・紐付けの変更が入っていたら、戻した相手（元の ID）をすぐ deactivate。止め直せなければ needs_attention・通知。
+  - 書き込みは updated_at の楽観ロック。続きは「同じ event_at・first_at の pending」が残っているときだけ、新規は「もっと新しいイベントの記録」を上書きしない。
+- SEO 有効の確認を厳しくした（seoConfirmed）：result が applied / duplicate、かつ entitlement が有り seo === true のときだけ。
+  seo 欠落・reason 不明（以前は applied とみなしていた）・entitlement なし・stale・eventAt なしでは戻さない。
+  控えが無い支払い回復だけ、LARUbot の status（読むだけ）で hp.state active かつ hp.seo true のときに戻す。
+- 管理画面の照合（/api/admin/hp-entitlement）に publication_recovery を表示。
+
+### 通知
+- 控えの保存失敗は kind `entitlement_record`、公開先の復帰は kind `publication_recovery` に分けた。
+  本文は「契約は通ったが Bot/SEO が付いていない」「プランを付け直す」とは言わず、照合（/api/admin/hp-entitlement）を見ること・契約の操作で直さないことを案内する。
+- 冪等キー：`laruhp-alert-<kind>-<sha256(kind|user|site|段階).slice(0,32)>-<JST日付>`。試行回数・時刻・切り詰めた理由を含めない。同じキーなら同じ件名・本文。
+- 既存の通知（autopilot など他の kind）の文言とキーは変えていない。
+
+### 保証の範囲（正直に）
+- メールの重複を抑えるのは Resend の冪等キー（24 時間）と、キーに入れた日付。同じ障害は 1 日 1 通まで（日付が変われば 1 通）。
+- アプリ側の通知関数の呼び出し（ログ）は、5 分ごとに繰り返す。抑えるのはメールの重複だけ。保存できないこと自体が障害なので「通知済み」は保存しない。
+- 送信が失敗した・キーが届かない・日付をまたぐ、では 2 通目があり得る。本番での実際の重複メールは未確認（テストでも実メールは送っていない）。
+- 待ちの読み出しは pending を最大 200 件・1 回 20 件、next_at の並べ替えなし（いまは対象 0〜数件。数百規模なら並べ替えへ）。
+
+### 確認（ローカル・偽 DB＋LARUbot/記事一覧の代わり。外部送信なし）
+| 対象 | 結果 |
+|---|---|
+| 単体 publication-recovery（503→回復→定期処理だけで復帰、404 は 24 時間まで、中止の各条件、新しい base、SEO 確認の表、壊れた応答、eventAt なし、二重実行、恒久 4xx、保存競合、サーバー所有、通知キー、status の代わり、戻した直後の取り消し、読めないときに中止しない） | 18/18 |
+| 実サーバー：権利同期ライフサイクル（一覧 503 → 回復 → 5 分の口だけで復帰・権利 API 呼び直しなし・二度目は何もしない を追加） | 27/27 |
+| 実サーバー：M03 記事 39・記事の見え方 25・公開先 31・ルーティング 38 | すべて合格 |
+| 全件 npm test | 1602/1602 |

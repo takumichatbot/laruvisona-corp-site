@@ -104,6 +104,8 @@ http.createServer(async (req, res) => {
     body = status === 200 ? { ...d.body, publication: t.publication } : d.body;
     if (status !== 200) return send(res, status, body, { 'Cache-Control': 'no-store' });
   } else {
+    // 一覧だけ一時的に失敗させる（公開先の復帰待ちの確認用）。tenants.<id>.listStatus = 503 など
+    if (t.listStatus) return send(res, t.listStatus, { error: 'unavailable' }, { 'Cache-Control': 'no-store' });
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 20));
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const items = t.items || [];

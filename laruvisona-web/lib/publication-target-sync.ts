@@ -221,14 +221,21 @@ export async function beforeOwnerSeoLoss(db: unknown, userId: string, mode: 'dow
   return ok;
 }
 
-export async function afterOwnerSeoGain(db: unknown, userId: string, event: string, deps: PtDeps = {}): Promise<void> {
-  // 決め打ちで true にしない。書き込んだあとの持ち主の契約を読み直して、その時点で SEO があるときだけ戻す
+/**
+ * SEO が付いた／戻ったあと、確認できた会社（public_id）の公開中のサイトだけ公開先を戻す。
+ * 記事一覧がまだ 200 でなければ「復帰待ち」として残し、5 分ごとの再送が再開する（lib/hp-entitlement-sync.ts）。
+ */
+export async function afterOwnerSeoGain(db: unknown, userId: string, event: string, deps: PtDeps & { eventAt?: string; only?: Set<string> } = {}): Promise<void> {
   const { ownerLaruEntitlement } = await import('@/lib/hp-owner-entitlement');
   const ownerSeo = (await ownerLaruEntitlement(db as Parameters<typeof ownerLaruEntitlement>[0], userId)).seo;
   if (!ownerSeo) return;
+  const { reactivateConfirmed, companyPublicId } = await import('@/lib/hp-entitlement-sync');
   const sites = await ownerSites(db, userId);
   for (const site of sites ?? []) {
-    if (site.published) await reactivateWhenReady(site, { event, ownerSeo }, deps);
+    if (!site.published) continue;
+    const pid = companyPublicId(site.settings_json);
+    if (!pid || (deps.only && !deps.only.has(pid))) continue;
+    await reactivateConfirmed(db, { ...site, user_id: userId }, { userId, event, eventAt: deps.eventAt ?? null }, deps);
   }
 }
 
@@ -253,18 +260,39 @@ export async function beforeBillingChange(db: unknown, userId: string, from: Bil
  */
 export async function afterBillingChange(db: unknown, userId: string, from: Billing, to: Billing, event: string, deps: PtDeps & { eventAt?: string } = {}): Promise<void> {
   const seoGain = !seoActive(from) && seoActive(to);
-  let deferred = false;
-  const { entitlementChange, syncUserEntitlement, seoConfirmed } = await import('@/lib/hp-entitlement-sync');
+  const { entitlementChange, syncUserEntitlement, seoConfirmed, seoUnknown, noteReactivation, companySites, recordConfirmsSeo, statusConfirmsHpSeo, companyPublicId, ENT_KEY } = await import('@/lib/hp-entitlement-sync');
   const change = entitlementChange(from, to);
-  if (change && deps.eventAt) {
-    const sent = await syncUserEntitlement(db, userId, { ...change, eventAt: deps.eventAt, event, reactivatePt: seoGain }, deps);
-    // 公開先を戻すのは、LARUbot が今回の SEO を確かめた（applied/duplicate かつ最終状態で SEO あり）ときだけ。
-    // 届かなかった・stale・SEO なし・手元にもっと新しい状態がある（newer_recorded）・会社を読めなかった（0件）→ 戻さない。
-    // public_id の無いサイト・運営の一時テストサイトは数えない
-    const counted = sent.filter((r) => !(r.outcome.kind === 'skipped' && (r.outcome.reason === 'no_public_id' || r.outcome.reason === 'excluded')));
-    deferred = !(counted.length > 0 && counted.every((r) => seoConfirmed(r.outcome)));
+  // 公開先を戻してよい会社（public_id）。LARUbot が今回の SEO を確かめた会社、または（今回は送らない経路で）控えが確認済みの会社だけ
+  const only = new Set<string>();
+  if (change) {
+    // 時刻が無い呼び出しでは送らない＝確かめていないので戻さない
+    if (deps.eventAt) {
+      const sent = await syncUserEntitlement(db, userId, { ...change, eventAt: deps.eventAt, event, reactivatePt: seoGain }, deps);
+      for (const r of sent) {
+        const pid = companyPublicId(r.site.settings_json);
+        if (!pid) continue;
+        if (seoConfirmed(r.outcome)) only.add(pid);
+        // 同じイベントがすでに控えにあり（再配信）、その控えが確認済みなら、前回の続きとして扱う
+        else if (r.outcome.kind === 'skipped' && r.outcome.reason === 'already_synced'
+          && recordConfirmsSeo(((r.site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as Parameters<typeof recordConfirmsSeo>[0])) only.add(pid);
+        else if (seoGain && seoUnknown(r.outcome) && r.site.published) {
+          // 届いたが SEO の有効を確かめられない（reason・seo の欠落など）：戻さず、要対応として残す
+          await noteReactivation(db, r.site, { userId, event, eventAt: deps.eventAt }, { kind: 'unconfirmed' }, deps);
+        }
+      }
+    }
+  } else if (seoGain) {
+    // 同じプランのままの支払い回復など：権利は送らないので、記録済みの同じ状態（控え）が確認済みのときだけ
+    for (const site of (await companySites(db, userId)) ?? []) {
+      const pid = companyPublicId(site.settings_json);
+      const record = ((site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as Parameters<typeof recordConfirmsSeo>[0];
+      if (!pid) continue;
+      if (recordConfirmsSeo(record)) only.add(pid);
+      // 控えが無い会社（同期の仕組みより前から）だけ、LARUbot の status で HP 由来の SEO が有効かを読む（直接契約の SEO とは分ける）
+      else if (!record && (await statusConfirmsHpSeo(pid, deps))) only.add(pid);
+    }
   }
-  if (seoGain && !deferred) await afterOwnerSeoGain(db, userId, event, deps);
+  if (seoGain && only.size) await afterOwnerSeoGain(db, userId, event, { ...deps, only });
 }
 /**
  * 解約の前に呼ぶ。LARU SEO を含むプランだった人だけ retire（plan_cancelled）。false は保留。

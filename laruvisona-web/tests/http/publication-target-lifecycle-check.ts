@@ -38,6 +38,7 @@ try {
   await control({ patchSite: { id: 'id-b', patch: { user_id: OWNER, custom_domain: null, published: true, settings_json: { laruseoPublicId: 'pidB', laruseo: true } } } });
   await post(mock + '/__state', { tenants: { pidA: { publication: PUB, items: [item] }, pidB: { publication: PUB, items: [item] } } });
   await ptMode('ok', true);
+  await post(mock + '/__ent', { mode: 'ok', reset: true });   // 前の実行の権利（新しい event_at）が残っていると stale になるため、毎回まっさらから
   check('準備：公開中・LARU SEO あり → 記事一覧 200', (await articles('site-a')) === 200);
 
   /* 1. 非公開（未登録）→ 先に deactivate（未登録なので changed:false）→ そのあと記事一覧は 404 */
@@ -127,7 +128,8 @@ try {
   check('プランに関係ない変更（同じプランのまま）では呼ばない', (await beforeBillingChange(db, OWNER, to, to, 'noop')) === true && (await since(n)).length === 0);
   await control({ patchProfile: { id: OWNER, patch: { plan: 'hp-bot-seo' } } });
   n = (await pt()).calls.length;
-  await afterBillingChange(db, OWNER, to, from, 'test_upgrade');
+  // 本番の呼び出しと同じく、状態になった時刻を渡す（時刻の無い呼び出しでは、権利を確かめていないので公開先を戻さない：2026-10-18）
+  await afterBillingChange(db, OWNER, to, from, 'test_upgrade', { eventAt: '2026-10-05T09:00:00.000Z' });
   c = await since(n);
   check('LARU SEO ありへ戻した後：reactivate（記事一覧 200 の後。未登録なら register）', c.length >= 1 && c.every((x) => (x.action === 'reactivate' || x.action === 'register') && x.articlesStatus === 200) && (await pt()).registered.pidA.state === 'active', c.map((x) => [x.body.site_id, x.action, x.articlesStatus]));
   await ptMode('fail503');

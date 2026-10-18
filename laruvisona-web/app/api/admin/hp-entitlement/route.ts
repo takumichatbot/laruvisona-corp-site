@@ -4,7 +4,7 @@ import { isAdminEmail } from '@/lib/adminAuth';
 import { readContactBody } from '@/lib/contact-contract';
 import { fetchLarubotStatus } from '@/lib/larubot-seo';
 import { laruEntitlement } from '@/lib/laru-entitlement';
-import { companyPublicId, ENT_KEY, entitlementPlan, syncSiteEntitlement, type EntRecord, type EntState } from '@/lib/hp-entitlement-sync';
+import { companyPublicId, ENT_KEY, RECOVERY_KEY, entitlementPlan, syncSiteEntitlement, type EntRecord, type EntState, type RecoveryRecord } from '@/lib/hp-entitlement-sync';
 
 /**
  * HP バンドルの権利の照合（運営だけ）。
@@ -74,6 +74,8 @@ function view(s: Row, p: Prof | undefined, isOperator: boolean, status: Record<s
     cannot_decide: 'unknown' in right ? right.unknown : null,
     event_at: rec?.event_at ?? null,
     record: rec ? { status: rec.status, plan: rec.plan, state: rec.state, event_at: rec.event_at, result: rec.result, last_http: rec.last_http, last_code: rec.last_code } : null,
+    // 権利の同期とは別に、公開先の復帰待ち（pending＝5 分ごとに自動再開／needs_attention＝要対応／done／cancelled）
+    publication_recovery: (() => { const r = (s.settings_json?.[RECOVERY_KEY] ?? null) as RecoveryRecord | null; return r ? { state: r.state, event_at: r.event_at, attempts: r.attempts, first_at: r.first_at, next_at: r.next_at, last_reason: r.last_reason, last_http: r.last_http } : null; })(),
     larubot: status ? { entitlement: status.entitlement ?? null, is_hp_bundle: status.is_hp_bundle ?? null } : null,
   };
 }
