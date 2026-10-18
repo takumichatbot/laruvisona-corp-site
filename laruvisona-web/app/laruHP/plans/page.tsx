@@ -3,7 +3,7 @@ import { MONTHLY, ANNUAL, ANNUAL_TOTAL } from '@/lib/laruhp-facts';
 import { useState, useEffect, Suspense, createContext, useContext } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import { createClient } from '@/lib/supabase/client';
 import { trackBeginCheckout } from '@/lib/funnel';
 import { hasServiceAccess } from '@/lib/subscription-access';
@@ -301,7 +301,7 @@ export default function PlansPage() {
       <header className="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
+            <LaruHpLogo className="w-14 md:w-16" sizes="(min-width: 768px) 64px, 56px" />
           </Link>
           <div className="flex items-center gap-2.5">
             <Link href="https://laruvisona.jp/laruHP/auth/login" className="hidden md:block text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-xl text-sm transition-all">

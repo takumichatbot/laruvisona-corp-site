@@ -1,6 +1,6 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import { CircleX } from 'lucide-react';
 import { siteMemberToken } from '@/lib/site-member-contract';
 
@@ -43,7 +43,7 @@ export default async function InvitePage({ params }: Props) {
       <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full shadow-sm">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center mx-auto mb-4">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={40} width={160} className="h-10 w-auto" />
+            <LaruHpLogo className="w-20" sizes="80px" />
           </div>
           <h1 className="text-lg font-bold text-gray-900 mb-1">LARUbot履歴への招待</h1>
           <p className="text-gray-500 text-sm">

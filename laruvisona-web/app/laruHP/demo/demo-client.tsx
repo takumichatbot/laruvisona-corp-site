@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import { LARUHP_APP_ORIGIN } from '@/lib/laruhp-host';
 import { MONTHLY, PRIMARY_CTA, TERMS } from '@/lib/laruhp-facts';
 import PublicFooter from '@/components/laruhp/PublicFooter';
@@ -34,7 +34,7 @@ export default function DemoClient() {
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
+            <LaruHpLogo className="w-14 md:w-16" sizes="(min-width: 768px) 64px, 56px" />
           </Link>
           <Link href={`${LARUHP_APP_ORIGIN}/laruHP/auth/signup`} className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
             {PRIMARY_CTA.label} →

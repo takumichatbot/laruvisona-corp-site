@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import Link from 'next/link';
 import { ArrowRight, ExternalLink, Globe2, Mail, ShieldCheck } from 'lucide-react';
 import {
@@ -32,7 +32,7 @@ export default function DomainsPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <Link href="https://laruhp.com/" className={styles.brand} aria-label="LARU HP トップへ">
-          <Image src="/laruhp_logo.png" alt="" width={32} height={32} priority />
+          <LaruHpLogo alt="" className="w-10" sizes="40px" priority />
           <span>LARU HP</span>
         </Link>
         <Link href="https://laruvisona.jp/laruHP/settings?tab=domain" className={styles.headerLink}>接続設定を開く</Link>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import { advisePlan, type Billing, type DomainChoice, type PlanNeeds } from '@/lib/plan-advice';
 import { LARUHP_APP_ORIGIN } from '@/lib/laruhp-host';
 import PublicFooter from '@/components/laruhp/PublicFooter';
@@ -48,7 +48,7 @@ export default function SimulatorClient() {
       <header className="fixed top-0 z-50 w-full border-b border-sky-100 bg-white/90 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
+            <LaruHpLogo className="w-14 md:w-16" sizes="(min-width: 768px) 64px, 56px" />
           </Link>
           <Link href="https://laruhp.com/plans" className="rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-sky-500">
             料金表を見る

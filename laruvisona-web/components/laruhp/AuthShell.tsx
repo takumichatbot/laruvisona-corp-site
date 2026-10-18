@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import Link from 'next/link';
 import { LARUHP_ORIGIN } from '@/lib/laruhp-host';
 
@@ -60,7 +60,7 @@ export default function AuthShell({
   // 濃い面の上ではほとんど見えない。ログイン後の道しるべ（.shell-brand）と
   // 同じ組み方にして、どちらの面でも読めるようにする。
   const logo = (
-    <Image src="/laruhp_logo.png" alt="LARU HP" height={36} width={144} className="h-9 w-auto" priority />
+    <LaruHpLogo className="w-[72px]" sizes="72px" priority />
   );
 
   return (

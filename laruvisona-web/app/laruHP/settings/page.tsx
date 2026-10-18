@@ -2,7 +2,7 @@
 import { MONTHLY } from '@/lib/laruhp-facts';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import DomainSettings from './DomainSettings';
@@ -488,7 +488,7 @@ export default function SettingsPage() {
                   <img src={brandLogoUrl} alt="ロゴプレビュー" className="h-8 w-auto max-w-[120px] object-contain rounded border border-gray-200" />
                 )}
                 {!brandLogoUrl && (
-                  <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto rounded" />
+                  <LaruHpLogo className="w-8" sizes="32px" />
                 )}
                 <span className="text-xs text-gray-500">現在のロゴ</span>
               </div>

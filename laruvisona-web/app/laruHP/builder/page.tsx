@@ -16,7 +16,7 @@ import { releaseEditedColorRoles } from '@/lib/theme-roles';
 import { publishCompletion } from '@/lib/publish-result';
 import { migrationBlockData } from '@/lib/migration-block';
 import Link from 'next/link';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import { blockIconPath } from '@/lib/laruhp-block-icons';
 import { trackSiteCreate, trackPublishAttempt, trackPublish, trackPurchaseComplete, trackBeginCheckout } from '@/lib/funnel';
 
@@ -5993,7 +5993,7 @@ function BuilderContent() {
               <img src={brandLogoUrl} alt="logo" className="h-7 w-auto max-w-[120px] object-contain rounded" />
             ) : (
               <>
-                <Image src="/laruhp_logo.png" alt="LARU HP" height={28} width={160} className="h-7 w-auto brightness-0 invert" />
+                <LaruHpLogo plate platePadding="p-0.5" className="w-6" sizes="24px" />
               </>
             )}
           </button>

@@ -80,7 +80,9 @@ const CONTACTS = [];
 // 公開のたびに残る版（POST /api/sites/[id]/publish が insert する）。
 // 一括再生成（/api/admin/republish-all）が「公開時点の中身」を引く先なので、受け取るだけでなく残す。
 const SITE_VERSIONS = [];
-const TABLES = { sites: SITES, news_posts: POSTS, contacts: CONTACTS, site_versions: SITE_VERSIONS, profiles: [
+// 招待リンクの画面（/laruHP/invite/[token]）を開くための、期限内の招待 1 件（ロゴの表示確認用。2026-10-18）
+const SITE_MEMBERS = [{ id: 'm-invite-1', site_id: 'id-a', invited_email: 'staff@example.com', role: 'viewer', status: 'pending', invite_token: 'ab'.repeat(24), invite_expires_at: '2099-01-01T00:00:00.000Z' }];
+const TABLES = { sites: SITES, news_posts: POSTS, contacts: CONTACTS, site_versions: SITE_VERSIONS, site_members: SITE_MEMBERS, profiles: [
   { id: '4f2a1b8c-3d5e-4a6f-8b1c-2e3d4f5a6b7c', plan: 'agency', subscription_status: 'active' },
   // 契約中の利用者。plan が無いとサイトを1件も作れない（/api/sites が no_plan で断る）ので、
   // 「はじめての利用者が実際に1件作る」確認のために入れてある。

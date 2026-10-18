@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import LaruHpLogo from '@/components/laruhp/LaruHpLogo';
 import type { Metadata } from 'next';
 import { FAQ_PAGES } from '@/lib/laruhp-faq';
 import { PLAN_FAQ } from '@/lib/laruhp-facts';
@@ -66,7 +66,7 @@ export default function FaqIndexPage() {
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="https://laruhp.com/" className="flex items-center gap-3">
-            <Image src="/laruhp_logo.png" alt="LARU HP" height={32} width={160} className="h-8 w-auto" />
+            <LaruHpLogo className="w-14 md:w-16" sizes="(min-width: 768px) 64px, 56px" />
           </Link>
           <Link href="https://laruhp.com/plans" className="bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-sky-500 transition-all">
             料金を見る
