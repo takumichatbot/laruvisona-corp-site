@@ -95,3 +95,31 @@
 | 実サーバー：権利同期ライフサイクル（一覧 503 → 回復 → 5 分の口だけで復帰・権利 API 呼び直しなし・二度目は何もしない を追加） | 27/27 |
 | 実サーバー：M03 記事 39・記事の見え方 25・公開先 31・ルーティング 38 | すべて合格 |
 | 全件 npm test | 1602/1602 |
+
+## 追加 2：確認根拠を保存後も失わない・待ちの取り出し方（同日・追加指示 2）
+
+指示：「LARU HP：公開先復帰の確認根拠・待ちの取り出し方を仕上げる」。基準：開始 HEAD = main = 本番 `aa26007`。
+
+### 1. SEO 有効の確認根拠
+- 修正前の再現（応答 → nextRecord → 保存 → 再読込 → 同じイベントの再処理）：applied / duplicate で seo が false・欠落・null・"true" のとき、
+  初回は戻さないが、同じイベントの再配信（already_synced）と、同じプランのままの支払い回復で reactivate に届いていた（12 経路）。
+  原因：nextRecord が応答の SEO 確認を保存せず、recordConfirmsSeo が result と plan だけを見ていた。
+- 修正：控えに `seo_confirmed`（送ったときの seoConfirmed の結果）と `seo_public_id`（確かめた会社）を残す。
+  `recordSeoEvidence` = confirmed（true かつ同じ会社）/ legacy（この項目より前の控え）/ unconfirmed。
+  legacy と控えなしは、読み取り専用の LARUbot status（hp.state active かつ hp.seo true）で確かめる。読めなければ戻さない（止めもしない）。
+  共通判定を、再配信・支払い回復・復帰待ちの再開（recoveryStopReason）の 3 か所が使う。
+
+### 2. 待ちの取り出し
+- 修正前の再現：復帰待ち 201 件のうち先に返る 200 件が時刻前だと、201 件目の期限到来を拾えず処理 0 件。権利の再送も 51 件で同じ。
+- 修正（selectDue）：`settings_json-><key>->>state|status = pending` で絞り、`->>next_at` 昇順（null 先頭）→ `id` 昇順で並べてから 21 件読む。
+  期限到来（next_at なし・読めない時刻・時刻到来・起点から 24 時間）を 20 件まで処理。`more` で残りの有無を出す（due は今回扱う件数で、全体の件数ではない）。
+  next_at は toISOString（UTC・同じ桁数）なので、文字列順＝時刻順。
+- 次の時刻は起点 + 24 時間を越えて置かない（nextRetryAt）。起点が読めない時刻なら打ち切る。event_at・first_at は作り直さない。
+- 処理の直前に 1 行ずつ読み直し、取り出した後に変わった待ちは進めない。
+- 権利の再送中に紐付けが外れた控えは、送らずに終わった（failed・skipped:no_public_id）と残し、先頭に居続けない。
+- 本物の PostgreSQL 16 + PostgREST 12.2.3 で確認（tests/http/retry-selection-postgrest-check.ts、5/5。本番 Supabase の PostgREST 版は未確認）。
+
+### 残る限界
+- 保存が続けて失敗する行は、期限到来の先頭に残り、その行の処理（公開先 API の呼び出し）が 5 分ごとに繰り返される。1 行が 1 枠を使うだけで、ほかの行は進む（20 行以上が同時に保存できない場合は止まる）。
+- この修正より前に書かれた待ちは next_at が起点 + 36 時間程度まであり得る（本番の待ちは 0 件）。
+- ISO 形式でない next_at は文字列順で後ろに並ぶ（このコードは書かない）。

@@ -55,7 +55,7 @@ function fakeDb(sites: Array<Record<string, unknown>>, profile: Record<string, u
     const [col, ...path] = k.split(/->>?/);
     return path.reduce<unknown>((v, p) => (v && typeof v === 'object' ? (v as Record<string, unknown>)[p] : undefined), row[col]);
   };
-  const hooks: { beforeUpdate?: (rows: Array<Record<string, unknown>>) => void; failUpdates?: boolean; failProfile?: boolean } = {};
+  const hooks: { beforeUpdate?: (rows: Array<Record<string, unknown>>) => void; failUpdates?: boolean; failProfile?: boolean; failIds?: Set<string> } = {};
   return {
     sites, hooks, profile,
     from(t: string) {
@@ -63,10 +63,25 @@ function fakeDb(sites: Array<Record<string, unknown>>, profile: Record<string, u
       return {
         select() {
           const filters: Array<[string, string]> = [];
-          const run = () => t !== 'sites' && hooks.failProfile ? Promise.resolve({ data: null, error: { message: 'down' } }) : Promise.resolve({ data: rows.filter((r) => filters.every(([k, v]) => String(pick(r, k)) === v)).map((r) => JSON.parse(JSON.stringify(r))), error: null });
+          const orders: Array<[string, boolean, boolean]> = [];
+          let cap = Infinity;
+          // PostgREST と同じ意味：order は指定順に比べる（->> は文字列として。null は nullsFirst の向き）。order が無ければ順は決めない（ここでは入った順）
+          const cmp = (a: Record<string, unknown>, b: Record<string, unknown>) => {
+            for (const [k, asc, nullsFirst] of orders) {
+              const x = pick(a, k), y = pick(b, k);
+              if (x == null && y == null) continue;
+              if (x == null) return nullsFirst ? -1 : 1;
+              if (y == null) return nullsFirst ? 1 : -1;
+              const c = String(x) < String(y) ? -1 : String(x) > String(y) ? 1 : 0;
+              if (c) return asc ? c : -c;
+            }
+            return 0;
+          };
+          const run = () => t !== 'sites' && hooks.failProfile ? Promise.resolve({ data: null, error: { message: 'down' } }) : Promise.resolve({ data: rows.filter((r) => filters.every(([k, v]) => String(pick(r, k)) === v)).sort(cmp).slice(0, cap).map((r) => JSON.parse(JSON.stringify(r))), error: null });
           const q = {
             eq(k: string, v: string) { filters.push([k, v]); return q; },
-            limit() { return run(); },
+            order(k: string, o: { ascending?: boolean; nullsFirst?: boolean } = {}) { orders.push([k, o.ascending !== false, !!o.nullsFirst]); return q; },
+            limit(n: number) { cap = n; return run(); },
             maybeSingle() { return run().then((r) => ({ data: r.data?.[0] ?? null, error: r.error })); },
             then(res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) { return run().then(res, rej); },
           };
@@ -77,7 +92,7 @@ function fakeDb(sites: Array<Record<string, unknown>>, profile: Record<string, u
           const q = {
             eq(k: string, val: string) { conds.push([k, val]); return q; },
             select() {
-              if (hooks.failUpdates) return Promise.resolve({ data: null, error: { message: 'down' } });
+              if (hooks.failUpdates || conds.some(([k, v]) => k === 'id' && hooks.failIds?.has(v))) return Promise.resolve({ data: null, error: { message: 'down' } });
               if (hooks.beforeUpdate) hooks.beforeUpdate(rows);
               const hit = rows.filter((r) => conds.every(([k, val]) => String(r[k]) === String(val)));
               hit.forEach((r) => { Object.assign(r, JSON.parse(JSON.stringify(v))); r.updated_at = `t${++clock}`; });
@@ -479,4 +494,103 @@ test('保存後：復帰待ちの再開でも、前の形の控えは status で
   await retryPendingRecoveries(db, w.deps);
   assert.deepEqual(w.actions(), []);
   assert.equal(rec(db.sites[0])?.state, 'cancelled');
+});
+
+/* ── 2026-10-18 追加：取り出し件数の上限の外に、期限の来た待ちが埋もれない ── */
+const iso = (ms: number) => new Date(ms).toISOString();
+const NOW0 = Date.parse('2026-10-18T00:00:00.000Z');
+function manyRecoveries(n: number, dueIdx: number[], extra: (i: number) => Record<string, unknown> = () => ({})) {
+  return Array.from({ length: n }, (_, i) => {
+    const id = `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+    const r: RecoveryRecord = { public_id: `pid-${i}`, pt_public_id: `pid-${i}`, user_id: USER, event: 'up', event_at: T1, state: 'pending', attempts: 1, first_at: iso(NOW0 - 3600_000), next_at: dueIdx.includes(i) ? iso(NOW0 - 60_000) : iso(NOW0 + 6 * 3600_000), last_reason: 'articles_not_ready', last_http: null };
+    const e: EntRecord = { plan: 'hp-bot-seo', state: 'active', event_at: T1, user_id: USER, event: 'up', status: 'synced', attempts: 0, first_failed_at: null, next_at: null, last_http: 200, last_code: null, result: 'applied', seo_confirmed: true, seo_public_id: `pid-${i}` };
+    return { ...site({ larubotPublicId: `pid-${i}`, laruseoPublicId: `pid-${i}`, [RECOVERY_KEY]: r, [ENT_KEY]: e }, { id, slug: `s${i}` }), ...extra(i) };
+  });
+}
+test('取り出し：前の 200 件がまだ時刻前でも、201 件目の期限の来た待ちを処理する', async () => {
+  const w = world(); const db = fakeDb(manyRecoveries(201, [200]));
+  const c = await retryPendingRecoveries(db, w.deps);
+  assert.equal(c.done, 1, `201 件目を拾えなかった ${JSON.stringify(c)}`);
+  assert.deepEqual(w.actions(), ['reactivate']);
+  assert.equal(rec(db.sites[200])?.state, 'done');
+  assert.equal(w.state.calls.filter((x) => x.url.endsWith('/articles')).length, 1, '時刻前の待ちで記事一覧を確かめた');
+});
+
+function manyEntPending(n: number, dueIdx: number[]) {
+  return Array.from({ length: n }, (_, i) => {
+    const id = `00000000-0000-4000-9000-${String(i).padStart(12, '0')}`;
+    const e: EntRecord = { plan: 'hp-bot', state: 'active', event_at: T1, user_id: USER, event: 'down', status: 'pending', attempts: 1, first_failed_at: iso(NOW0 - 3600_000), next_at: dueIdx.includes(i) ? iso(NOW0 - 60_000) : iso(NOW0 + 6 * 3600_000), last_http: 503, last_code: null, result: null, reactivate_pt: false };
+    return site({ larubotPublicId: `pid-${i}`, laruseoPublicId: `pid-${i}`, [ENT_KEY]: e }, { id, slug: `e${i}` });
+  });
+}
+test('取り出し（権利の再送）：前の 50 件がまだ時刻前でも、51 件目の期限の来た控えを送り直す', async () => {
+  const w = world(); const db = fakeDb(manyEntPending(51, [50]));
+  const c = await retryPendingEntitlements(db, w.deps);
+  assert.equal(c.done, 1, `51 件目を拾えなかった ${JSON.stringify(c)}`);
+  assert.equal(w.entCalls(), 1, '時刻前の控えを送った');
+  assert.equal(ent(db.sites[50])?.status, 'synced');
+});
+
+test('取り出し：期限の来た待ちが 20 件を超えても、周期ごとに残りが進む（同じ行を繰り返さない・同じ時刻は id 順で安定）', async () => {
+  const w = world(); w.state.articles = 503;
+  const db = fakeDb(manyRecoveries(45, Array.from({ length: 45 }, (_, i) => i)));
+  const seen: string[][] = [];
+  for (let run = 0; run < 3; run++) {
+    const before = w.state.calls.length;
+    const c = await retryPendingRecoveries(db, w.deps);
+    seen.push(w.state.calls.slice(before).filter((x) => x.url.endsWith('/articles')).map((x) => x.url));
+    assert.equal(c.more, run === 0 ? true : run === 1, `more の表示 run=${run}`);
+  }
+  assert.deepEqual(seen.map((x) => x.length), [20, 20, 5]);
+  assert.equal(new Set(seen.flat()).size, 45, '同じ行を繰り返した／取り残した');
+  assert.deepEqual(seen[0], Array.from({ length: 20 }, (_, i) => `https://laruvisona.jp/hp/s${i}/articles`), '同じ時刻で id 順になっていない');
+  // 再起動（新しい呼び出し）でも、残りは期限の早い順のまま。全件まだ時刻前なら何も呼ばない
+  const n = w.state.calls.length;
+  assert.equal((await retryPendingRecoveries(db, w.deps)).due, 0);
+  assert.equal(w.state.calls.length, n);
+});
+
+test('取り出し：保存できない行・取り出し後に取消された行があっても、ほかの待ちは進む。古い取り出し結果で戻さない', async () => {
+  const w = world();
+  const db = fakeDb(manyRecoveries(30, Array.from({ length: 30 }, (_, i) => i)));
+  db.hooks.failIds = new Set(db.sites.slice(0, 5).map((s) => String(s.id)));
+  // 取り出しのあと、6 件目の処理の前に 6 件目を取消（別の処理が非公開にして中止した）
+  let k = 0;
+  const realFrom = db.from.bind(db);
+  (db as { from: typeof db.from }).from = (t: string) => {
+    if (t === 'sites' && ++k === 2) { (db.sites[5].settings_json as Record<string, unknown>)[RECOVERY_KEY] = { ...rec(db.sites[5])!, state: 'cancelled', last_reason: 'unpublished' }; }
+    return realFrom(t);
+  };
+  await retryPendingRecoveries(db, w.deps);
+  await retryPendingRecoveries(db, w.deps);
+  const done = db.sites.filter((s) => rec(s)?.state === 'done').length;
+  assert.equal(done, 24, `保存できる 24 件が進んでいない（done=${done}）`);
+  assert.equal(rec(db.sites[5])?.state, 'cancelled');
+  assert.ok(!w.state.calls.some((c) => c.body?.public_id === 'pid-5'), '取消された待ちを古い取り出し結果で戻した');
+});
+
+test('取り出し：24 時間を過ぎた待ちは、next_at が先でも次の周期で要対応（永久に pending にしない）。次の時刻は打ち切りを越えない', async () => {
+  const w = world(); w.state.articles = 503;
+  const db = fakeDb(manyRecoveries(2, []));
+  rec(db.sites[0])!.first_at = iso(NOW0 - 25 * 3600_000);          // 前の形：起点から 25 時間・next_at は 6 時間先
+  rec(db.sites[1])!.first_at = iso(NOW0 - 20 * 3600_000); rec(db.sites[1])!.next_at = iso(NOW0 - 1); rec(db.sites[1])!.attempts = 6;
+  await retryPendingRecoveries(db, w.deps);
+  assert.equal(rec(db.sites[0])?.state, 'needs_attention');
+  assert.equal(rec(db.sites[0])?.first_at, iso(NOW0 - 25 * 3600_000), '起点を作り直した');
+  assert.equal(rec(db.sites[1])?.state, 'pending');
+  assert.equal(rec(db.sites[1])?.next_at, iso(NOW0 + 4 * 3600_000), '次の時刻が 24 時間の打ち切りを越えた（12 時間後に置いた）');
+  w.tick(4 * 3600_000);
+  await retryPendingRecoveries(db, w.deps);
+  assert.equal(rec(db.sites[1])?.state, 'needs_attention');
+});
+
+test('取り出し（権利の再送）：待っている間に紐付けが外れた控えは、送らずに終わったと残し、先頭に居続けない', async () => {
+  const w = world(); const db = fakeDb(manyEntPending(25, Array.from({ length: 25 }, (_, i) => i)));
+  for (let i = 0; i < 21; i++) { const sj = db.sites[i].settings_json as Record<string, unknown>; delete sj.larubotPublicId; delete sj.laruseoPublicId; }
+  await retryPendingEntitlements(db, w.deps);
+  await retryPendingEntitlements(db, w.deps);
+  assert.equal(ent(db.sites[0])?.status, 'failed');
+  assert.equal(ent(db.sites[0])?.last_code, 'skipped:no_public_id');
+  assert.ok(db.sites.slice(21).every((s) => ent(s)?.status === 'synced'), '紐付けの外れた控えが先頭を占め、ほかが進まない');
+  assert.equal(w.entCalls(), 4);
 });

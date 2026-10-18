@@ -65,6 +65,47 @@ const INLINE_BACKOFF_MS = [300, 900, 2700];
 /** 控えに残したあとの再送間隔（仕様の例: 1分 → 5分 → 30分 → 2時間 …、最大 24 時間） */
 export const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 3600_000, 6 * 3600_000, 12 * 3600_000];
 export const GIVE_UP_MS = 24 * 3600_000;
+/** 次に試す時刻。起点から 24 時間の打ち切りを越えて先へ置かない（打ち切りの判定が、未来の next_at の陰で遅れないように） */
+export function nextRetryAt(now: Date, attempts: number, firstAt: string): string {
+  const t = now.getTime() + RETRY_DELAYS_MS[Math.min(attempts - 1, RETRY_DELAYS_MS.length - 1)];
+  const limit = Date.parse(firstAt) + GIVE_UP_MS;
+  return new Date(Number.isFinite(limit) ? Math.max(now.getTime(), Math.min(t, limit)) : t).toISOString();
+}
+
+/** 1 回の定期処理で扱う件数（負荷の上限）。取り出しは期限の早い順に、これより 1 件多く読む（残りがあるかを知るため） */
+export const RETRY_BATCH = 20;
+/**
+ * 期限の来た待ち（state/status が value の行）を、期限の早い順に取り出す。
+ * next_at は toISOString（UTC・同じ桁数）で保存しているので、->> の文字列順＝時刻順。next_at なし（null）は先頭（期限到来扱い）。
+ * 並べてから件数を切るので、時刻前の行が何件あっても、期限の来た行が上限の外に埋もれない。同じ時刻は id 順（安定）。
+ * 起点（firstKey）から 24 時間を過ぎた行も期限到来として扱う（前の形で next_at が先にある行の打ち切りが遅れないように）。
+ */
+export async function selectDue(db: unknown, key: string, field: string, value: string, firstKey: string, now: Date): Promise<{ rows: SiteRow[]; more: boolean }> {
+  const { data, error } = await (db as Db).from('sites').select(SITE_COLUMNS)
+    .eq(`settings_json->${key}->>${field}`, value)
+    .order(`settings_json->${key}->>next_at`, { ascending: true, nullsFirst: true })
+    .order('id', { ascending: true })
+    .limit(RETRY_BATCH + 1);
+  if (error) throw new Error(`pending ${key} could not be read`);
+  const due = ((data ?? []) as SiteRow[]).filter((s) => {
+    const r = ((s.settings_json ?? {}) as Record<string, unknown>)[key] as Record<string, unknown> | undefined;
+    if (!r || r[field] !== value) return false;
+    const next = typeof r.next_at === 'string' ? Date.parse(r.next_at) : NaN;
+    const first = typeof r[firstKey] === 'string' ? Date.parse(r[firstKey] as string) : NaN;
+    // next_at が無い・読めない時刻は、黙って待たせず期限到来として扱う（再試行の記録で直る・24 時間で要対応）
+    return !r.next_at || !Number.isFinite(next) || next <= now.getTime() || (Number.isFinite(first) && now.getTime() - first >= GIVE_UP_MS);
+  });
+  return { rows: due.slice(0, RETRY_BATCH), more: due.length > RETRY_BATCH };
+}
+/** 処理の直前に 1 行だけ読み直す。取り出したあとに更新・取消された待ちは、古い取り出し結果で進めない（null） */
+async function rereadSame(db: unknown, site: SiteRow, key: string): Promise<SiteRow | null> {
+  const { data, error } = await (db as Db).from('sites').select(SITE_COLUMNS).eq('id', site.id);
+  const fresh = error ? undefined : (((data ?? []) as SiteRow[])[0] ?? undefined);
+  if (!fresh) return null;
+  const was = ((site.settings_json ?? {}) as Record<string, unknown>)[key];
+  const now = ((fresh.settings_json ?? {}) as Record<string, unknown>)[key];
+  return JSON.stringify(was) === JSON.stringify(now) ? fresh : null;
+}
 const TIMEOUT_MS = 10_000;
 const PUBLIC_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const apiBase = () => (process.env.LARUBOT_API_URL || 'https://larubot.tokyo').replace(/\/+$/, '');
@@ -177,11 +218,11 @@ export function nextRecord(
   if (outcome.kind === 'failed') {
     const attempts = (same ? prev!.attempts : 0) + 1;
     const firstFailed = same && prev!.first_failed_at ? prev!.first_failed_at : now.toISOString();
-    const expired = now.getTime() - Date.parse(firstFailed) >= GIVE_UP_MS;
+    const expired = !Number.isFinite(Date.parse(firstFailed)) || now.getTime() - Date.parse(firstFailed) >= GIVE_UP_MS;   // 起点が読めない時刻なら、待ち続けず打ち切る
     const pending = outcome.retryable && !expired;
     return {
       ...base, status: pending ? 'pending' : 'failed', attempts, first_failed_at: firstFailed,
-      next_at: pending ? new Date(now.getTime() + RETRY_DELAYS_MS[Math.min(attempts - 1, RETRY_DELAYS_MS.length - 1)]).toISOString() : null,
+      next_at: pending ? nextRetryAt(now, attempts, firstFailed) : null,
       last_http: outcome.status, last_code: outcome.code, result: null, reactivate_pt: reactivate,
     };
   }
@@ -191,11 +232,12 @@ export function nextRecord(
 type Db = {
   from(t: string): {
     select(c: string): {
-      eq(k: string, v: string): PromiseLike<{ data: unknown[] | null; error: unknown }> & { limit(n: number): PromiseLike<{ data: unknown[] | null; error: unknown }> };
+      eq(k: string, v: string): PromiseLike<{ data: unknown[] | null; error: unknown }> & { limit(n: number): PromiseLike<{ data: unknown[] | null; error: unknown }>; order(k: string, o: { ascending: boolean; nullsFirst?: boolean }): Ordered };
     };
     update(v: Record<string, unknown>): { eq(k: string, v: string): Filtered };
   };
 };
+type Ordered = { order(k: string, o: { ascending: boolean; nullsFirst?: boolean }): Ordered; limit(n: number): PromiseLike<{ data: unknown[] | null; error: unknown }> };
 type Filtered = { eq(k: string, v: string): Filtered; select(c: string): PromiseLike<{ data: unknown[] | null; error: unknown }> };
 type SiteRow = PtSite & { user_id: string; published?: boolean };
 const SITE_COLUMNS = 'id, user_id, slug, custom_domain, published, settings_json';
@@ -325,12 +367,12 @@ export async function noteReactivation(
   } else {
     const retryable = outcome.kind === 'skipped' || outcome.retryable;
     const attempts = (prev?.attempts ?? 0) + 1;
-    const expired = now.getTime() - Date.parse(base.first_at) >= GIVE_UP_MS;
+    const expired = !Number.isFinite(Date.parse(base.first_at)) || now.getTime() - Date.parse(base.first_at) >= GIVE_UP_MS;
     const reason = outcome.kind === 'skipped' ? 'articles_not_ready' : READ_FAILURES.has(outcome.code ?? '') ? String(outcome.code) : `publication_target_${outcome.code ?? outcome.status ?? 'unreachable'}`;
     const pending = retryable && !expired;
     next = {
       ...base, state: pending ? 'pending' : 'needs_attention', attempts,
-      next_at: pending ? new Date(now.getTime() + RETRY_DELAYS_MS[Math.min(attempts - 1, RETRY_DELAYS_MS.length - 1)]).toISOString() : null,
+      next_at: pending ? nextRetryAt(now, attempts, base.first_at) : null,
       last_reason: reason, last_http: outcome.kind === 'failed' ? outcome.status : null,
     };
   }
@@ -429,18 +471,15 @@ export async function statusConfirmsHpSeo(publicId: string, deps: EntDeps = {}):
 }
 
 /** 復帰待ちの再開（server.js から 5 分ごと。権利の再送と同じ口）。いまの状態を読み直し、変わっていれば中止する */
-export async function retryPendingRecoveries(db: unknown, deps: EntDeps = {}): Promise<{ due: number; done: number; pending: number; cancelled: number; attention: number }> {
+export async function retryPendingRecoveries(db: unknown, deps: EntDeps = {}): Promise<{ due: number; more: boolean; done: number; pending: number; cancelled: number; attention: number }> {
   const now = (deps.now ?? (() => new Date()))();
-  // 件数が増えても待ちが埋もれないよう広めに読む（いまは対象が数件。数百を超える規模なら next_at の並べ替えへ）
-  const { data, error } = await (db as Db).from('sites').select(SITE_COLUMNS).eq(`settings_json->${RECOVERY_KEY}->>state`, 'pending').limit(200);
-  if (error) throw new Error('pending recoveries could not be read');
-  const due = ((data ?? []) as SiteRow[]).filter((s) => {
-    const r = ((s.settings_json ?? {}) as Record<string, unknown>)[RECOVERY_KEY] as RecoveryRecord | undefined;
-    return r && r.state === 'pending' && (!r.next_at || Date.parse(r.next_at) <= now.getTime());
-  });
-  const counts = { due: due.length, done: 0, pending: 0, cancelled: 0, attention: 0 };
+  const { rows, more } = await selectDue(db, RECOVERY_KEY, 'state', 'pending', 'first_at', now);
+  // due＝今回扱う件数（全体の件数ではない）。more＝期限の来た待ちがまだ残っている（次の周期で続き）
+  const counts = { due: rows.length, more, done: 0, pending: 0, cancelled: 0, attention: 0 };
   const log = (o: Record<string, unknown>) => console.info(`[publication-recovery] ${JSON.stringify(o)}`);
-  for (const site of due.slice(0, 20)) {
+  for (const picked of rows) {
+    const site = await rereadSame(db, picked, RECOVERY_KEY);
+    if (!site) { log({ site_id: picked.id, skipped: 'changed_since_pick' }); continue; }
     const r = ((site.settings_json ?? {}) as Record<string, unknown>)[RECOVERY_KEY] as RecoveryRecord;
     const ctx = { userId: r.user_id, event: r.event, eventAt: r.event_at, prev: r };
     const check = await recoveryStopReason(db, site, r, deps);
@@ -592,17 +631,13 @@ export async function entitlementBeforeSiteDelete(db: unknown, site: SiteRow, pl
  * 再送（server.js から 5 分ごと）。控えが pending で next_at を過ぎたものだけ、控えた event_at のまま送り直す。
  * 成功して reactivate_pt が付いていれば、公開先を reactivate する（SEO の再追加・再契約）。
  */
-export async function retryPendingEntitlements(db: unknown, deps: EntDeps = {}): Promise<{ due: number; done: number; pending: number; failed: number }> {
+export async function retryPendingEntitlements(db: unknown, deps: EntDeps = {}): Promise<{ due: number; more: boolean; done: number; pending: number; failed: number }> {
   const now = (deps.now ?? (() => new Date()))();
-  const q = (db as Db).from('sites').select(SITE_COLUMNS).eq(`settings_json->${ENT_KEY}->>status`, 'pending');
-  const { data, error } = await q.limit(50);
-  if (error) throw new Error('pending entitlements could not be read');
-  const due = ((data ?? []) as SiteRow[]).filter((s) => {
-    const r = ((s.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as EntRecord | undefined;
-    return r && r.status === 'pending' && (!r.next_at || Date.parse(r.next_at) <= now.getTime());
-  });
-  const counts = { due: due.length, done: 0, pending: 0, failed: 0 };
-  for (const site of due.slice(0, 20)) {
+  const { rows, more } = await selectDue(db, ENT_KEY, 'status', 'pending', 'first_failed_at', now);
+  const counts = { due: rows.length, more, done: 0, pending: 0, failed: 0 };
+  for (const picked of rows) {
+    const site = await rereadSame(db, picked, ENT_KEY);
+    if (!site) continue;   // 取り出したあとに控えが変わった（新しいイベント・別の処理が送った）
     const r = ((site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as EntRecord;
     const outcome = await syncSiteEntitlement(db, site, { plan: r.plan, state: r.state, eventAt: r.event_at, event: r.event, userId: r.user_id, reactivatePt: r.reactivate_pt }, deps);
     if (outcome.kind === 'done') {
@@ -612,6 +647,11 @@ export async function retryPendingEntitlements(db: unknown, deps: EntDeps = {}):
         else if (seoUnknown(outcome)) await noteReactivation(db, site, { userId: r.user_id, event: r.event, eventAt: r.event_at }, { kind: 'unconfirmed' }, deps);
       }
     } else if (outcome.kind === 'failed' && outcome.retryable) counts.pending++;
+    else if (outcome.kind === 'skipped' && outcome.reason === 'no_public_id') {
+      // 待っている間に紐付けが外れた：送れないまま期限到来の先頭に居続けないよう、送らずに終わったと残す（運営テストサイトは控えを書かない）
+      await saveRecord(db, site.id, nextRecord(r, { plan: r.plan, state: r.state, eventAt: r.event_at, userId: r.user_id, event: r.event }, outcome, now));
+      counts.failed++;
+    }
     else counts.failed++;
   }
   return counts;

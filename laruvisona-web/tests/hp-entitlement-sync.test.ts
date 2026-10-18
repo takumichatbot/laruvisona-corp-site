@@ -54,6 +54,7 @@ function fakeDb(sites: Array<Record<string, unknown>>, profile = { plan: 'hp-bot
           const run = () => Promise.resolve({ data: rows.filter((r) => filters.every(([k, v]) => String(pick(r, k)) === v)).map((r) => JSON.parse(JSON.stringify(r))), error: null });
           const q = {
             eq(k: string, v: string) { filters.push([k, v]); return q; },
+            order() { return q; },   // 件数が少ないので並べ替えは見ない（取り出しの順は publication-recovery.test.ts で確かめる）
             limit() { return run(); },
             maybeSingle() { return run().then((r) => ({ data: r.data[0] ?? null, error: null })); },
             then(res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) { return run().then(res, rej); },
@@ -167,7 +168,7 @@ test('再送：時刻を過ぎた pending だけ、控えた event_at のまま�
   const db = fakeDb([site({ [ENT_KEY]: pending }), { ...site({ [ENT_KEY]: { ...pending, next_at: '2999-01-01T00:00:00.000Z' } }), id: '22222222-2222-4222-8222-222222222222', settings_json: { larubotPublicId: 'pid-2', [ENT_KEY]: { ...pending, next_at: '2999-01-01T00:00:00.000Z' } } }]);
   const h = harness([APPLIED]);
   const c = await retryPendingEntitlements(db, { ...h.deps, now: () => new Date(T2) });
-  assert.deepEqual(c, { due: 1, done: 1, pending: 0, failed: 0 });
+  assert.deepEqual(c, { due: 1, more: false, done: 1, pending: 0, failed: 0 });
   const ent = h.calls.filter((x) => x.url.endsWith('/api/hp/entitlement'));
   assert.deepEqual([ent.length, ent[0].body?.event_at, ent[0].body?.public_id], [1, T1, 'pid-1']);
   const order = h.calls.map((x) => (x.url.endsWith('/entitlement') ? 'entitlement' : x.url.endsWith('/articles') ? 'articles' : String(x.body?.action)));
