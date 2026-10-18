@@ -260,7 +260,13 @@ export async function beforeBillingChange(db: unknown, userId: string, from: Bil
  */
 export async function afterBillingChange(db: unknown, userId: string, from: Billing, to: Billing, event: string, deps: PtDeps & { eventAt?: string } = {}): Promise<void> {
   const seoGain = !seoActive(from) && seoActive(to);
-  const { entitlementChange, syncUserEntitlement, seoConfirmed, seoUnknown, noteReactivation, companySites, recordConfirmsSeo, statusConfirmsHpSeo, companyPublicId, ENT_KEY } = await import('@/lib/hp-entitlement-sync');
+  const { entitlementChange, syncUserEntitlement, seoConfirmed, seoUnknown, noteReactivation, companySites, recordSeoEvidence, statusConfirmsHpSeo, companyPublicId, ENT_KEY } = await import('@/lib/hp-entitlement-sync');
+  type Rec = Parameters<typeof recordSeoEvidence>[0];
+  // 保存された控えで確かめる（前の形の控え・控えなしは、読み取り専用の status で確かめる。読めなければ戻さない）
+  const recordOrStatus = async (record: Rec, pid: string) => {
+    const ev = record ? recordSeoEvidence(record, pid) : 'legacy';
+    return ev === 'confirmed' || (ev === 'legacy' && (await statusConfirmsHpSeo(pid, deps)));
+  };
   const change = entitlementChange(from, to);
   // 公開先を戻してよい会社（public_id）。LARUbot が今回の SEO を確かめた会社、または（今回は送らない経路で）控えが確認済みの会社だけ
   const only = new Set<string>();
@@ -274,7 +280,7 @@ export async function afterBillingChange(db: unknown, userId: string, from: Bill
         if (seoConfirmed(r.outcome)) only.add(pid);
         // 同じイベントがすでに控えにあり（再配信）、その控えが確認済みなら、前回の続きとして扱う
         else if (r.outcome.kind === 'skipped' && r.outcome.reason === 'already_synced'
-          && recordConfirmsSeo(((r.site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as Parameters<typeof recordConfirmsSeo>[0])) only.add(pid);
+          && (await recordOrStatus(((r.site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as Rec, pid))) only.add(pid);
         else if (seoGain && seoUnknown(r.outcome) && r.site.published) {
           // 届いたが SEO の有効を確かめられない（reason・seo の欠落など）：戻さず、要対応として残す
           await noteReactivation(db, r.site, { userId, event, eventAt: deps.eventAt }, { kind: 'unconfirmed' }, deps);
@@ -285,11 +291,10 @@ export async function afterBillingChange(db: unknown, userId: string, from: Bill
     // 同じプランのままの支払い回復など：権利は送らないので、記録済みの同じ状態（控え）が確認済みのときだけ
     for (const site of (await companySites(db, userId)) ?? []) {
       const pid = companyPublicId(site.settings_json);
-      const record = ((site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as Parameters<typeof recordConfirmsSeo>[0];
+      const record = ((site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as Rec;
       if (!pid) continue;
-      if (recordConfirmsSeo(record)) only.add(pid);
-      // 控えが無い会社（同期の仕組みより前から）だけ、LARUbot の status で HP 由来の SEO が有効かを読む（直接契約の SEO とは分ける）
-      else if (!record && (await statusConfirmsHpSeo(pid, deps))) only.add(pid);
+      // 控えが無い・前の形の控えの会社だけ、LARUbot の status で HP 由来の SEO が有効かを読む（直接契約の SEO とは分ける）
+      if (await recordOrStatus(record, pid)) only.add(pid);
     }
   }
   if (seoGain && only.size) await afterOwnerSeoGain(db, userId, event, { ...deps, only });

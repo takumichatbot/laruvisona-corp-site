@@ -45,6 +45,13 @@ export interface EntRecord {
   result: string | null;
   /** SEO の再追加・再契約で、同期が成功したら公開先を reactivate する */
   reactivate_pt?: boolean;
+  /**
+   * この控え（同じ event_at・plan・state）を送ったときに、LARUbot の応答で SEO の有効を確かめられたか（seoConfirmed と同じ判定）。
+   * true だけが確認済み。false＝確かめられなかった（seo:false・欠落・未知の reason など）。無い＝この項目より前の控え（未確認）
+   */
+  seo_confirmed?: boolean;
+  /** 確かめた会社（LARUbot の public_id）。紐付けが変わったら、古い確認を使い回さない */
+  seo_public_id?: string | null;
 }
 
 export type EntOutcome =
@@ -156,7 +163,7 @@ export async function postEntitlement(
 /** 送った結果から、次の控え。再送待ちの間隔・24 時間であきらめるのもここで決める */
 export function nextRecord(
   prev: EntRecord | null,
-  input: { plan: string; state: EntState; eventAt: string; userId: string; event: string; reactivatePt?: boolean },
+  input: { plan: string; state: EntState; eventAt: string; userId: string; event: string; reactivatePt?: boolean; publicId?: string | null },
   outcome: EntOutcome,
   now: Date,
 ): EntRecord {
@@ -164,7 +171,8 @@ export function nextRecord(
   const base = { plan: input.plan, state: input.state, event_at: input.eventAt, user_id: input.userId, event: input.event };
   const reactivate = !!(input.reactivatePt || (same && prev?.reactivate_pt));
   if (outcome.kind === 'done') {
-    return { ...base, status: 'synced', attempts: 0, first_failed_at: null, next_at: null, last_http: 200, last_code: null, result: outcome.result, reactivate_pt: false };
+    // 通信が終わった・控えを書けた、とは別に「SEO の有効を確かめられたか」を残す（保存後に読む経路が同じ判定を使えるように）
+    return { ...base, status: 'synced', attempts: 0, first_failed_at: null, next_at: null, last_http: 200, last_code: null, result: outcome.result, reactivate_pt: false, seo_confirmed: seoConfirmed(outcome), seo_public_id: input.publicId ?? null };
   }
   if (outcome.kind === 'failed') {
     const attempts = (same ? prev!.attempts : 0) + 1;
@@ -250,9 +258,21 @@ export async function reactivateConfirmed(db: unknown, site: SiteRow, ctx: { use
 }
 
 /** 控えから、その会社の HP 由来の SEO が確認済みか（同じプランのままの支払い回復など、今回は送らない経路で使う） */
-export function recordConfirmsSeo(record: EntRecord | null | undefined): boolean {
-  return !!record && record.status === 'synced' && record.state === 'active' && isSeoPlan(record.plan)
-    && (record.result === 'applied' || record.result === 'duplicate');
+/**
+ * 保存された控えが、その会社（publicId）の SEO 有効の確認になっているか。
+ * confirmed＝送ったときに LARUbot が seo:true と答えた（seoConfirmed）。
+ * legacy＝確認の印を持たない前の形の控え（推測で true にしない。必要なら読み取り専用の status で確かめる）。
+ * unconfirmed＝それ以外（確かめられなかった・別の会社・SEO なし・失敗中）。
+ */
+export function recordSeoEvidence(record: EntRecord | null | undefined, publicId: string | null | undefined): 'confirmed' | 'legacy' | 'unconfirmed' {
+  if (!record || record.status !== 'synced' || record.state !== 'active' || !isSeoPlan(record.plan)) return 'unconfirmed';
+  if (record.result !== 'applied' && record.result !== 'duplicate') return 'unconfirmed';
+  if (!('seo_confirmed' in record) || record.seo_confirmed === undefined) return 'legacy';
+  if (record.seo_confirmed !== true) return 'unconfirmed';
+  return !!publicId && record.seo_public_id === publicId ? 'confirmed' : 'unconfirmed';
+}
+export function recordConfirmsSeo(record: EntRecord | null | undefined, publicId: string | null | undefined): boolean {
+  return recordSeoEvidence(record, publicId) === 'confirmed';
 }
 
 /* ── 公開先の復帰待ち（2026-10-18）────────────────────────────────────────────
@@ -374,8 +394,10 @@ async function recoveryStopReason(db: unknown, site: SiteRow, r: RecoveryRecord,
   }
   const latest = await latestRecordFor(db, r.user_id, r.public_id);
   if (latest === undefined) return { unknown: 'state_unknown' };
-  if (latest && !recordConfirmsSeo(latest)) return { stop: 'entitlement_changed' };
-  if (!latest) {
+  const evidence = latest ? recordSeoEvidence(latest, r.public_id) : null;
+  if (evidence === 'unconfirmed') return { stop: 'entitlement_changed' };
+  // 控えが無い・前の形の控え（確認の印なし）は、読み取り専用の status で確かめる
+  if (evidence !== 'confirmed') {
     const st = await statusHpSeo(r.public_id, deps);
     if (st === null) return { unknown: 'status_unreachable' };
     if (!st) return { stop: 'entitlement_unconfirmed' };
@@ -493,7 +515,7 @@ export async function syncSiteEntitlement(
   const userId = input.userId ?? site.user_id;
   const prev = ((site.settings_json ?? {}) as Record<string, unknown>)[ENT_KEY] as EntRecord | undefined;
   const plan = entitlementPlan(input.plan);
-  const rec = { plan: plan ?? String(input.plan), state: input.state, eventAt: input.eventAt, userId, event: input.event, reactivatePt: input.reactivatePt };
+  const rec = { plan: plan ?? String(input.plan), state: input.state, eventAt: input.eventAt, userId, event: input.event, reactivatePt: input.reactivatePt, publicId };
   if (!plan) {
     const out: EntOutcome = { kind: 'skipped', reason: 'invalid_plan' };
     const record = nextRecord(prev ?? null, rec, out, now);

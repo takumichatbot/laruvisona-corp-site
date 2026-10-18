@@ -212,10 +212,22 @@ test('7：時刻（eventAt）が無い・控えが確認済みでない支払い
   w = world(); db = fakeDb([site()]);
   await afterBillingChange(db, USER, { plan: 'hp-bot-seo', status: 'past_due' }, { plan: 'hp-bot-seo', status: 'active' }, 'recover', { ...w.deps, eventAt: T1 });
   assert.deepEqual(w.actions(), [], '確認済みの控えなしで戻した');
-  const confirmed: EntRecord = { plan: 'hp-bot-seo', state: 'active', event_at: '2026-10-01T00:00:00.000Z', user_id: USER, event: 'up', status: 'synced', attempts: 0, first_failed_at: null, next_at: null, last_http: 200, last_code: null, result: 'applied' };
+  const legacy: EntRecord = { plan: 'hp-bot-seo', state: 'active', event_at: '2026-10-01T00:00:00.000Z', user_id: USER, event: 'up', status: 'synced', attempts: 0, first_failed_at: null, next_at: null, last_http: 200, last_code: null, result: 'applied' };
+  const confirmed: EntRecord = { ...legacy, seo_confirmed: true, seo_public_id: 'pid-1' };
   w = world(); db = fakeDb([site({ [ENT_KEY]: confirmed })]);
   await afterBillingChange(db, USER, { plan: 'hp-bot-seo', status: 'past_due' }, { plan: 'hp-bot-seo', status: 'active' }, 'recover', { ...w.deps, eventAt: T1 });
   assert.deepEqual(w.actions(), ['reactivate']);
+  // 確認済みでも、別の会社の確認は使い回さない
+  w = world(); db = fakeDb([site({ [ENT_KEY]: { ...confirmed, seo_public_id: 'pid-old' } })]);
+  await afterBillingChange(db, USER, { plan: 'hp-bot-seo', status: 'past_due' }, { plan: 'hp-bot-seo', status: 'active' }, 'recover', { ...w.deps, eventAt: T1 });
+  assert.deepEqual(w.actions(), [], '別の会社の確認で戻した');
+  // 前の形の控え（確認の印なし）：推測で確認済みにしない。status が確かめたら戻す・一時的に読めなければ戻さない
+  for (const [st, want] of [[{ status: 200, body: { entitlement: { hp: { state: 'active', seo: true } } } }, ['reactivate']], [{ status: 503, body: {} }, []], ['throw', []], [{ status: 200, body: { entitlement: { hp: null } } }, []]] as const) {
+    w = world(); db = fakeDb([site({ [ENT_KEY]: legacy })]); w.state.status = st as Reply;
+    await afterBillingChange(db, USER, { plan: 'hp-bot-seo', status: 'past_due' }, { plan: 'hp-bot-seo', status: 'active' }, 'recover', { ...w.deps, eventAt: T1 });
+    assert.deepEqual(w.actions(), want, `前の形の控え・status ${JSON.stringify(st)}`);
+    assert.equal(db.sites[0].published, true, '読めないだけで公開を止めた');
+  }
 });
 
 test('4：控えの再送（pending → 成功）でも、記事一覧が 503 なら復帰待ちとして残す。二重に回しても重複しない', async () => {
@@ -404,4 +416,67 @@ test('再レビュー：戻した直後に紐付けが変わったら、戻し�
   assert.ok(w.actions().slice(1).every((a) => a === 'deactivate') && w.actions().length >= 2);
   assert.equal(rec(db.sites[0])?.state, 'needs_attention');
   assert.match(String(rec(db.sites[0])?.last_reason), /unpublished_after_reactivate_undo_failed/);
+});
+
+/* ── 2026-10-18 追加：確認根拠を保存後も失わない（応答 → nextRecord → 保存 → 再読込 → 同じイベントの再処理） ── */
+const entReply = (body: unknown): Reply => ({ status: 200, body });
+const UNCONFIRMED: Array<[string, unknown]> = [
+  ['applied + seo:false', { ok: true, reason: 'applied', entitlement: { plan: 'starter', bot: true, seo: false } }],
+  ['applied + seo 欠落', { ok: true, reason: 'applied', entitlement: { plan: 'starter', bot: true } }],
+  ['applied + seo:null', { ok: true, reason: 'applied', entitlement: { plan: 'starter', seo: null } }],
+  ['applied + seo:"true"', { ok: true, reason: 'applied', entitlement: { plan: 'starter', seo: 'true' } }],
+  ['duplicate + seo:false', { ok: true, reason: 'duplicate', entitlement: { seo: false } }],
+  ['duplicate + seo 欠落', { ok: true, reason: 'duplicate', entitlement: {} }],
+  ['stale + seo:true', { ok: true, reason: 'stale', entitlement: { seo: true } }],
+  ['未知の reason + seo:true', { ok: true, reason: 'queued', entitlement: { seo: true } }],
+  ['reason なし + seo:true', { ok: true, entitlement: { seo: true } }],
+  ['空 JSON', {}],
+];
+test('保存後：SEO を確かめられなかった応答は、保存・再読込・同じイベントの再配信（already_synced）でも確認済みにならない', async () => {
+  const bad: string[] = [];
+  for (const [name, body] of UNCONFIRMED) {
+    const w = world([entReply(body)]); const db = fakeDb([site()]);
+    await afterBillingChange(db, USER, UPGRADE[0], UPGRADE[1], 'upgrade', { ...w.deps, eventAt: T1 });
+    if (w.actions().length) bad.push(`${name}：初回`);
+    // 同じイベントの再配信（保存された控えを読み直して判定する経路）
+    await afterBillingChange(db, USER, UPGRADE[0], UPGRADE[1], 'upgrade', { ...w.deps, eventAt: T1 });
+    if (w.actions().length) bad.push(`${name}：再配信`);
+    // 同じプランのままの支払い回復（権利を送らない経路）
+    await afterBillingChange(db, USER, { plan: 'hp-bot-seo', status: 'past_due' }, { plan: 'hp-bot-seo', status: 'active' }, 'recover', { ...w.deps, eventAt: T1 });
+    if (w.actions().length) bad.push(`${name}：支払い回復`);
+  }
+  assert.deepEqual(bad, [], '確かめられなかった応答で公開先を戻した');
+});
+
+test('保存後：applied / duplicate + seo:true は、保存後の再配信・支払い回復でも（条件が同じなら）戻せる', async () => {
+  for (const reason of ['applied', 'duplicate']) {
+    const w = world([entReply({ ok: true, reason, entitlement: { plan: 'starter', bot: true, seo: true } })]); const db = fakeDb([site()]);
+    w.state.articles = 503;
+    await afterBillingChange(db, USER, UPGRADE[0], UPGRADE[1], 'upgrade', { ...w.deps, eventAt: T1 });
+    assert.deepEqual(w.actions(), []);
+    w.state.articles = 200;
+    await afterBillingChange(db, USER, UPGRADE[0], UPGRADE[1], 'upgrade', { ...w.deps, eventAt: T1 });
+    assert.deepEqual(w.actions(), ['reactivate'], `${reason}：再配信で戻せない`);
+    await afterBillingChange(db, USER, { plan: 'hp-bot-seo', status: 'past_due' }, { plan: 'hp-bot-seo', status: 'active' }, 'recover', { ...w.deps, eventAt: T1 });
+    assert.deepEqual(w.actions(), ['reactivate', 'reactivate'], `${reason}：支払い回復で戻せない`);
+  }
+});
+
+test('保存後：復帰待ちの再開でも、前の形の控えは status で確かめる（読めなければ待ち・確かめたら戻す）。確かめられなかった控えなら中止', async () => {
+  const r0: RecoveryRecord = { public_id: 'pid-1', pt_public_id: 'pid-1', user_id: USER, event: 'up', event_at: T1, state: 'pending', attempts: 1, first_at: '2026-10-18T00:00:00.000Z', next_at: '2026-10-18T00:00:00.000Z', last_reason: 'articles_not_ready', last_http: null };
+  const legacy: EntRecord = { plan: 'hp-bot-seo', state: 'active', event_at: T1, user_id: USER, event: 'up', status: 'synced', attempts: 0, first_failed_at: null, next_at: null, last_http: 200, last_code: null, result: 'applied' };
+  let w = world(); let db = fakeDb([site({ [RECOVERY_KEY]: r0, [ENT_KEY]: legacy })]);
+  w.state.status = { status: 503, body: {} };
+  await retryPendingRecoveries(db, w.deps);
+  assert.deepEqual(w.actions(), []);
+  assert.equal(rec(db.sites[0])?.state, 'pending');
+  w.state.status = { status: 200, body: { entitlement: { hp: { state: 'active', seo: true } } } }; w.tick(2 * 3600_000);
+  await retryPendingRecoveries(db, w.deps);
+  assert.deepEqual(w.actions(), ['reactivate']);
+  // 送ったときに確かめられなかった控え（seo_confirmed:false）→ status が何と言っても、その控えでは戻さない
+  w = world(); db = fakeDb([site({ [RECOVERY_KEY]: r0, [ENT_KEY]: { ...legacy, seo_confirmed: false, seo_public_id: 'pid-1' } })]);
+  w.state.status = { status: 200, body: { entitlement: { hp: { state: 'active', seo: true } } } };
+  await retryPendingRecoveries(db, w.deps);
+  assert.deepEqual(w.actions(), []);
+  assert.equal(rec(db.sites[0])?.state, 'cancelled');
 });
