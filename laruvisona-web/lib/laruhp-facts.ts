@@ -239,8 +239,8 @@ export const PLAN_FAQ = [
 export const SUITE_LINKS = {
   /** LARU CALL の正本（公開中を 2026-10-20 に確認） */
   call: 'https://larubot.tokyo/laru-call',
-  /** LARU OS の専用ページは未公開。確定したらここに入れる（未公開の先・推測した URL へはリンクしない） */
-  os: null as string | null,
+  /** LARU OS の正本（2026-10-22 公開。larubot.tokyo のサイトマップ・料金・FAQ からも辿れる） */
+  os: 'https://larubot.tokyo/laru-os' as string | null,
 } as const;
 export const AFTER_LAUNCH = [
   {
@@ -258,7 +258,7 @@ export const AFTER_LAUNCH = [
     product: 'LARU OS',
     body: 'AIで終わらない相談は担当者が引き継ぎます。お客様はページを閉じたあとも、返信のお知らせ（メール／LINE）から同じ相談に戻れます。',
     kind: 'included',
-    plan: 'LARUbot の機能。HP + Bot・HP + Bot + SEO で利用可',
+    plan: 'LARUbot の機能。Lite・HP + Bot・HP + Bot + SEO（Bot付きのプラン）で利用可',
     note: 'お知らせは、お客様・担当者がそれぞれ受け取りを選んだときだけ届きます。LINEは1社あたり月の上限があり、届くことを約束するものではありません。' as string | null,
   },
   {
@@ -275,11 +275,12 @@ export const AFTER_LAUNCH = [
 /**
  * HP に付く LARUbot ごとの LARU OS（相談の続き）の扱い。表示だけに使う（権利の判定・付与はしない）。
  * Standard は LARUbot 側 starter で、公開の料金表（larubot.tokyo/pricing.md）が「AIチャットボットを含む全有料プラン」の対象と明記。
- * Lite（HP 専用の LARUbot プラン）は公開資料に記載がなく確認中。
+ * Lite（HP 専用の LARUbot プラン＝LARUbot 側 lite）も対象：LARUbot の利用資格（app/services/continuity.py PAID_PLANS）に lite が含まれ、
+ * 公開の専用ページ（larubot.tokyo/laru-os）も「AIチャットボットを含む有料プラン」と記載（2026-10-22 確認）。
  */
 export const OS_BY_BOT: Record<'LARUbot Lite' | 'LARUbot Standard', 'yes' | 'unconfirmed'> = {
   'LARUbot Standard': 'yes',
-  'LARUbot Lite': 'unconfirmed',
+  'LARUbot Lite': 'yes',
 };
 
 /* 料金ページが使う月額・年額。PLANS と同じ数字を1か所で持つ。

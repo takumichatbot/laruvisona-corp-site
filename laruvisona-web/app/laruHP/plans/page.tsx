@@ -38,8 +38,8 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: '　└ チャット内のメニュー項目', hp: 'no',  lite: '2件',  hpBot: '3件',  hpBotSeo: '3件' },
   { label: '　└ 質問例',              hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
   { label: '　└ メールシーケンス',    hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
-  // LARU OS は LARUbot の機能。Standard（LARUbot 側 starter）は公開の料金表で対象。Lite は確認中（docs/change-2026-10-20-call-os-guide.md）
-  { label: '相談の続き・返信のお知らせ（LARU OS）', hp: 'no', lite: '確認中', hpBot: 'yes', hpBotSeo: 'yes' },
+  // LARU OS は LARUbot の機能。Lite（LARUbot 側 lite）・Standard（同 starter）とも対象（lib/laruhp-facts.ts OS_BY_BOT・docs/change-2026-10-20-call-os-guide.md）
+  { label: '相談の続き・返信のお知らせ（LARU OS）', hp: 'no', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'LARUSEO AIブログ',        hp: 'no',  lite: 'no',  hpBot: 'no',  hpBotSeo: 'yes' },
   { label: '独自ドメイン対応',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'SSL・サーバー費用込み',   hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
@@ -555,8 +555,8 @@ export default function PlansPage() {
               <p className="text-sm font-semibold text-gray-900 mb-1">相談の続き・返信のお知らせ（LARU OS）</p>
               <p className="text-[13px] text-gray-600 leading-relaxed">
                 LARUbot の機能です。AIで終わらない相談を担当者が引き継ぎ、お客様は返信のお知らせ（メール／LINE）から同じ相談に戻れます。
-                お知らせは各自が受け取りを選んだときだけ届き、LINEには月の上限があります。Liteでの提供範囲は確認中のため、
-                <Link href="https://laruvisona.jp/laruHP/contact" className="text-sky-700 underline underline-offset-2">お問い合わせ</Link>ください。
+                お知らせは各自が受け取りを選んだときだけ届き、LINEには月の上限があります。Bot付きのプラン（Lite・HP + Bot・HP + Bot + SEO）で、追加料金なしで使えます。
+                <a href={SUITE_LINKS.os ?? 'https://larubot.tokyo/laru-os'} target="_blank" rel="noopener noreferrer" className="text-sky-700 underline underline-offset-2 ml-1">LARU OS の画面と使い方</a>
               </p>
             </div>
             <div className="rounded-xl border border-gray-200 bg-white p-4">

@@ -111,8 +111,12 @@ test('公開後の相談・電話（2026-10-20）：付く LARUbot の名前が�
   }
   assert.equal(AFTER_LAUNCH.find((s) => s.id === 'call')?.kind, 'separate');
   assert.match(SUITE_LINKS.call, /^https:\/\/larubot\.tokyo\/laru-call$/);
-  assert.equal(SUITE_LINKS.os, null, 'LARU OS の専用ページは未公開。確定した URL だけを入れる');
-  assert.equal(OS_BY_BOT['LARUbot Lite'], 'unconfirmed');
+  assert.equal(SUITE_LINKS.os, 'https://larubot.tokyo/laru-os', 'LARU OS は公開済みの専用ページへ（推測した URL は入れない）');
+  assert.equal(OS_BY_BOT['LARUbot Lite'], 'yes', 'LARUbot の利用資格（PAID_PLANS）に lite が含まれる');
+  assert.equal(OS_BY_BOT['LARUbot Standard'], 'yes');
+  const plans = readFileSync('app/laruHP/plans/page.tsx', 'utf8');
+  assert.doesNotMatch(plans, /Liteでの提供範囲は確認中|lite: '確認中'/, '料金表に「確認中」が残っている');
+  assert.match(readFileSync('app/services/page.tsx', 'utf8'), /href: 'https:\/\/larubot\.tokyo\/laru-os'/);
   const lp = readFileSync('app/laruHP/page.tsx', 'utf8');
   assert.match(lp, /s\.id === 'os' && SUITE_LINKS\.os &&/, 'OS のリンクを URL が無いときも出している');
   assert.doesNotMatch(lp + readFileSync('components/immersive/CompanyExperience.tsx', 'utf8'), /href="#"|href=\{?'#'\}?/, '「#」のリンクを出している');

@@ -54,3 +54,13 @@ LARU HP 側（laruvisona-corp-site）で、LARU CALL・LARU OS の掲載を反�
 1. LARU OS の正本ページの公開 URL（確定後、HP 側は 1 か所の設定でリンクを出します。未公開の先へはリンクしていません）
 2. HP の Lite・エージェンシー（LARUbot 側 plan=lite）で、有人対応・相談の継続が使えるか（今は「確認中」と表示）
 ```
+
+## 追記 2026-10-22：LARU OS の専用ページ公開と Lite の扱い
+
+- LARUbot 側で LARU OS の専用ページ `https://larubot.tokyo/laru-os` を公開（LARUbot のトップ・料金・FAQ・機能ページ・サイトマップから辿れる）。
+- `SUITE_LINKS.os` にこの URL を入れた。LARU HP のトップ（公開後の相談のカード）は「LARU OS を詳しく見る」を自動で出す。
+- 会社サイトの「用途ごとの専用ページ」の LARU OS の行を `https://larubot.tokyo` → `https://larubot.tokyo/laru-os` に。
+- Lite・エージェンシー（LARUbot 側 `lite`）も対象と確定：LARUbot の利用資格（`app/services/continuity.py` の `PAID_PLANS`）に `lite` が含まれ、
+  有人対応・相談の継続を `is_lite_plan` で止める箇所は無い。公開の専用ページも「AIチャットボットを含む有料プラン・追加料金なし」。
+  → `OS_BY_BOT['LARUbot Lite'] = 'yes'`、料金表の「確認中」を「○」に、表の外の説明を「Bot付きのプランで追加料金なし」とリンクに。
+- 上の照合表の「確認中」（Lite・エージェンシー）と「残り」の 2 項目は、この追記で解消。料金・契約条件・権利の判定は変えていない。
