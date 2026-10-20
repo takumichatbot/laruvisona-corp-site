@@ -19,7 +19,7 @@ import BrandFonts from '@/components/BrandFonts';
 import CreationLab from '@/components/lp/CreationLab';
 import HeroExperience from '@/components/lp/HeroExperience';
 import { jsonForScript } from '@/lib/safe-markup';
-import { PLANS, TERMS, PRIMARY_CTA, INDUSTRIES, FAQ as FACT_FAQ } from '@/lib/laruhp-facts';
+import { PLANS, TERMS, PRIMARY_CTA, INDUSTRIES, FAQ as FACT_FAQ, AFTER_LAUNCH, SUITE_LINKS } from '@/lib/laruhp-facts';
 import { ARTICLES } from './articles/articles-data';
 import './landing.css';
 
@@ -339,6 +339,48 @@ export default async function LaruHPLandingPage({ searchParams }: {
                 </p>
                 <span>AIチャット・ブログは対応プランで利用できます</span>
               </article>
+            </div>
+
+            {/* 公開後の問い合わせ・相談の続き・電話と、プランとの関係（lib/laruhp-facts.ts AFTER_LAUNCH）。
+                製品の詳しい案内は LARUbot 側の正本へ。ここでは「どれが、どの契約で付くか」だけを並べる */}
+            <div className="lp-reach" aria-labelledby="lp-reach-title">
+              <div className="lp-reach-head">
+                <h3 id="lp-reach-title">問い合わせも、<br />その先の相談も、電話も。</h3>
+                <p>
+                  サイトで聞かれたこと、あとから続く相談、かかってきた電話。
+                  <br className="lp-reach-br" />
+                  それぞれを受ける仕組みと、プランとの関係です。
+                </p>
+              </div>
+              <ol className="lp-reach-list">
+                {AFTER_LAUNCH.map((s, i) => (
+                  <li key={s.id} className={`lp-reach-item lp-reach-${s.kind}`}>
+                    <span className="lp-reach-step" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                    <div className="lp-reach-copy">
+                      <p className="lp-reach-ask">{s.ask}</p>
+                      <h4>{s.product}</h4>
+                      <p>{s.body}</p>
+                      {s.note && <p className="lp-reach-note">{s.note}</p>}
+                    </div>
+                    <div className="lp-reach-plan">
+                      <span className="lp-reach-badge">{s.kind === 'included' ? 'Bot付きのプランに含む' : '別契約'}</span>
+                      <span>{s.plan}</span>
+                      {s.id === 'call' && (
+                        <a className="lp-card-link" href={SUITE_LINKS.call} target="_blank" rel="noopener noreferrer">
+                          LARU CALL を詳しく見る
+                          <ArrowUpRight size={13} aria-hidden="true" />
+                        </a>
+                      )}
+                      {s.id === 'os' && SUITE_LINKS.os && (
+                        <a className="lp-card-link" href={SUITE_LINKS.os} target="_blank" rel="noopener noreferrer">
+                          LARU OS を詳しく見る
+                          <ArrowUpRight size={13} aria-hidden="true" />
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
         </section>

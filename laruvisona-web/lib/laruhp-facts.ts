@@ -58,7 +58,9 @@ export const PLANS = [
     lead: 'ホームページに、問い合わせ対応のAIを足す',
     includes: [
       'HP単体プランのすべて',
-      'LARUbot Lite（AIチャットボット）',
+      // HP + Bot に付くのは LARUbot Standard（lib/laru-entitlement.ts。LARUbot 側は starter）。以前「Lite」と書いていた（2026-10-20 直す）
+      'LARUbot Standard（AIチャットボット）',
+      '相談の続き・返信のお知らせ（LARU OS）',
       'メールでのサポート（同じ窓口）',
     ],
     excludes: ['LARUSEO（AIブログ）'],
@@ -180,8 +182,8 @@ export const FAQ = [
     a: '業種別の構造化データ（JSON-LD）、メタタグ、ページ構成が自動で設定されます。順位を保証するものではありませんが、検索エンジンが内容を理解するための土台は最初から整った状態で公開されます。',
   },
   {
-    q: 'LARUbot Lite とフル版の違いは？',
-    a: 'LARU HPの予約管理は、すべてのHPプランで利用できます。HP + Bot以上に含まれるLite版は、ホームページ上の質問対応に機能を絞ったLARUbotです。複数ボットの運用、顧客管理、メール配信などを含むフル版LARUbot（月額27,500円〜）は別サービスです。',
+    q: 'HPに付くLARUbotと、通常版の違いは？',
+    a: 'LARU HPの予約管理は、すべてのHPプランで利用できます。Bot付きのプランに含まれるLARUbot（Lite・Standard）は、ホームページ上の質問対応に機能を絞ったものです。複数ボットの運用、顧客管理、メール配信などを含む通常版LARUbot（月額27,500円〜）は別サービスです。',
   },
   {
     q: '年払いはありますか？',
@@ -215,10 +217,70 @@ export const PLAN_FAQ = [
     a: '貼る必要はありません。Bot付き・SEO付きのプランを契約すると自動で連携され、公開サイトに設置されます。',
   },
   {
+    q: 'お客様がページを閉じたあとも、相談を続けられますか？',
+    a: 'HP + Bot・HP + Bot + SEO では、LARUbot の相談の続き（LARU OS）を使えます。AIで終わらない相談は担当者が引き継ぎ、お客様は返信のお知らせ（メール／LINE）から同じ相談に戻れます。お知らせは、お客様と担当者がそれぞれ受け取りを選んだときだけ届きます。LINEは1社あたり月の上限があり、届くことを約束するものではありません。Lite・エージェンシーでの提供範囲は確認中のため、お問い合わせください。',
+  },
+  {
+    q: '電話の受付もできますか？',
+    a: 'LARU HPのプランには含まれません。会社の電話にAIが出て、ご用件と折り返し先を受け付けるAI電話受付「LARU CALL」（別契約）があります。料金と申込はLARU CALLのページ（larubot.tokyo/laru-call）でご案内しています。',
+  },
+  {
     q: 'プランを変えたら、サイトは作り直しですか？下げたら消えますか？',
     a: '作り直しはありません。上げると、追加された機能が公開サイトに自動で付きます。下げると公開サイトのAIチャットや記事の表示は外れますが、サイトは消えず、チャットの設定や記事などのデータは保持されます。料金の差額は日割りで次回の請求に反映されます。',
   },
 ] as const;
+
+/**
+ * 公開したあとの「問い合わせ・相談の続き・電話」と、LARU HP のプランとの関係（2026-10-20）。
+ * LARUbot・LARU OS・LARU CALL の製品と正本の案内は LARUbot 側（larubot.tokyo）。ここには HP のプランとの関係と、
+ * 正本で公開されている事実（larubot.tokyo/pricing.md・/laru-call）だけを書く。料金・契約条件はここに持たない。
+ * 根拠と照合表：docs/change-2026-10-20-call-os-guide.md
+ */
+export const SUITE_LINKS = {
+  /** LARU CALL の正本（公開中を 2026-10-20 に確認） */
+  call: 'https://larubot.tokyo/laru-call',
+  /** LARU OS の専用ページは未公開。確定したらここに入れる（未公開の先・推測した URL へはリンクしない） */
+  os: null as string | null,
+} as const;
+export const AFTER_LAUNCH = [
+  {
+    id: 'web',
+    ask: 'サイトで聞かれたことに、すぐ答える',
+    product: 'LARUbot',
+    body: '公開したサイトにAIチャットが付き、登録した内容の範囲で、よくある質問にその場で答えます。',
+    kind: 'included',
+    plan: 'Bot付きのプランに含まれ、公開サイトへ自動で設置',
+    note: null as string | null,
+  },
+  {
+    id: 'os',
+    ask: '相談を、あとから続ける',
+    product: 'LARU OS',
+    body: 'AIで終わらない相談は担当者が引き継ぎます。お客様はページを閉じたあとも、返信のお知らせ（メール／LINE）から同じ相談に戻れます。',
+    kind: 'included',
+    plan: 'LARUbot の機能。HP + Bot・HP + Bot + SEO で利用可',
+    note: 'お知らせは、お客様・担当者がそれぞれ受け取りを選んだときだけ届きます。LINEは1社あたり月の上限があり、届くことを約束するものではありません。' as string | null,
+  },
+  {
+    id: 'call',
+    ask: '出られない電話に、AIが出る',
+    product: 'LARU CALL',
+    body: '会社の電話にAIが出て、ご用件・お名前・折り返し先を受付票にし、担当者へ知らせます。',
+    kind: 'separate',
+    plan: 'LARU HP のプランには含まれない別契約',
+    note: null as string | null,
+  },
+] as const;
+
+/**
+ * HP に付く LARUbot ごとの LARU OS（相談の続き）の扱い。表示だけに使う（権利の判定・付与はしない）。
+ * Standard は LARUbot 側 starter で、公開の料金表（larubot.tokyo/pricing.md）が「AIチャットボットを含む全有料プラン」の対象と明記。
+ * Lite（HP 専用の LARUbot プラン）は公開資料に記載がなく確認中。
+ */
+export const OS_BY_BOT: Record<'LARUbot Lite' | 'LARUbot Standard', 'yes' | 'unconfirmed'> = {
+  'LARUbot Standard': 'yes',
+  'LARUbot Lite': 'unconfirmed',
+};
 
 /* 料金ページが使う月額・年額。PLANS と同じ数字を1か所で持つ。
    以前は料金ページが自前の定数を持っていて、案内ページと食い違い得た。 */

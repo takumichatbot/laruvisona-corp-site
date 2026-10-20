@@ -1,5 +1,5 @@
 'use client';
-import { MONTHLY, ANNUAL, ANNUAL_TOTAL } from '@/lib/laruhp-facts';
+import { MONTHLY, ANNUAL, ANNUAL_TOTAL, SUITE_LINKS } from '@/lib/laruhp-facts';
 import { useState, useEffect, Suspense, createContext, useContext } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -28,7 +28,8 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: 'AIコンテンツ生成',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'ビジュアルエディタ',      hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'SEO自動最適化',           hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
-  { label: 'LARUbot Lite AIチャットボット', hp: 'no',  lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  // 付く LARUbot は Lite と Standard で違う（lib/laru-entitlement.ts）。以前は全部「Lite」と書いていた（2026-10-20）
+  { label: 'AIチャットボット（LARUbot）', hp: 'no',  lite: 'Lite', hpBot: 'Standard', hpBotSeo: 'Standard' },
   { label: '　└ Q&A 登録数',          hp: 'no',  lite: '15件', hpBot: '30件', hpBotSeo: '30件' },
   // 2026-09-17: 「設置ボット数 2体/3体」は、対応する上限がLARUbot側に存在しなかった。
   // 1アカウント=1ボットで、設置タグは何サイトに貼っても動く（サイト数の制限も無い）。
@@ -37,6 +38,8 @@ const FEATURE_ROWS: FeatureRow[] = [
   { label: '　└ チャット内のメニュー項目', hp: 'no',  lite: '2件',  hpBot: '3件',  hpBotSeo: '3件' },
   { label: '　└ 質問例',              hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
   { label: '　└ メールシーケンス',    hp: 'no',  lite: '3件',  hpBot: '5件',  hpBotSeo: '5件' },
+  // LARU OS は LARUbot の機能。Standard（LARUbot 側 starter）は公開の料金表で対象。Lite は確認中（docs/change-2026-10-20-call-os-guide.md）
+  { label: '相談の続き・返信のお知らせ（LARU OS）', hp: 'no', lite: '確認中', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'LARUSEO AIブログ',        hp: 'no',  lite: 'no',  hpBot: 'no',  hpBotSeo: 'yes' },
   { label: '独自ドメイン対応',        hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
   { label: 'SSL・サーバー費用込み',   hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
@@ -46,6 +49,8 @@ const FEATURE_ROWS: FeatureRow[] = [
   // プランごとにサポート内容を分ける仕組みは実装していない。
   // 「チャットサポート」「優先サポート」と書き分けると、実態と合わなくなる。
   { label: 'サポート（メール）',      hp: 'yes', lite: 'yes', hpBot: 'yes', hpBotSeo: 'yes' },
+  // LARU CALL は LARU HP のプランに含まれない（別契約。正本 larubot.tokyo/laru-call）
+  { label: '電話のAI受付（LARU CALL）', hp: '別契約', lite: '別契約', hpBot: '別契約', hpBotSeo: '別契約' },
 ];
 
 function Cell({ value }: { value: Availability }) {
@@ -540,6 +545,29 @@ export default function PlansPage() {
           </div>
         </div>
           </div>
+      </section>
+
+      {/* 公開後の相談・電話の付き方。比較表はスマホで横に送るので、その外に置く（文が切れないように） */}
+      <section className="px-4 md:px-6 pb-12" aria-label="公開後の相談と電話">
+          {/* 公開後の相談・電話の付き方（lib/laruhp-facts.ts AFTER_LAUNCH と同じ事実） */}
+          <div className="max-w-4xl mx-auto grid gap-3 md:grid-cols-2 text-left">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-sm font-semibold text-gray-900 mb-1">相談の続き・返信のお知らせ（LARU OS）</p>
+              <p className="text-[13px] text-gray-600 leading-relaxed">
+                LARUbot の機能です。AIで終わらない相談を担当者が引き継ぎ、お客様は返信のお知らせ（メール／LINE）から同じ相談に戻れます。
+                お知らせは各自が受け取りを選んだときだけ届き、LINEには月の上限があります。Liteでの提供範囲は確認中のため、
+                <Link href="https://laruvisona.jp/laruHP/contact" className="text-sky-700 underline underline-offset-2">お問い合わせ</Link>ください。
+              </p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-sm font-semibold text-gray-900 mb-1">電話のAI受付（LARU CALL）</p>
+              <p className="text-[13px] text-gray-600 leading-relaxed">
+                LARU HP のプランには含まれない別契約です。会社の電話にAIが出て、ご用件・折り返し先を受付票にし、担当者へ知らせます。
+                <a href={SUITE_LINKS.call} target="_blank" rel="noopener noreferrer" className="text-sky-700 underline underline-offset-2 ml-1">LARU CALL の料金と申込</a>
+              </p>
+            </div>
+          </div>
+
       </section>
 
       {/* CTA section */}

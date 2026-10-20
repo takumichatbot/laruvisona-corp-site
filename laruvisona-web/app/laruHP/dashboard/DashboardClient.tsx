@@ -14,7 +14,7 @@ import { getSiteLimit } from '@/lib/plan-limits';
 import { trackPublishAttempt, trackPublish, trackPurchaseComplete, trackBeginCheckout, trackSiteCreate } from '@/lib/funnel';
 import { disablePushNotifications, requestPushPermission } from '@/components/PwaInit';
 import { publishCompletion } from '@/lib/publish-result';
-import { ANNUAL, MONTHLY, TERMS } from '@/lib/laruhp-facts';
+import { ANNUAL, MONTHLY, TERMS, OS_BY_BOT, SUITE_LINKS } from '@/lib/laruhp-facts';
 import { chatPublicId } from '@/lib/larubot-public-id';
 import { hpProduct, planChangeNotes, HP_SEO_ARTICLES_PER_MONTH } from '@/lib/laru-entitlement';
 import { hasServiceAccess } from '@/lib/subscription-access';
@@ -2319,10 +2319,21 @@ export default function DashboardPage() {
                 <div>プラン: <strong className="text-gray-900">{isAdmin ? '運営アカウント（確認用）' : (contracted?.name ?? '未契約')}</strong></div>
                 <div>AIチャット: {contracted?.bot ? `${contracted.bot}（公開サイトへ自動で設置）` : '未契約'}</div>
                 <div>LARU SEO: {contracted?.seo ? `あり（記事は月${HP_SEO_ARTICLES_PER_MONTH}本まで・公開サイトの「コラム」へ自動で表示）` : '未契約'}</div>
+                {/* 相談の続き（LARU OS）は LARUbot の機能。HP 側では状態を持たないので、使えるかどうかの案内だけ（lib/laruhp-facts.ts OS_BY_BOT） */}
+                {contracted?.bot && (
+                  <div>
+                    相談の続き・返信のお知らせ（LARU OS）: {OS_BY_BOT[contracted.bot] === 'yes'
+                      ? 'LARUbot の機能として利用できます（お知らせの受け取りは各自の設定）'
+                      : <>提供範囲を確認中です（<Link href="/laruHP/contact" className="text-gray-500 underline">お問い合わせ</Link>）</>}
+                  </div>
+                )}
+                {/* 電話の受付（LARU CALL）は別契約。HP 側では契約状態が分からないので「利用中／未契約」とは書かない */}
+                <div>電話のAI受付（LARU CALL）: 別契約（LARU HP のプランには含まれません）</div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
                   {!contracted?.bot && <Link href="/laruHP/plans" className="text-indigo-600 underline">AIチャットを追加する</Link>}
                   {!contracted?.seo && <Link href="/laruHP/plans" className="text-emerald-600 underline">SEOも追加する</Link>}
                   {contracted?.bot && <a href="https://larubot.tokyo" target="_blank" rel="noopener noreferrer" className="text-gray-500 underline">LARUbot通常版の機能を見る</a>}
+                  <a href={SUITE_LINKS.call} target="_blank" rel="noopener noreferrer" className="text-gray-500 underline">LARU CALL を見る</a>
                   {(contracted?.bot || contracted?.seo) && <Link href="/laruHP/contact" className="text-gray-500 underline">通常版への切り替え・記事を増やしたい場合はご相談ください</Link>}
                 </div>
               </div>

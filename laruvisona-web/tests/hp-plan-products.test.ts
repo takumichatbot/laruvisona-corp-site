@@ -31,7 +31,11 @@ test('表示・出し分け・機能制限・LARUbot登録で、プランの意�
   }
   assert.equal(hpProduct('starter'), null, 'LARUbot の内部名をHPのプランとして扱っている');
   const faq = JSON.stringify(PLAN_FAQ);
-  assert.equal(PLAN_FAQ.length, 5);
+  // 2026-10-20: 相談の続き（LARU OS）と電話の受付（LARU CALL）の 2 問を足した
+  assert.equal(PLAN_FAQ.length, 7);
+  assert.match(faq, /LARU CALL」（別契約）/, '電話の受付が別契約だと書いていない');
+  assert.match(faq, /受け取りを選んだときだけ/, '返信のお知らせが各自の選択だと書いていない');
+  assert.doesNotMatch(faq, /無制限|必ず届|全員に自動/, 'LINE・お知らせを約束している');
   assert.match(readFileSync('app/laruHP/faq/page.tsx', 'utf8'), /PLAN_FAQ\.map/, '/faq に出していない');
   assert.match(faq, new RegExp(`月${HP_SEO_ARTICLES_PER_MONTH}本まで`));
 });
@@ -95,4 +99,22 @@ test('ダッシュボード: 内部名を出さず、通常版は「見る・相
   assert.match(s, /LARUbot通常版の機能を見る/);
   assert.match(s, /AIチャットを追加する/);
   assert.match(s, /SEOも追加する/);
+});
+
+test('公開後の相談・電話（2026-10-20）：付く LARUbot の名前が契約と同じ・CALL は別契約・未公開の先へリンクしない', async () => {
+  const { PLANS, AFTER_LAUNCH, SUITE_LINKS, OS_BY_BOT } = await import('../lib/laruhp-facts');
+  for (const p of PLANS) {
+    const bot = HP_PLAN_PRODUCTS[p.id as keyof typeof HP_PLAN_PRODUCTS].bot;
+    const shown = (p.includes as readonly string[]).find((x) => /LARUbot (Lite|Standard)/.test(x));
+    if (bot && shown) assert.ok(shown.startsWith(bot), `${p.id}: 案内は「${shown}」、契約は ${bot}`);
+    if (!bot) assert.ok(!shown, `${p.id}: Bot なしのプランに LARUbot と書いている`);
+  }
+  assert.equal(AFTER_LAUNCH.find((s) => s.id === 'call')?.kind, 'separate');
+  assert.match(SUITE_LINKS.call, /^https:\/\/larubot\.tokyo\/laru-call$/);
+  assert.equal(SUITE_LINKS.os, null, 'LARU OS の専用ページは未公開。確定した URL だけを入れる');
+  assert.equal(OS_BY_BOT['LARUbot Lite'], 'unconfirmed');
+  const lp = readFileSync('app/laruHP/page.tsx', 'utf8');
+  assert.match(lp, /s\.id === 'os' && SUITE_LINKS\.os &&/, 'OS のリンクを URL が無いときも出している');
+  assert.doesNotMatch(lp + readFileSync('components/immersive/CompanyExperience.tsx', 'utf8'), /href="#"|href=\{?'#'\}?/, '「#」のリンクを出している');
+  assert.doesNotMatch(readFileSync('app/laruHP/larubot-logs/page.tsx', 'utf8'), /LARU_HP_API_SECRET/, '利用者の画面に環境変数名を出している');
 });

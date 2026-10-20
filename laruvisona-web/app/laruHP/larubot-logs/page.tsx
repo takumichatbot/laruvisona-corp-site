@@ -324,12 +324,11 @@ export default function LarubotLogsPage() {
                 <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-4 text-xl font-bold text-indigo-400">LB</div>
                 <p className="text-gray-500 text-sm">まだ会話ログがありません</p>
                 <p className="text-gray-400 text-xs mt-1">LARUbotがこのサイトに設置されると、会話が記録されます</p>
-                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-left max-w-sm mx-auto">
-                  <p className="text-xs font-semibold text-gray-700 mb-1">LARUbot側の設定</p>
-                  <p className="text-[11px] text-gray-500">会話終了時に以下のエンドポイントへPOSTするよう設定してください：</p>
-                  <code className="text-[10px] text-indigo-600 block mt-1 break-all">POST /api/larubot/conversations</code>
-                  <code className="text-[10px] text-gray-500 block mt-0.5">x-laru-secret: {'$LARU_HP_API_SECRET'}</code>
-                </div>
+                {/* 以前はここに内部の受け口と環境変数名を出していた（利用者には意味がなく、設定もできない）。2026-10-20 */}
+                <p className="text-gray-400 text-xs mt-3 max-w-sm mx-auto leading-relaxed">
+                  Bot付きのプランでは、AIチャットは公開中のサイトへ自動で設置されます。表示されない場合は
+                  <Link href="/laruHP/contact" className="text-sky-700 underline mx-1">お問い合わせ</Link>ください。
+                </p>
               </div>
             ) : (
               <div className="space-y-2">

@@ -1457,3 +1457,148 @@
     font-size: 13px;
   }
 }
+
+/* 公開後の問い合わせ・相談の続き・電話と、プランとの関係（2026-10-20）。
+   同じカードを並べず、「何を受けるか → どの仕組みか → どの契約か」を 1 行ずつ読む。 */
+.lp-reach {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr);
+  gap: 48px;
+  margin-top: 64px;
+  padding-top: 44px;
+  border-top: 1px solid #ffffff1a;
+}
+.lp-reach .lp-reach-head h3 {
+  font-size: 22px;
+  line-height: 1.55;
+  color: #fff;
+  margin-bottom: 14px;
+}
+.lp-reach .lp-reach-head p {
+  font-size: 13px;
+  line-height: 2;
+  color: #abb7ce;
+}
+.lp-reach-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lp-reach-item {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(180px, 0.62fr);
+  gap: 22px;
+  padding: 26px 0;
+  border-bottom: 1px solid #ffffff14;
+}
+.lp-reach-item:first-child {
+  padding-top: 0;
+}
+.lp-reach-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.lp-reach-step {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #a4b7fb;
+  padding-top: 3px;
+}
+.lp-reach .lp-reach-copy .lp-reach-ask {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #b4c2ff;
+  margin-bottom: 4px;
+}
+.lp-reach h4 {
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.lp-reach .lp-reach-copy p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #c3cde0;
+}
+.lp-reach .lp-reach-copy .lp-reach-note {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #93a0ba;
+  margin-top: 8px;
+}
+.lp-reach-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #c9d3e6;
+}
+.lp-reach-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #b4c2ff40;
+  background: #b4c2ff1f;
+  color: #dbe1ff;
+  font-size: 11px;
+  font-weight: 750;
+}
+.lp-reach-separate .lp-reach-badge {
+  background: transparent;
+  border-color: #ffffff45;
+  color: #e7ebf4;
+}
+.lp-reach .lp-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  color: #b8eaff;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.lp-reach .lp-card-link:focus-visible {
+  outline: 2px solid #b8eaff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+@media (max-width: 1000px) {
+  .lp-reach {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+}
+@media (max-width: 760px) {
+  .lp-reach {
+    margin-top: 40px;
+    padding-top: 32px;
+  }
+  .lp-reach .lp-reach-head h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  .lp-reach-br {
+    display: none;
+  }
+  .lp-reach-item {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 4px 12px;
+    padding: 22px 0;
+  }
+  .lp-reach-plan {
+    grid-column: 2;
+    margin-top: 10px;
+  }
+  .lp-reach h4 {
+    font-size: 17px;
+  }
+}

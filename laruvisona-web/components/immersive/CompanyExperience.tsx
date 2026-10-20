@@ -62,8 +62,9 @@ const products = [
         ビジネスが動き出す。
       </>
     ),
-    text: "問い合わせへの応答を、次のアクションへ。AIチャットボットを中心に、お客様との接点を支えるサービス。",
-    tags: ["AIチャットボット", "問い合わせ対応"],
+    // 2026-10-20: 相談の続き・返信のお知らせ（LARU OS）は LARUbot の機能として書く（単独の商品・料金としては見せない）。
+    text: "問い合わせへの応答を、次のアクションへ。AIが答え、AIで終わらない相談は担当者が引き継ぎます。お客様はページを閉じたあとも、返信のお知らせから同じ相談に戻れます（LARU OS）。",
+    tags: ["AIチャットボット", "問い合わせ対応", "相談の続き（LARU OS）"],
     href: "https://larubot.tokyo",
     link: "LARUbotを見る",
   },
@@ -119,6 +120,33 @@ const products = [
     tags: ["クラウドファンディング", "Webサービス"],
     href: "https://www.flastal.com",
     link: "FLASTALを見る",
+  },
+] as const;
+
+const ROUTES = [
+  {
+    id: "hp",
+    need: "ホームページをつくる",
+    name: "LARU HP",
+    note: "作成から公開、その後の更新まで。Bot付きのプランには、AIチャット（LARUbot）が付きます。",
+    href: "https://laruhp.com/",
+    link: "LARU HPを見る",
+  },
+  {
+    id: "web",
+    need: "Webでの相談に応える",
+    name: "LARUbot（相談の続き・LARU OS を含む）",
+    note: "AIが答え、担当者が引き継ぎ、お客様は返信のお知らせから同じ相談に戻れます。",
+    href: "https://larubot.tokyo",
+    link: "LARUbotを見る",
+  },
+  {
+    id: "call",
+    need: "電話を受ける",
+    name: "LARU CALL",
+    note: "出られない電話にAIが出て、用件と折り返し先を受け付けます。LARU HP・LARUbotとは別の契約です。",
+    href: "https://larubot.tokyo/laru-call",
+    link: "LARU CALLを見る",
   },
 ] as const;
 
@@ -310,6 +338,26 @@ function Products({
             <Arrow />
           </a>
         </div>
+      </div>
+      {/* 目的から選ぶ（2026-10-20）。HP・Webでの相談・電話受付の違いと、どの契約で使うかを一度に読む。
+          詳細・料金・申込は各製品の正本ページへ（ここでは複製しない） */}
+      <div className="lv-routes" aria-labelledby="lv-routes-title">
+        <h3 id="lv-routes-title">目的から選ぶ</h3>
+        <ul>
+          {ROUTES.map((r) => (
+            <li key={r.id}>
+              <span className="lv-route-need">{r.need}</span>
+              <span className="lv-route-answer">
+                <strong>{r.name}</strong>
+                <span>{r.note}</span>
+              </span>
+              <a href={r.href} className="lv-route-link">
+                {r.link}
+                <Arrow />
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
       <div className="lv-products-more">
         {/* 実績の詳細ページ（/works）はどこからもリンクされていなかった。
