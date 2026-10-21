@@ -50,3 +50,14 @@ test('案内文に古い額が残っていない・無料範囲が実装と一�
     assert.match(s, /TERMS\.freeScope/, p);
   }
 });
+
+test('会社サイトの部品にも LARU HP の額を手書きしない（2026-10-22: 旧価格の表記が残っていた2つ）', () => {
+  for (const p of ['components/company/PurposePicker.tsx', 'components/Estimator.tsx']) {
+    const s = readFileSync(p, 'utf8');
+    assert.ok(!/999|初月1円/.test(s), p);
+    assert.match(s, /from '@\/lib\/laruhp-facts'/, p);
+    assert.match(s, /MONTHLY\.hp/, p);
+  }
+  const picker = readFileSync('components/company/PurposePicker.tsx', 'utf8');
+  assert.ok(!picker.includes('独自ドメイン、SSLを含みます'), '独自ドメインの費用は別（TERMS.domainNote）');
+});

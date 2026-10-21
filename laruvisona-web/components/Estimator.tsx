@@ -3,11 +3,15 @@
 import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import Link from 'next/link';
+import { MONTHLY, TERMS } from '@/lib/laruhp-facts';
 import { Monitor, Layers, Smartphone, Mic, Volume2, Camera, CreditCard, MapPin, Database } from 'lucide-react';
 
 interface EstimatorProps {
   onConsult: (estimateDetails: string) => void;
 }
+
+// 2026-10-22: LARU HP の月額・契約条件は lib/laruhp-facts.ts から読む（旧価格と旧キャンペーンの表記が残っていた）
+const HP_MONTHLY = MONTHLY.hp.toLocaleString('ja-JP');
 
 export default function Estimator({ onConsult }: EstimatorProps) {
   const [mode, setMode] = useState<'custom' | 'laruHP'>('custom');
@@ -63,7 +67,7 @@ export default function Estimator({ onConsult }: EstimatorProps) {
     '業種別テンプレート 10種以上',
     'SEO自動最適化・構造化データ',
     'LARUbot連携（AIチャットボット）',
-    'SSL・サーバー費用込み',
+    'SSL・サーバー費用込み（独自ドメインの費用は別）',
     'モバイル完全対応',
     'Google Analytics連携',
   ];
@@ -92,14 +96,14 @@ export default function Estimator({ onConsult }: EstimatorProps) {
           <div className="lg:col-span-8 space-y-6">
             {/* 価格説明 */}
             <div className="bg-gradient-to-br from-cyan-900/30 to-[#0f172a] border border-cyan-500/30 rounded-[1.5rem] p-8 relative overflow-hidden">
-              <div className="absolute top-4 right-4 bg-cyan-500 text-white text-xs font-black px-3 py-1.5 rounded-full animate-pulse">🎁 初月1円</div>
+              <div className="absolute top-4 right-4 bg-cyan-500 text-white text-xs font-black px-3 py-1.5 rounded-full animate-pulse">🎁 初月無料</div>
               <div className="text-cyan-400 font-bold text-xs tracking-widest mb-3">LARU HP — HPビルダーSaaS</div>
-              <h3 className="text-3xl font-black text-white mb-2">月額 <span className="text-5xl text-cyan-400">999</span><span className="text-xl text-slate-400">円</span>（税別）</h3>
-              <p className="text-slate-400 text-sm mb-6">最低6ヶ月 / 7ヶ月目〜いつでも解約可 / Stripe安全決済</p>
+              <h3 className="text-3xl font-black text-white mb-2">月額 <span className="text-5xl text-cyan-400">{HP_MONTHLY}</span><span className="text-xl text-slate-400">円</span>（税別）から</h3>
+              <p className="text-slate-400 text-sm mb-6">{TERMS.firstMonthFree} / 最低{TERMS.minimumMonths}ヶ月 / {TERMS.cancel} / {TERMS.taxNote}</p>
               <div className="grid grid-cols-3 gap-3 mb-6">
                 {[
-                  { label: '1日あたり', val: '約33円' },
-                  { label: '初月', val: '1円' },
+                  { label: '1日あたり', val: `約${Math.round(MONTHLY.hp / 30)}円` },
+                  { label: '初月（月払い）', val: '無料' },
                   { label: '完成まで', val: '約5分' },
                 ].map((s, i) => (
                   <div key={i} className="bg-white/5 rounded-xl p-3 text-center">
@@ -137,7 +141,7 @@ export default function Estimator({ onConsult }: EstimatorProps) {
               {[
                 ['初期費用', '0円', '50〜300万円'],
                 ['完成まで', '5分', '1〜3ヶ月'],
-                ['月額', '999円', '保守費 別途'],
+                ['月額', `${HP_MONTHLY}円〜（税別）`, '保守費 別途'],
                 ['AI機能', '標準搭載', 'オプション'],
                 ['SEO対策', '自動設定', '別途対応'],
               ].map(([label, laru, custom], i) => (
@@ -157,8 +161,8 @@ export default function Estimator({ onConsult }: EstimatorProps) {
               <div className="text-6xl mb-4">🏠</div>
               <p className="text-cyan-400 font-bold text-sm mb-1">LARU HP</p>
               <p className="text-slate-400 text-xs mb-6">AIで最高のHPを最短で</p>
-              <div className="text-4xl font-black text-white mb-1">¥999<span className="text-lg text-slate-400">/月</span></div>
-              <div className="text-cyan-400 text-xs font-bold mb-6">初月1円キャンペーン中</div>
+              <div className="text-4xl font-black text-white mb-1">¥{HP_MONTHLY}<span className="text-lg text-slate-400">/月〜（税別）</span></div>
+              <div className="text-cyan-400 text-xs font-bold mb-6">月払いは初月無料</div>
               <Link
                 href="/laruHP/studio"
                 className="block w-full py-4 bg-cyan-500 text-white font-black rounded-xl hover:scale-105 transition-transform text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] mb-3"
@@ -171,7 +175,7 @@ export default function Estimator({ onConsult }: EstimatorProps) {
               >
                 ▶ デモを体験
               </Link>
-              <p className="text-[10px] text-slate-600 mt-4">クレジットカード / 最低6ヶ月契約</p>
+              <p className="text-[10px] text-slate-600 mt-4">{TERMS.payment} / 最低{TERMS.minimumMonths}ヶ月契約</p>
             </div>
           </div>
         </div>
